@@ -46,11 +46,7 @@
 
   /* ---------- chrome ---------- */
 
-  /* ponytail: bring-up only. WAM doesn't forward console.log anywhere readable
-     on this set, and ares-inspect needs a browser, so the app posts its own
-     status to a listener on the dev machine. Set BEACON to '' to switch off;
-     delete both once the TV stops surprising us. */
-  var BEACON = 'http://192.168.1.92:8099/';
+  var BEACON = Config.beacon;
 
   function debug(msg) {
     elDebug.textContent = msg;
@@ -316,7 +312,7 @@
     var media = (item.Media && item.Media[0]) || {};
     var b = '';
     if (media.videoResolution) {
-      b += badge(String(media.videoResolution).toUpperCase(), Plex.isUHD(media) ? 'warn' : '');
+      b += badge(String(media.videoResolution).toUpperCase(), Media.isUHD(media) ? 'warn' : '');
     }
     if (media.videoCodec) b += badge(String(media.videoCodec).toUpperCase());
     if (media.container) b += badge(String(media.container).toUpperCase());
@@ -324,9 +320,9 @@
     var md = metaCache[item.ratingKey];
     if (md) {
       var part = md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
-      var audio = Plex.pickAudio(part);
+      var audio = Media.pickAudio(part);
       b += audio
-        ? badge('AUDIO ' + Plex.audioLabel(audio), audio.channels > 2 ? 'good' : 'warn')
+        ? badge('AUDIO ' + Media.audioLabel(audio), audio.channels > 2 ? 'good' : 'warn')
         : badge('NO PASSABLE AUDIO', 'bad');
     } else {
       b += badge('AUDIO …');
@@ -605,7 +601,7 @@
   var KIDS_MAX_AGE = 12;
 
   function isKids(item) {
-    var age = Plex.ageLimit(item && item.contentRating);
+    var age = Media.ageLimit(item && item.contentRating);
     return age !== null && age <= KIDS_MAX_AGE;
   }
 
@@ -625,7 +621,7 @@
     Plex.contentRatings(sec.key).then(function (all) {
       if (gen !== generation) return;
       var kid = all.filter(function (r) {
-        var age = Plex.ageLimit(r);
+        var age = Media.ageLimit(r);
         return age !== null && age <= KIDS_MAX_AGE;
       });
       debug('kids certificates: ' + (kid.join(', ') || 'none'));
@@ -811,8 +807,9 @@
       }
       if (!rows.length) rows = [listRow('No matches', [])];
       rowIdx = 0;
+      renderSections();          // swap the chips for the results header
       render();
-      debug('search "' + q + '": ' + found.length + ' films');
+      debug('search "' + q + '": ' + found.length + ' film' + (found.length === 1 ? '' : 's'));
     }).catch(function (e) {
       message('Search failed', e.message);
     });
@@ -831,6 +828,7 @@
     savedRows = null;
     searchQuery = null;
     rowIdx = 0;
+    renderSections();          // and back to the chips
     render();
     return true;
   }
@@ -847,7 +845,7 @@
       var part = media && media.Part && media.Part[0];
       if (!part) { message('Nothing to play', 'This item has no playable part.'); return; }
 
-      var audio = Plex.pickAudio(part);
+      var audio = Media.pickAudio(part);
       if (!audio) {
         message('No passable audio track', item.title +
           ' only offers TrueHD or DTS-HD MA. Neither can pass over plain HDMI ARC ' +
@@ -870,7 +868,7 @@
           return;
         }
         var why = verdict.text || ('the server returned "' + verdict.decision + '"');
-        if (Plex.isUHD(media)) {
+        if (Media.isUHD(media)) {
           message('4K transcode refused', item.title + ' will not direct play — ' + why +
             '. Starting it would register a 4K transcode on the server, which gets killed. ' +
             'Run probe.py against this file to find which declared capability flips it.');
@@ -1017,7 +1015,7 @@
            means the per-server token is stale — rediscover, don't make the
            user link again. Conflating the two is what turned one bug into a
            repeating login loop. */
-        if (e.message.indexOf('https://plex.tv') >= 0) {
+        if (e.message.indexOf(Config.plexTvBase) >= 0) {
           Plex.signOut();
           message('Plex rejected the login', e.message +
             '  ·  The stored login is no longer valid. BACK to link again.');
@@ -1056,9 +1054,16 @@
 
   buildRows();
   document.addEventListener('keydown', onKey, false);
-  /* Enter from the on-screen keyboard arrives on the input, not the document. */
+  /* Enter from the on-screen keyboard arrives on the input, not the document.
+     It must not go on to reach onKey: runSearch switches back to the browse
+     view synchronously, so by the time the event bubbles up, onKey would read
+     it as OK on whatever was focused before the search and start a playback
+     decision on it. */
   elInput.addEventListener('keydown', function (e) {
-    if (e.keyCode === 13) { e.preventDefault(); runSearch(); }
+    if (e.keyCode !== 13) return;
+    e.preventDefault();
+    e.stopPropagation();
+    runSearch();
   }, false);
   Plex.init();
   loadMyDevices();

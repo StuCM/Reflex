@@ -1,3 +1,6 @@
 *.ipk
 __pycache__/
 .ares/
+node_modules/
+dev/fixtures/
+dev/screenshots/

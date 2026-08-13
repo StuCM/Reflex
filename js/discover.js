@@ -10,7 +10,7 @@
 var Discover = (function () {
   'use strict';
 
-  var KEY = '';                                  // <-- paste a TMDB v3 API key
+  var KEY = Config.tmdbKey;                      // see js/config.js
   var API = 'https://api.themoviedb.org/3';
   var REGION = 'GB';
 

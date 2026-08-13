@@ -4,9 +4,9 @@ var assert = require('assert');
 var fs = require('fs');
 var path = require('path');
 
-var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'plex.js'), 'utf8');
-var Plex = new Function(src + '; return Plex;')();
-var age = Plex.ageLimit;
+var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'media.js'), 'utf8');
+var Media = new Function(src + '; return Media;')();
+var age = Media.ageLimit;
 
 // BBFC
 assert.strictEqual(age('U'), 0);

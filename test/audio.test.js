@@ -4,8 +4,8 @@ var assert = require('assert');
 var fs = require('fs');
 var path = require('path');
 
-var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'plex.js'), 'utf8');
-var Plex = new Function(src + '; return Plex;')();
+var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'media.js'), 'utf8');
+var Media = new Function(src + '; return Media;')();
 
 function part(streams) {
   return { Stream: streams.map(function (s, i) {
@@ -13,7 +13,7 @@ function part(streams) {
   }) };
 }
 
-var pick = Plex.pickAudio;
+var pick = Media.pickAudio;
 
 // TrueHD can never pass over plain ARC. Nothing else on offer -> refuse.
 assert.strictEqual(pick(part([{ codec: 'truehd', channels: 8 }])), null);
@@ -47,10 +47,10 @@ assert.strictEqual(pick({ Stream: [{ streamType: 1, codec: 'hevc' },
 assert.strictEqual(pick(null), null);
 
 // The 4K guard fires on UHD dimensions, not on 1080p.
-assert.strictEqual(Plex.isUHD({ width: 3840, height: 2160 }), true);
-assert.strictEqual(Plex.isUHD({ width: 1920, height: 1080 }), false);
+assert.strictEqual(Media.isUHD({ width: 3840, height: 2160 }), true);
+assert.strictEqual(Media.isUHD({ width: 1920, height: 1080 }), false);
 
-assert.strictEqual(Plex.audioLabel({ codec: 'eac3', channels: 6, languageCode: 'eng' }),
+assert.strictEqual(Media.audioLabel({ codec: 'eac3', channels: 6, languageCode: 'eng' }),
                    'EAC3 5.1 ENG');
 
 console.log('audio selection: all assertions passed');

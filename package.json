@@ -1,0 +1,17 @@
+{
+  "name": "reflex",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Browse-fast Plex client for an LG OLED B8 (webOS 4.0)",
+  "scripts": {
+    "dev": "node dev/server.js",
+    "test": "node test/run.js",
+    "check": "node tools/check-es5.js",
+    "smoke": "node dev/smoke.js",
+    "verify": "npm run check && npm test && npm run smoke"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14"
+  }
+}
