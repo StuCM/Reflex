@@ -68,7 +68,12 @@ var Guard = (function () {
     if (v.state === 'noaudio') return 'no passable audio';
     if (v.state === 'nopart') return 'nothing to play';
     if (v.state === 'nometa') return 'no metadata';
-    if (v.state === 'error') return 'server did not answer';
+    if (v.state === 'error') {
+      /* The server answering with a refusal is a different problem from it not
+         answering, and saying the wrong one sends you looking at the network. */
+      var status = /-> (\d{3})/.exec(v.text || '');
+      return status ? 'server said ' + status[1] : 'check failed';
+    }
     return 'would transcode';
   }
 

@@ -138,15 +138,22 @@ def ensure_token(cfg):
     sys.exit("pin expired")
 
 
-def ensure_server(cfg):
-    if cfg.get("base") and cfg.get("server_token"):
+def ensure_server(cfg, prefer=None):
+    """Pick a server. The account has more than one, and a rating key only
+    means something on the server it came from, so --server matters."""
+    cached_ok = cfg.get("base") and cfg.get("server_token")
+    if cached_ok and prefer and prefer.lower() not in (cfg.get("server_name") or "").lower():
+        cached_ok = False
+    if cached_ok:
         try:
             get(cfg["base"] + "/identity", server_headers(cfg), timeout=6)
+            print("Server: %s  %s" % (cfg.get("server_name"), cfg["base"]))
             return cfg
         except Exception:
             cfg.pop("base", None)
 
     resources = get(PLEX_TV + "/api/v2/resources?includeHttps=1&includeRelay=0", headers(cfg))
+    found = []
     for res in resources:
         if "server" not in (res.get("provides") or ""):
             continue
@@ -157,13 +164,26 @@ def ensure_server(cfg):
                 get(conn["uri"] + "/identity", headers(cfg), timeout=6)
             except Exception:
                 continue
-            cfg["base"] = conn["uri"]
-            cfg["server_name"] = res.get("name")
-            cfg["server_token"] = res.get("accessToken") or cfg.get("token")
-            save_config(cfg)
-            print("Server: %s  %s" % (res.get("name"), conn["uri"]))
-            return cfg
-    sys.exit("no direct server connection answered")
+            found.append((res.get("name"), conn["uri"], res.get("accessToken")))
+            break
+
+    if not found:
+        sys.exit("no direct server connection answered")
+
+    print("Servers: %s" % ", ".join(name for name, _, _ in found))
+    chosen = found[0]
+    if prefer:
+        matches = [f for f in found if prefer.lower() in (f[0] or "").lower()]
+        if not matches:
+            sys.exit("no server matching %r (have: %s)"
+                     % (prefer, ", ".join(n for n, _, _ in found)))
+        chosen = matches[0]
+
+    cfg["server_name"], cfg["base"] = chosen[0], chosen[1]
+    cfg["server_token"] = chosen[2] or cfg.get("token")
+    save_config(cfg)
+    print("Using:   %s  %s" % (cfg["server_name"], cfg["base"]))
+    return cfg
 
 
 # ---------- probing ----------
@@ -239,7 +259,13 @@ def decide(cfg, rating_key, row_params, audio_id=None):
     try:
         res = get(url, server_headers(cfg, product, platform))
     except urllib.error.HTTPError as exc:
-        return "HTTP %s" % exc.code, ""
+        # The status alone is unexplainable; the server says why in the body.
+        try:
+            body = exc.read().decode("utf-8", "replace")
+        except Exception:
+            body = ""
+        body = " ".join(body.split())[:160]
+        return "HTTP %s" % exc.code, body
     mc = res.get("MediaContainer") or {}
     md = (mc.get("Metadata") or [None])[0]
     part = None
@@ -260,6 +286,7 @@ def main():
     ap.add_argument("rating_key", nargs="?", help="library item to probe")
     ap.add_argument("--search", help="find rating keys by title")
     ap.add_argument("--audio", help="force this audio stream id on every row")
+    ap.add_argument("--server", help="which server, by name (there is more than one)")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -267,7 +294,7 @@ def main():
         cfg["client_id"] = "reflex-probe-%d" % int(time.time())
         save_config(cfg)
     cfg = ensure_token(cfg)
-    cfg = ensure_server(cfg)
+    cfg = ensure_server(cfg, args.server)
 
     if args.search:
         search(cfg, args.search)
@@ -282,7 +309,7 @@ def main():
     for name, row in ROWS:
         decision, detail = decide(cfg, args.rating_key, row, args.audio)
         mark = "OK " if decision == "directplay" else "   "
-        print("%s%-19s %-14s %s" % (mark, name, decision, detail[:60]))
+        print("%s%-19s %-14s %s" % (mark, name, decision, detail[:70]))
         time.sleep(0.3)          # be a polite guest on someone else's server
 
 
