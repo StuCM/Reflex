@@ -11,7 +11,19 @@ var Plex = (function () {
   var TV       = Config.plexTvBase;
   var PRODUCT  = 'Reflex';
   var VERSION  = '0.0.1';
-  var PLATFORM = 'webOS';
+  /* The panel is webOS, but do NOT say so here.
+     Measured against both of this account's servers, on 2026-08-13: the media
+     decision engine answers 400 Bad Request — an HTML error page, not a Plex
+     one — for X-Plex-Platform of webOS, WebOS, LG, Linux, or absent. Chrome,
+     Safari, Android, Roku and tvOS all return a decision. Nothing else about
+     the request matters; every query parameter was bisected first and none of
+     them changes it.
+     Chrome is the honest choice of the ones that work: the app IS Chromium 53
+     under WAM, which is also what the platform version says. Product, device,
+     model and device name still say Reflex on a B8, so the server's dashboard
+     shows exactly what this is. */
+  var PLATFORM = 'Chrome';
+  var PLATFORM_VERSION = '53.0';
   var DEVICE   = 'LG OLED B8';
 
   /* Direct play profile we declare to the server. The server has no built-in
@@ -75,7 +87,7 @@ var Plex = (function () {
       'X-Plex-Version': VERSION,
       'X-Plex-Client-Identifier': s.clientId,
       'X-Plex-Platform': PLATFORM,
-      'X-Plex-Platform-Version': '4.0',
+      'X-Plex-Platform-Version': PLATFORM_VERSION,
       'X-Plex-Device': DEVICE,
       'X-Plex-Device-Name': 'Reflex (B8)',
       'X-Plex-Model': 'OLED55B8',

@@ -24,6 +24,10 @@ import urllib.request
 PLEX_TV = "https://plex.tv"
 PRODUCT = "Reflex"
 VERSION = "0.0.1"
+# Not "webOS": the decision endpoint answers 400 for webOS/LG/Linux/absent on
+# these servers, and a decision for Chrome/Safari/Android/Roku/tvOS. Chrome is
+# the honest one — the app is Chromium 53. See js/plex.js.
+PLATFORM = "Chrome"
 CONFIG = os.path.join(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
     "reflex", "probe.json",
@@ -54,6 +58,8 @@ ROWS = [
     ("no directStream",     {"X-Plex-Client-Profile-Extra": BASE_PROFILE, "directStream": 0}),
     ("as Plex Web",         {"X-Plex-Client-Profile-Extra": BASE_PROFILE, "_product": "Plex Web",
                              "_platform": "Chrome"}),
+    # Kept as a regression check: this is the one that used to 400 everything.
+    ("platform=webOS",      {"X-Plex-Client-Profile-Extra": BASE_PROFILE, "_platform": "webOS"}),
 ]
 
 
@@ -73,7 +79,7 @@ def save_config(cfg):
         json.dump(cfg, fh, indent=2)
 
 
-def server_headers(cfg, product=PRODUCT, platform="webOS"):
+def server_headers(cfg, product=PRODUCT, platform=PLATFORM):
     """Headers for the media server itself.
 
     A server you do NOT own rejects the plex.tv account token with 401 — it
@@ -85,7 +91,7 @@ def server_headers(cfg, product=PRODUCT, platform="webOS"):
     return h
 
 
-def headers(cfg, product=PRODUCT, platform="webOS"):
+def headers(cfg, product=PRODUCT, platform=PLATFORM):
     h = {
         "Accept": "application/json",
         "X-Plex-Product": product,
@@ -247,7 +253,7 @@ def decide(cfg, rating_key, row_params, audio_id=None):
     if audio_id:
         params["audioStreamID"] = audio_id
 
-    product, platform = PRODUCT, "webOS"
+    product, platform = PRODUCT, PLATFORM
     for key, value in row_params.items():
         if key == "_product":
             product = value

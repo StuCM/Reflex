@@ -46,6 +46,20 @@ assert.strictEqual(pick({ Stream: [{ streamType: 1, codec: 'hevc' },
                                    { streamType: 3, codec: 'srt' }] }), null);
 assert.strictEqual(pick(null), null);
 
+// What the panel decodes. We identify as Chrome to get a decision at all, so a
+// server may offer direct play of something Chrome handles and this panel does
+// not — that has to be refused here rather than shown as a black screen.
+assert.strictEqual(Media.canDecode({ videoCodec: 'h264', container: 'mkv' }), true);
+assert.strictEqual(Media.canDecode({ videoCodec: 'hevc', container: 'mp4' }), true);
+assert.strictEqual(Media.canDecode({ videoCodec: 'h264', container: 'mpegts' }), true);
+assert.strictEqual(Media.canDecode({ videoCodec: 'HEVC', container: 'MKV' }), true);
+assert.strictEqual(Media.canDecode({ videoCodec: 'vp9', container: 'webm' }), false);
+assert.strictEqual(Media.canDecode({ videoCodec: 'av1', container: 'mkv' }), false);
+assert.strictEqual(Media.canDecode({ videoCodec: 'vc1', container: 'mkv' }), false);
+assert.strictEqual(Media.canDecode({ videoCodec: 'h264', container: 'avi' }), false);
+assert.strictEqual(Media.canDecode({}), false);
+assert.strictEqual(Media.canDecode(null), false);
+
 // The 4K guard fires on UHD dimensions, not on 1080p.
 assert.strictEqual(Media.isUHD({ width: 3840, height: 2160 }), true);
 assert.strictEqual(Media.isUHD({ width: 1920, height: 1080 }), false);

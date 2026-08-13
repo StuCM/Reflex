@@ -49,6 +49,24 @@ var Media = (function () {
     return codec + ' ' + ch + lang;
   }
 
+  /* ---------- what the panel can actually decode ----------
+
+     The same list js/plex.js declares to the server, checked again here because
+     we identify as Chrome (see the header comment there for why). A server
+     applying its Chrome profile may offer direct play of something Chrome can
+     decode and this panel cannot — VP9 or AV1 in a WebM, say — and claiming a
+     codec the panel cannot decode gives a black screen. */
+
+  var PANEL_VIDEO = { h264: true, hevc: true };
+  var PANEL_CONTAINER = { mkv: true, mp4: true, mpegts: true };
+
+  function canDecode(media) {
+    if (!media) return false;
+    var codec = String(media.videoCodec || '').toLowerCase();
+    var container = String(media.container || '').toLowerCase();
+    return PANEL_VIDEO[codec] === true && PANEL_CONTAINER[container] === true;
+  }
+
   /* ---------- resolution ---------- */
 
   function isUHD(media) {
@@ -137,7 +155,7 @@ var Media = (function () {
   function identity(item) { return identities(item)[0]; }
 
   return {
-    pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD,
+    pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD, canDecode: canDecode,
     ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
     identities: identities, identity: identity
   };

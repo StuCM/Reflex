@@ -22,6 +22,23 @@ within a major webOS version. Therefore:
   transitions — they force layout and paint on a 2018 SoC.
 - Build target `es2015` if a bundler is introduced. Prefer no bundler.
 
+**Never send `X-Plex-Platform: webOS`.** Measured against both servers on
+2026-08-13: `/video/:/transcode/universal/decision` answers `400 Bad Request`
+(an HTML page, not a Plex error) for a platform of `webOS`, `WebOS`, `LG`,
+`Linux`, or absent — and returns a decision for `Chrome`, `Safari`, `Android`,
+`Roku`, `tvOS`. No query parameter affects it; all of them were bisected first.
+The app says `Chrome` with platform version `53.0`, which is honest — it is
+Chromium 53 under WAM — while product, device, model and device name still say
+Reflex on a B8, so the admin's dashboard shows what it really is.
+
+Consequence: the server may now apply its Chrome profile and offer direct play
+of something Chrome decodes and this panel does not. `Media.canDecode` refuses
+anything outside H.264/HEVC in MKV/MP4/MPEG-TS before the decision call, and it
+is unit tested. Widen it only alongside `PROFILE` in `js/plex.js`, and only
+after `probe.py` says the panel really manages it.
+
+With that fixed, 4K HEVC direct plays on these servers.
+
 **The user does not own the Plex servers.** He is a shared user on someone
 else's two remote servers, connecting directly (not via relay).
 

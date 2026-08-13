@@ -34,6 +34,13 @@ var Guard = (function () {
                  text: 'This version has no playable part.' };
       }
 
+      /* Free and certain, so it goes before anything that costs a request. */
+      if (!Media.canDecode(media)) {
+        return { ok: false, state: 'codec', md: md, media: media, part: part, mediaIndex: n,
+                 text: (media.videoCodec || '?') + ' in ' + (media.container || '?') +
+                       ' is not something this panel decodes.' };
+      }
+
       var audio = Media.pickAudio(part);
       if (!audio) {
         return { ok: false, state: 'noaudio', md: md, media: media, part: part,
@@ -66,6 +73,7 @@ var Guard = (function () {
     if (!v) return 'checking…';
     if (v.ok) return 'direct play';
     if (v.state === 'noaudio') return 'no passable audio';
+    if (v.state === 'codec') return 'panel cannot decode';
     if (v.state === 'nopart') return 'nothing to play';
     if (v.state === 'nometa') return 'no metadata';
     if (v.state === 'error') {
@@ -84,6 +92,12 @@ var Guard = (function () {
         ' only offers TrueHD or DTS-HD MA. Neither can pass over plain HDMI ARC ' +
         'on this set, so playing it would force an audio transcode on a server ' +
         'we do not own. Refused.'];
+    }
+    if (v.state === 'codec') {
+      return ['This panel cannot decode it', item.title + ' is ' +
+        (v.media && v.media.videoCodec) + ' in ' + (v.media && v.media.container) +
+        '. The B8 decodes H.264 and HEVC in MKV, MP4 or MPEG-TS. Playing it ' +
+        'would give a black screen, so it is refused before asking the server.'];
     }
     if (v.state === 'nopart') return ['Nothing to play', 'This copy has no playable part.'];
     if (v.state === 'nometa') return ['No metadata', 'The server returned nothing for this copy.'];
