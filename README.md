@@ -10,7 +10,7 @@ constraints that shape every decision here.
 - direct server discovery (races every non-relay connection, first to answer wins)
 - movie sections, paged and cached in IndexedDB — the rail paints from cache
   before any network call
-- windowed rail: 14 tiles in the DOM regardless of library size
+- windowed rail: 4 rows of 12 tiles in the DOM, regardless of library size
 - masthead shows resolution / codec / container and **the audio track we would
   pick**, before you press OK
 - OK runs the `hasMDE=1` decision call and plays only on `directplay`. A 4K item
