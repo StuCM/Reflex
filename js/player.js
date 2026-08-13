@@ -11,6 +11,10 @@ var Player = (function () {
   var item = null, server = null, onExit = null, onError = null;
   var ticker = null, osdTimer = null, resumeMs = 0;
 
+  /* A stall is the thing you actually see as a blip, and it is over before the
+     ten-second sample comes round. Count them instead. */
+  var stalls = 0, lowest = 999, startedAt = 0;
+
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
     var h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
@@ -91,6 +95,7 @@ var Player = (function () {
     onError = opts.onError;
     resumeMs = opts.item.viewOffset || 0;
 
+    stalls = 0; lowest = 999; startedAt = Date.now();
     var url = opts.url || Plex.streamUrl(server, opts.part);
     osdTitle.textContent = opts.item.title || '';
     v.classList.remove('hidden');
@@ -105,6 +110,8 @@ var Player = (function () {
       report('playing');
     };
     v.onplaying = function () { showOsd(); };
+    /* 'waiting' is the panel telling us it has run dry. */
+    v.onwaiting = function () { stalls++; };
     v.ontimeupdate = function () { if (osdShowing()) paintOsd(); };
     v.onended = function () { stop('stopped'); };
     v.onerror = function () {
@@ -163,17 +170,30 @@ var Player = (function () {
     var frames = (decoded === undefined) ? 'frames n/a'
       : ('dropped ' + dropped + '/' + decoded);
 
-    return fmt(v.currentTime) + '  buffered +' + ahead + 's  ' + frames +
-           (v.paused ? '  PAUSED' : '');
+    if (ahead >= 0 && ahead < lowest) lowest = ahead;
+
+    return fmt(v.currentTime) + '  buffered +' + ahead + 's (low ' + lowest + 's)' +
+           '  stalls ' + stalls + '  ' + frames + (v.paused ? '  PAUSED' : '');
+  }
+
+  /* Said once when playback ends, because that is when the whole picture
+     exists: enough stalls on a 4K remux means the link cannot carry it, and
+     the answer is the 1080p copy on the film page rather than anything here. */
+  function summary() {
+    var mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
+    return 'played ' + mins + ' min · ' + stalls + ' stall' + (stalls === 1 ? '' : 's') +
+           ' · buffer low ' + (lowest === 999 ? '?' : lowest + 's');
   }
 
   function stop(state) {
     if (!item) return;
+    UI.debug(summary());
     report(state || 'stopped');
     clearInterval(ticker); ticker = null;
     clearTimeout(osdTimer);
     v.pause();
     v.onloadedmetadata = v.onplaying = v.ontimeupdate = v.onended = v.onerror = null;
+    v.onwaiting = null;
     v.removeAttribute('src');
     v.load();
     v.classList.add('hidden');
