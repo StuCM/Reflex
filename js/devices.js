@@ -14,6 +14,11 @@
 var Devices = (function () {
   'use strict';
 
+  /* Enough to attribute the Continue watching row, which is all this is for.
+     It is fetched per server on the first paint's critical path, and Plex
+     history entries are fat. */
+  var HISTORY = 100;
+
   var played = null;             // 'serverId:ratingKey' -> 'serverId:deviceID'
   var claimed = null;            // null = never configured, so don't filter
   var list = [], idx = 0;
@@ -39,7 +44,7 @@ var Devices = (function () {
     if (played) return Promise.resolve(played);
     var servers = Servers.all();
     return Promise.all(servers.map(function (sv) {
-      return Plex.history(sv, 200).then(function (entries) {
+      return Plex.history(sv, HISTORY).then(function (entries) {
         return { server: sv, entries: entries };
       });
     })).then(function (perServer) {

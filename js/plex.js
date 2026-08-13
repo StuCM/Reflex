@@ -19,6 +19,11 @@ var Plex = (function () {
      conservative and transcodes. Do NOT widen this without confirming the B8
      panel actually decodes it — see CLAUDE.md. probe.py exists to test rows
      against a real file before they land here. */
+  /* Items per category row. The rail shows ten across and you have to scroll to
+     reach the rest, so asking for thirty per hub per server was mostly payload
+     we never drew — and it is on the critical path of the first paint. */
+  var HUB_COUNT = 12;
+
   var PROFILE = [
     'add-direct-play-profile(type=videoProfile&container=mkv&codec=h264,hevc&audioCodec=aac,ac3,eac3,mp3)',
     'add-direct-play-profile(type=videoProfile&container=mp4&codec=h264,hevc&audioCodec=aac,ac3,eac3,mp3)',
@@ -90,7 +95,7 @@ var Plex = (function () {
       if (opts.token) xhr.setRequestHeader('X-Plex-Token', opts.token);
       xhr.onload = function () {
         if (xhr.status < 200 || xhr.status >= 300) {
-          reject(new Error(method + ' ' + url + ' -> ' + xhr.status));
+          reject(new Error(method + ' ' + tidy(url) + ' -> ' + xhr.status + why(xhr)));
           return;
         }
         if (!xhr.responseText) { resolve(null); return; }
@@ -101,6 +106,25 @@ var Plex = (function () {
       xhr.onerror = function () { reject(new Error('network ' + url)); };
       xhr.send(opts.body || null);
     });
+  }
+
+  /* The declared profile is 500 characters of constant noise, and it is the
+     same every time. Anything that ends up on screen or in a log is more use
+     without it. */
+  function tidy(url) {
+    return String(url).replace(/X-Plex-Client-Profile-Extra=[^&]*/, 'X-Plex-Client-Profile-Extra=…');
+  }
+
+  /* Plex says why it refused, in the body. Throwing that away and reporting a
+     bare status is how a 400 becomes unexplainable. */
+  function why(xhr) {
+    var body = '';
+    try { body = xhr.responseText || ''; } catch (e) { return ''; }
+    if (!body) return '';
+    var m = body.match(/status="([^"]+)"/) ||        // <Response status="..."/>
+            body.match(/"status"\s*:\s*"([^"]+)"/);
+    if (m) return '  ·  ' + m[1];
+    return '  ·  ' + body.replace(/\s+/g, ' ').substring(0, 220);
   }
 
   function tv(method, path, opts) {
@@ -312,7 +336,7 @@ var Plex = (function () {
      One request returns every hub with its items, which is how the stock app
      shows a huge library without listing it. */
   function hubs(server, sectionKey) {
-    return ask(server, '/hubs/sections/' + sectionKey + '?' + qs({ count: 30 }),
+    return ask(server, '/hubs/sections/' + sectionKey + '?' + qs({ count: HUB_COUNT }),
                { timeout: 20000 }).then(function (res) {
       var list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, h;
       for (i = 0; i < list.length; i++) {

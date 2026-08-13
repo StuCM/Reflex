@@ -25,6 +25,7 @@ var UI = (function () {
 
   var current = 'browse';
   var toastTimer = null;
+  var bootedAt = Date.now();
 
   function isBack(code) {
     return code === KEY.BACK || code === KEY.ESC || code === KEY.BACKSPACE;
@@ -43,9 +44,13 @@ var UI = (function () {
   /* The bottom line of the screen. WAM doesn't forward console.log anywhere
      readable on this set, so during bring-up the same text can be posted to a
      listener on the dev machine — see Config.beacon and dev/beacon.js. */
+  /* Stamped with the time since launch, so the debug line reads as a timeline
+     of the first load — which is the only way to tell a slow server from a slow
+     panel without a profiler. */
   function debug(msg) {
-    elDebug.textContent = msg;
-    if (window.console && console.log) console.log('REFLEX ' + msg);
+    var stamped = (Date.now() - bootedAt) + 'ms  ' + msg;
+    elDebug.textContent = stamped;
+    if (window.console && console.log) console.log('REFLEX ' + stamped);
     if (!Config.beacon) return;
     try {
       var x = new XMLHttpRequest();

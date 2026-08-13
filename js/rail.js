@@ -73,12 +73,12 @@ var Rail = (function () {
     for (r = 0; r < ROW_POOL; r++) {
       for (i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
-        if (!t._filled) t._idx = -1;
+        if (!t._filled || t._deferred) t._idx = -1;
       }
     }
   }
 
-  function drawRow(rowEl, rows, r, rowIdx) {
+  function drawRow(rowEl, rows, r, rowIdx, onScreen) {
     var row = rows[r], reused = rowEl._row !== r;
     var i, idx, tile, item, url, firstVisible, start;
 
@@ -108,7 +108,9 @@ var Rail = (function () {
       tile.classList.remove('hidden');
       translate(tile, idx * STRIDE, 0);
       tile.classList.toggle('on', r === rowIdx && idx === row.focus);
-      if (tile._idx === idx) continue;
+      /* A tile whose poster was skipped has to be redrawn when its row comes
+         into view, so the short circuit has to know about that. */
+      if (tile._idx === idx && !(tile._deferred && onScreen)) continue;
       tile._idx = idx;
       item = Rows.itemAt(row, idx);
       tile._filled = !!item;
@@ -121,6 +123,16 @@ var Rail = (function () {
       tile._fb.textContent = item.title || '';
       tile._prog.style.width = (item.viewOffset && item.duration)
         ? Math.round(100 * item.viewOffset / item.duration) + '%' : '0';
+      /* Rows below the fold get their titles but not their posters. On a first
+         run every poster is generated on demand by a server we do not own, so
+         asking for two screens' worth before the first one has painted is the
+         single most expensive thing this app does. They load when scrolled to. */
+      if (!onScreen) {
+        tile._deferred = true;
+        tile._img.removeAttribute('src');
+        continue;
+      }
+      tile._deferred = false;
       url = Plex.posterUrl(item, TILE_W, TILE_H);
       if (url) tile._img.src = url; else tile._img.removeAttribute('src');
     }
@@ -134,7 +146,7 @@ var Rail = (function () {
     for (i = 0; i < ROW_POOL; i++) {
       r = start + i;
       if (r >= rows.length) { rowEls[i].classList.add('hidden'); rowEls[i]._row = -1; continue; }
-      drawRow(rowEls[i], rows, r, rowIdx);
+      drawRow(rowEls[i], rows, r, rowIdx, r < firstVisible + ROWS_VISIBLE);
     }
   }
 
