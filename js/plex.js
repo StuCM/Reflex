@@ -239,19 +239,58 @@ var Plex = (function () {
     });
   }
 
-  function items(sectionKey, start, size) {
-    var url = s.base + '/library/sections/' + sectionKey + '/all?' + qs({
+  function items(sectionKey, start, size, extra) {
+    var params = {
       type: 1,
       sort: 'titleSort:asc',
       includeCollections: 0,
       includeExternalMedia: 0,
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size
-    });
+    };
+    /* Filters (e.g. contentRating) are applied server side — never pull a
+       section down to sieve it here. */
+    if (extra) {
+      var keys = Object.keys(extra), i;
+      for (i = 0; i < keys.length; i++) params[keys[i]] = extra[keys[i]];
+    }
+    var url = s.base + '/library/sections/' + sectionKey + '/all?' + qs(params);
     return request('GET', url, { timeout: 20000 }).then(function (res) {
       var mc = res.MediaContainer || {};
       return { total: mc.totalSize || mc.size || 0, items: mc.Metadata || [] };
     });
+  }
+
+  /* Which certificates this library actually uses. Asking beats hardcoding —
+     the server may label things BBFC (U, PG, 12A, 15, 18) or MPAA (G, PG-13,
+     R), or prefix them by region ("gb/12A"). */
+  function contentRatings(sectionKey) {
+    return request('GET', s.base + '/library/sections/' + sectionKey + '/contentRating')
+      .then(function (res) {
+        var dirs = (res.MediaContainer && res.MediaContainer.Directory) || [], out = [], i;
+        for (i = 0; i < dirs.length; i++) out.push(dirs[i].title || dirs[i].key);
+        return out;
+      }).catch(function () { return []; });
+  }
+
+  var RATING_AGE = {
+    u: 0, g: 0, e: 0, ec: 0, 'tv-y': 0, 'tv-g': 0, uc: 0,
+    'tv-y7': 7, pg: 8, 'tv-pg': 8,
+    'pg-13': 13, 'tv-14': 14,
+    r: 17, 'tv-ma': 17, 'nc-17': 18, x: 18
+  };
+
+  /* Minimum age a certificate implies, or null if unrated/unrecognised.
+     Unrated returns null rather than 0 — absence of a rating is not evidence
+     that something is suitable for children. */
+  function ageLimit(rating) {
+    if (!rating) return null;
+    var r = String(rating).toLowerCase().replace(/\s/g, '');
+    var slash = r.lastIndexOf('/');
+    if (slash >= 0) r = r.substring(slash + 1);      // strip "gb/", "us/"
+    var m = r.match(/^(\d{1,2})/);                    // 12, 12a, 15, 18, 6, 7
+    if (m) return parseInt(m[1], 10);
+    return RATING_AGE[r] === undefined ? null : RATING_AGE[r];
   }
 
   /* Continue Watching. /library/onDeck is the universally supported endpoint —
@@ -426,6 +465,7 @@ var Plex = (function () {
     discover: discover, state: s,
     sections: sections, items: items, metadata: metadata, posterUrl: posterUrl,
     onDeck: onDeck, hubs: hubs, search: search,
+    contentRatings: contentRatings, ageLimit: ageLimit,
     pickAudio: pickAudio, audioLabel: audioLabel,
     isUHD: isUHD, decide: decide, streamUrl: streamUrl, timeline: timeline
   };

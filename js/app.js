@@ -33,6 +33,7 @@
   var savedRows = null;          // browse rows, parked while showing search results
   var searchQuery = null;        // non-null while the results page is showing
   var searchCount = 0;
+  var kidsMode = false;
   var generation = 0;            // bumps on section switch, kills stale paints
   var rowEls = [];
   var metaCache = {}, metaCount = 0;
@@ -92,9 +93,11 @@
     return { kind: 'list', title: title, items: items, total: items.length, focus: 0 };
   }
 
-  function allRow(sec) {
-    return { kind: 'all', title: 'All films', focus: 0, total: 0,
-             key: sec.key, version: sec.updatedAt || 0, pages: {}, inflight: {} };
+  function allRow(sec, title, filter, tag) {
+    return { kind: 'all', title: title || 'All films', focus: 0, total: 0,
+             key: sec.key, version: sec.updatedAt || 0,
+             filter: filter || null, tag: tag || '',
+             pages: {}, inflight: {} };
   }
 
   function itemAt(row, i) {
@@ -225,7 +228,9 @@
 
   /* The Magic Remote has no colour buttons, so every action has to be
      reachable with the d-pad. Up from the top row lands here. */
-  function chipCount() { return sections.length + 1; }   // sections, then Search
+  function chipCount() { return sections.length + 2; }   // sections, Kids, Search
+  function kidsChip() { return sections.length; }
+  function searchChip() { return sections.length + 1; }
 
   function renderSections() {
     var html = '', i, cls;
@@ -239,17 +244,23 @@
       return;
     }
     for (i = 0; i < sections.length; i++) {
-      cls = 'chip' + (i === secIdx ? ' cur' : '') + (headerFocus && i === chipIdx ? ' on' : '');
+      cls = 'chip' + (i === secIdx && !kidsMode ? ' cur' : '') +
+            (headerFocus && i === chipIdx ? ' on' : '');
       html += '<span class="' + cls + '">' + escapeHtml(sections[i].title) + '</span>';
     }
-    cls = 'chip' + (headerFocus && chipIdx === sections.length ? ' on' : '');
+    cls = 'chip' + (kidsMode ? ' cur' : '') +
+          (headerFocus && chipIdx === kidsChip() ? ' on' : '');
+    html += '<span class="' + cls + '">kids</span>';
+    cls = 'chip' + (headerFocus && chipIdx === searchChip() ? ' on' : '');
     html += '<span class="' + cls + '">search</span>';
     elSections.innerHTML = html;
   }
 
   function activateChip() {
-    if (chipIdx === sections.length) { openSearch(); return; }
+    if (chipIdx === searchChip()) { openSearch(); return; }
+    if (chipIdx === kidsChip()) { loadKids(); return; }
     headerFocus = false;
+    kidsMode = false;
     if (chipIdx !== secIdx) loadSection(chipIdx, true);
     else render();
   }
@@ -375,12 +386,12 @@
     /* updatedAt is in the key, so a changed section simply misses the cache.
        ponytail: stale entries linger — Store has no delete. Add a cursor sweep
        if the cache ever grows past a few hundred MB. */
-    var key = 'page:' + row.key + ':' + row.version + ':' + n;
+    var key = 'page:' + row.key + ':' + row.version + ':' + row.tag + ':' + n;
 
     Store.get(key).then(function (cached) {
       if (gen !== generation) return null;
       if (cached && cached.length) return cached;
-      return Plex.items(row.key, n * PAGE, PAGE).then(function (res) {
+      return Plex.items(row.key, n * PAGE, PAGE, row.filter).then(function (res) {
         if (gen !== generation) return null;
         if (res.total) row.total = res.total;
         Store.put(key, res.items);
@@ -406,6 +417,7 @@
     secIdx = i;
     var gen = ++generation;
     var sec = sections[i];
+    kidsMode = false;
     rows = [];
     rowIdx = 0;
     renderSections();
@@ -419,7 +431,7 @@
       if (cached && cached.rows && cached.rows.length) {
         rows = cached.rows.map(function (r) { return listRow(r.title, r.items); });
         rows.push(allRow(sec));
-        restoreTotal(sec, gen);
+        restoreTotal(rows[rows.length - 1], gen);
         render();
         debug(sec.title + ': rows from cache');
       }
@@ -438,7 +450,7 @@
         rows = built.map(function (r) { return listRow(r.title, r.items); });
         rows.push(allRow(sec));
         rowIdx = clamp(rowIdx, 0, rows.length - 1);
-        restoreTotal(sec, gen);
+        restoreTotal(rows[rows.length - 1], gen);
         render();
         debug(sec.title + ': ' + rows.length + ' rows');
       });
@@ -449,26 +461,90 @@
     });
   }
 
-  /* The All row's length. Size=0 returns totalSize and no items — one cheap
+  /* A virtual row's length. Size=0 returns totalSize and no items — one cheap
      request instead of crawling 300 pages of a library we don't own. */
-  function restoreTotal(sec, gen) {
-    var row = rows[rows.length - 1];
+  function restoreTotal(row, gen) {
     if (!row || row.kind !== 'all') return;
-    Store.get('total:' + sec.key).then(function (cached) {
+    var ck = 'total:' + row.key + ':' + row.tag;
+    Store.get(ck).then(function (cached) {
       if (gen !== generation) return;
       if (cached && cached.total && cached.updatedAt === row.version) {
         row.total = cached.total;
         render();
         return;
       }
-      return Plex.items(sec.key, 0, 0).then(function (res) {
+      return Plex.items(row.key, 0, 0, row.filter).then(function (res) {
         if (gen !== generation) return;
         row.total = res.total;
-        Store.put('total:' + sec.key, { updatedAt: row.version, total: res.total });
+        Store.put(ck, { updatedAt: row.version, total: res.total });
         render();
-        debug(sec.title + ': ' + res.total + ' films');
+        debug(row.title + ': ' + res.total + ' films');
       });
     }).catch(function (e) { debug('count: ' + e.message); });
+  }
+
+  /* ---------- kids ---------- */
+
+  /* Everything rated at or below this counts as kids viewing. */
+  var KIDS_MAX_AGE = 12;
+
+  function isKids(item) {
+    var age = Plex.ageLimit(item && item.contentRating);
+    return age !== null && age <= KIDS_MAX_AGE;
+  }
+
+  function loadKids() {
+    var gen = ++generation;
+    var sec = sections[secIdx];
+    kidsMode = true;
+    headerFocus = false;
+    rows = [];
+    rowIdx = 0;
+    renderSections();
+    renderRows();
+    renderMasthead();
+
+    /* Ask the library which certificates it uses, keep the ones at or below the
+       cutoff, and let the server do the filtering. */
+    Plex.contentRatings(sec.key).then(function (all) {
+      if (gen !== generation) return;
+      var kid = all.filter(function (r) {
+        var age = Plex.ageLimit(r);
+        return age !== null && age <= KIDS_MAX_AGE;
+      });
+      debug('kids certificates: ' + (kid.join(', ') || 'none'));
+
+      return Plex.onDeck().then(function (deck) {
+        if (gen !== generation) return;
+        var watching = deck.filter(isKids);
+        rows = [];
+        if (watching.length) rows.push(listRow('Kids · carry on watching', watching));
+
+        if (kid.length) {
+          rows.push(allRow(sec, 'Kids · all films',
+                           { contentRating: kid.join(',') }, 'kids' + KIDS_MAX_AGE));
+          render();
+          restoreTotal(rows[rows.length - 1], gen);
+        } else {
+          render();
+          if (!watching.length) {
+            message('No age ratings', sec.title + ' has no certificate data, so ' +
+              'there is nothing to filter on. BACK to return.');
+          }
+        }
+      });
+    }).catch(function (e) {
+      if (gen !== generation) return;
+      debug('kids: ' + e.message);
+      toast('Could not load the kids list');
+    });
+  }
+
+  function leaveKids() {
+    if (!kidsMode) return false;
+    kidsMode = false;
+    loadSection(secIdx, true);
+    return true;
   }
 
   /* ---------- search ---------- */
@@ -631,7 +707,7 @@
         break;
       case 461: case 27: case 8:
         if (headerFocus) { headerFocus = false; renderSections(); }
-        else if (!clearSearchResults()) exitApp();
+        else if (!clearSearchResults() && !leaveKids()) exitApp();
         break;
       default:
         return;
