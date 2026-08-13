@@ -478,6 +478,12 @@ var Plex = (function () {
       location: 'lan',
       session: session(),
       audioStreamID: audioStreamId || null,
+      /* In the query, not just the header. The transcode endpoints rebuild this
+         URL internally and look for the token in it — /photo/:/transcode has
+         always been given it here, and this one refuses with a 400 rather than
+         a 401 when it is missing, which reads as a malformed request rather
+         than an unauthenticated one. */
+      'X-Plex-Token': server.token,
       'X-Plex-Client-Profile-Extra': PROFILE
     });
     return ask(server, url, { timeout: 20000 }).then(function (res) {

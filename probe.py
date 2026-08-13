@@ -240,6 +240,9 @@ def decide(cfg, rating_key, row_params, audio_id=None):
         "mediaBufferSize": 102400,
         "location": "lan",
         "session": "probe-%s" % rating_key,
+        # The transcode endpoints want the token in the URL, not only the
+        # header — without it they answer 400, not 401.
+        "X-Plex-Token": cfg.get("server_token") or cfg.get("token"),
     }
     if audio_id:
         params["audioStreamID"] = audio_id
