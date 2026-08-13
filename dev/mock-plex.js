@@ -443,6 +443,16 @@ function create(opts) {
     if (pathname === '/video/:/transcode/universal/decision') { decision(srv, res, q); return true; }
     if (pathname.indexOf('/library/parts/') === 0) { streamFile(req, res); return true; }
 
+    /* A real server answers this with HLS, which a desktop browser will not
+       play — so the harness serves the same fixture instead. It proves the app
+       reaches for the converted stream when the verdict says to; whether the
+       panel plays actual HLS is a question only the TV can answer. */
+    if (pathname.indexOf('/video/:/transcode/universal/start') === 0) {
+      log(srv.name + ' transcode session requested (the harness serves the fixture)');
+      streamFile(req, res);
+      return true;
+    }
+
     if (pathname === '/:/timeline') {
       log(srv.name + ' timeline ' + q.state + ' ' +
           Math.round(Number(q.time || 0) / 1000) + 's');

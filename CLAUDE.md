@@ -42,12 +42,17 @@ With that fixed, 4K HEVC direct plays on these servers.
 **The user does not own the Plex servers.** He is a shared user on someone
 else's two remote servers, connecting directly (not via relay).
 
-- The server's rule is **no transcoding of 4K**. Enforcement appears to be
-  Tautulli-style kill-stream, which fires *after* a session starts — so an
-  accidental transcode still registers on the admin's dashboard.
+- The server's rule is **no transcoding of 4K**, and only 4K. Enforcement
+  appears to be Tautulli-style kill-stream, which fires *after* a session
+  starts.
 - Therefore: always call `/video/:/transcode/universal/decision` with
   `hasMDE=1` before playback. It returns the verdict without opening a
   session. Refuse 4K playback if the decision is anything but `directplay`.
+- **Below 4K, a transcode is allowed.** Prefer direct play, but do not insist
+  on it: the server is perfectly able to refuse work it does not want, and
+  insisting is what made every TrueHD remux unplayable. `Media.allows` is the
+  whole rule, and it is unit tested. A converted stream is fetched as HLS from
+  `Plex.transcodeUrl`, which *does* open a session.
 - Never widen the direct play profile to "make something work" without
   confirming the panel can actually decode it. Claiming a codec it can't
   gives a black screen; omitting one it can pushes needless load onto
@@ -95,6 +100,11 @@ ARC ceiling regardless of settings:
 
 Consequence: a 4K remux with only a TrueHD track is unplayable — video direct
 plays, audio transcodes, session counts as a transcode, server kills it.
+
+Audio track choice therefore has two tiers: the best track that passes over ARC
+as-is (`Media.pickAudio`), and failing that the film's own track
+(`Media.bestAudio`) with the server re-encoding it. Never a commentary in
+either.
 
 **A commentary track is not the film.** It is an ordinary AC3 or AAC track by
 codec and channel count, so nothing in the ranking excludes it by accident — and

@@ -59,6 +59,22 @@ var Media = (function () {
     return bestScore < 0 ? null : best;
   }
 
+  /* The best track when nothing passes — the film's own audio, transcoded.
+     Still never a commentary: that is about playing the right thing, not about
+     what the link can carry. Channel count wins here because the server is
+     going to re-encode it anyway, so we may as well start from the good one. */
+  function bestAudio(part) {
+    var streams = (part && part.Stream) || [], best = null, bestScore = -1, i, st, sc;
+    for (i = 0; i < streams.length; i++) {
+      st = streams[i];
+      if (st.streamType !== 2 || isCommentary(st)) continue;
+      sc = Math.min(st.channels || 2, 8) * 10 + (st.selected ? 5 : 0) +
+           (st.default ? 2 : 0);
+      if (sc > bestScore) { bestScore = sc; best = st; }
+    }
+    return best;
+  }
+
   function audioLabel(st) {
     if (!st) return 'no passable track';
     var codec = (st.codec || '?').toUpperCase();
@@ -102,6 +118,20 @@ var Media = (function () {
 
   function isUHD(media) {
     return ((media && media.width) || 0) >= 2500 || ((media && media.height) || 0) >= 1400;
+  }
+
+  /* Will we play this, given what the server said?
+
+     The one rule with teeth: the admin's kill-stream fires on 4K transcodes,
+     after the session has started, so a 4K item that will not direct play is
+     refused before anything opens. Below 4K a transcode is ordinary server
+     work — preferring direct play is right, insisting on it is what made every
+     TrueHD remux unplayable.
+
+     Direct play is also the only path that hands the panel the original file,
+     so that is where the decode check applies; a re-encode arrives as H.264. */
+  function allows(media, direct) {
+    return direct ? canDecode(media) : !isUHD(media);
   }
 
   /* ---------- certificates ---------- */
@@ -187,7 +217,8 @@ var Media = (function () {
 
   return {
     pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD, canDecode: canDecode,
-    isCommentary: isCommentary, audioSummary: audioSummary,
+    isCommentary: isCommentary, audioSummary: audioSummary, bestAudio: bestAudio,
+    allows: allows,
     ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
     identities: identities, identity: identity
   };

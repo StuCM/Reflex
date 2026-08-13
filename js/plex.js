@@ -405,12 +405,38 @@ var Plex = (function () {
   /* Find a library item by external id, e.g. 'tmdb://27205'. This is the join
      that lets us start from a curated external list and ask what the server
      has, instead of crawling the library. */
-  function findByGuid(server, guid) {
+  function copiesByGuid(server, guid) {
     return ask(server, '/library/all?' + qs({ guid: guid, includeGuids: 1 }), { timeout: 15000 })
       .then(function (res) {
         var m = (res.MediaContainer && res.MediaContainer.Metadata) || [];
-        return m.length ? Servers.stamp(m, server)[0] : null;
-      }).catch(function () { return null; });
+        return Servers.stamp(m, server);
+      }).catch(function () { return []; });
+  }
+
+  function findByGuid(server, guid) {
+    return copiesByGuid(server, guid).then(function (m) { return m.length ? m[0] : null; });
+  }
+
+  /* Every copy of a film on this server, wherever it lives.
+     /library/all is global, which matters: these libraries keep the 4K version
+     of a film in a SEPARATE SECTION ("Movies" and "Movies - 4K UHD"), so the
+     other version is not another entry in Media[] — it is a different library
+     item under a different chip, and only a guid lookup finds it. */
+  function allVersions(server, item) {
+    var ids = [], g = (item && item.Guid) || [], i;
+    if (item && item.guid && String(item.guid).indexOf('plex://') === 0) ids.push(item.guid);
+    for (i = 0; i < g.length; i++) if (g[i].id) ids.push(g[i].id);
+    if (!ids.length) return Promise.resolve([]);
+
+    /* Try the ids in order and take the first that finds anything — one
+       request in the normal case. */
+    function attempt(n) {
+      if (n >= ids.length) return Promise.resolve([]);
+      return copiesByGuid(server, ids[n]).then(function (found) {
+        return found.length ? found : attempt(n + 1);
+      });
+    }
+    return attempt(0);
   }
 
   /* TMDB id off an item, handling both the modern Guid array and the legacy
@@ -469,8 +495,8 @@ var Plex = (function () {
   /* hasMDE=1 returns the verdict WITHOUT opening a session, so this is safe to
      call on a server we don't own. Never call the non-decision transcode
      endpoints. */
-  function decide(server, item, mediaIndex, partIndex, audioStreamId) {
-    var url = '/video/:/transcode/universal/decision?' + qs({
+  function playbackParams(server, item, mediaIndex, partIndex, audioStreamId) {
+    return {
       hasMDE: 1,
       path: '/library/metadata/' + item.ratingKey,
       mediaIndex: mediaIndex,
@@ -497,17 +523,44 @@ var Plex = (function () {
          than an unauthenticated one. */
       'X-Plex-Token': server.token,
       'X-Plex-Client-Profile-Extra': PROFILE
-    });
-    return ask(server, url, { timeout: 20000 }).then(function (res) {
+    };
+  }
+
+  function decide(server, item, mediaIndex, partIndex, audioStreamId) {
+    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId);
+    return ask(server, '/video/:/transcode/universal/decision?' + qs(params),
+               { timeout: 20000 }).then(function (res) {
       var mc = res.MediaContainer || {};
       var md = (mc.Metadata && mc.Metadata[0]) || null;
       var part = md && md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
+      var streams = (part && part.Stream) || [], i, video = '', audio = '';
+      /* Per stream, so "the audio needs re-encoding" can be told apart from
+         "the whole thing does" — one of those is acceptable here and the other
+         is what gets a 4K session killed. */
+      for (i = 0; i < streams.length; i++) {
+        if (streams[i].streamType === 1 && !video) video = streams[i].decision || '';
+        if (streams[i].streamType === 2 && !audio) audio = streams[i].decision || '';
+      }
       return {
         decision: (part && part.decision) || 'unknown',
+        video: video, audio: audio,
         text: mc.transcodeDecisionText || mc.generalDecisionText || mc.mdeDecisionText || '',
         raw: mc
       };
     });
+  }
+
+  /* Where to play from when the server has to re-encode something. HLS,
+     because that is what the panel's own media pipeline handles — a desktop
+     browser will not play this, so it cannot be tested on the laptop.
+     Calling this DOES open a session on the server. */
+  function transcodeUrl(server, item, mediaIndex, partIndex, audioStreamId) {
+    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId);
+    params.hasMDE = null;
+    params.protocol = 'hls';
+    params.copyts = 1;
+    params.directPlay = 0;
+    return server.base + '/video/:/transcode/universal/start.m3u8?' + qs(params);
   }
 
   function streamUrl(server, part) {
@@ -539,7 +592,8 @@ var Plex = (function () {
     posterUrl: posterUrl, artUrl: artUrl, photoUrl: photoUrl,
     onDeck: onDeck, hubs: hubs, search: search,
     history: history, devices: devices, findByGuid: findByGuid, tmdbId: tmdbId,
+    allVersions: allVersions,
     contentRatings: contentRatings,
-    decide: decide, streamUrl: streamUrl, timeline: timeline
+    decide: decide, streamUrl: streamUrl, transcodeUrl: transcodeUrl, timeline: timeline
   };
 })();

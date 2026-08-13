@@ -76,7 +76,7 @@ var Player = (function () {
     onError = opts.onError;
     resumeMs = opts.item.viewOffset || 0;
 
-    var url = Plex.streamUrl(server, opts.part);
+    var url = opts.url || Plex.streamUrl(server, opts.part);
     osdTitle.textContent = opts.item.title || '';
     v.classList.remove('hidden');
 
@@ -101,7 +101,8 @@ var Player = (function () {
     v.src = url;
     v.load();
     showOsd();
-    UI.debug('playing ' + String(url).split('?')[0]);
+    UI.debug((opts.transcode ? 'playing (server converting) ' : 'playing ') +
+             String(url).split('?')[0]);
 
     /* Ask directly rather than waiting on loadedmetadata, which need not fire
        on its own, and report a rejected play() rather than sitting on a black

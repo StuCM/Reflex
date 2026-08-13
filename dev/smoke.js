@@ -476,19 +476,32 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('refuses what the server says it would transcode', function () {
+      return step('plays sub-4K content the server has to convert', function () {
+        /* Below 4K a transcode is ordinary server work, and refusing it is what
+           made every awkward file unplayable. */
         return openTitle(titles.transcodes.title)
-          .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
-            return waitFor(shown('transcode', titles.transcodes.title),
-                           'the transcode refusal, naming ' + titles.transcodes.title);
+            return waitFor('/transcode/.test(document.querySelector(".dt-source.on").textContent)',
+                           'a transcode verdict on the selected copy', 15000);
           })
+          .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
             if (!tracedThat(/decision: transcode/)) {
               throw new Error('expected a transcode verdict in: ' + trace.slice(-3).join(' | '));
             }
           })
-          .then(function () { return shot('refuse-transcode'); })
+          .then(function () {
+            if (!hasFixture()) return page.waitForTimeout(500);
+            return waitFor('(function(){var v=document.getElementById("video");' +
+                           'return !v.classList.contains("hidden") && !v.error;})()',
+                           'the converted stream to start', 15000);
+          })
+          .then(function () {
+            if (!tracedThat(/server converting/)) {
+              throw new Error('played the original file rather than the converted stream');
+            }
+          })
+          .then(function () { return shot('transcode-play'); })
           .then(backToLibrary);
       });
     })
@@ -529,7 +542,7 @@ function drive(page, titles) {
                for: a 4K TrueHD remux on one server, a passable copy on the
                other. */
             const playable = src.filter(function (s) { return /direct play/.test(s.text); });
-            const refused = src.filter(function (s) { return /no passable audio/.test(s.text); });
+            const refused = src.filter(function (s) { return /4K, would transcode/.test(s.text); });
             if (playable.length !== 1 || refused.length !== 1) {
               throw new Error('expected one playable and one refused copy, got:\n        ' +
                               src.map(function (s) { return s.text; }).join('\n        '));

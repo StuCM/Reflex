@@ -98,6 +98,40 @@ var Detail = (function () {
     }
   }
 
+  /* The copies we started with came from the row, which only ever knew about
+     one section. These libraries keep the 4K version of a film in a section of
+     its own, so the other versions are separate library items and only a guid
+     lookup across the whole server finds them. */
+  function addOtherVersions(md) {
+    var gen = generation;
+    var known = {};
+    copies.forEach(function (c) { known[c.item._server + ':' + c.item.ratingKey] = true; });
+
+    Servers.all().forEach(function (sv) {
+      Plex.allVersions(sv, md).then(function (found) {
+        if (gen !== generation || !found.length) return;
+        var added = 0;
+        found.forEach(function (other) {
+          var key = other._server + ':' + other.ratingKey;
+          if (known[key]) return;
+          known[key] = true;
+          added++;
+          copies.push({ item: other, server: Servers.of(other), versions: null });
+          Meta.load(other).then(function (omd) {
+            if (gen !== generation || !omd) return;
+            expand(copies.filter(function (c) { return c.item === other; })[0], omd);
+          });
+        });
+        if (added) {
+          UI.debug('found ' + added + ' more version' + (added === 1 ? '' : 's') +
+                   ' of ' + md.title + ' on ' + sv.name);
+          rebuild();
+          renderSources();
+        }
+      });
+    });
+  }
+
   /* Trailers and behind-the-scenes clips come nested in the film's metadata,
      carrying their own media. They are ordinary parts on the same server, so
      they go through the same guard as the film — a clip that would transcode
@@ -241,6 +275,7 @@ var Detail = (function () {
         elCrew.innerHTML = crewHtml(md);
         elCast.innerHTML = castHtml(md);
         addExtras(md);
+        addOtherVersions(md);
       });
     });
   }

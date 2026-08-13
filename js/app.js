@@ -22,18 +22,26 @@
     });
   }
 
-  /* The verdict has already been through Guard, so by here the copy is known to
-     direct play. Nothing else may reach Player. */
+  /* The verdict has already been through Guard, so by here we know the server
+     will serve it and that it is not a 4K transcode. Nothing else reaches
+     Player. */
   function playChecked(item, verdict, isExtra) {
     if (!verdict || !verdict.ok) return;
     var md = verdict.md;
+    var server = Servers.of(md);
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0 : (item.viewOffset || md.viewOffset || 0);
     UI.show('player');
     Player.play({
-      server: Servers.of(md),
+      server: server,
       item: md,
       part: verdict.part,
+      /* Direct play reads the file itself. Otherwise the server has to serve a
+         converted stream, which means HLS and an actual session on it. */
+      url: verdict.transcode
+        ? Plex.transcodeUrl(server, md, verdict.mediaIndex || 0, 0, verdict.audio && verdict.audio.id)
+        : null,
+      transcode: !!verdict.transcode,
       onExit: function () { openDetail(item); },
       onError: function (msg) { UI.message('Playback failed', msg); }
     });

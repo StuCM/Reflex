@@ -85,6 +85,25 @@ assert.strictEqual(Media.canDecode({ videoCodec: 'h264', container: 'avi' }), fa
 assert.strictEqual(Media.canDecode({}), false);
 assert.strictEqual(Media.canDecode(null), false);
 
+// The policy, which is the whole point of the app: 4K must direct play or not
+// play at all, because the admin's kill-stream fires after a 4K transcode has
+// started. Below that, letting the server re-encode is fine — refusing it is
+// what made every TrueHD remux unplayable.
+var UHD = { width: 3840, height: 2160, videoCodec: 'hevc', container: 'mkv' };
+var HD = { width: 1920, height: 1080, videoCodec: 'h264', container: 'mkv' };
+var ODD = { width: 1920, height: 1080, videoCodec: 'vc1', container: 'avi' };
+
+assert.strictEqual(Media.allows(UHD, true), true, '4K that direct plays is fine');
+assert.strictEqual(Media.allows(UHD, false), false, '4K that would transcode is not');
+assert.strictEqual(Media.allows(HD, true), true);
+assert.strictEqual(Media.allows(HD, false), true, 'sub-4K may be transcoded');
+assert.strictEqual(Media.allows(ODD, false), true, 'the server re-encodes it to something we play');
+// Direct play hands the panel the original file, so the decode check applies
+// there and only there.
+assert.strictEqual(Media.allows(ODD, true), false, 'the panel cannot decode VC-1 itself');
+assert.strictEqual(Media.allows({ width: 3840, height: 2160, videoCodec: 'av1',
+                                  container: 'mkv' }, true), false);
+
 // The 4K guard fires on UHD dimensions, not on 1080p.
 assert.strictEqual(Media.isUHD({ width: 3840, height: 2160 }), true);
 assert.strictEqual(Media.isUHD({ width: 1920, height: 1080 }), false);

@@ -1,23 +1,30 @@
 /* Will this copy play, and at what cost to someone else's server?
 
-   The rule the whole app exists to keep: nothing opens a session on a server we
-   do not own unless we already know it will direct play. Two checks, in this
-   order, because the first is free:
+   The rule is narrower than it first looks. The admin's limit is on transcoding
+   *4K*, enforced by a kill-stream that fires after a session starts — so a 4K
+   item that will not direct play outright is refused here, before anything
+   opens. Below 4K, a transcode is ordinary server work and the server is
+   perfectly able to refuse it itself; preferring direct play is right, insisting
+   on it is not, and insisting is what made every TrueHD remux unplayable.
 
-     1. Is there an audio track that can pass over plain HDMI ARC at all? A file
-        offering only TrueHD or DTS-HD MA is refused here, without a request.
-     2. Does the server agree it will direct play, with that track chosen? Asked
-        with hasMDE=1, which returns the verdict WITHOUT opening a session.
+   So, in order, cheapest first:
+
+     1. Can this panel decode the video at all? Free, and certain.
+     2. Which audio track — the best one that passes over plain HDMI ARC as-is,
+        and failing that the film's own track, which the server will re-encode.
+        Never a commentary either way.
+     3. What does the server say, asked with hasMDE=1, which returns the verdict
+        WITHOUT opening a session.
 
    Every copy on every server goes through this, which is what lets the detail
-   page say "this one plays, that one doesn't" before you choose. */
+   page say what each one will cost before you choose. */
 var Guard = (function () {
   'use strict';
 
   /* Resolves with a verdict object, never rejects:
-       { ok, state, audio, media, part, md, text }
-     state is one of: 'directplay' | 'noaudio' | 'nopart' | 'nometa' |
-                      'transcode' (or whatever else the server said) | 'error' */
+       { ok, state, transcode, audio, media, part, md, text }
+     ok means we are willing to play it. transcode says the server will have to
+     re-encode something to do it. */
   /* mediaIndex picks which version of this copy to check. One library item can
      hold several — a 4K remux and a 1080p encode of the same film are two
      entries in Media[], and they get different verdicts, so they are checked
@@ -34,14 +41,10 @@ var Guard = (function () {
                  text: 'This version has no playable part.' };
       }
 
-      /* Free and certain, so it goes before anything that costs a request. */
-      if (!Media.canDecode(media)) {
-        return { ok: false, state: 'codec', md: md, media: media, part: part, mediaIndex: n,
-                 text: (media.videoCodec || '?') + ' in ' + (media.container || '?') +
-                       ' is not something this panel decodes.' };
-      }
-
-      var audio = Media.pickAudio(part);
+      /* The track that passes as-is if there is one, otherwise the film's own
+         audio and the server re-encodes it. */
+      var passes = Media.pickAudio(part);
+      var audio = passes || Media.bestAudio(part);
       if (!audio) {
         return { ok: false, state: 'noaudio', md: md, media: media, part: part,
                  mediaIndex: n, audio: null, text: Media.audioSummary(part) };
@@ -49,13 +52,26 @@ var Guard = (function () {
 
       var server = Servers.of(md);
       return Plex.decide(server, md, n, 0, audio.id).then(function (v) {
+        var direct = v.decision === 'directplay';
+        var uhd = Media.isUHD(media);
+        /* Only direct play hands the panel the original file. A re-encode
+           arrives as H.264, which it always manages — so this check belongs
+           here, not before the decision. */
+        var undecodable = direct && !Media.canDecode(media);
+        var willing = Media.allows(media, direct);
         UI.debug('decision: ' + v.decision + ' · ' + md.title +
                  (Servers.count() > 1 ? ' on ' + server.name : '') +
-                 ' · ' + Media.audioLabel(audio) + ' ' + v.text);
+                 ' · ' + Media.audioLabel(audio) +
+                 (v.video || v.audio ? ' · v:' + (v.video || '?') + ' a:' + (v.audio || '?') : '') +
+                 ' ' + v.text);
         return {
-          ok: v.decision === 'directplay',
-          state: v.decision,
-          audio: audio, md: md, media: media, part: part, mediaIndex: n,
+          /* 4K must direct play or not play. Anything else may transcode. */
+          ok: willing,
+          state: undecodable ? 'codec' : v.decision,
+          transcode: !direct,
+          video: v.video, audioDecision: v.audio,
+          audio: audio, passes: !!passes,
+          md: md, media: media, part: part, mediaIndex: n,
           text: v.text || ''
         };
       }, function (e) {
@@ -70,9 +86,16 @@ var Guard = (function () {
   /* A short label for a verdict, for the source list. */
   function label(v) {
     if (!v) return 'checking…';
-    if (v.ok) return 'direct play';
+    if (v.ok && !v.transcode) return 'direct play';
+    if (v.ok) {
+      /* Audio-only re-encoding is cheap and is the common case for a remux
+         whose only track is TrueHD; a full re-encode is worth naming. */
+      if (v.video && v.video !== 'transcode') return 'audio transcode';
+      return 'server transcodes';
+    }
     if (v.state === 'noaudio') return 'no passable audio';
     if (v.state === 'codec') return 'panel cannot decode';
+    if (Media.isUHD(v.media)) return '4K, would transcode';
     if (v.state === 'nopart') return 'nothing to play';
     if (v.state === 'nometa') return 'no metadata';
     if (v.state === 'error') {
@@ -104,13 +127,11 @@ var Guard = (function () {
     if (v.state === 'error') return ['Could not check playback', v.text];
 
     var why = v.text || ('the server returned "' + v.state + '"');
-    if (Media.isUHD(v.media)) {
-      return ['4K transcode refused', item.title + ' will not direct play — ' + why +
-        '. Starting it would register a 4K transcode on the server, which gets killed. ' +
-        'Run probe.py against this file to find which declared capability flips it.'];
-    }
-    return ['Would transcode', item.title + ' will not direct play — ' + why +
-      '. Reflex plays direct only.'];
+    /* The only thing still refused outright. */
+    return ['4K transcode refused', item.title + ' will not direct play — ' + why +
+      '. Starting it would register a 4K transcode on the server, which gets ' +
+      'killed mid-stream. Another copy may direct play — check the list. Or run ' +
+      'probe.py against this file to find which declared capability flips it.'];
   }
 
   return { check: check, label: label, refusal: refusal };

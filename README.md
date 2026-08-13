@@ -22,11 +22,12 @@ constraints that shape every decision here.
   server and a 1080p E-AC3 file on the other; the page says which will play
   before you choose. The `prefer:` chip sets which server a shared film is
   shown as by default.
-- Playing runs the `hasMDE=1` decision call and proceeds only on `directplay`.
-  A 4K item that will not direct play is refused with the server's reason.
+- Playing runs the `hasMDE=1` decision call first. Direct play is preferred and
+  is what the badges push you towards, but below 4K the server is allowed to
+  convert. **4K is the exception**: if it will not direct play it is refused
+  outright, because that is the one thing the server kills mid-stream.
 
-Not yet: shows, and filters beyond the kids certificate cut. Direct play only —
-there is no transcode playback path, by design.
+Not yet: shows, and filters beyond the kids certificate cut.
 
 ## Run it on the laptop
 
