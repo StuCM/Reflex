@@ -63,7 +63,9 @@ const TYPES = {
 
 function start(opts) {
   const log = opts.quiet ? function () {} : function (m) { console.log('  ' + m); };
-  const api = mock.create({ films: opts.films, pinPolls: opts.pinPolls, log: log });
+  /* In proxy mode there is no fake library at all — see the /__plex handler. */
+  const api = opts.proxy ? null
+    : mock.create({ films: opts.films, pinPolls: opts.pinPolls, log: log });
 
   const server = http.createServer(function (req, res) {
     const parsed = url.parse(req.url, true);
@@ -82,6 +84,18 @@ function start(opts) {
 
     if (opts.proxy && pathname.indexOf('/__plextv') === 0) {
       proxyToPlexTv(req, res, parsed);
+      return;
+    }
+
+    /* Proxy mode must not answer as a media server, even for a moment. The
+       browser remembers the last servers it linked to, and if the mock kept
+       answering on this origin the app would happily go on using the fake
+       library it cached earlier — looking connected while showing nothing real.
+       Refusing here makes the stale entry fail its ping, which is what makes
+       the app rediscover. */
+    if (opts.proxy && pathname.indexOf('/__plex') === 0) {
+      res.writeHead(404, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+      res.end('proxy mode: no mock server here');
       return;
     }
 
@@ -121,11 +135,19 @@ function start(opts) {
   server.listen(opts.port, function () {
     console.log('');
     console.log('  Reflex dev server   http://localhost:' + opts.port);
-    console.log('  ' + (opts.proxy ? 'plex.tv proxied for real; sign in with your own account'
-                                   : 'mock Plex: two servers sharing ' + opts.films +
-                                     ' films, pin claims itself'));
+    if (opts.proxy) {
+      console.log('  plex.tv proxied for real — sign in with your own account.');
+      console.log('  No mock library is served. Your real servers are reached directly,');
+      console.log('  so posters and playback come straight from them.');
+    } else {
+      console.log('  mock Plex: two servers sharing ' + opts.films +
+                  ' films, pin claims itself.');
+      console.log('  This is FAKE data — generated titles, generated posters.');
+      console.log('  For your own library: npm run dev -- --proxy');
+    }
     if (opts.latency) console.log('  ' + opts.latency + 'ms added to every server response');
-    if (!fixture()) {
+    /* Only the mock needs a stand-in video; real servers have the real files. */
+    if (!opts.proxy && !fixture()) {
       console.log('  no video to play: OK on a film will reach its error path.');
       console.log('  npm run fixture   (or drop one at dev/fixtures/sample.mp4)');
     }
