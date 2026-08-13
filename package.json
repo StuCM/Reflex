@@ -10,7 +10,8 @@
     "test": "node test/run.js",
     "check": "node tools/check-es5.js",
     "smoke": "node dev/smoke.js",
-    "verify": "npm run check && npm test && npm run smoke"
+    "verify": "npm run check && npm test && npm run smoke",
+    "package": "sh tools/package.sh"
   },
   "devDependencies": {},
   "engines": {

@@ -164,6 +164,9 @@ Screen:
 Tools:
 
 - `dev/` — the laptop harness (see Testing). Never packaged.
+- `tools/package.sh` — `npm run package`. Stages only what runs and builds the
+  .ipk from that: `ares-package .` ignores `--exclude` here and would ship the
+  git history and the harness to the TV.
 - `probe.py` — runs the decision endpoint under several client profiles to
   find which declared capability flips transcode → direct play. Safe to run
   repeatedly; starts no sessions.
