@@ -44,8 +44,7 @@ var Guard = (function () {
       var audio = Media.pickAudio(part);
       if (!audio) {
         return { ok: false, state: 'noaudio', md: md, media: media, part: part,
-                 mediaIndex: n, audio: null,
-                 text: 'Only TrueHD or DTS-HD MA, neither of which passes over plain ARC.' };
+                 mediaIndex: n, audio: null, text: Media.audioSummary(part) };
       }
 
       var server = Servers.of(md);
@@ -88,10 +87,11 @@ var Guard = (function () {
   /* Why we are refusing, in full, for the message screen. */
   function refusal(item, v) {
     if (v.state === 'noaudio') {
-      return ['No passable audio track', item.title +
-        ' only offers TrueHD or DTS-HD MA. Neither can pass over plain HDMI ARC ' +
-        'on this set, so playing it would force an audio transcode on a server ' +
-        'we do not own. Refused.'];
+      return ['No usable audio track', item.title + ' offers: ' + (v.text || 'nothing') +
+        '.  Nothing there is both passable over plain HDMI ARC and actually the ' +
+        'film — TrueHD and DTS-HD MA cannot pass at all, and a commentary is not ' +
+        'what you asked to watch. Playing it would force an audio transcode on a ' +
+        'server we do not own, so it is refused.'];
     }
     if (v.state === 'codec') {
       return ['This panel cannot decode it', item.title + ' is ' +

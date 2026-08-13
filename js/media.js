@@ -16,9 +16,27 @@ var Media = (function () {
 
   var AUDIO_RANK = { eac3: 5, 'ec-3': 5, ac3: 4, aac: 3, mp3: 2, dca: 1, dts: 1 };
 
+  /* A director's commentary is a perfectly good AC3 5.1 by every measure this
+     ranking uses, and picking it ruins the film. It is also exactly what gets
+     picked on a remux whose main track is TrueHD, because excluding the TrueHD
+     leaves the commentary as the only passable thing on the file.
+
+     Plex puts the word in the stream's title rather than flagging it, so this
+     is a text match — deliberately broad, because being wrong in the other
+     direction means two hours of someone talking over the film. */
+  var NOT_THE_FILM =
+    /commentar|descriptive|description|narrat|audio ?desc|\bdvs\b|\bad\b sign|karaoke/i;
+
+  function isCommentary(st) {
+    if (!st) return false;
+    var text = [st.title, st.displayTitle, st.extendedDisplayTitle].join(' ');
+    return NOT_THE_FILM.test(text);
+  }
+
   function audioScore(st) {
     var codec = (st.codec || '').toLowerCase();
     var profile = (st.profile || '').toLowerCase();
+    if (isCommentary(st)) return -1;
     if (codec === 'truehd') return -1;
     if ((codec === 'dca' || codec === 'dts') && profile.indexOf('ma') === 0) return -1;
     var rank = AUDIO_RANK[codec];
@@ -47,6 +65,19 @@ var Media = (function () {
     var ch = st.channels === 6 ? '5.1' : (st.channels === 8 ? '7.1' : (st.channels || '?') + '.0');
     var lang = st.languageCode ? ' ' + st.languageCode.toUpperCase() : '';
     return codec + ' ' + ch + lang;
+  }
+
+  /* What the file actually offers, for a refusal that says something useful.
+     "only TrueHD or DTS-HD MA" was a lie the moment commentary tracks started
+     being excluded too. */
+  function audioSummary(part) {
+    var streams = (part && part.Stream) || [], out = [], i, st;
+    for (i = 0; i < streams.length; i++) {
+      st = streams[i];
+      if (st.streamType !== 2) continue;
+      out.push(audioLabel(st) + (isCommentary(st) ? ' (commentary)' : ''));
+    }
+    return out.join(', ') || 'no audio tracks at all';
   }
 
   /* ---------- what the panel can actually decode ----------
@@ -156,6 +187,7 @@ var Media = (function () {
 
   return {
     pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD, canDecode: canDecode,
+    isCommentary: isCommentary, audioSummary: audioSummary,
     ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
     identities: identities, identity: identity
   };

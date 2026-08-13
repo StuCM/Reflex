@@ -94,15 +94,18 @@ var Player = (function () {
     v.onended = function () { stop('stopped'); };
     v.onerror = function () { fail(mediaErrorText(v.error)); };
 
+    /* preload only matters between the element existing and a src being set,
+       and the src is only ever set here, at the moment we play. Leaving it at
+       "none" made the browser conservative about reading ahead for no benefit. */
+    v.preload = 'auto';
     v.src = url;
     v.load();
     showOsd();
     UI.debug('playing ' + String(url).split('?')[0]);
 
-    /* preload="none" means nothing loads until something asks it to, and
-       loadedmetadata may never fire on its own. Ask directly, and report it if
-       the request is refused rather than sitting on a black screen — a play()
-       that rejects is otherwise completely silent. */
+    /* Ask directly rather than waiting on loadedmetadata, which need not fire
+       on its own, and report a rejected play() rather than sitting on a black
+       screen — it is otherwise completely silent. */
     var started = v.play();
     if (started && started.then) {
       started.then(null, function (e) {
@@ -113,7 +116,36 @@ var Player = (function () {
     }
 
     clearInterval(ticker);
-    ticker = setInterval(function () { report(v.paused ? 'paused' : 'playing'); }, 10000);
+    ticker = setInterval(function () {
+      report(v.paused ? 'paused' : 'playing');
+      UI.debug(health());
+    }, 10000);
+  }
+
+  /* Stuttering is either the network not keeping up or the panel not decoding
+     fast enough, and those want opposite fixes. The video element knows which:
+     a buffer that keeps draining is bandwidth, dropped frames are decode.
+     Reported every ten seconds alongside the timeline, so the debug line
+     answers it without a profiler. */
+  function health() {
+    var ahead = 0;
+    try {
+      if (v.buffered && v.buffered.length) {
+        ahead = Math.round(v.buffered.end(v.buffered.length - 1) - v.currentTime);
+      }
+    } catch (e) { ahead = -1; }
+
+    var dropped = v.webkitDroppedFrameCount, decoded = v.webkitDecodedFrameCount;
+    if (dropped === undefined && v.getVideoPlaybackQuality) {
+      var q = v.getVideoPlaybackQuality();
+      dropped = q.droppedVideoFrames;
+      decoded = q.totalVideoFrames;
+    }
+    var frames = (decoded === undefined) ? 'frames n/a'
+      : ('dropped ' + dropped + '/' + decoded);
+
+    return fmt(v.currentTime) + '  buffered +' + ahead + 's  ' + frames +
+           (v.paused ? '  PAUSED' : '');
   }
 
   function stop(state) {

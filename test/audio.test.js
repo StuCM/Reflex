@@ -41,6 +41,31 @@ assert.strictEqual(
 assert.strictEqual(
   pick(part([{ codec: 'dca', channels: 6 }, { codec: 'aac', channels: 2 }])).codec, 'aac');
 
+// A commentary is an ordinary AC3 track by codec and channel count, so nothing
+// else in this ranking excludes it — and on a remux whose main track is TrueHD
+// it is the ONLY passable track, which is how it gets picked and ruins the film.
+assert.strictEqual(
+  pick(part([{ codec: 'ac3', channels: 6, title: 'Director\'s Commentary' },
+             { codec: 'ac3', channels: 6, title: 'English' }])).title, 'English');
+assert.strictEqual(
+  pick(part([{ codec: 'truehd', channels: 8, title: 'Surround 7.1' },
+             { codec: 'ac3', channels: 2, title: 'Commentary by the cast' }])), null,
+  'a TrueHD main track plus a commentary leaves nothing worth playing');
+assert.strictEqual(
+  pick(part([{ codec: 'eac3', channels: 6, extendedDisplayTitle: 'English (EAC3 5.1) - Audio Description' },
+             { codec: 'ac3', channels: 6, title: 'English' }])).codec, 'ac3');
+assert.strictEqual(Media.isCommentary({ title: 'Commentary' }), true);
+assert.strictEqual(Media.isCommentary({ displayTitle: 'Audio Description' }), true);
+assert.strictEqual(Media.isCommentary({ title: 'English' }), false);
+assert.strictEqual(Media.isCommentary({ title: 'Surround 5.1' }), false);
+assert.strictEqual(Media.isCommentary(null), false);
+
+// The refusal has to say what the file actually offers, not a fixed sentence.
+var summary = Media.audioSummary(part([
+  { codec: 'truehd', channels: 8 },
+  { codec: 'ac3', channels: 2, title: 'Commentary' }]));
+assert.ok(/TRUEHD 7\.1/.test(summary) && /commentary/.test(summary), summary);
+
 // Subtitle and video streams are not audio candidates.
 assert.strictEqual(pick({ Stream: [{ streamType: 1, codec: 'hevc' },
                                    { streamType: 3, codec: 'srt' }] }), null);

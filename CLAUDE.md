@@ -96,6 +96,14 @@ ARC ceiling regardless of settings:
 Consequence: a 4K remux with only a TrueHD track is unplayable — video direct
 plays, audio transcodes, session counts as a transcode, server kills it.
 
+**A commentary track is not the film.** It is an ordinary AC3 or AAC track by
+codec and channel count, so nothing in the ranking excludes it by accident — and
+on a remux whose main track is TrueHD it is the *only* passable track left, so
+it wins and two hours of someone talking over the film is what you get.
+`Media.isCommentary` matches the word in the stream title (Plex does not flag
+it), and such a track can never be selected. If it is the only passable one, the
+file is refused and the message lists what was actually on offer.
+
 **So audio track selection is required, not optional.** Prefer, in order:
 E-AC3 → AC3 → AAC stereo. Never select TrueHD or DTS-HD MA. Pass the chosen
 track as `audioStreamID` on the decision call, and surface the selected track
