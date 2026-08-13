@@ -245,6 +245,7 @@ var Plex = (function () {
       sort: 'titleSort:asc',
       includeCollections: 0,
       includeExternalMedia: 0,
+      includeGuids: 1,
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size
     };
@@ -335,8 +336,59 @@ var Plex = (function () {
     });
   }
 
+  /* Watch history. Plex attributes everything to the account, not the person,
+     but each entry records which device played it — which is the only handle we
+     have on "that was the other TV, not me". */
+  function history(size) {
+    var url = s.base + '/status/sessions/history/all?' + qs({
+      sort: 'viewedAt:desc',
+      'X-Plex-Container-Start': 0,
+      'X-Plex-Container-Size': size || 200
+    });
+    return request('GET', url, { timeout: 20000 }).then(function (res) {
+      return (res.MediaContainer && res.MediaContainer.Metadata) || [];
+    });
+  }
+
+  function devices() {
+    return request('GET', s.base + '/devices').then(function (res) {
+      var d = (res.MediaContainer && res.MediaContainer.Device) || [], out = [], i;
+      for (i = 0; i < d.length; i++) {
+        out.push({ id: String(d[i].id),
+                   name: d[i].name || d[i].clientIdentifier || ('device ' + d[i].id),
+                   platform: d[i].platform || '' });
+      }
+      return out;
+    }).catch(function () { return []; });
+  }
+
+  /* Find a library item by external id, e.g. 'tmdb://27205'. This is the join
+     that lets us start from a curated external list and ask what the server
+     has, instead of crawling the library. */
+  function findByGuid(guid) {
+    return request('GET', s.base + '/library/all?' + qs({ guid: guid, includeGuids: 1 }),
+                   { timeout: 15000 })
+      .then(function (res) {
+        var m = (res.MediaContainer && res.MediaContainer.Metadata) || [];
+        return m.length ? m[0] : null;
+      }).catch(function () { return null; });
+  }
+
+  /* TMDB id off an item, handling both the modern Guid array and the legacy
+     agent form (com.plexapp.agents.themoviedb://123?lang=en). */
+  function tmdbId(item) {
+    var g = (item && item.Guid) || [], i, id;
+    for (i = 0; i < g.length; i++) {
+      id = g[i].id || '';
+      if (id.indexOf('tmdb://') === 0) return id.substring(7);
+    }
+    var m = String((item && item.guid) || '').match(/themoviedb:\/\/(\d+)/);
+    return m ? m[1] : null;
+  }
+
   function metadata(ratingKey) {
-    return request('GET', s.base + '/library/metadata/' + ratingKey).then(function (res) {
+    return request('GET', s.base + '/library/metadata/' + ratingKey + '?' +
+                   qs({ includeGuids: 1 })).then(function (res) {
       var m = res.MediaContainer && res.MediaContainer.Metadata;
       return (m && m[0]) || null;
     });
@@ -465,6 +517,7 @@ var Plex = (function () {
     discover: discover, state: s,
     sections: sections, items: items, metadata: metadata, posterUrl: posterUrl,
     onDeck: onDeck, hubs: hubs, search: search,
+    history: history, devices: devices, findByGuid: findByGuid, tmdbId: tmdbId,
     contentRatings: contentRatings, ageLimit: ageLimit,
     pickAudio: pickAudio, audioLabel: audioLabel,
     isUHD: isUHD, decide: decide, streamUrl: streamUrl, timeline: timeline

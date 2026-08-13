@@ -20,6 +20,7 @@
   var elLink = document.getElementById('link');
   var elMessage = document.getElementById('message');
   var elSearch = document.getElementById('search');
+  var elDevices = document.getElementById('devices');
   var elInput = document.getElementById('search-input');
   var elRows = document.getElementById('rows');
   var elSections = document.getElementById('sections');
@@ -34,6 +35,10 @@
   var searchQuery = null;        // non-null while the results page is showing
   var searchCount = 0;
   var kidsMode = false;
+  var discoverMode = false;
+  var deviceMap = null;          // ratingKey -> deviceID of the most recent play
+  var myDevices = null;          // null = not configured, so don't filter
+  var deviceList = [], devIdx = 0;
   var generation = 0;            // bumps on section switch, kills stale paints
   var rowEls = [];
   var metaCache = {}, metaCount = 0;
@@ -71,6 +76,7 @@
     elLink.classList.toggle('hidden', name !== 'link');
     elMessage.classList.toggle('hidden', name !== 'message');
     elSearch.classList.toggle('hidden', name !== 'search');
+    elDevices.classList.toggle('hidden', name !== 'devices');
   }
 
   function message(title, body) {
@@ -228,9 +234,11 @@
 
   /* The Magic Remote has no colour buttons, so every action has to be
      reachable with the d-pad. Up from the top row lands here. */
-  function chipCount() { return sections.length + 2; }   // sections, Kids, Search
+  function chipCount() { return sections.length + 4; }
   function kidsChip() { return sections.length; }
-  function searchChip() { return sections.length + 1; }
+  function discoverChip() { return sections.length + 1; }
+  function devicesChip() { return sections.length + 2; }
+  function searchChip() { return sections.length + 3; }
 
   function renderSections() {
     var html = '', i, cls;
@@ -251,6 +259,11 @@
     cls = 'chip' + (kidsMode ? ' cur' : '') +
           (headerFocus && chipIdx === kidsChip() ? ' on' : '');
     html += '<span class="' + cls + '">kids</span>';
+    cls = 'chip' + (discoverMode ? ' cur' : '') +
+          (headerFocus && chipIdx === discoverChip() ? ' on' : '');
+    html += '<span class="' + cls + '">discover</span>';
+    cls = 'chip' + (headerFocus && chipIdx === devicesChip() ? ' on' : '');
+    html += '<span class="' + cls + '">devices</span>';
     cls = 'chip' + (headerFocus && chipIdx === searchChip() ? ' on' : '');
     html += '<span class="' + cls + '">search</span>';
     elSections.innerHTML = html;
@@ -259,8 +272,11 @@
   function activateChip() {
     if (chipIdx === searchChip()) { openSearch(); return; }
     if (chipIdx === kidsChip()) { loadKids(); return; }
+    if (chipIdx === discoverChip()) { loadDiscover(); return; }
+    if (chipIdx === devicesChip()) { openDevices(); return; }
     headerFocus = false;
     kidsMode = false;
+    discoverMode = false;
     if (chipIdx !== secIdx) loadSection(chipIdx, true);
     else render();
   }
@@ -418,6 +434,7 @@
     var gen = ++generation;
     var sec = sections[i];
     kidsMode = false;
+    discoverMode = false;
     rows = [];
     rowIdx = 0;
     renderSections();
@@ -439,9 +456,10 @@
 
       /* Continue Watching plus the section's own categories: two requests for
          the whole browse screen, no matter how big the library is. */
-      return Promise.all([Plex.onDeck(), Plex.hubs(sec.key)]).then(function (res) {
+      return Promise.all([Plex.onDeck(), Plex.hubs(sec.key), ensureHistory()])
+        .then(function (res) {
         if (gen !== generation) return;
-        var built = [], deck = res[0], hubList = res[1], i2;
+        var built = [], deck = mine(res[0]), hubList = res[1], i2;
         if (deck.length) built.push({ title: 'Continue watching', items: deck });
         for (i2 = 0; i2 < hubList.length; i2++) {
           built.push({ title: hubList[i2].title, items: hubList[i2].items });
@@ -483,6 +501,104 @@
     }).catch(function (e) { debug('count: ' + e.message); });
   }
 
+  /* ---------- devices: whose viewing is this ---------- */
+
+  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function lsSet(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* full */ } }
+
+  function loadMyDevices() {
+    var raw = lsGet('myDevices');
+    if (!raw) return;
+    try { myDevices = JSON.parse(raw); } catch (e) { myDevices = null; }
+  }
+
+  /* One history fetch per session gives us ratingKey -> which device last
+     played it. onDeck carries no device information of its own, so this is the
+     only way to tell your viewing from the other TV's. */
+  function ensureHistory() {
+    if (deviceMap) return Promise.resolve(deviceMap);
+    return Plex.history(200).then(function (entries) {
+      var map = {}, i, e;
+      /* Sorted newest first, so the first entry per ratingKey is the latest. */
+      for (i = 0; i < entries.length; i++) {
+        e = entries[i];
+        if (!e.ratingKey || e.deviceID === undefined) continue;
+        if (map[e.ratingKey] === undefined) map[e.ratingKey] = String(e.deviceID);
+      }
+      deviceMap = map;
+      debug('history: ' + entries.length + ' entries, ' +
+            Object.keys(map).length + ' items, ' + countDevices(map) + ' devices');
+      return map;
+    }).catch(function (e) {
+      debug('history unavailable: ' + e.message);
+      deviceMap = {};                 // don't retry all session; filtering just stays off
+      return deviceMap;
+    });
+  }
+
+  function countDevices(map) {
+    var seen = {}, keys = Object.keys(map), i;
+    for (i = 0; i < keys.length; i++) seen[map[keys[i]]] = true;
+    return Object.keys(seen).length;
+  }
+
+  /* Items last played on a device the user hasn't claimed are dropped. Unknown
+     provenance is kept — better a stray entry than silently hiding your own. */
+  function mine(list) {
+    if (!myDevices || !deviceMap) return list;
+    return list.filter(function (m) {
+      var dev = deviceMap[m.ratingKey];
+      return !dev || myDevices[dev];
+    });
+  }
+
+  function openDevices() {
+    show('devices');
+    devIdx = 0;
+    document.getElementById('device-list').innerHTML = '<div class="device-row">Reading history…</div>';
+    Promise.all([ensureHistory(), Plex.devices()]).then(function (res) {
+      var map = res[0] || {}, named = res[1] || [];
+      var names = {}, counts = {}, keys = Object.keys(map), i, id;
+      for (i = 0; i < named.length; i++) names[named[i].id] = named[i].name;
+      for (i = 0; i < keys.length; i++) {
+        id = map[keys[i]];
+        counts[id] = (counts[id] || 0) + 1;
+      }
+      deviceList = Object.keys(counts).map(function (d) {
+        return { id: d, name: names[d] || ('device ' + d), count: counts[d],
+                 mine: myDevices ? !!myDevices[d] : true };
+      }).sort(function (a, b) { return b.count - a.count; });
+      renderDevices();
+    });
+  }
+
+  function renderDevices() {
+    if (!deviceList.length) {
+      document.getElementById('device-list').innerHTML =
+        '<div class="device-row">No device history available on this server.</div>';
+      return;
+    }
+    var html = '', i, d;
+    for (i = 0; i < deviceList.length; i++) {
+      d = deviceList[i];
+      html += '<div class="device-row' + (i === devIdx ? ' on' : '') + '">' +
+              (d.mine ? '[x] ' : '[ ] ') + escapeHtml(d.name) +
+              ' <span class="device-count">' + d.count + ' items</span></div>';
+    }
+    document.getElementById('device-list').innerHTML = html;
+  }
+
+  function saveDevices() {
+    if (!deviceList.length) { show('browse'); render(); return; }
+    var map = {}, i;
+    for (i = 0; i < deviceList.length; i++) if (deviceList[i].mine) map[deviceList[i].id] = true;
+    myDevices = map;
+    lsSet('myDevices', JSON.stringify(map));
+    debug('devices: ' + Object.keys(map).length + ' of ' + deviceList.length + ' claimed');
+    show('browse');
+    loadSection(secIdx, true);
+  }
+
   /* ---------- kids ---------- */
 
   /* Everything rated at or below this counts as kids viewing. */
@@ -514,9 +630,9 @@
       });
       debug('kids certificates: ' + (kid.join(', ') || 'none'));
 
-      return Plex.onDeck().then(function (deck) {
+      return Promise.all([Plex.onDeck(), ensureHistory()]).then(function (res) {
         if (gen !== generation) return;
-        var watching = deck.filter(isKids);
+        var watching = mine(res[0]).filter(isKids);
         rows = [];
         if (watching.length) rows.push(listRow('Kids · carry on watching', watching));
 
@@ -543,6 +659,123 @@
   function leaveKids() {
     if (!kidsMode) return false;
     kidsMode = false;
+    loadSection(secIdx, true);
+    return true;
+  }
+
+  /* ---------- discovery ---------- */
+
+  /* Bounded concurrency: guid lookups are one small request each, but firing
+     forty at a remote server at once is rude and slower in practice. */
+  function mapLimit(list, max, fn) {
+    return new Promise(function (resolve) {
+      var results = new Array(list.length), i = 0, done = 0, active = 0;
+      if (!list.length) { resolve([]); return; }
+      function launch() {
+        while (active < max && i < list.length) {
+          active++;
+          (function (k) {
+            fn(list[k]).then(function (v) { results[k] = v; }, function () { results[k] = null; })
+              .then(function () {
+                active--; done++;
+                if (done === list.length) resolve(results); else launch();
+              });
+          })(i++);
+        }
+      }
+      launch();
+    });
+  }
+
+  /* TMDB ids -> the library items we actually hold, order preserved. */
+  function matchToLibrary(tmdbIds) {
+    return mapLimit(tmdbIds.slice(0, 40), 4, function (id) {
+      return Plex.findByGuid('tmdb://' + id);
+    }).then(function (found) {
+      return found.filter(function (m) { return !!m; });
+    });
+  }
+
+  function seedsFromViewing() {
+    return Plex.onDeck().then(function (deck) {
+      var seeds = [], i, id, list = mine(deck);
+      for (i = 0; i < list.length && seeds.length < 8; i++) {
+        id = Plex.tmdbId(list[i]);
+        if (id) seeds.push(id);
+      }
+      return seeds;
+    }).catch(function () { return []; });
+  }
+
+  function loadDiscover() {
+    var gen = ++generation;
+    discoverMode = true;
+    kidsMode = false;
+    headerFocus = false;
+    rows = [];
+    rowIdx = 0;
+    renderSections();
+    renderRows();
+    renderMasthead();
+
+    if (!Discover.enabled()) {
+      discoverMode = false;
+      message('Discovery needs a TMDB key',
+        'Curated rows come from TMDB. Paste a free v3 API key into KEY at the ' +
+        'top of js/discover.js and rebuild. Everything else works without it.');
+      return;
+    }
+
+    var tasks = [{ title: 'Trending this week', get: Discover.trending }];
+    Discover.providers.forEach(function (p) {
+      tasks.push({ title: 'On ' + p.name,
+                   get: function () { return Discover.onProvider(p.id); } });
+    });
+
+    /* Rows appear as they resolve rather than all at the end — the first one
+       lands while the rest are still matching. */
+    function runTask(t) {
+      return t.get().then(matchToLibrary).then(function (items) {
+        if (gen !== generation) return;
+        if (!items.length) { debug(t.title + ': nothing on this server'); return; }
+        rows.push(listRow(t.title, items));
+        render();
+        debug(t.title + ': ' + items.length + ' on this server');
+      }, function (e) {
+        debug(t.title + ' failed: ' + e.message);
+      });
+    }
+
+    var i = 0;
+    function step() {
+      if (gen !== generation) return Promise.resolve();
+      if (i >= tasks.length) return Promise.resolve();
+      return runTask(tasks[i++]).then(step);
+    }
+
+    step().then(function () {
+      if (gen !== generation) return;
+      return seedsFromViewing().then(function (seeds) {
+        if (gen !== generation || !seeds.length) return;
+        return Discover.recommendedFrom(seeds).then(matchToLibrary).then(function (items) {
+          if (gen !== generation || !items.length) return;
+          rows.push(listRow('Because of what you have been watching', items));
+          render();
+        });
+      });
+    }).then(function () {
+      if (gen !== generation) return;
+      if (!rows.length) {
+        message('Nothing matched',
+          'None of the curated titles are on this server, or the TMDB ids did ' +
+          'not line up. Check the debug line for which rows came back empty.');
+      }
+    });
+  }
+
+  function leaveDiscover() {
+    if (!discoverMode) return false;
+    discoverMode = false;
     loadSection(secIdx, true);
     return true;
   }
@@ -668,6 +901,17 @@
       return;
     }
 
+    if (view === 'devices') {
+      if (code === 38 && devIdx > 0) { devIdx--; renderDevices(); }
+      else if (code === 40 && devIdx < deviceList.length - 1) { devIdx++; renderDevices(); }
+      else if (code === 13 && deviceList[devIdx]) {
+        deviceList[devIdx].mine = !deviceList[devIdx].mine;
+        renderDevices();
+      } else if (code === 461 || code === 27 || code === 8) { saveDevices(); }
+      e.preventDefault();
+      return;
+    }
+
     if (view === 'message') {
       if (code === 461 || code === 27 || code === 8 || code === 13) {
         if (!Plex.hasToken()) doLink();
@@ -707,7 +951,7 @@
         break;
       case 461: case 27: case 8:
         if (headerFocus) { headerFocus = false; renderSections(); }
-        else if (!clearSearchResults() && !leaveKids()) exitApp();
+        else if (!clearSearchResults() && !leaveKids() && !leaveDiscover()) exitApp();
         break;
       default:
         return;
@@ -817,6 +1061,7 @@
     if (e.keyCode === 13) { e.preventDefault(); runSearch(); }
   }, false);
   Plex.init();
+  loadMyDevices();
   storageSelfTest();
   if (Plex.hasToken()) start(); else doLink();
 })();

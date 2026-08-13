@@ -145,6 +145,15 @@ html, body {
 }
 #search-input:focus { border-color: #e8e8ea; }
 
+#device-list { margin: 30px auto; width: 1100px; text-align: left; }
+
+.device-row {
+  padding: 12px 20px; font-size: 30px; color: #9a9aa2;
+  border-left: 6px solid transparent;   /* reserved, so focus shifts nothing */
+}
+.device-row.on { color: #e8e8ea; border-left-color: #e5a00d; }
+.device-count { font-size: 22px; color: #6a6a72; }
+
 .msg-title { font-size: 48px; font-weight: 300; margin-bottom: 24px; }
 .msg-body { font-size: 28px; color: #9a9aa2; line-height: 1.5; max-width: 1200px; margin: 0 auto; }
 .msg-hint { font-size: 22px; color: #5a5a62; margin-top: 40px; }
