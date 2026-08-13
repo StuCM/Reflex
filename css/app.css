@@ -1,0 +1,174 @@
+/* Chromium 53. Flexbox / inline-block only, no grid, no sticky.
+   Transitions on transform and opacity only. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  background: #0b0b0d;
+  color: #e8e8ea;
+  font-family: "LG Smart UI", "Helvetica Neue", Arial, sans-serif;
+  -webkit-user-select: none;
+  cursor: none;
+}
+
+.hidden { display: none !important; }
+
+.view { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+
+.centre {
+  position: absolute; top: 50%; left: 0; width: 100%;
+  -webkit-transform: translateY(-50%); transform: translateY(-50%);
+  text-align: center;
+}
+
+/* ---- masthead ---- */
+
+#masthead { position: absolute; top: 56px; left: 64px; width: 1500px; height: 300px; }
+
+#mh-title {
+  font-size: 62px; font-weight: 300; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#mh-meta { margin-top: 10px; font-size: 26px; color: #9a9aa2; }
+
+#mh-badges { margin-top: 18px; height: 40px; }
+
+.badge {
+  display: inline-block; vertical-align: top;
+  margin-right: 10px; padding: 6px 14px;
+  border-radius: 4px; font-size: 20px; letter-spacing: 0.04em;
+  background: #22222a; color: #c9c9d1;
+}
+.badge.good { background: #17402a; color: #7fe0a8; }
+.badge.warn { background: #4a3410; color: #f0c070; }
+.badge.bad  { background: #4a1414; color: #ff8f8f; }
+
+#mh-summary {
+  margin-top: 16px; font-size: 22px; line-height: 1.45; color: #8b8b93;
+  max-height: 96px; overflow: hidden;
+}
+
+/* ---- section chips ---- */
+
+#sections { position: absolute; top: 392px; left: 64px; height: 42px; }
+
+.chip {
+  display: inline-block; margin-right: 26px; padding-bottom: 6px;
+  font-size: 24px; color: #6a6a72; letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 4px solid transparent;   /* reserved, so focus shifts nothing */
+}
+.chip.cur { color: #e8e8ea; }
+.chip.on { color: #e8e8ea; border-bottom-color: #e5a00d; }
+
+/* ---- rows ---- */
+
+#viewport { position: absolute; top: 440px; left: 0; width: 1920px; height: 640px; overflow: hidden; }
+
+#rows {
+  position: absolute; top: 0; left: 0; width: 100%;
+  -webkit-transition: -webkit-transform 180ms ease-out;
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+
+.row { position: absolute; top: 0; left: 0; width: 1920px; height: 304px; }
+
+.row-label {
+  position: absolute; top: 0; left: 64px;
+  font-size: 24px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #6a6a72;
+}
+.row.on .row-label { color: #e8e8ea; }
+
+.strip {
+  position: absolute; top: 36px; left: 64px; width: 100%; height: 260px;
+  -webkit-transition: -webkit-transform 180ms ease-out;
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+
+/* Outer tile is repositioned when recycled, so it must NOT transition —
+   otherwise a recycled tile flies across the screen. Only the inner element
+   animates, and only its transform. */
+.tile { position: absolute; top: 0; left: 0; width: 160px; height: 240px; }
+
+.tile-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  background: #17171c;
+  border: 4px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%;
+  -webkit-transition: -webkit-transform 180ms ease-out;
+  transition: transform 180ms ease-out;
+}
+.tile.on .tile-inner {
+  border-color: #e8e8ea;
+  -webkit-transform: scale(1.08); transform: scale(1.08);
+}
+
+.tile img { position: relative; display: block; width: 100%; height: 100%; }
+
+/* Resume position, for the Continue Watching row. */
+.tile-progress {
+  position: absolute; left: 0; bottom: 0; height: 5px;
+  background: #e5a00d;
+  z-index: 2;
+}
+
+.tile-fallback {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  padding: 12px; font-size: 20px; line-height: 1.3; color: #7a7a82;
+  overflow: hidden;
+}
+
+/* ---- link / message ---- */
+
+.link-lead { font-size: 30px; color: #8b8b93; margin: 14px 0; }
+.link-url { font-size: 56px; font-weight: 300; }
+.link-code {
+  font-size: 120px; font-weight: 300; letter-spacing: 0.18em;
+  margin-top: 10px;
+}
+
+#search-input {
+  width: 1100px; padding: 18px 24px; margin: 10px 0;
+  font-size: 40px; font-family: inherit;
+  color: #e8e8ea; background: #17171c;
+  border: 4px solid #3a3a44; border-radius: 6px;
+  outline: none;
+}
+#search-input:focus { border-color: #e8e8ea; }
+
+.msg-title { font-size: 48px; font-weight: 300; margin-bottom: 24px; }
+.msg-body { font-size: 28px; color: #9a9aa2; line-height: 1.5; max-width: 1200px; margin: 0 auto; }
+.msg-hint { font-size: 22px; color: #5a5a62; margin-top: 40px; }
+
+/* ---- player ---- */
+
+#video { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: #000; }
+
+#osd {
+  position: absolute; left: 64px; bottom: 72px; width: 1792px;
+  -webkit-transition: opacity 180ms linear; transition: opacity 180ms linear;
+}
+#osd-title { font-size: 40px; font-weight: 300; }
+#osd-time { font-size: 28px; color: #9a9aa2; margin-top: 8px; }
+
+/* ---- toast / debug ---- */
+
+#toast {
+  position: absolute; top: 56px; right: 64px;
+  padding: 12px 22px; border-radius: 4px;
+  background: #22222a; font-size: 24px;
+}
+
+#debug {
+  position: absolute; bottom: 8px; left: 64px; width: 1792px; height: 22px;
+  font-size: 18px; color: #4a4a52; white-space: nowrap; overflow: hidden;
+}

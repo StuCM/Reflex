@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reflex</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<div id="browse" class="view">
+  <div id="masthead">
+    <div id="mh-title">&nbsp;</div>
+    <div id="mh-meta"></div>
+    <div id="mh-badges"></div>
+    <div id="mh-summary"></div>
+  </div>
+  <div id="sections"></div>
+  <div id="viewport"><div id="rows"></div></div>
+</div>
+
+<div id="link" class="view hidden">
+  <div class="centre">
+    <div class="link-lead">Go to</div>
+    <div class="link-url">plex.tv/link</div>
+    <div class="link-lead">and enter</div>
+    <div id="link-code" class="link-code">- - - -</div>
+  </div>
+</div>
+
+<div id="search" class="view hidden">
+  <div class="centre">
+    <div class="msg-title">Search films</div>
+    <input id="search-input" type="text" autocomplete="off" autocorrect="off"
+           autocapitalize="off" spellcheck="false">
+    <div class="msg-hint">OK to search · BACK to cancel</div>
+  </div>
+</div>
+
+<div id="message" class="view hidden">
+  <div class="centre">
+    <div id="message-title" class="msg-title"></div>
+    <div id="message-body" class="msg-body"></div>
+    <div class="msg-hint">BACK to return</div>
+  </div>
+</div>
+
+<video id="video" class="hidden" preload="none"></video>
+<div id="osd" class="hidden"><div id="osd-title"></div><div id="osd-time"></div></div>
+
+<div id="toast" class="hidden"></div>
+<div id="debug"></div>
+
+<script src="js/store.js"></script>
+<script src="js/plex.js"></script>
+<script src="js/player.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
