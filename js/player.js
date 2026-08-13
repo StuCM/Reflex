@@ -7,13 +7,26 @@ var Player = (function () {
   var osd = document.getElementById('osd');
   var osdTitle = document.getElementById('osd-title');
   var osdTime = document.getElementById('osd-time');
+  var osdFill = document.getElementById('osd-fill');
+  var osdBuffered = document.getElementById('osd-buffered');
+  var osdTracks = document.getElementById('osd-tracks');
 
-  var item = null, server = null, onExit = null, onError = null;
+  var BAR_W = 1792;                // #osd-bar, in CSS pixels
+  var SEEK_SETTLE = 400;           // ms of stillness before a seek is applied
+
+  var item = null, server = null, onExit = null, onError = null, onAudio = null;
+  var currentPart = null, currentAudio = null;
   var ticker = null, osdTimer = null, resumeMs = 0;
 
   /* A stall is the thing you actually see as a blip, and it is over before the
      ten-second sample comes round. Count them instead. */
   var stalls = 0, lowest = 999, startedAt = 0;
+
+  /* Where a run of seek presses is heading. Every currentTime assignment on a
+     direct-played file is a real seek — a range request, a decoder flush — so
+     holding the key would otherwise fire one per press and fight the network
+     the whole way. Accumulate, show where you are going, apply once you stop. */
+  var pending = null, seekTimer = null;
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -22,12 +35,30 @@ var Player = (function () {
     return h ? (h + ':' + mm + ':' + ss) : (m + ':' + ss);
   }
 
+  /* Where the picture will be once any pending seek lands — that is what the
+     user is aiming at, so that is what the bar and the clock have to show. */
+  function target() {
+    return pending === null ? (v.currentTime || 0) : pending;
+  }
+
   /* Two separate things: painting the time, and putting the OSD back on screen
      for another few seconds. Repainting must not reset the hide timer, or the
      OSD would never go away once playback started. */
   function paintOsd() {
-    osdTime.textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration) +
-                          (v.paused ? '   PAUSED' : '');
+    var at = target(), dur = v.duration || 0;
+    var left = dur ? Math.max(0, dur - at) : 0;
+
+    osdTime.textContent = fmt(at) + ' / ' + fmt(dur) +
+      (dur ? '   ·   ' + fmt(left) + ' left' : '') +
+      (pending !== null ? '   SEEKING' : (v.paused ? '   PAUSED' : ''));
+
+    osdFill.style.width = dur ? Math.round(BAR_W * at / dur) + 'px' : '0';
+
+    var ahead = 0;
+    try {
+      if (v.buffered && v.buffered.length) ahead = v.buffered.end(v.buffered.length - 1);
+    } catch (e) { ahead = 0; }
+    osdBuffered.style.width = dur ? Math.round(BAR_W * Math.min(ahead, dur) / dur) + 'px' : '0';
   }
 
   function showOsd() {
@@ -35,7 +66,31 @@ var Player = (function () {
     osd.classList.remove('hidden');
     osd.style.opacity = '1';
     clearTimeout(osdTimer);
-    osdTimer = setTimeout(function () { osd.style.opacity = '0'; }, 4000);
+    /* While a seek is still being aimed, the OSD is the only feedback there is,
+       so it stays until the seek lands. */
+    osdTimer = setTimeout(function () {
+      if (pending !== null) { showOsd(); return; }
+      osd.style.opacity = '0';
+    }, 4000);
+  }
+
+  /* Nudge the target. Repeats accumulate rather than each one seeking. */
+  function seekBy(seconds) {
+    var dur = v.duration || 0;
+    var at = target() + seconds;
+    pending = Math.max(0, dur ? Math.min(at, dur - 2) : at);
+    showOsd();
+    clearTimeout(seekTimer);
+    seekTimer = setTimeout(applySeek, SEEK_SETTLE);
+  }
+
+  function applySeek() {
+    if (pending === null) return;
+    var to = pending;
+    pending = null;
+    try { v.currentTime = to; } catch (e) { /* not seekable yet */ }
+    report(v.paused ? 'paused' : 'playing');
+    showOsd();
   }
 
   function osdShowing() { return osd.style.opacity !== '0' && !osd.classList.contains('hidden'); }
@@ -43,6 +98,21 @@ var Player = (function () {
   /* Progress goes to the server we are playing from. Plex syncs the position
      to the account, which is why the same film picked up on the other server
      resumes in the right place. */
+  /* Which audio the panel is actually carrying, named on screen — the file
+     usually has several and until now nothing said which one you had. */
+  function paintTracks(part, chosen) {
+    var streams = (part && part.Stream) || [], audio = [], i, st;
+    for (i = 0; i < streams.length; i++) {
+      st = streams[i];
+      if (st.streamType !== 2) continue;
+      audio.push(Media.audioLabel(st) + (Media.isCommentary(st) ? ' (commentary)' : ''));
+    }
+    osdTracks.textContent = chosen
+      ? 'Audio: ' + Media.audioLabel(chosen) +
+        (audio.length > 1 ? '   ·   ' + audio.length + ' tracks on this file' : '')
+      : '';
+  }
+
   function report(state) {
     if (!item || !server) return;
     Plex.timeline(server, item, state, (v.currentTime || 0) * 1000, (v.duration || 0) * 1000);
@@ -98,6 +168,12 @@ var Player = (function () {
     stalls = 0; lowest = 999; startedAt = Date.now();
     var url = opts.url || Plex.streamUrl(server, opts.part);
     osdTitle.textContent = opts.item.title || '';
+    pending = null;
+    clearTimeout(seekTimer);
+    currentPart = opts.part;
+    currentAudio = opts.audio || null;
+    onAudio = opts.onAudio || null;
+    paintTracks(opts.part, opts.audio);
     v.classList.remove('hidden');
 
     v.onloadedmetadata = function () {
@@ -185,12 +261,17 @@ var Player = (function () {
            ' · buffer low ' + (lowest === 999 ? '?' : lowest + 's');
   }
 
-  function stop(state) {
+  /* quiet: tear down without telling the caller we are done — used when
+     playback is about to be started again with a different track, where firing
+     onExit would bounce back to the film page mid-restart. */
+  function stop(state, quiet) {
     if (!item) return;
     UI.debug(summary());
     report(state || 'stopped');
     clearInterval(ticker); ticker = null;
     clearTimeout(osdTimer);
+    clearTimeout(seekTimer);
+    pending = null;
     v.pause();
     v.onloadedmetadata = v.onplaying = v.ontimeupdate = v.onended = v.onerror = null;
     v.onwaiting = null;
@@ -198,9 +279,31 @@ var Player = (function () {
     v.load();
     v.classList.add('hidden');
     osd.classList.add('hidden');
-    var done = onExit;
-    item = null; server = null; onExit = null; onError = null;
+    var done = quiet ? null : onExit;
+    item = null; server = null; onExit = null; onError = null; onAudio = null;
+    currentPart = null; currentAudio = null;
     if (done) done();
+  }
+
+  /* Cycle to the next audio track on the file. The panel picks its own track
+     out of a direct-played file, so honouring a choice means asking the server
+     to deliver that one — which is a restart, from where we are now. A list
+     screen would be nicer; a remote with no colour buttons but one red makes
+     cycling the cheaper control that actually works. */
+  function nextAudio() {
+    if (!onAudio) return false;
+    var tracks = Media.audioTracks(currentPart);
+    if (tracks.length < 2) { showOsd(); return true; }
+    var at = 0, i;
+    for (i = 0; i < tracks.length; i++) {
+      if (currentAudio && String(tracks[i].id) === String(currentAudio.id)) at = i;
+    }
+    var next = tracks[(at + 1) % tracks.length];
+    osdTracks.textContent = 'Switching to ' + Media.audioLabel(next) +
+      (Media.isCommentary(next) ? ' (commentary)' : '') + '…';
+    showOsd();
+    onAudio(next.id, v.currentTime || 0);
+    return true;
   }
 
   function playing() { return !!item; }
@@ -212,17 +315,26 @@ var Player = (function () {
         report(v.paused ? 'paused' : 'playing');
         showOsd();
         return true;
-      case 37: case 412:                          // left / rewind
-        v.currentTime = Math.max(0, v.currentTime - 30);
-        showOsd();
+      case 37:                                    // left
+        seekBy(-30);
         return true;
-      case 39: case 417:                          // right / fast forward
-        v.currentTime = Math.min(v.duration || 0, v.currentTime + 30);
-        showOsd();
+      case 39:                                    // right
+        seekBy(30);
         return true;
-      case 38: case 40:
-        showOsd();
+      case 412:                                   // rewind
+        seekBy(-300);
         return true;
+      case 417:                                   // fast forward
+        seekBy(300);
+        return true;
+      case 38:                                    // up — five minutes on
+        seekBy(300);
+        return true;
+      case 40:                                    // down — five minutes back
+        seekBy(-300);
+        return true;
+      case 403:                                   // red — next audio track
+        return nextAudio();
       case 461: case 27: case 8: case 413:        // back / stop
         stop('stopped');
         return true;

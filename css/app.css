@@ -251,7 +251,24 @@ html, body {
   -webkit-transition: opacity 180ms linear; transition: opacity 180ms linear;
 }
 #osd-title { font-size: 40px; font-weight: 300; }
-#osd-time { font-size: 28px; color: #9a9aa2; margin-top: 8px; }
+
+/* Position at a glance. Seeking blind is what made the player feel like it had
+   no controls at all. */
+#osd-bar {
+  position: relative; height: 8px; margin-top: 18px; width: 1792px;
+  background: #2a2a32; border-radius: 4px; overflow: hidden;
+}
+#osd-buffered {
+  position: absolute; top: 0; left: 0; height: 8px; width: 0;
+  background: #44444e;
+}
+#osd-fill {
+  position: absolute; top: 0; left: 0; height: 8px; width: 0;
+  background: #e5a00d;
+}
+
+#osd-time { font-size: 28px; color: #9a9aa2; margin-top: 10px; }
+#osd-tracks { font-size: 22px; color: #6a6a72; margin-top: 6px; }
 
 /* ---- toast / debug ---- */
 

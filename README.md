@@ -124,9 +124,15 @@ First launch shows a code — enter it at plex.tv/link.
 | Key | Browse | Detail page | Playing |
 |---|---|---|---|
 | ← → | move in rail | choose a copy | seek ∓30s |
-| ↑ ↓ | change row / reach the chips | choose a copy | — |
+| ↑ ↓ | change row / reach the chips | choose a copy | seek ∓5 min |
+| ⏪ ⏩ | — | — | seek ∓5 min |
 | OK | open the film | play the selected copy | play / pause |
+| Red | search | — | next audio track |
 | Back | exit app | back to the rail | stop, back to the film |
+
+Holding a seek key accumulates rather than seeking on every press: the OSD shows
+where you are heading and the seek happens once you stop, because each one is a
+real range request on a direct-played file.
 
 ## probe.py
 

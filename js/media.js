@@ -83,6 +83,24 @@ var Media = (function () {
     return codec + ' ' + ch + lang;
   }
 
+  /* Every audio track on a part, in file order — what the player cycles
+     through. */
+  function audioTracks(part) {
+    var streams = (part && part.Stream) || [], out = [], i;
+    for (i = 0; i < streams.length; i++) {
+      if (streams[i].streamType === 2) out.push(streams[i]);
+    }
+    return out;
+  }
+
+  function streamById(part, id) {
+    var list = (part && part.Stream) || [], i;
+    for (i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(id)) return list[i];
+    }
+    return null;
+  }
+
   /* What the file actually offers, for a refusal that says something useful.
      "only TrueHD or DTS-HD MA" was a lie the moment commentary tracks started
      being excluded too. */
@@ -218,6 +236,7 @@ var Media = (function () {
   return {
     pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD, canDecode: canDecode,
     isCommentary: isCommentary, audioSummary: audioSummary, bestAudio: bestAudio,
+    audioTracks: audioTracks, streamById: streamById,
     allows: allows,
     ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
     identities: identities, identity: identity

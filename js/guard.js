@@ -29,7 +29,10 @@ var Guard = (function () {
      hold several — a 4K remux and a 1080p encode of the same film are two
      entries in Media[], and they get different verdicts, so they are checked
      and played separately. */
-  function check(item, mediaIndex) {
+  /* forceAudioId overrides the choice — that is how switching track in the
+     player works, since the ranking would otherwise just pick the same one
+     again. */
+  function check(item, mediaIndex, forceAudioId) {
     var n = mediaIndex || 0;
     return Meta.load(item).then(function (md) {
       if (!md) return { ok: false, state: 'nometa', text: 'No metadata for this copy.' };
@@ -45,6 +48,10 @@ var Guard = (function () {
          audio and the server re-encodes it. */
       var passes = Media.pickAudio(part);
       var audio = passes || Media.bestAudio(part);
+      if (forceAudioId) {
+        var wanted = Media.streamById(part, forceAudioId);
+        if (wanted) { audio = wanted; passes = Media.pickAudio(part) === wanted; }
+      }
       if (!audio) {
         return { ok: false, state: 'noaudio', md: md, media: media, part: part,
                  mediaIndex: n, audio: null, text: Media.audioSummary(part) };

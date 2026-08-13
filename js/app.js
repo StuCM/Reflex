@@ -25,17 +25,35 @@
   /* The verdict has already been through Guard, so by here we know the server
      will serve it and that it is not a 4K transcode. Nothing else reaches
      Player. */
-  function playChecked(item, verdict, isExtra) {
+  function playChecked(item, verdict, isExtra, resumeAt) {
     if (!verdict || !verdict.ok) return;
     var md = verdict.md;
     var server = Servers.of(md);
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
-    md.viewOffset = isExtra ? 0 : (item.viewOffset || md.viewOffset || 0);
+    md.viewOffset = isExtra ? 0
+      : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
     UI.show('player');
     Player.play({
       server: server,
       item: md,
       part: verdict.part,
+      audio: verdict.audio,
+      mediaIndex: verdict.mediaIndex || 0,
+      /* Switching track means asking the server for that one and starting
+         again from where we were — the panel chooses for itself out of a
+         direct-played file, so there is nothing to switch client-side. */
+      onAudio: function (streamId, at) {
+        Guard.check(verdict.md, verdict.mediaIndex || 0, streamId).then(function (v2) {
+          if (!v2.ok) {
+            var why = Guard.refusal(item, v2);
+            Player.stop('stopped', true);
+            UI.message(why[0], why[1]);
+            return;
+          }
+          Player.stop('stopped', true);
+          playChecked(item, v2, isExtra, at);
+        });
+      },
       /* Direct play reads the file itself. Otherwise the server has to serve a
          converted stream, which means HLS and an actual session on it. */
       url: verdict.transcode

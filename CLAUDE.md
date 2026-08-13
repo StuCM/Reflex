@@ -158,7 +158,9 @@ Screen:
 - `js/devices.js` — whose viewing is this; filters Continue watching.
 - `js/discovery.js` — turns a TMDB list into rows of what the servers have.
 - `js/browse.js` — the state: sections, rows, focus, mode, paging, search.
-- `js/player.js` — direct play, resume, progress.
+- `js/player.js` — playback, the OSD, seeking and audio track cycling.
+  Seeks accumulate: every `currentTime` assignment on a direct-played file is a
+  real range request, so holding a key aims first and seeks once.
 - `js/app.js` — boot, and where each key goes.
 
 Tools:
@@ -180,6 +182,10 @@ Tools:
    `audioStreamID` on the decision call, shown in the masthead before you press
    OK. The rules are unit tested but have never met the real ARC path.
 3. Show/episode drill-down (currently movies only).
+3a. Subtitles. Nothing is wired: the decision call sends `subtitles=none`.
+   Burning them in is a transcode; the direct-play-safe route is an external
+   SRT fetched and rendered as text over the video, which is the only approach
+   that does not cost the server anything.
 4. ~~Search~~ — done. Filters: only the kids certificate filter so far, and it
    is applied server side. Anything else (year, unwatched, resolution) is still
    to do.
