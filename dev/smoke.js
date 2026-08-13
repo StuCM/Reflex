@@ -570,6 +570,56 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('extras are listed and are guarded like anything else', function () {
+        return openTitle(titles.directPlays.title)
+          .then(function () {
+            return waitFor('(function(){var e=document.querySelectorAll("#dt-extras .dt-source");' +
+                           'if (!e.length) return false;' +
+                           'return !/checking/.test(e[0].textContent);})()',
+                           'an extra with a verdict', 15000);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return Array.prototype.map.call(
+                document.querySelectorAll('#dt-extras .dt-source'),
+                function (e) { return e.textContent.replace(/\s+/g, ' '); });
+            });
+          })
+          .then(function (rows) {
+            if (!/Trailer/i.test(rows.join(' '))) {
+              throw new Error('no trailer listed: ' + rows.join(' | '));
+            }
+            /* A clip is an ordinary part on the same server, so it goes through
+               the same guard — it must carry a verdict, not be assumed safe. */
+            if (!/direct play|transcode|no passable/.test(rows[0])) {
+              throw new Error('extra has no verdict: ' + rows[0]);
+            }
+          })
+          .then(function () {
+            /* Down past every copy of the film to reach the first extra. */
+            return page.evaluate(function () {
+              return document.querySelectorAll('#dt-sources .dt-source').length;
+            });
+          })
+          .then(function (copies) { return press('ArrowDown', copies); })
+          .then(function () {
+            return waitFor('(function(){var on=document.querySelector(".dt-source.on");' +
+                           'return on && on.parentNode.id === "dt-extras";})()',
+                           'focus to reach the extras');
+          })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            if (!hasFixture()) return page.waitForTimeout(500);
+            return waitFor('(function(){var v=document.getElementById("video");' +
+                           'return !v.classList.contains("hidden") && v.currentTime >= 0;})()',
+                           'the extra to start', 15000);
+          })
+          .then(function () { return shot('extras'); })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
       return step('plays a file that direct plays', function () {
         return openTitle(titles.directPlays.title)
           .then(function () { return page.keyboard.press('Enter'); })

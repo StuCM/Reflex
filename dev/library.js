@@ -191,6 +191,51 @@ function makeCopy(film, serverIndex) {
   return item;
 }
 
+/* Extras hang off a film's metadata carrying their own media but, like a real
+   server, no streams — those come from fetching the extra's own metadata.
+   Rating key is the film's with '00' and the index appended, so the mock can
+   resolve one without keeping an index. */
+const EXTRA_KINDS = [
+  { subtype: 'trailer', title: 'Official Trailer', minutes: 2 },
+  { subtype: 'behindTheScenes', title: 'Behind the Scenes', minutes: 7 }
+];
+
+function extraKey(parentKey, n) { return String(parentKey) + '00' + n; }
+
+function makeExtra(parent, n, withStreams) {
+  const kind = EXTRA_KINDS[n];
+  const key = extraKey(parent.ratingKey, n);
+  const out = {
+    ratingKey: key,
+    key: '/library/metadata/' + key,
+    type: 'clip',
+    subtype: kind.subtype,
+    extraType: n + 1,
+    title: kind.title,
+    duration: kind.minutes * 60000,
+    thumb: parent.thumb,
+    Media: [{
+      id: Number(key),
+      videoResolution: '1080', videoCodec: 'h264', audioCodec: 'aac',
+      container: 'mp4', width: 1920, height: 1080, duration: kind.minutes * 60000,
+      Part: [{
+        id: Number(key) + 1,
+        key: '/library/parts/' + key + '/1600000000/extra.mp4',
+        container: 'mp4', duration: kind.minutes * 60000, size: 40000000
+      }]
+    }]
+  };
+  /* Extras direct play: h264 + AAC stereo is inside the declared profile. */
+  if (withStreams) {
+    out.Media[0].Part[0].Stream = [
+      { id: Number(key) * 10, streamType: 1, codec: 'h264', width: 1920, height: 1080 },
+      { id: Number(key) * 10 + 1, streamType: 2, codec: 'aac', channels: 2,
+        languageCode: 'eng', selected: true }
+    ];
+  }
+  return out;
+}
+
 /* Streams, cast and crew only appear on the full metadata payload, exactly as
    they do on a real server — which is why the masthead shows "AUDIO …" until it
    lands, and why the detail page has to fetch. */
@@ -233,6 +278,10 @@ function fullMetadata(item, film) {
     return { tag: c.name, role: c.role,
              thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
   });
+  copy.Extras = {
+    size: EXTRA_KINDS.length,
+    Metadata: EXTRA_KINDS.map(function (k, n) { return makeExtra(item, n, false); })
+  };
   return copy;
 }
 
@@ -313,4 +362,15 @@ function build(counts) {
   };
 }
 
-module.exports = { build: build, PROFILES: PROFILES, SERVERS: SERVERS };
+/* '<parentKey>00<n>' -> the extra, with streams, or null. */
+function resolveExtra(byKey, key) {
+  const m = String(key).match(/^(\d+)00(\d)$/);
+  if (!m) return null;
+  const parent = byKey[m[1]];
+  const n = Number(m[2]);
+  if (!parent || n >= EXTRA_KINDS.length) return null;
+  return makeExtra(parent, n, true);
+}
+
+module.exports = { build: build, PROFILES: PROFILES, SERVERS: SERVERS,
+                   resolveExtra: resolveExtra };

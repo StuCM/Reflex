@@ -165,12 +165,12 @@ html, body {
              letter-spacing: 0.06em; font-size: 18px; margin-right: 8px; }
 .dt-gap { display: inline-block; width: 34px; }
 
-#dt-sources-label {
-  margin-top: 26px; font-size: 20px; letter-spacing: 0.06em;
+.dt-label {
+  margin-top: 22px; font-size: 20px; letter-spacing: 0.06em;
   text-transform: uppercase; color: #6a6a72;
 }
 
-#dt-sources { margin-top: 10px; width: 1000px; }
+#dt-sources, #dt-extras { margin-top: 10px; width: 1000px; }
 
 /* Reserved border, so moving the selection shifts nothing. */
 .dt-source {
@@ -196,7 +196,7 @@ html, body {
 
 /* ---- cast ---- */
 
-#dt-cast { margin-top: 28px; height: 190px; white-space: nowrap; overflow: hidden; }
+#dt-cast { margin-top: 22px; height: 190px; white-space: nowrap; overflow: hidden; }
 
 .dt-actor {
   display: inline-block; vertical-align: top; width: 120px; margin-right: 22px;

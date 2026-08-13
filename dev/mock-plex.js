@@ -13,7 +13,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const buildLibrary = require('./library').build;
+const library = require('./library');
+const buildLibrary = library.build;
 
 const TOKEN = 'mock-account-token';
 const MACHINE_TOKEN = { 1: 'mock-server-token-main', 2: 'mock-server-token-backup' };
@@ -189,9 +190,10 @@ function create(opts) {
   function decision(srv, res, q) {
     const m = String(q.path || '').match(/\/library\/metadata\/(\d+)/);
     const item = m ? srv.byKey[m[1]] : null;
-    if (!item) { json(res, 404, container({ size: 0 })); return; }
+    const extra = item ? null : (m ? library.resolveExtra(srv.byKey, m[1]) : null);
+    if (!item && !extra) { json(res, 404, container({ size: 0 })); return; }
 
-    const full = lib.fullMetadata(item);
+    const full = extra || lib.fullMetadata(item);
     const part = full.Media[0].Part[0];
     const streams = part.Stream;
     const video = streams.filter(function (s) { return s.streamType === 1; })[0];
@@ -215,7 +217,7 @@ function create(opts) {
       text = 'Conversion required. Audio: Unsupported codec (' + audio.codec + ').';
     }
 
-    log(srv.name + ' decision ' + item.title + ' audio=' + (audio ? audio.codec : 'none') +
+    log(srv.name + ' decision ' + full.title + ' audio=' + (audio ? audio.codec : 'none') +
         ' -> ' + verdict);
 
     part.decision = verdict;
@@ -422,7 +424,14 @@ function create(opts) {
     m = pathname.match(/^\/library\/metadata\/(\d+)$/);
     if (m) {
       const item = srv.byKey[m[1]];
-      if (!item) { json(res, 404, container({ size: 0 })); return true; }
+      if (!item) {
+        /* Extras are addressable in their own right, and that is how the app
+           gets their streams. */
+        const extra = library.resolveExtra(srv.byKey, m[1]);
+        if (extra) { json(res, 200, container({ size: 1, Metadata: [extra] })); return true; }
+        json(res, 404, container({ size: 0 }));
+        return true;
+      }
       const deckHit = srv.deck.filter(function (d) { return d.ratingKey === item.ratingKey; })[0];
       const full = lib.fullMetadata(item);
       if (deckHit) full.viewOffset = deckHit.viewOffset;

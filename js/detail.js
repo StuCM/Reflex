@@ -24,12 +24,15 @@ var Detail = (function () {
   var elSummary = document.getElementById('dt-summary');
   var elCrew = document.getElementById('dt-crew');
   var elSources = document.getElementById('dt-sources');
+  var elExtras = document.getElementById('dt-extras');
+  var elExtrasLabel = document.getElementById('dt-extras-label');
   var elCast = document.getElementById('dt-cast');
 
   var item = null;                 // the merged entry
   var copies = [];                 // one per server that has it
   var sources = [];                // flattened: one per server × version
-  var idx = 0;
+  var extras = [];                 // trailers and the rest, playable in their own right
+  var idx = 0;                     // indexes sources.concat(extras)
   var opts = {};
   var generation = 0;
 
@@ -44,6 +47,7 @@ var Detail = (function () {
     copies = Merge.sources(entry).map(function (copy) {
       return { item: copy, server: Servers.of(copy), versions: null };
     });
+    extras = [];
     idx = 0;
     rebuild();
 
@@ -57,8 +61,12 @@ var Detail = (function () {
     item = null;
     copies = [];
     sources = [];
+    extras = [];
     if (opts.onExit) opts.onExit();
   }
+
+  /* Everything focusable on the page, in the order it is drawn. */
+  function lines() { return sources.concat(extras); }
 
   /* ---------- the source list ---------- */
 
@@ -66,7 +74,7 @@ var Detail = (function () {
      response, but not how many. So each copy contributes one provisional line
      that becomes one line per version once we know. */
   function rebuild() {
-    var chosen = sources[idx] || null;
+    var chosen = lines()[idx] || null;
     sources = [];
     copies.forEach(function (copy) {
       if (copy.versions) {
@@ -80,14 +88,30 @@ var Detail = (function () {
     /* Keep the user's choice pinned across a rebuild. */
     idx = 0;
     if (chosen) {
-      var i;
-      for (i = 0; i < sources.length; i++) {
-        if (sources[i].copy === chosen.copy && sources[i].mediaIndex === chosen.mediaIndex) {
+      var all = lines(), i;
+      for (i = 0; i < all.length; i++) {
+        if (all[i].copy === chosen.copy && all[i].mediaIndex === chosen.mediaIndex) {
           idx = i;
           break;
         }
       }
     }
+  }
+
+  /* Trailers and behind-the-scenes clips come nested in the film's metadata,
+     carrying their own media. They are ordinary parts on the same server, so
+     they go through the same guard as the film — a clip that would transcode
+     is still a transcode on someone else's hardware. */
+  function addExtras(md) {
+    if (extras.length || !md.Extras || !md.Extras.Metadata) return;
+    extras = md.Extras.Metadata.slice(0, 6).map(function (x) {
+      return { copy: { item: x }, server: Servers.of(x), mediaIndex: 0,
+               media: (x.Media && x.Media[0]) || {},
+               title: x.title || 'Extra', kind: x.subtype || x.extraType || '',
+               verdict: null, isExtra: true };
+    });
+    renderSources();
+    extras.forEach(check);
   }
 
   function expand(copy, md) {
@@ -138,10 +162,32 @@ var Detail = (function () {
            '</div>';
   }
 
+  function extraLine(src, on) {
+    var v = src.verdict;
+    var state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
+    var mins = src.copy.item.duration
+      ? Math.max(1, Math.round(src.copy.item.duration / 60000)) + ' min' : '';
+    return '<div class="dt-source' + (on ? ' on' : '') + '">' +
+           '<div class="dt-source-name">' + UI.escapeHtml(src.title) + '</div>' +
+           '<div class="dt-source-media">' +
+           UI.escapeHtml([src.kind, mins, versionLabel(src)].filter(Boolean).join(' · ')) +
+           '</div>' +
+           '<div class="dt-source-verdict badge ' + state + '">' +
+           UI.escapeHtml(Guard.label(v)) + '</div>' +
+           '</div>';
+  }
+
   function renderSources() {
     var html = '', i;
     for (i = 0; i < sources.length; i++) html += sourceLine(sources[i], i === idx);
     elSources.innerHTML = html;
+
+    html = '';
+    for (i = 0; i < extras.length; i++) {
+      html += extraLine(extras[i], sources.length + i === idx);
+    }
+    elExtras.innerHTML = html;
+    elExtrasLabel.classList.toggle('hidden', extras.length === 0);
   }
 
   /* ---------- the rest of the page ---------- */
@@ -194,6 +240,7 @@ var Detail = (function () {
         if (md.summary) elSummary.textContent = md.summary;
         elCrew.innerHTML = crewHtml(md);
         elCast.innerHTML = castHtml(md);
+        addExtras(md);
       });
     });
   }
@@ -227,7 +274,7 @@ var Detail = (function () {
   /* ---------- keys ---------- */
 
   function play() {
-    var src = sources[idx];
+    var src = lines()[idx];
     if (!src) return;
     if (!src.verdict) { UI.toast('Still checking that copy…'); return; }
     if (!src.verdict.ok) {
@@ -235,13 +282,13 @@ var Detail = (function () {
       UI.message(why[0], why[1]);
       return;
     }
-    if (opts.onPlay) opts.onPlay(item, src.verdict);
+    if (opts.onPlay) opts.onPlay(item, src.verdict, !!src.isExtra);
   }
 
   function key(code) {
     var K = UI.KEY;
     if ((code === K.UP || code === K.LEFT) && idx > 0) { idx--; renderSources(); return true; }
-    if ((code === K.DOWN || code === K.RIGHT) && idx < sources.length - 1) {
+    if ((code === K.DOWN || code === K.RIGHT) && idx < lines().length - 1) {
       idx++; renderSources(); return true;
     }
     if (code === K.OK) { play(); return true; }

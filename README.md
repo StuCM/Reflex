@@ -17,7 +17,7 @@ constraints that shape every decision here.
 - windowed rail: 4 rows of 12 tiles in the DOM, regardless of library size
 - masthead shows resolution / codec / container and **the audio track we would
   pick**, before you press OK
-- OK opens a detail page: cast, ratings, crew — and every copy of the film,
+- OK opens a detail page: cast, ratings, crew, trailers and extras — and every copy of the film,
   each with its own verdict. The same film is often a 4K TrueHD remux on one
   server and a 1080p E-AC3 file on the other; the page says which will play
   before you choose. The `prefer:` chip sets which server a shared film is
@@ -43,9 +43,25 @@ only, 4K VC-1) so every branch of the playback guard is reachable. Press `?` in
 the browser for the key mapping; `index.html` is rewritten in memory on the way
 out, never on disk.
 
-`npm run dev -- --proxy` forwards plex.tv to the real thing instead, if you want
-to sign in properly and browse the real library from a desktop browser. Your
-token passes through the local process.
+### Against the real servers
+
+```sh
+npm run dev -- --proxy
+```
+
+plex.tv is forwarded to the real thing, so you sign in with your own account and
+get a real code for plex.tv/link. Discovery then hands the browser your servers'
+own addresses and the app talks to them directly, exactly as it does on the TV.
+Your token passes through the local process.
+
+Browsing is safe to do this way — it is the same handful of requests per screen
+the TV makes, and every playback check uses `hasMDE=1`, which opens no session.
+Do not point the smoke test at it: it asserts nothing leaves the machine, and it
+would be asserting against someone else's server.
+
+If the browser console shows CORS failures talking to a `plex.direct` address,
+say so — the dev server can proxy the media servers as well, but that is not
+built until it is needed.
 
 Playback needs a video to play, and the mock cannot invent one:
 

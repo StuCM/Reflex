@@ -24,10 +24,11 @@
 
   /* The verdict has already been through Guard, so by here the copy is known to
      direct play. Nothing else may reach Player. */
-  function playChecked(item, verdict) {
+  function playChecked(item, verdict, isExtra) {
     if (!verdict || !verdict.ok) return;
     var md = verdict.md;
-    md.viewOffset = item.viewOffset || md.viewOffset || 0;
+    /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
+    md.viewOffset = isExtra ? 0 : (item.viewOffset || md.viewOffset || 0);
     UI.show('player');
     Player.play({
       server: Servers.of(md),

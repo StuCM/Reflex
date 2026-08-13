@@ -394,6 +394,9 @@ var Plex = (function () {
                qs({ includeGuids: 1, includeExtras: 1 })).then(function (res) {
       var m = res.MediaContainer && res.MediaContainer.Metadata;
       if (!m || !m[0]) return null;
+      /* Extras arrive nested and are playable in their own right, so they need
+         stamping too or nothing can tell which server they came from. */
+      if (m[0].Extras && m[0].Extras.Metadata) Servers.stamp(m[0].Extras.Metadata, server);
       return Servers.stamp(m, server)[0];
     });
   }

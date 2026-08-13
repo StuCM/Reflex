@@ -118,8 +118,8 @@ Screen:
 - `js/guard.js` — will this copy play, and at what cost to someone else's
   server. Everything that reaches Player goes through it first.
 - `js/masthead.js` — title, badges, and the audio track we would pick.
-- `js/detail.js` — the page OK opens: cast, ratings, and every copy of the film
-  with its verdict, which is where playback is actually chosen.
+- `js/detail.js` — the page OK opens: cast, ratings, extras, and every copy of
+  the film with its verdict, which is where playback is actually chosen.
 - `js/devices.js` — whose viewing is this; filters Continue watching.
 - `js/discovery.js` — turns a TMDB list into rows of what the servers have.
 - `js/browse.js` — the state: sections, rows, focus, mode, paging, search.
@@ -145,10 +145,9 @@ Tools:
 4. ~~Search~~ — done. Filters: only the kids certificate filter so far, and it
    is applied server side. Anything else (year, unwatched, resolution) is still
    to do.
-5. Extras and trailers on the detail page. `includeExtras=1` is already on the
-   metadata call; nothing reads it yet. Local extras are ordinary parts and
-   direct play; anything coming from Plex's own trailer service does not touch
-   our servers at all, so neither is a transcode risk.
+5. ~~Extras and trailers~~ — done: listed on the detail page under the copies,
+   in the same focus list. A clip is an ordinary part on the same server, so it
+   goes through the same guard as the film rather than being assumed safe.
 6. Only if browsing is still slow after all this: a caching backend on the
    existing Hetzner box (Docker Compose + Caddy) that pre-sizes posters and
    serves a pre-baked section index. Deliberately deferred — the point is to
