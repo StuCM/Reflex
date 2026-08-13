@@ -127,6 +127,90 @@ html, body {
   overflow: hidden;
 }
 
+/* ---- detail ----
+   Chromium 53: no grid, so the columns are absolutely positioned. The artwork
+   is a static background image, never animated. */
+
+#dt-art {
+  position: absolute; top: 0; right: 0; width: 1100px; height: 620px;
+  background-position: center; background-size: cover;
+  opacity: 0.5;
+}
+
+/* Two flat gradients rather than a blur: blurring a 1100px image on this SoC
+   costs a frame we do not have. */
+#dt-shade {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 620px;
+  background-image: -webkit-linear-gradient(left, #0b0b0d 0%, #0b0b0d 42%, rgba(11,11,13,0) 100%);
+  background-image: linear-gradient(to right, #0b0b0d 0%, #0b0b0d 42%, rgba(11,11,13,0) 100%);
+}
+
+#dt-body { position: absolute; top: 64px; left: 64px; width: 1000px; }
+
+#dt-title {
+  font-size: 58px; font-weight: 300; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#dt-meta { margin-top: 10px; font-size: 24px; color: #9a9aa2; }
+#dt-tagline { margin-top: 10px; font-size: 24px; color: #e5a00d; font-style: italic; }
+
+#dt-summary {
+  margin-top: 14px; font-size: 22px; line-height: 1.45; color: #b8b8c0;
+  max-height: 96px; overflow: hidden;
+}
+
+#dt-crew { margin-top: 14px; font-size: 20px; color: #8b8b93; }
+#dt-crew b { color: #6a6a72; font-weight: normal; text-transform: uppercase;
+             letter-spacing: 0.06em; font-size: 18px; margin-right: 8px; }
+.dt-gap { display: inline-block; width: 34px; }
+
+#dt-sources-label {
+  margin-top: 26px; font-size: 20px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #6a6a72;
+}
+
+#dt-sources { margin-top: 10px; width: 1000px; }
+
+/* Reserved border, so moving the selection shifts nothing. */
+.dt-source {
+  position: relative; height: 54px; padding: 10px 18px;
+  border-left: 6px solid transparent;
+  background: #131318;
+  margin-bottom: 6px;
+}
+.dt-source.on { background: #1c1c24; border-left-color: #e5a00d; }
+
+.dt-source-name {
+  display: inline-block; width: 250px; font-size: 24px; color: #9a9aa2;
+  white-space: nowrap; overflow: hidden;
+}
+.dt-source.on .dt-source-name { color: #e8e8ea; }
+
+.dt-source-media {
+  display: inline-block; width: 460px; font-size: 22px; color: #8b8b93;
+  white-space: nowrap; overflow: hidden;
+}
+
+.dt-source-verdict { position: absolute; right: 14px; top: 12px; }
+
+/* ---- cast ---- */
+
+#dt-cast { margin-top: 28px; height: 190px; white-space: nowrap; overflow: hidden; }
+
+.dt-actor {
+  display: inline-block; vertical-align: top; width: 120px; margin-right: 22px;
+  white-space: normal;
+}
+.dt-actor img, .dt-actor-blank {
+  display: block; width: 120px; height: 120px; border-radius: 60px;
+  background: #17171c; overflow: hidden;
+}
+.dt-actor-name { margin-top: 8px; font-size: 18px; line-height: 1.2; color: #c9c9d1; }
+.dt-actor-role { font-size: 16px; line-height: 1.2; color: #6a6a72; }
+
+.dt-hint { position: absolute; left: 64px; bottom: 40px; margin-top: 0; }
+
 /* ---- link / message ---- */
 
 .link-lead { font-size: 30px; color: #8b8b93; margin: 14px 0; }

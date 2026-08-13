@@ -91,7 +91,9 @@ var Rail = (function () {
       rowEl._label.textContent = row.title;
       for (i = 0; i < TILE_POOL; i++) { rowEl._tiles[i]._idx = -1; rowEl._tiles[i]._filled = false; }
     }
-    if (row.kind === 'all') {
+    /* A merged row's length is an estimate until it has been walked, so the
+       count is re-read on every paint rather than only when the row is reused. */
+    if (row.kind === 'merge') {
       rowEl._label.textContent = row.title + (row.total ? '  (' + row.total + ')' : '');
     }
 

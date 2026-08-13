@@ -19,7 +19,7 @@ var Masthead = (function () {
   }
 
   function audioBadge(item) {
-    var md = Meta.get(item.ratingKey);
+    var md = Meta.get(item);
     if (!md) return badge('AUDIO …');
     var part = md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
     var audio = Media.pickAudio(part);
@@ -59,6 +59,11 @@ var Masthead = (function () {
     if (media.videoCodec) b += badge(String(media.videoCodec).toUpperCase());
     if (media.container) b += badge(String(media.container).toUpperCase());
     b += audioBadge(item);
+    /* One entry, more than one copy: the badges above describe the copy we
+       would default to, and OK opens the page where you can pick another. */
+    if (Merge.isShared(item)) {
+      b += badge('ON ' + Merge.sources(item).length + ' SERVERS');
+    }
     elBadges.innerHTML = b;
   }
 

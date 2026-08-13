@@ -1,50 +1,50 @@
 /* The row model, and nothing else — no DOM, no network.
 
    Two kinds of row:
-     'list'  items are held outright (hubs, Continue watching, search results)
-     'all'   virtual over a total the server told us, pages fetched on demand
+     'list'   items are held outright (hubs, Continue watching, search results)
+     'merge'  virtual over one or more server sections, merged and deduplicated
+              as you scroll
 
-   The 'all' row is what makes a 30,000 film section browsable: the app knows
-   how long it is and holds only the pages you have actually looked at. */
+   The merge row is what makes a 30,000 film library browsable across two
+   servers: it knows roughly how long it is without crawling anything, holds
+   only what you have walked past, and shows one entry per film with every
+   copy of it attached. See js/merge.js for the walk itself. */
 var Rows = (function () {
   'use strict';
 
-  var PAGE = 100;                // items per request on an 'all' row
-  var EDGE = 20;                 // how close to a page edge before prefetching
+  var PAGE = 100;                // items per request against a server section
 
   function list(title, items) {
     return { kind: 'list', title: title, items: items, total: items.length, focus: 0 };
   }
 
-  function all(sec, title, filter, tag) {
-    return { kind: 'all', title: title || 'All films', focus: 0, total: 0,
-             key: sec.key, version: sec.updatedAt || 0,
-             filter: filter || null, tag: tag || '',
-             pages: {}, inflight: {} };
+  /* parts: [{ server, key, updatedAt, filter, tag }], one per server section.
+     fetch(part, offset) -> Promise({ items, total }). */
+  function merged(title, parts, fetch) {
+    return { kind: 'merge', title: title || 'All films', focus: 0, total: 0,
+             parts: parts, state: Merge.stream(parts, fetch) };
   }
 
-  /* Null means "position exists but its page has not arrived" — the caller
+  /* Null means "position exists but has not been walked to yet" — the tile
      draws a placeholder rather than a gap. */
   function itemAt(row, i) {
     if (!row || i < 0 || i >= row.total) return null;
     if (row.kind === 'list') return row.items[i];
-    var p = row.pages[Math.floor(i / PAGE)];
-    return p ? p[i % PAGE] : null;
+    return Merge.items(row.state)[i] || null;
   }
 
-  function pageOf(i) { return Math.floor(i / PAGE); }
+  /* How far ahead of the focus to materialise: a screenful, plus enough that
+     holding a direction key does not outrun the walk. */
+  var LOOKAHEAD = 24;
 
-  /* Which pages are worth having, given where the focus is: the one you are
-     on, and the neighbour you are close enough to reach. */
-  function pagesNeeded(focus) {
-    var n = pageOf(focus), within = focus % PAGE, out = [n];
-    if (within > PAGE - EDGE) out.push(n + 1);
-    if (within < EDGE && n > 0) out.push(n - 1);
-    return out;
+  function needsUpTo(row) { return row.focus + LOOKAHEAD; }
+
+  function haveUpTo(row) {
+    return row.kind === 'merge' ? Merge.items(row.state).length : row.total;
   }
 
-  return { PAGE: PAGE, EDGE: EDGE, list: list, all: all,
-           itemAt: itemAt, pageOf: pageOf, pagesNeeded: pagesNeeded };
+  return { PAGE: PAGE, list: list, merged: merged, itemAt: itemAt,
+           needsUpTo: needsUpTo, haveUpTo: haveUpTo, LOOKAHEAD: LOOKAHEAD };
 })();
 
 if (typeof module !== 'undefined') module.exports = Rows;   // for test/rows.test.js

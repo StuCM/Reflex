@@ -30,13 +30,12 @@ function fixture() {
 }
 
 function parseArgs(argv) {
-  const out = { port: 8080, films: 2000, uhd: 300, latency: 0, pinPolls: 2,
+  const out = { port: 8080, films: 2000, latency: 0, pinPolls: 2,
                 proxy: false, quiet: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--port') out.port = Number(argv[++i]);
     else if (a === '--films') out.films = Number(argv[++i]);
-    else if (a === '--uhd') out.uhd = Number(argv[++i]);
     else if (a === '--latency') out.latency = Number(argv[++i]);
     else if (a === '--pin-polls') out.pinPolls = Number(argv[++i]);
     else if (a === '--proxy') out.proxy = true;
@@ -64,7 +63,7 @@ const TYPES = {
 
 function start(opts) {
   const log = opts.quiet ? function () {} : function (m) { console.log('  ' + m); };
-  const api = mock.create({ films: opts.films, uhd: opts.uhd, pinPolls: opts.pinPolls, log: log });
+  const api = mock.create({ films: opts.films, pinPolls: opts.pinPolls, log: log });
 
   const server = http.createServer(function (req, res) {
     const parsed = url.parse(req.url, true);
@@ -123,8 +122,8 @@ function start(opts) {
     console.log('');
     console.log('  Reflex dev server   http://localhost:' + opts.port);
     console.log('  ' + (opts.proxy ? 'plex.tv proxied for real; sign in with your own account'
-                                   : 'mock Plex: ' + opts.films + ' films, ' + opts.uhd +
-                                     ' 4K films, pin claims itself'));
+                                   : 'mock Plex: two servers sharing ' + opts.films +
+                                     ' films, pin claims itself'));
     if (opts.latency) console.log('  ' + opts.latency + 'ms added to every server response');
     if (!fixture()) {
       console.log('  no video to play: OK on a film will reach its error path.');

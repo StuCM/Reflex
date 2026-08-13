@@ -8,7 +8,7 @@ var Player = (function () {
   var osdTitle = document.getElementById('osd-title');
   var osdTime = document.getElementById('osd-time');
 
-  var item = null, onExit = null, onError = null;
+  var item = null, server = null, onExit = null, onError = null;
   var ticker = null, osdTimer = null, resumeMs = 0;
 
   function fmt(sec) {
@@ -36,9 +36,12 @@ var Player = (function () {
 
   function osdShowing() { return osd.style.opacity !== '0' && !osd.classList.contains('hidden'); }
 
+  /* Progress goes to the server we are playing from. Plex syncs the position
+     to the account, which is why the same film picked up on the other server
+     resumes in the right place. */
   function report(state) {
-    if (!item) return;
-    Plex.timeline(item, state, (v.currentTime || 0) * 1000, (v.duration || 0) * 1000);
+    if (!item || !server) return;
+    Plex.timeline(server, item, state, (v.currentTime || 0) * 1000, (v.duration || 0) * 1000);
   }
 
   /* A black screen tells you nothing, and "the panel refused it" is only one of
@@ -68,11 +71,12 @@ var Player = (function () {
 
   function play(opts) {
     item = opts.item;
+    server = opts.server;
     onExit = opts.onExit;
     onError = opts.onError;
     resumeMs = opts.item.viewOffset || 0;
 
-    var url = Plex.streamUrl(opts.part);
+    var url = Plex.streamUrl(server, opts.part);
     osdTitle.textContent = opts.item.title || '';
     v.classList.remove('hidden');
 
@@ -124,7 +128,7 @@ var Player = (function () {
     v.classList.add('hidden');
     osd.classList.add('hidden');
     var done = onExit;
-    item = null; onExit = null; onError = null;
+    item = null; server = null; onExit = null; onError = null;
     if (done) done();
   }
 

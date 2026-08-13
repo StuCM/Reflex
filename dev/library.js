@@ -1,17 +1,21 @@
-/* A synthetic Plex library, generated deterministically.
+/* Two synthetic Plex servers, generated deterministically.
    Runs on Node only — the Chromium 53 constraint does not apply in dev/.
 
    The point is not realistic titles, it is realistic *shapes*: enough items to
-   make the windowed rail work for its living, and a spread of media profiles
-   that reaches every branch of the playback guard —
+   make the windowed rail work for its living, a spread of media profiles that
+   reaches every branch of the playback guard, and — since the real account has
+   two servers sharing much of the same library — overlap.
 
-     - 1080p h264 + E-AC3 5.1        direct plays, good audio badge
-     - 1080p h264 + AAC stereo       direct plays, warn badge
-     - 4K hevc + E-AC3 5.1           direct plays, UHD badge
-     - 4K hevc + TrueHD and AC3      we pick the AC3 and it plays
-     - 4K hevc + TrueHD only         refused before any request is made
-     - 1080p vc1 in avi              the server returns transcode, we refuse
-*/
+   Films exist in a canonical list. Each server holds a subset:
+
+     - most films are on Main
+     - a third are on both, with DIFFERENT media on each (that is the whole
+       point of choosing a source: one copy direct plays, the other doesn't)
+     - some are only on Backup, so merging has to add as well as deduplicate
+
+   A film's identity is the same on both servers — same plex:// guid, same
+   title, same year — because that is what Plex itself syncs watch state
+   against, and therefore what the app deduplicates on. */
 'use strict';
 
 const ADJECTIVES = [
@@ -33,6 +37,25 @@ const NOUNS = [
   'Station', 'Summer', 'Terminal', 'Tower', 'Traveller', 'Tunnel', 'Valley',
   'Verdict', 'Village', 'Voyage', 'Wharf', 'Window', 'Winter', 'Witness'
 ];
+
+const FIRST_NAMES = [
+  'Alma', 'Bernard', 'Cissy', 'Dara', 'Edwin', 'Fenella', 'Gordon', 'Hester',
+  'Ivor', 'Juno', 'Keir', 'Lorna', 'Magnus', 'Nell', 'Orla', 'Peregrine',
+  'Quentin', 'Rosalind', 'Silas', 'Tamsin', 'Ulric', 'Verity', 'Wilf', 'Yvonne'
+];
+
+const LAST_NAMES = [
+  'Ackroyd', 'Baird', 'Cattermole', 'Dunphy', 'Eastwick', 'Fairbairn',
+  'Gallacher', 'Hollingsworth', 'Inchbald', 'Jardine', 'Kettleborough',
+  'Lachlan', 'Mainwaring', 'Nesbitt', 'Ollerenshaw', 'Pargeter', 'Quiller',
+  'Rutherford', 'Standish', 'Thirlwell', 'Urquhart', 'Vane', 'Wollaston'
+];
+
+const GENRES = ['Drama', 'Thriller', 'Comedy', 'Science Fiction', 'Crime',
+                'Documentary', 'Romance', 'Horror', 'Adventure', 'Mystery'];
+
+const STUDIOS = ['Harbour Pictures', 'Northlight', 'Verdigris Films',
+                 'Coldwater', 'Two Rivers', 'Ashgrove'];
 
 /* Certificates the fake library uses, weighted so the kids filter has both
    plenty to show and plenty to exclude. `null` means unrated, which must stay
@@ -72,35 +95,76 @@ function rand(seed) {
 
 function pick(rng, list) { return list[Math.floor(rng() * list.length)]; }
 
-function makeItem(sectionKey, i) {
-  const rng = rand(i * 2654435761 + sectionKey * 97);
-  const profile = PROFILES[PROFILE_PICK[Math.floor(rng() * PROFILE_PICK.length)]];
-  const ratingKey = String(sectionKey * 100000 + 1000 + i);
+/* What a film IS, independent of which server is holding a copy of it. Both
+   servers agree on all of this, which is what makes deduplication possible. */
+function makeFilm(i) {
+  const rng = rand(i * 2654435761);
   const title = pick(rng, ADJECTIVES) + ' ' + pick(rng, NOUNS) +
                 (rng() < 0.12 ? ' ' + (2 + Math.floor(rng() * 3)) : '');
+  const cast = [];
+  const castCount = 4 + Math.floor(rng() * 6);
+  for (let n = 0; n < castCount; n++) {
+    cast.push({
+      name: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
+      role: pick(rng, FIRST_NAMES) + (rng() < 0.3 ? ' ' + pick(rng, LAST_NAMES) : '')
+    });
+  }
+  const genres = [pick(rng, GENRES)];
+  if (rng() < 0.6) genres.push(pick(rng, GENRES));
   const year = 1975 + Math.floor(rng() * 50);
-  const duration = (78 + Math.floor(rng() * 92)) * 60000;
-  const contentRating = pick(rng, RATINGS);
-  const tmdb = 1000 + i * 7 + sectionKey;
+
+  return {
+    i: i,
+    guid: 'plex://movie/' + (5000000 + i),
+    tmdb: 1000 + i * 7,
+    imdb: 'tt' + String(1000000 + i * 13),
+    title: title,
+    year: year,
+    duration: (78 + Math.floor(rng() * 92)) * 60000,
+    contentRating: pick(rng, RATINGS),
+    tagline: 'A ' + pick(rng, ADJECTIVES).toLowerCase() + ' ' +
+             pick(rng, NOUNS).toLowerCase() + ', and no way back.',
+    studio: pick(rng, STUDIOS),
+    rating: Math.round((45 + rng() * 55)) / 10,          // critic, out of 10
+    audienceRating: Math.round((40 + rng() * 60)) / 10,
+    genres: genres.filter(function (g, n, a) { return a.indexOf(g) === n; }),
+    director: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
+    writer: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
+    cast: cast,
+    summary: title + ' (' + year + '). ' +
+             pick(rng, ADJECTIVES).toLowerCase() + ' ' + pick(rng, NOUNS).toLowerCase() +
+             ', a ' + pick(rng, NOUNS).toLowerCase() + ', and one long night in the ' +
+             pick(rng, NOUNS).toLowerCase() + '.'
+  };
+}
+
+/* One server's copy of a film. Same identity, its own rating key and its own
+   media — deliberately different between servers, so that choosing a source
+   is choosing whether the thing direct plays. */
+function makeCopy(film, serverIndex) {
+  const rng = rand(film.i * 7919 + serverIndex * 104729);
+  const profile = PROFILES[PROFILE_PICK[Math.floor(rng() * PROFILE_PICK.length)]];
+  const ratingKey = String(serverIndex * 1000000 + 1000 + film.i);
 
   const item = {
     ratingKey: ratingKey,
     key: '/library/metadata/' + ratingKey,
-    guid: 'plex://movie/' + ratingKey,
-    Guid: [{ id: 'tmdb://' + tmdb }],
+    guid: film.guid,
+    Guid: [{ id: 'tmdb://' + film.tmdb }, { id: 'imdb://' + film.imdb }],
     type: 'movie',
-    title: title,
-    titleSort: title,
-    year: year,
-    duration: duration,
-    addedAt: 1600000000 + i * 3600,
-    updatedAt: 1600000000 + i * 3600,
-    thumb: '/library/metadata/' + ratingKey + '/thumb/' + (1600000000 + i),
-    art: '/library/metadata/' + ratingKey + '/art/' + (1600000000 + i),
-    summary: title + ' (' + year + '). ' + pick(rng, ADJECTIVES).toLowerCase() +
-             ' ' + pick(rng, NOUNS).toLowerCase() + ', a ' +
-             pick(rng, NOUNS).toLowerCase() + ', and one long night in the ' +
-             pick(rng, NOUNS).toLowerCase() + '.',
+    title: film.title,
+    titleSort: film.title,
+    year: film.year,
+    duration: film.duration,
+    addedAt: 1600000000 + film.i * 3600 + serverIndex * 900,
+    updatedAt: 1600000000 + film.i * 3600,
+    thumb: '/library/metadata/' + ratingKey + '/thumb/' + (1600000000 + film.i),
+    art: '/library/metadata/' + ratingKey + '/art/' + (1600000000 + film.i),
+    summary: film.summary,
+    tagline: film.tagline,
+    studio: film.studio,
+    rating: film.rating,
+    audienceRating: film.audienceRating,
     Media: [{
       id: Number(ratingKey),
       videoResolution: profile.res,
@@ -109,28 +173,32 @@ function makeItem(sectionKey, i) {
       container: profile.container,
       width: profile.w,
       height: profile.h,
-      duration: duration,
+      duration: film.duration,
       bitrate: profile.res === '4k' ? 48000 : 9000,
       Part: [{
         id: Number(ratingKey) + 500000,
         key: '/library/parts/' + (Number(ratingKey) + 500000) + '/' +
-             (1600000000 + i) + '/file.' + profile.container,
+             (1600000000 + film.i) + '/file.' + profile.container,
         container: profile.container,
-        duration: duration,
+        duration: film.duration,
         size: profile.res === '4k' ? 62000000000 : 9000000000
       }]
     }]
   };
-  if (contentRating) item.contentRating = contentRating;
+  if (film.contentRating) item.contentRating = film.contentRating;
   item._profile = profile.id;
+  item._film = film.i;
   return item;
 }
 
-/* Streams only appear on the full metadata payload, exactly as they do on a
-   real server — which is why the masthead shows "AUDIO …" until it lands. */
-function streamsFor(item) {
+/* Streams, cast and crew only appear on the full metadata payload, exactly as
+   they do on a real server — which is why the masthead shows "AUDIO …" until it
+   lands, and why the detail page has to fetch. */
+function fullMetadata(item, film) {
+  const copy = JSON.parse(JSON.stringify(item));
   const profile = PROFILES.filter(function (p) { return p.id === item._profile; })[0];
-  const media = item.Media[0];
+  const media = copy.Media[0];
+
   const streams = [{
     id: Number(item.ratingKey) * 10,
     streamType: 1,
@@ -146,7 +214,7 @@ function streamsFor(item) {
       streamType: 2,
       codec: a[0],
       channels: a[1],
-      languageCode: n === 0 ? 'eng' : (n === 1 ? 'eng' : 'fra'),
+      languageCode: n === 2 ? 'fra' : 'eng',
       selected: n === 0
     };
     if (a[2]) st.profile = a[2];
@@ -156,57 +224,93 @@ function streamsFor(item) {
     id: Number(item.ratingKey) * 10 + 9,
     streamType: 3, codec: 'subrip', languageCode: 'eng'
   });
-  return streams;
-}
+  copy.Media[0].Part[0].Stream = streams;
 
-function fullMetadata(item) {
-  const copy = JSON.parse(JSON.stringify(item));
-  copy.Media[0].Part[0].Stream = streamsFor(item);
+  copy.Genre = film.genres.map(function (g) { return { tag: g }; });
+  copy.Director = [{ tag: film.director }];
+  copy.Writer = [{ tag: film.writer }];
+  copy.Role = film.cast.map(function (c, n) {
+    return { tag: c.name, role: c.role,
+             thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
+  });
   return copy;
 }
 
-/* Sections. The show section exists so we can see it being filtered out —
-   drill-down is task 3, and until then it must not appear as a chip. */
+/* ---------- servers ---------- */
+
+/* Which films each server holds. Main has most of them; Backup has a third of
+   Main's plus a slice of its own, so merging has to both deduplicate and add. */
+function holdings(count) {
+  const main = [], backup = [];
+  for (let i = 0; i < count; i++) {
+    if (i % 4 !== 3) main.push(i);
+    if (i % 3 === 0 || i % 4 === 3) backup.push(i);
+  }
+  return [main, backup];
+}
+
+const SERVERS = [
+  { index: 1, id: 'mockmachine00000000000000000000000000main', name: 'Main', prefix: '/__plex' },
+  { index: 2, id: 'mockmachine0000000000000000000000000backup', name: 'Backup', prefix: '/__plex2' }
+];
+
 function build(counts) {
-  const sections = [
-    { key: '1', title: 'Films', type: 'movie', updatedAt: 1700000000, count: counts.films },
-    { key: '2', title: '4K Films', type: 'movie', updatedAt: 1700000100, count: counts.uhd },
-    { key: '3', title: 'TV Shows', type: 'show', updatedAt: 1700000200, count: 0 }
-  ];
+  const filmCount = counts.films;
+  const films = [];
+  for (let i = 0; i < filmCount; i++) films.push(makeFilm(i));
 
-  const items = {};
-  sections.forEach(function (sec) {
-    const list = [];
-    for (let i = 0; i < sec.count; i++) list.push(makeItem(Number(sec.key), i));
-    /* The app asks for sort=titleSort:asc and nothing else, so sort once here
-       rather than pretending to honour arbitrary sorts. */
-    list.sort(function (a, b) { return a.titleSort < b.titleSort ? -1 : (a.titleSort > b.titleSort ? 1 : 0); });
-    items[sec.key] = list;
-  });
+  const held = holdings(filmCount);
 
-  const byKey = {};
-  const byTmdb = {};
-  Object.keys(items).forEach(function (k) {
-    items[k].forEach(function (m) {
-      byKey[m.ratingKey] = m;
-      byTmdb[m.Guid[0].id] = m;
+  const servers = SERVERS.map(function (spec, n) {
+    const mine = held[n];
+    /* Section 1 is everything this server holds; section 2 is its 4K subset,
+       so the two servers do not even agree on how many sections there are. */
+    const all = mine.map(function (i) { return makeCopy(films[i], spec.index); });
+    all.sort(function (a, b) {
+      return a.titleSort < b.titleSort ? -1 : (a.titleSort > b.titleSort ? 1 : 0);
     });
+    const uhd = all.filter(function (m) { return m.Media[0].videoResolution === '4k'; });
+
+    const sections = [
+      { key: '1', title: 'Films', type: 'movie', updatedAt: 1700000000 + n },
+      { key: '3', title: 'TV Shows', type: 'show', updatedAt: 1700000200 }
+    ];
+    const items = { '1': all, '3': [] };
+    /* Only Main separates its 4K films into their own section. */
+    if (n === 0) {
+      sections.splice(1, 0, { key: '2', title: '4K Films', type: 'movie', updatedAt: 1700000100 });
+      items['2'] = uhd;
+    }
+
+    const byKey = {};
+    all.forEach(function (m) { byKey[m.ratingKey] = m; });
+    const byGuid = {};
+    all.forEach(function (m) { byGuid['tmdb://' + films[m._film].tmdb] = m; });
+
+    return {
+      spec: spec,
+      name: spec.name,
+      machineId: spec.id,
+      prefix: spec.prefix,
+      sections: sections,
+      items: items,
+      byKey: byKey,
+      byGuid: byGuid,
+      contentRatings: function (key) {
+        const seen = {};
+        (items[key] || []).forEach(function (m) {
+          if (m.contentRating) seen[m.contentRating] = true;
+        });
+        return Object.keys(seen).sort();
+      }
+    };
   });
 
   return {
-    sections: sections,
-    items: items,
-    byKey: byKey,
-    byTmdb: byTmdb,
-    fullMetadata: fullMetadata,
-    /* Distinct certificates in a section, which is what the kids filter asks
-       for before it filters on anything. */
-    contentRatings: function (key) {
-      const seen = {};
-      (items[key] || []).forEach(function (m) { if (m.contentRating) seen[m.contentRating] = true; });
-      return Object.keys(seen).sort();
-    }
+    films: films,
+    servers: servers,
+    fullMetadata: function (item) { return fullMetadata(item, films[item._film]); }
   };
 }
 
-module.exports = { build: build, PROFILES: PROFILES };
+module.exports = { build: build, PROFILES: PROFILES, SERVERS: SERVERS };

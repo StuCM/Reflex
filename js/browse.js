@@ -2,12 +2,13 @@
 
    Browse owns the state the rest of the app reads: the section list, the rows,
    which row and tile are focused, and which mode is showing (the library, the
-   kids cut of it, the curated rows, or a page of search results). It builds
-   rows and hands them to Rail to draw.
+   kids cut of it, the curated rows, or a page of search results).
 
-   Nothing here fetches or holds a whole section. Continue watching and the
-   category rows arrive as small preloaded lists; the All row is virtual over a
-   total count and pages in only what you look at. */
+   Every row is built by asking each server separately and merging the answers,
+   so a film held by both appears once, carrying both copies. Nothing here
+   fetches or holds a whole section: Continue watching and the category rows
+   arrive as small preloaded lists, and the All row is virtual over the servers'
+   own totals, walking them in title order only as far as you scroll. */
 var Browse = (function () {
   'use strict';
 
@@ -33,8 +34,7 @@ var Browse = (function () {
     /* Enter from the on-screen keyboard arrives on the input, not the document.
        It must not go on to reach the browse key handler: runSearch switches
        back to the browse view synchronously, so by the time the event bubbled
-       up it would read as OK on whatever was focused before the search, and
-       start a playback decision on it. */
+       up it would read as OK on whatever was focused before the search. */
     elInput.addEventListener('keydown', function (e) {
       if (e.keyCode !== UI.KEY.OK) return;
       e.preventDefault();
@@ -60,13 +60,53 @@ var Browse = (function () {
     renderChips();
     Rail.render(rows, rowIdx);
     Masthead.render(focusedRow(), focusedItem(), rows.length > 0);
-    schedulePages();
+    scheduleWalk();
     Meta.schedule(focusedItem(), function (ratingKey) {
       var here = focusedItem();
       if (here && here.ratingKey === ratingKey) {
         Masthead.render(focusedRow(), here, true);
       }
     });
+  }
+
+  /* ---------- servers and sections ----------
+
+     Each server has its own sections, with their own keys. Two servers both
+     calling a section "Films" means one chip backed by two parts — and a
+     section only one of them has still gets a chip of its own. */
+
+  function setSections(perServer) {
+    var byTitle = {}, order = [], i, j, list, sec, key;
+    for (i = 0; i < perServer.length; i++) {
+      list = perServer[i].sections || [];
+      for (j = 0; j < list.length; j++) {
+        sec = list[j];
+        key = sec.title.toLowerCase();
+        if (!byTitle[key]) {
+          byTitle[key] = { title: sec.title, parts: [] };
+          order.push(key);
+        }
+        byTitle[key].parts.push({ server: perServer[i].server, key: sec.key,
+                                  updatedAt: sec.updatedAt || 0 });
+      }
+    }
+    var merged = order.map(function (k) { return byTitle[k]; });
+    var currentTitle = sections[secIdx] && sections[secIdx].title;
+    sections = merged;
+    var at = 0;
+    for (i = 0; i < merged.length; i++) if (merged[i].title === currentTitle) at = i;
+    return at;
+  }
+
+  function serversOf(sec) {
+    var out = [], seen = {}, i, id;
+    for (i = 0; i < sec.parts.length; i++) {
+      id = sec.parts[i].server.id;
+      if (seen[id]) continue;
+      seen[id] = true;
+      out.push(sec.parts[i].server);
+    }
+    return out;
   }
 
   /* ---------- the chips above the rail ----------
@@ -82,6 +122,13 @@ var Browse = (function () {
     }
     out.push({ label: 'kids', kind: 'kids', current: mode === 'kids' });
     out.push({ label: 'discover', kind: 'discover', current: mode === 'discover' });
+    /* Which server a film is shown as, when both have it. One chip that names
+       the current choice and cycles on OK — the remote has no colour buttons,
+       and a whole settings screen for one preference would be worse. */
+    if (Servers.count() > 1) {
+      var pref = Servers.get(Servers.preferred());
+      out.push({ label: 'prefer: ' + (pref ? pref.name : '?'), kind: 'prefer', current: false });
+    }
     out.push({ label: 'devices', kind: 'devices', current: false });
     out.push({ label: 'search', kind: 'search', current: false });
     return out;
@@ -117,6 +164,18 @@ var Browse = (function () {
     if (chip.kind === 'search') { openSearch(); return; }
     if (chip.kind === 'kids') { loadKids(); return; }
     if (chip.kind === 'discover') { loadDiscover(); return; }
+    if (chip.kind === 'prefer') {
+      var at = chipIdx;
+      var now = Servers.get(Servers.cyclePreferred());
+      UI.debug('preferring ' + (now ? now.name : '?') + ' where both servers have a film');
+      /* Rebuild the rows: which copy of a shared film is shown changes with
+         the preference. */
+      loadSection(secIdx, true);
+      headerFocus = true;
+      chipIdx = at;
+      renderChips();
+      return;
+    }
     if (chip.kind === 'devices') {
       Devices.open(function (changed) {
         UI.show('browse');
@@ -130,16 +189,7 @@ var Browse = (function () {
     else render();
   }
 
-  /* ---------- sections ---------- */
-
-  /* Adopt a fresh section list, keeping whatever section was showing. */
-  function setSections(list) {
-    var currentKey = sections[secIdx] && sections[secIdx].key;
-    sections = list;
-    var i = 0, j;
-    for (j = 0; j < list.length; j++) if (list[j].key === currentKey) i = j;
-    return i;
-  }
+  /* ---------- building rows ---------- */
 
   function reset(newMode) {
     generation++;
@@ -150,116 +200,145 @@ var Browse = (function () {
     render();
   }
 
+  /* One page of one server's section, for the merge walk. */
+  function pageFetcher() {
+    return function (part, offset) {
+      return Plex.items(part.server, part.key, offset, Rows.PAGE, part.filter)
+        .then(function (res) { return { items: res.items, total: res.total }; });
+    };
+  }
+
+  function allRow(sec, title, filter, tag) {
+    var parts = sec.parts.map(function (p) {
+      return { server: p.server, key: p.key, updatedAt: p.updatedAt,
+               filter: filter || null, tag: tag || '' };
+    });
+    return Rows.merged(title || 'All films', parts, pageFetcher());
+  }
+
+  /* A section's length, cheaply: size=0 returns totalSize and no items, once
+     per server. The merged length is the sum less whatever duplicates the walk
+     has found so far, so it only gets more accurate. */
+  function primeTotals(row, isCurrent) {
+    if (!row || row.kind !== 'merge') return;
+    var jobs = row.state.streams.map(function (s) {
+      if (s.total) return Promise.resolve();
+      var ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
+      return Store.get(ck).then(function (cached) {
+        if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
+          s.total = cached.total;
+          return;
+        }
+        return Plex.items(s.part.server, s.part.key, 0, 0, s.part.filter).then(function (res) {
+          s.total = res.total;
+          Store.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
+        });
+      }).catch(function (e) { UI.debug('count: ' + e.message); });
+    });
+    Promise.all(jobs).then(function () {
+      if (!isCurrent()) return;
+      row.total = Merge.estimate(row.state);
+      render();
+      UI.debug(row.title + ': about ' + row.total + ' films across ' +
+               row.state.streams.length + ' server' +
+               (row.state.streams.length === 1 ? '' : 's'));
+    });
+  }
+
   function loadSection(i, allowFetch) {
     secIdx = i;
     reset('library');
     var isCurrent = generationGuard();
     var sec = sections[i];
-    var cacheKey = 'rows:' + sec.key;
+    var cacheKey = 'rows:' + sec.title;
 
     Store.get(cacheKey).then(function (cached) {
       if (!isCurrent()) return;
       if (cached && cached.rows && cached.rows.length) {
         rows = cached.rows.map(function (r) { return Rows.list(r.title, r.items); });
-        rows.push(Rows.all(sec));
-        restoreTotal(rows[rows.length - 1], isCurrent);
+        rows.push(allRow(sec));
+        primeTotals(rows[rows.length - 1], isCurrent);
         render();
         UI.debug(sec.title + ': rows from cache');
       }
       if (!allowFetch) return;
 
-      /* Continue watching plus the section's own categories: two requests for
-         the whole browse screen, no matter how big the library is. */
-      return Promise.all([Plex.onDeck(), Plex.hubs(sec.key), Devices.ensureHistory()])
-        .then(function (res) {
-          if (!isCurrent()) return;
-          var built = [], deck = Devices.mine(res[0]), hubList = res[1], n;
-          if (deck.length) built.push({ title: 'Continue watching', items: deck });
-          for (n = 0; n < hubList.length; n++) {
-            built.push({ title: hubList[n].title, items: hubList[n].items });
-          }
-          Store.put(cacheKey, { rows: built });
-          rows = built.map(function (r) { return Rows.list(r.title, r.items); });
-          rows.push(Rows.all(sec));
-          rowIdx = UI.clamp(rowIdx, 0, rows.length - 1);
-          restoreTotal(rows[rows.length - 1], isCurrent);
-          render();
-          UI.debug(sec.title + ': ' + rows.length + ' rows');
-        });
+      /* Continue watching is per server; the category rows are per section. Two
+         requests per server for the whole browse screen, however big the
+         library is. */
+      var servers = serversOf(sec);
+      return Promise.all([
+        Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
+        Promise.all(sec.parts.map(function (p) { return Plex.hubs(p.server, p.key); })),
+        Devices.ensureHistory()
+      ]).then(function (res) {
+        if (!isCurrent()) return;
+        var built = [];
+
+        var deck = Devices.mine(Merge.lists(res[0]));
+        deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
+        if (deck.length) built.push({ title: 'Continue watching', items: deck });
+
+        mergeHubs(res[1]).forEach(function (hub) { built.push(hub); });
+
+        Store.put(cacheKey, { rows: built });
+        rows = built.map(function (r) { return Rows.list(r.title, r.items); });
+        rows.push(allRow(sec));
+        rowIdx = UI.clamp(rowIdx, 0, rows.length - 1);
+        primeTotals(rows[rows.length - 1], isCurrent);
+        render();
+        UI.debug(sec.title + ': ' + rows.length + ' rows from ' + servers.length + ' server' +
+                 (servers.length === 1 ? '' : 's'));
+      });
     }).catch(function (e) {
       if (!isCurrent()) return;
       UI.debug('rows: ' + e.message);
-      if (!rows.length) UI.toast('Could not reach the server');
+      if (!rows.length) UI.toast('Could not reach the servers');
     });
   }
 
-  /* A virtual row's length. Size=0 returns totalSize and no items — one cheap
-     request instead of crawling 300 pages of a library we don't own. */
-  function restoreTotal(row, isCurrent) {
-    if (!row || row.kind !== 'all') return;
-    var ck = 'total:' + row.key + ':' + row.tag;
-    Store.get(ck).then(function (cached) {
-      if (!isCurrent()) return;
-      if (cached && cached.total && cached.updatedAt === row.version) {
-        row.total = cached.total;
-        render();
-        return;
+  /* Both servers offer a "Recently Added"; they are one row, deduplicated.
+     Order within it is first-seen, which keeps each server's own ordering
+     intact rather than inventing a ranking across them. */
+  function mergeHubs(perPart) {
+    var byTitle = {}, order = [], i, j, list;
+    for (i = 0; i < perPart.length; i++) {
+      list = perPart[i] || [];
+      for (j = 0; j < list.length; j++) {
+        if (!byTitle[list[j].title]) { byTitle[list[j].title] = []; order.push(list[j].title); }
+        byTitle[list[j].title].push(list[j].items);
       }
-      return Plex.items(row.key, 0, 0, row.filter).then(function (res) {
-        if (!isCurrent()) return;
-        row.total = res.total;
-        Store.put(ck, { updatedAt: row.version, total: res.total });
-        render();
-        UI.debug(row.title + ': ' + res.total + ' films');
-      });
-    }).catch(function (e) { UI.debug('count: ' + e.message); });
+    }
+    return order.map(function (title) {
+      return { title: title, items: Merge.lists(byTitle[title]) };
+    }).filter(function (hub) { return hub.items.length > 0; });
   }
 
-  /* ---------- paging (the All row only) ---------- */
+  /* ---------- walking the merge ---------- */
 
-  /* Debounced: scrolling through twenty screens must not fire twenty page
-     requests, only one for wherever you come to rest. */
-  function schedulePages() {
+  /* Debounced: scrolling through twenty screens must not fire twenty walks,
+     only one for wherever you come to rest. */
+  function scheduleWalk() {
     clearTimeout(pageTimer);
     pageTimer = setTimeout(function () {
       var row = focusedRow();
-      if (!row || row.kind !== 'all') return;
-      var want = Rows.pagesNeeded(row.focus), i;
-      for (i = 0; i < want.length; i++) ensurePage(row, want[i]);
-    }, 150);
-  }
-
-  function ensurePage(row, n) {
-    if (n < 0 || row.pages[n] || row.inflight[n]) return;
-    if (row.total && n * Rows.PAGE >= row.total) return;
-    var isCurrent = generationGuard();
-    row.inflight[n] = true;
-    /* updatedAt is in the key, so a changed section simply misses the cache.
-       ponytail: stale entries linger — Store has no delete. Add a cursor sweep
-       if the cache ever grows past a few hundred MB. */
-    var key = 'page:' + row.key + ':' + row.version + ':' + row.tag + ':' + n;
-
-    Store.get(key).then(function (cached) {
-      if (!isCurrent()) return null;
-      if (cached && cached.length) return cached;
-      return Plex.items(row.key, n * Rows.PAGE, Rows.PAGE, row.filter).then(function (res) {
-        if (!isCurrent()) return null;
-        if (res.total) row.total = res.total;
-        Store.put(key, res.items);
-        return res.items;
+      if (!row || row.kind !== 'merge') return;
+      if (Rows.haveUpTo(row) > Rows.needsUpTo(row)) return;
+      var isCurrent = generationGuard();
+      var had = Rows.haveUpTo(row), was = row.total;
+      Merge.advance(row.state, Rows.needsUpTo(row)).then(function () {
+        if (!isCurrent()) return;
+        row.total = Merge.estimate(row.state);
+        /* Only repaint if the walk actually produced something, or this would
+           schedule itself for ever once the servers are exhausted. */
+        if (Rows.haveUpTo(row) === had && row.total === was) return;
+        Rail.invalidateEmpty();
+        render();
+      }).catch(function (e) {
+        if (!isCurrent()) return;
+        UI.debug('walk: ' + e.message);
       });
-    }).then(function (list) {
-      delete row.inflight[n];
-      if (!isCurrent() || !list) return;
-      row.pages[n] = list;
-      Rail.invalidateEmpty();
-      render();
-      UI.debug('page ' + n + ' of ' + row.total);
-    }).catch(function (e) {
-      delete row.inflight[n];
-      if (!isCurrent()) return;
-      UI.debug('page ' + n + ': ' + e.message);
-    });
+    }, 150);
   }
 
   /* ---------- kids ---------- */
@@ -269,26 +348,38 @@ var Browse = (function () {
     reset('kids');
     var isCurrent = generationGuard();
 
-    /* Ask the library which certificates it uses, keep the ones at or below the
-       cutoff, and let the server do the filtering. */
-    Plex.contentRatings(sec.key).then(function (all) {
+    /* Ask each library which certificates it uses, keep the ones at or below
+       the cutoff, and let the servers do the filtering. */
+    Promise.all(sec.parts.map(function (p) {
+      return Plex.contentRatings(p.server, p.key);
+    })).then(function (perPart) {
       if (!isCurrent()) return;
-      var kid = all.filter(Media.isKidsRating);
+      var kid = [], seen = {};
+      perPart.forEach(function (list) {
+        list.filter(Media.isKidsRating).forEach(function (r) {
+          if (!seen[r]) { seen[r] = true; kid.push(r); }
+        });
+      });
       UI.debug('kids certificates: ' + (kid.join(', ') || 'none'));
 
-      return Promise.all([Plex.onDeck(), Devices.ensureHistory()]).then(function (res) {
+      var servers = serversOf(sec);
+      return Promise.all([
+        Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
+        Devices.ensureHistory()
+      ]).then(function (res) {
         if (!isCurrent()) return;
-        var watching = Devices.mine(res[0]).filter(function (m) {
+        var watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
           return Media.isKidsRating(m.contentRating);
         });
         rows = [];
         if (watching.length) rows.push(Rows.list('Kids · carry on watching', watching));
 
         if (kid.length) {
-          rows.push(Rows.all(sec, 'Kids · all films',
-                             { contentRating: kid.join(',') }, 'kids' + Media.KIDS_MAX_AGE));
+          var row = allRow(sec, 'Kids · all films',
+                           { contentRating: kid.join(',') }, 'kids' + Media.KIDS_MAX_AGE);
+          rows.push(row);
           render();
-          restoreTotal(rows[rows.length - 1], isCurrent);
+          primeTotals(row, isCurrent);
           return;
         }
         render();
@@ -329,7 +420,7 @@ var Browse = (function () {
     }).then(function () {
       if (!isCurrent() || rows.length) return;
       UI.message('Nothing matched',
-        'None of the curated titles are on this server, or the TMDB ids did ' +
+        'None of the curated titles are on either server, or the TMDB ids did ' +
         'not line up. Check the debug line for which rows came back empty.');
     });
   }
@@ -357,7 +448,8 @@ var Browse = (function () {
   }
 
   /* Results land on their own page, not back on the library rows — laid out as
-     a grid of RESULTS_PER_ROW using the same row machinery. */
+     a grid of RESULTS_PER_ROW using the same row machinery. Both servers are
+     asked, and a film on both appears once. */
   function runSearch() {
     var q = elInput.value.trim();
     if (!q) { closeSearch(); return; }
@@ -365,8 +457,11 @@ var Browse = (function () {
     UI.show('browse');
     UI.toast('Searching…');
     var isCurrent = generationGuard();
-    Plex.search(q).then(function (found) {
+    Promise.all(Servers.all().map(function (sv) {
+      return Plex.search(sv, q);
+    })).then(function (perServer) {
       if (!isCurrent()) return;
+      var found = Merge.lists(perServer);
       if (!savedRows) savedRows = rows;
       searchQuery = q;
       searchCount = found.length;
@@ -378,7 +473,8 @@ var Browse = (function () {
       if (!rows.length) rows = [Rows.list('No matches', [])];
       rowIdx = 0;
       render();
-      UI.debug('search "' + q + '": ' + found.length + ' film' + (found.length === 1 ? '' : 's'));
+      UI.debug('search "' + q + '": ' + found.length + ' film' +
+               (found.length === 1 ? '' : 's'));
     }).catch(function (e) {
       UI.message('Search failed', e.message);
     });
@@ -426,7 +522,7 @@ var Browse = (function () {
         else if (rowIdx < rows.length - 1) { rowIdx++; render(); }
         break;
       case K.OK:
-        if (headerFocus) activateChip(); else if (opts.onPlay) opts.onPlay();
+        if (headerFocus) activateChip(); else if (opts.onOpen) opts.onOpen(focusedItem());
         break;
       case K.RED:                                 // red, on remotes that have it
         openSearch();

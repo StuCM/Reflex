@@ -22,8 +22,8 @@ within a major webOS version. Therefore:
   transitions — they force layout and paint on a 2018 SoC.
 - Build target `es2015` if a bundler is introduced. Prefer no bundler.
 
-**The user does not own the Plex server.** He is a shared user on someone
-else's remote server, connecting directly (not via relay).
+**The user does not own the Plex servers.** He is a shared user on someone
+else's two remote servers, connecting directly (not via relay).
 
 - The server's rule is **no transcoding of 4K**. Enforcement appears to be
   Tautulli-style kill-stream, which fires *after* a session starts — so an
@@ -37,6 +37,28 @@ else's remote server, connecting directly (not via relay).
   someone else's hardware.
 - Sync library data incrementally and infrequently. Do not full-crawl a
   server we don't own.
+
+**There are two servers, and they share much of the same library.** Plex syncs
+watch state between them at the account level, by matching the item's global
+ids — so the same film picked up on one resumes in the right place on the
+other.
+
+- The app shows **one entry per film**, never one per server. Identity is
+  `Media.identities`: any external id in common (imdb, tmdb, tvdb, the plex://
+  guid), falling back to normalised title and year.
+- Which copy an entry is *shown* as follows the preferred server
+  (`Servers.preferred`, the `prefer:` chip). A film the preferred server does
+  not have simply appears as whoever does have it — the preference is a
+  preference, not a filter.
+- Every copy is kept on the entry as `_sources`, and the detail page lists them
+  all. This matters because the copies differ: the same film is often a 4K
+  TrueHD remux on one server and a 1080p E-AC3 file on the other, and only one
+  of those will direct play.
+- A copy can itself hold several versions — `Media[]` on one item — so a source
+  is *server × version*, and each is decided separately.
+- Every request is made against a named server. There is no "current server",
+  and nothing may assume one. Items are stamped with `_server` so posters,
+  decisions, playback and progress all go back to the right place.
 
 ## Audio: the live problem
 
@@ -75,26 +97,34 @@ Settings and services:
 - `js/store.js` — IndexedDB cache. The rail paints from cache before any
   network call.
 - `js/media.js` — the rules, as pure functions: audio track selection, the UHD
-  guard, certificate ages. No network, no DOM. These are the parts that must
-  not be wrong, so they are the parts that are unit tested.
+  guard, certificate ages, film identity. No network, no DOM. These are the
+  parts that must not be wrong, so they are the parts that are unit tested.
+- `js/servers.js` — the servers we can reach, which one an item came from, and
+  which one is preferred.
+- `js/merge.js` — one entry per film across servers: folding fetched lists, and
+  the streaming merge behind the All row.
 - `js/plex.js` — auth (PIN flow), server discovery, library paging, poster
-  URLs, the decision call, timeline reporting.
+  URLs, the decision call, timeline reporting. Every call takes a server.
 - `js/tmdb.js` — TMDB client for the curated rows. Inert without a key.
 
 Screen:
 
 - `js/ui.js` — which view is showing, toast, the debug line, keycodes.
-- `js/rows.js` — the row model. A 'list' row holds its items; an 'all' row is
-  virtual over a server-supplied total and pages in what you look at.
+- `js/rows.js` — the row model. A 'list' row holds its items; a 'merge' row is
+  virtual over the servers' own totals and walks them as you scroll.
 - `js/rail.js` — draws rows from a fixed pool: 4 row elements, 12 tiles each,
   whatever the library size. Owns no state.
-- `js/meta.js` — full metadata for the focused item, debounced and cached.
+- `js/meta.js` — full metadata for a copy, debounced and cached per server.
+- `js/guard.js` — will this copy play, and at what cost to someone else's
+  server. Everything that reaches Player goes through it first.
 - `js/masthead.js` — title, badges, and the audio track we would pick.
+- `js/detail.js` — the page OK opens: cast, ratings, and every copy of the film
+  with its verdict, which is where playback is actually chosen.
 - `js/devices.js` — whose viewing is this; filters Continue watching.
-- `js/discovery.js` — turns a TMDB list into rows of things this server has.
+- `js/discovery.js` — turns a TMDB list into rows of what the servers have.
 - `js/browse.js` — the state: sections, rows, focus, mode, paging, search.
 - `js/player.js` — direct play, resume, progress.
-- `js/app.js` — boot, the playback guard, and where each key goes.
+- `js/app.js` — boot, and where each key goes.
 
 Tools:
 
@@ -115,7 +145,11 @@ Tools:
 4. ~~Search~~ — done. Filters: only the kids certificate filter so far, and it
    is applied server side. Anything else (year, unwatched, resolution) is still
    to do.
-5. Only if browsing is still slow after all this: a caching backend on the
+5. Extras and trailers on the detail page. `includeExtras=1` is already on the
+   metadata call; nothing reads it yet. Local extras are ordinary parts and
+   direct play; anything coming from Plex's own trailer service does not touch
+   our servers at all, so neither is a transcode risk.
+6. Only if browsing is still slow after all this: a caching backend on the
    existing Hetzner box (Docker Compose + Caddy) that pre-sizes posters and
    serves a pre-baked section index. Deliberately deferred — the point is to
    find out whether it's needed.
@@ -148,8 +182,10 @@ The three checks, and what each is for:
   parser: a clean run means nothing obviously wrong, not proof.
 - `npm test` — the pure rules in `js/media.js` and the row arithmetic.
 - `npm run smoke` — drives the whole app in headless Chromium: link, browse,
-  paging, kids, discovery, search, devices, and all three playback verdicts.
-  Keep it green; add a step when you add a screen.
+  paging, kids, discovery, search, devices, the detail page, and all three
+  playback verdicts. The mock serves **two** servers sharing a library, so the
+  deduplication and the copy-picking are covered end to end. Keep it green; add
+  a step when you add a screen.
 
 None of that says anything about how it feels on the panel, which is still the
 question. When benchmarking on the TV, use the **second** pass through a

@@ -38,18 +38,26 @@ var Discovery = (function () {
     });
   }
 
-  /* TMDB ids -> the library items we actually hold, order preserved. */
+  /* TMDB ids -> the items we actually hold, on any server, order preserved and
+     one entry per film however many servers have it. */
   function matchToLibrary(tmdbIds) {
     return mapLimit(tmdbIds.slice(0, MAX_LOOKUPS), CONCURRENCY, function (id) {
-      return Plex.findByGuid('tmdb://' + id);
+      return Promise.all(Servers.all().map(function (sv) {
+        return Plex.findByGuid(sv, 'tmdb://' + id);
+      })).then(function (perServer) {
+        var hits = perServer.filter(function (m) { return !!m; });
+        return hits.length ? Merge.lists([hits])[0] : null;
+      });
     }).then(function (found) {
       return found.filter(function (m) { return !!m; });
     });
   }
 
   function seedsFromViewing() {
-    return Plex.onDeck().then(function (deck) {
-      var seeds = [], i, id, list = Devices.mine(deck);
+    return Promise.all(Servers.all().map(function (sv) {
+      return Plex.onDeck(sv);
+    })).then(function (perServer) {
+      var seeds = [], i, id, list = Devices.mine(Merge.lists(perServer));
       for (i = 0; i < list.length && seeds.length < MAX_SEEDS; i++) {
         id = Plex.tmdbId(list[i]);
         if (id) seeds.push(id);

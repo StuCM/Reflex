@@ -7,14 +7,23 @@ constraints that shape every decision here.
 ## What works now
 
 - plex.tv PIN link, token kept in localStorage
-- direct server discovery (races every non-relay connection, first to answer wins)
+- **all** of the account's servers, each reached on whichever of its addresses
+  answers first (races every non-relay connection; relays are never used)
+- **one entry per film across servers**, matched on the same ids Plex itself
+  syncs watch state against, so a film on both appears once and resumes in the
+  right place whichever copy you play
 - movie sections, paged and cached in IndexedDB — the rail paints from cache
   before any network call
 - windowed rail: 4 rows of 12 tiles in the DOM, regardless of library size
 - masthead shows resolution / codec / container and **the audio track we would
   pick**, before you press OK
-- OK runs the `hasMDE=1` decision call and plays only on `directplay`. A 4K item
-  that will not direct play is refused with the server's reason.
+- OK opens a detail page: cast, ratings, crew — and every copy of the film,
+  each with its own verdict. The same film is often a 4K TrueHD remux on one
+  server and a 1080p E-AC3 file on the other; the page says which will play
+  before you choose. The `prefer:` chip sets which server a shared film is
+  shown as by default.
+- Playing runs the `hasMDE=1` decision call and proceeds only on `directplay`.
+  A 4K item that will not direct play is refused with the server's reason.
 
 Not yet: shows, and filters beyond the kids certificate cut. Direct play only —
 there is no transcode playback path, by design.
@@ -82,12 +91,12 @@ First launch shows a code — enter it at plex.tv/link.
 
 ## Keys
 
-| Key | Browse | Playing |
-|---|---|---|
-| ← → | move in rail | seek ∓30s |
-| ↑ ↓ | change library section | — |
-| OK | play | play / pause |
-| Back | exit app | stop |
+| Key | Browse | Detail page | Playing |
+|---|---|---|---|
+| ← → | move in rail | choose a copy | seek ∓30s |
+| ↑ ↓ | change row / reach the chips | choose a copy | — |
+| OK | open the film | play the selected copy | play / pause |
+| Back | exit app | back to the rail | stop, back to the film |
 
 ## probe.py
 

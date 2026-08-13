@@ -85,8 +85,62 @@ var Media = (function () {
     return age !== null && age <= KIDS_MAX_AGE;
   }
 
+  /* ---------- identity ----------
+
+     Is this the same film as that one, on a different server?
+
+     Plex itself answers this every time it syncs a watch position between the
+     two servers, and it does it by matching the item's global identifiers. So
+     do we. Every id an item carries is a candidate key, and two items are the
+     same film if they agree on *any* of them — servers running different agent
+     versions expose different subsets, and requiring them all to line up would
+     mean silently showing duplicates.
+
+     Title and year come last, and only as a fallback. Two genuinely different
+     films sharing both is rare enough to accept; the same film failing to
+     match because one server has no external id is not. */
+
+  function externalIds(item) {
+    var out = [], g = (item && item.Guid) || [], i, id;
+    for (i = 0; i < g.length; i++) {
+      id = String(g[i].id || '').toLowerCase();
+      if (id.indexOf('imdb://') === 0 || id.indexOf('tmdb://') === 0 ||
+          id.indexOf('tvdb://') === 0) out.push(id);
+    }
+    /* The legacy agent form: com.plexapp.agents.imdb://tt0133093?lang=en */
+    var legacy = String((item && item.guid) || '');
+    var m = legacy.match(/agents\.(imdb|themoviedb|thetvdb):\/\/([^?/]+)/);
+    if (m) {
+      out.push((m[1] === 'themoviedb' ? 'tmdb' : (m[1] === 'thetvdb' ? 'tvdb' : 'imdb')) +
+               '://' + m[2].toLowerCase());
+    }
+    return out;
+  }
+
+  function titleKey(item) {
+    var t = String((item && (item.titleSort || item.title)) || '').toLowerCase()
+      .replace(/^(the|a|an)\s+/, '')
+      .replace(/[^a-z0-9]+/g, '');
+    return 'title://' + t + '/' + ((item && item.year) || '');
+  }
+
+  /* Every key this item could be recognised by, best first. */
+  function identities(item) {
+    var out = externalIds(item);
+    var guid = String((item && item.guid) || '');
+    if (guid.indexOf('plex://') === 0) out.push(guid.toLowerCase());
+    out.push(titleKey(item));
+    return out;
+  }
+
+  /* One stable key, for caching and for saying "this film" in a log line. */
+  function identity(item) { return identities(item)[0]; }
+
   return {
     pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD,
-    ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE
+    ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
+    identities: identities, identity: identity
   };
 })();
+
+if (typeof module !== 'undefined') module.exports = Media;   // for the unit tests

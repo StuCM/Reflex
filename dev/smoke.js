@@ -23,8 +23,7 @@ const { start } = require('./server');
 const buildLibrary = require('./library').build;
 
 const PORT = 8123;
-const FILMS = 300;
-const UHD = 60;
+const FILMS = 400;
 
 const args = process.argv.slice(2);
 const HEADED = args.indexOf('--head') >= 0;
@@ -45,27 +44,50 @@ try {
   }
 }
 
-/* Pick real titles out of the same generated library the server will serve, so
+/* Pick real titles out of the same generated library the servers will serve, so
    the playback assertions land on known media profiles rather than on whatever
    happens to be first. */
 function findTitles() {
-  const lib = buildLibrary({ films: FILMS, uhd: UHD });
-  const all = [];
-  Object.keys(lib.items).forEach(function (k) { lib.items[k].forEach(function (m) { all.push(m); }); });
+  const lib = buildLibrary({ films: FILMS });
+  const main = lib.servers[0], backup = lib.servers[1];
+
+  const copies = {};      // film index -> [copy, ...]
+  lib.servers.forEach(function (srv) {
+    srv.items['1'].forEach(function (m) {
+      (copies[m._film] = copies[m._film] || []).push(m);
+    });
+  });
+
   /* Search is a substring match, so a title is only usable here if no other
      title contains it — otherwise "one result" is not a safe assertion. */
-  function unique(profile) {
-    const hit = all.filter(function (m) {
-      if (m._profile !== profile) return false;
-      return all.filter(function (o) { return o.title.indexOf(m.title) >= 0; }).length === 1;
+  function unambiguous(m) {
+    return lib.films.filter(function (f) { return f.title.indexOf(m.title) >= 0; }).length === 1;
+  }
+
+  /* A film only one server has, so its verdict is the only one on offer. */
+  function only(profile) {
+    const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
+      return m._profile === profile && copies[m._film].length === 1 && unambiguous(m);
     })[0];
-    if (!hit) throw new Error('no unambiguous title with profile ' + profile);
+    if (!hit) throw new Error('no unambiguous single-server title with profile ' + profile);
     return hit;
   }
+
+  /* A film both servers have, in different shapes: one copy direct plays and
+     the other cannot. This is the case the whole feature exists for. */
+  const shared = main.items['1'].filter(function (m) {
+    if (copies[m._film].length !== 2 || !unambiguous(m)) return false;
+    const profiles = copies[m._film].map(function (c) { return c._profile; });
+    return profiles.indexOf('hevc-truehd') >= 0 &&
+           (profiles.indexOf('hevc-eac3') >= 0 || profiles.indexOf('h264-eac3') >= 0);
+  })[0];
+  if (!shared) throw new Error('no shared film with one playable and one unplayable copy');
+
   return {
-    truehdOnly: unique('hevc-truehd'),   // must be refused before any request
-    transcodes: unique('vc1-avi'),       // server says transcode, we refuse
-    directPlays: unique('h264-eac3')     // plays
+    truehdOnly: only('hevc-truehd'),     // must be refused before any request
+    transcodes: only('vc1-avi'),         // server says transcode, we refuse
+    directPlays: only('h264-eac3'),      // plays
+    shared: shared                       // on both servers, only one copy playable
   };
 }
 
@@ -85,7 +107,7 @@ function fail(name, err) {
 
 function run() {
   const titles = findTitles();
-  const server = start({ port: PORT, films: FILMS, uhd: UHD, latency: 0,
+  const server = start({ port: PORT, films: FILMS, latency: 0,
                          pinPolls: 1, proxy: false, quiet: true });
   let browser;
 
@@ -214,7 +236,8 @@ function drive(page, titles) {
     function attempt(n) {
       return page.evaluate(function () {
         return {
-          browse: !document.getElementById('browse').classList.contains('hidden'),
+          browse: !document.getElementById('browse').classList.contains('hidden') &&
+                  document.getElementById('detail').classList.contains('hidden'),
           results: document.querySelector('#sections').textContent.indexOf('back to library') >= 0
         };
       }).then(function (st) {
@@ -226,7 +249,9 @@ function drive(page, titles) {
     return attempt(5);
   }
 
-  /* Search for an exact title and land on the only result. */
+  /* Search for an exact title, focus the only result, and open its page. OK on
+     the rail no longer plays — it opens the detail page, and playing is a
+     decision made there against a named copy. */
   function openTitle(title) {
     return backToLibrary()
       .then(function () { return press('F1'); })
@@ -245,7 +270,19 @@ function drive(page, titles) {
         return waitFor('/AUDIO |NO PASSABLE/.test(document.querySelector("#mh-badges").textContent)',
                        'the audio badge');
       })
-      .then(function () { return page.keyboard.press('Enter'); });
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () {
+        return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
+                       ' document.getElementById("dt-title").textContent.trim() === ' +
+                       JSON.stringify(title), 'the detail page for ' + title);
+      })
+      /* Every copy is checked as the page opens; nothing can be chosen
+         meaningfully until at least the selected one has a verdict. */
+      .then(function () {
+        return waitFor('(function(){var s=document.querySelector(".dt-source.on");' +
+                       'return s && !/checking/.test(s.textContent);})()',
+                       'a verdict on the selected copy', 15000);
+      });
   }
 
   return page.goto('http://localhost:' + PORT + '/')
@@ -305,8 +342,22 @@ function drive(page, titles) {
       return step('the All row knows its size without crawling it', function () {
         return press('ArrowDown', 5)
           .then(function () {
-            return waitFor('/\\(' + FILMS + '\\)/.test(document.querySelector("#rows").textContent)',
+            return waitFor('/All films\\s+\\(\\d+\\)/.test(document.querySelector("#rows").textContent)',
                            'the All row count');
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              const m = document.querySelector('#rows').textContent.match(/All films\s+\((\d+)\)/);
+              return m ? Number(m[1]) : 0;
+            });
+          })
+          .then(function (count) {
+            /* Every film is on at least one server and many are on both, so the
+               estimate starts at the sum of the two and settles down towards the
+               true count as the walk finds duplicates. It must never claim fewer
+               than the library holds. */
+            if (count < FILMS) throw new Error('claims only ' + count + ' films of ' + FILMS);
+            if (count > FILMS * 2) throw new Error('claims ' + count + ', more than both servers hold');
           });
       });
     })
@@ -408,6 +459,7 @@ function drive(page, titles) {
     .then(function () {
       return step('refuses a TrueHD-only file without asking the server', function () {
         return openTitle(titles.truehdOnly.title)
+          .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
             return waitFor(shown('No passable audio', titles.truehdOnly.title),
                            'the no-passable-audio refusal, naming ' + titles.truehdOnly.title);
@@ -426,14 +478,14 @@ function drive(page, titles) {
     .then(function () {
       return step('refuses what the server says it would transcode', function () {
         return openTitle(titles.transcodes.title)
+          .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
             return waitFor(shown('transcode', titles.transcodes.title),
                            'the transcode refusal, naming ' + titles.transcodes.title);
           })
-          .then(debugLine)
-          .then(function (line) {
-            if (line.indexOf('decision: transcode') < 0) {
-              throw new Error('expected a transcode verdict, debug says: ' + line);
+          .then(function () {
+            if (!tracedThat(/decision: transcode/)) {
+              throw new Error('expected a transcode verdict in: ' + trace.slice(-3).join(' | '));
             }
           })
           .then(function () { return shot('refuse-transcode'); })
@@ -442,8 +494,85 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('a film on both servers is one entry with two copies', function () {
+        return openTitle(titles.shared.title)
+          .then(chipTexts)
+          .then(function () {
+            /* One search result, not two — that is the whole point. */
+            return page.evaluate(function () {
+              const m = document.querySelector('#sections').textContent.match(/(\d+) films?/);
+              return m ? Number(m[1]) : -1;
+            });
+          })
+          .then(function (n) {
+            if (n !== 1) throw new Error('the same film appeared ' + n + ' times');
+          })
+          .then(function () {
+            return waitFor('(function(){var s=document.querySelectorAll(".dt-source");' +
+                           'if (s.length !== 2) return false;' +
+                           'return !/checking/.test(s[0].textContent) &&' +
+                           ' !/checking/.test(s[1].textContent);})()',
+                           'both copies checked', 15000);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return Array.prototype.map.call(document.querySelectorAll('.dt-source'),
+                function (s) {
+                  return { on: s.classList.contains('on'),
+                           text: s.textContent.replace(/\s+/g, ' ') };
+                });
+            });
+          })
+          .then(function (src) {
+            /* The two copies must not read the same, and exactly one of them
+               must be playable — that is the case this whole feature exists
+               for: a 4K TrueHD remux on one server, a passable copy on the
+               other. */
+            const playable = src.filter(function (s) { return /direct play/.test(s.text); });
+            const refused = src.filter(function (s) { return /no passable audio/.test(s.text); });
+            if (playable.length !== 1 || refused.length !== 1) {
+              throw new Error('expected one playable and one refused copy, got:\n        ' +
+                              src.map(function (s) { return s.text; }).join('\n        '));
+            }
+            if (!/preferred/.test(src[0].text)) {
+              throw new Error('the preferred server should be listed first');
+            }
+            if (!src[0].on) throw new Error('the preferred copy should be selected');
+          })
+          .then(function () { return shot('detail-shared'); });
+      });
+    })
+
+    .then(function () {
+      return step('switching copy changes what OK does', function () {
+        /* Select the copy that cannot play and confirm the app refuses it,
+           rather than quietly falling back to the one that can. */
+        return press('ArrowDown')
+          .then(function () {
+            return page.evaluate(function () {
+              const on = document.querySelector('.dt-source.on');
+              return on ? on.textContent.replace(/\s+/g, ' ') : '';
+            });
+          })
+          .then(function (text) {
+            const refusing = /no passable audio/.test(text);
+            return page.keyboard.press('Enter').then(function () {
+              return waitFor('(function(){var m=document.getElementById("message");' +
+                             'var v=document.getElementById("video");' +
+                             'return ' + (refusing ? '!m.classList.contains("hidden")'
+                                                   : '!v.classList.contains("hidden")') + ';})()',
+                             refusing ? 'a refusal for the unplayable copy'
+                                      : 'playback of the playable copy', 15000);
+            });
+          })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
       return step('plays a file that direct plays', function () {
         return openTitle(titles.directPlays.title)
+          .then(function () { return page.keyboard.press('Enter'); })
           .then(function () { return page.waitForTimeout(600); })
           .then(function () {
             if (!tracedThat(/decision: directplay/)) {
@@ -477,9 +606,11 @@ function drive(page, titles) {
             return press('Backspace');            // stop
           })
           .then(function () {
+            /* Back from playback returns to the page it was started from, so
+               you can pick the other copy without searching again. */
             return waitFor('document.getElementById("video").classList.contains("hidden") &&' +
-                           ' !document.getElementById("browse").classList.contains("hidden")',
-                           'playback to stop and the rail to come back');
+                           ' !document.getElementById("detail").classList.contains("hidden")',
+                           'playback to stop and the detail page to come back');
           })
           .then(function () {
             if (!(at > 0)) throw new Error('playback never advanced');
