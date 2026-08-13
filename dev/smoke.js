@@ -159,6 +159,31 @@ function drive(page, titles) {
     return Promise.resolve().then(fn).then(function () { ok(name); }, function (e) { fail(name, e); });
   }
 
+  /* Walk the chip focus to a named chip and press OK on it, rather than
+     assuming an index — the chip row grows as the app does. */
+  function pressChip(label) {
+    return press('ArrowUp', 8)
+      .then(function () {
+        return waitFor('document.querySelector("#sections .chip.on") !== null', 'chip focus');
+      })
+      .then(function () {
+        return page.evaluate(function (want) {
+          const chips = document.querySelectorAll('#sections .chip');
+          let on = -1, to = -1;
+          for (let i = 0; i < chips.length; i++) {
+            if (chips[i].classList.contains('on')) on = i;
+            if (chips[i].textContent.trim() === want) to = i;
+          }
+          return [on, to];
+        }, label);
+      })
+      .then(function (idx) {
+        if (idx[1] < 0) throw new Error('no "' + label + '" chip');
+        return press(idx[1] > idx[0] ? 'ArrowRight' : 'ArrowLeft', Math.abs(idx[1] - idx[0]));
+      })
+      .then(function () { return page.keyboard.press('Enter'); });
+  }
+
   /* The refusal screen has to be *showing*, and it has to be about the film we
      actually chose — naming the wrong one is a bug this caught once already. */
   function shown(titleFragment, film) {
@@ -290,33 +315,7 @@ function drive(page, titles) {
 
     .then(function () {
       return step('kids rows exclude everything above the cutoff', function () {
-        return press('ArrowUp', 8)                      // up to the chips
-          .then(function () {
-            return waitFor('document.querySelector("#sections .chip.on") !== null', 'chip focus');
-          })
-          .then(function () {
-            /* Walk right to the kids chip rather than assuming its index. */
-            return page.evaluate(function () {
-              const chips = document.querySelectorAll('#sections .chip');
-              for (let i = 0; i < chips.length; i++) {
-                if (chips[i].classList.contains('on')) return i;
-              }
-              return -1;
-            });
-          })
-          .then(function (from) {
-            return page.evaluate(function () {
-              const chips = document.querySelectorAll('#sections .chip');
-              for (let i = 0; i < chips.length; i++) {
-                if (chips[i].textContent.trim() === 'kids') return i;
-              }
-              return -1;
-            }).then(function (to) {
-              if (to < 0) throw new Error('no kids chip');
-              return press(to > from ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - from));
-            });
-          })
-          .then(function () { return page.keyboard.press('Enter'); })
+        return pressChip('kids')
           .then(function () {
             return waitFor('/Kids/.test(document.querySelector("#rows").textContent)',
                            'a kids row', 15000);
@@ -332,6 +331,22 @@ function drive(page, titles) {
             return waitFor('!/Kids/.test(document.querySelector("#rows").textContent)',
                            'the library rows back');
           });
+      });
+    })
+
+    .then(function () {
+      return step('discovery says what it needs rather than failing quietly', function () {
+        /* No TMDB key in the harness, so this is the path a first run takes.
+           It has to name the setting, not just refuse. */
+        return backToLibrary()
+          .then(function () { return pressChip('discover'); })
+          .then(function () {
+            return waitFor('!document.getElementById("message").classList.contains("hidden") &&' +
+                           ' /TMDB/.test(document.getElementById("message-title").textContent) &&' +
+                           ' /config\\.js/.test(document.getElementById("message-body").textContent)',
+                           'the TMDB key message');
+          })
+          .then(function () { return press('Backspace'); });
       });
     })
 
@@ -362,23 +377,7 @@ function drive(page, titles) {
     .then(function () {
       return step('the device screen lists who has been watching', function () {
         return backToLibrary()
-          .then(function () { return press('ArrowUp', 6); })
-          .then(function () {
-            return page.evaluate(function () {
-              const chips = document.querySelectorAll('#sections .chip');
-              let on = -1, want = -1;
-              for (let i = 0; i < chips.length; i++) {
-                if (chips[i].classList.contains('on')) on = i;
-                if (chips[i].textContent.trim() === 'devices') want = i;
-              }
-              return [on, want];
-            });
-          })
-          .then(function (idx) {
-            if (idx[1] < 0) throw new Error('no devices chip');
-            return press(idx[1] > idx[0] ? 'ArrowRight' : 'ArrowLeft', Math.abs(idx[1] - idx[0]));
-          })
-          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () { return pressChip('devices'); })
           .then(function () {
             return waitFor('/Living room/.test(document.querySelector("#device-list").textContent)',
                            'the device list', 15000);

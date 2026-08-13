@@ -16,8 +16,31 @@ constraints that shape every decision here.
 - OK runs the `hasMDE=1` decision call and plays only on `directplay`. A 4K item
   that will not direct play is refused with the server's reason.
 
-Not yet: shows, search, filters. Direct play only — there is no transcode
-playback path, by design.
+Not yet: shows, and filters beyond the kids certificate cut. Direct play only —
+there is no transcode playback path, by design.
+
+## Run it on the laptop
+
+```sh
+npm run dev            # http://localhost:8080
+npm run dev -- --films 30000 --latency 140    # the real library's size and distance
+npm run verify         # Chromium-53 check, unit tests, headless smoke test
+```
+
+`npm run dev` serves the app exactly as it ships and stands in for both plex.tv
+and a media server, so there is no sign-in and no traffic to anyone's real
+server — the generated library is deliberately full of awkward files (TrueHD
+only, 4K VC-1) so every branch of the playback guard is reachable. Press `?` in
+the browser for the key mapping; `index.html` is rewritten in memory on the way
+out, never on disk.
+
+`npm run dev -- --proxy` forwards plex.tv to the real thing instead, if you want
+to sign in properly and browse the real library from a desktop browser. Your
+token passes through the local process.
+
+To exercise playback, drop any browser-playable video at
+`dev/fixtures/sample.mp4`; every item then plays it. Without one, playback takes
+its error path, which is worth seeing once too.
 
 ## Put it on the TV
 
@@ -36,7 +59,7 @@ is the webOS OSE profile, not a retail set. A retail TV in Dev Mode is
 ```sh
 ares-setup-device --modify tv -i "host=<TV_IP>" -i "port=9922" -i "username=prisoner"
 ares-novacom --device tv --getkey      # prompts for the passphrase
-ares-package .
+ares-package . -e dev -e test -e tools -e node_modules
 ares-install --device tv com.stu.plexlite_0.0.1_all.ipk
 ares-launch  --device tv com.stu.plexlite
 ares-inspect --device tv --app com.stu.plexlite   # DevTools, use Chromium ~53
@@ -80,13 +103,26 @@ XHR to plex.tv and to the server should work. If requests fail with status 0,
 that's the thing to confirm before blaming the Plex API.
 
 The bottom line of the screen is a debug readout — server name, section item
-counts, and the last decision verdict.
+counts, and the last decision verdict. If DevTools won't attach at all, run
+`npm run beacon` on the laptop and point `beacon` in `js/config.js` at it: the
+same line then prints in your terminal. Clear it again afterwards, it costs a
+request per line.
+
+## Curated rows
+
+The discovery rows need a free TMDB v3 API key in `tmdbKey` in `js/config.js`.
+Without one they say so and everything else works unchanged.
 
 ## Tests
 
 ```sh
-node test/audio.test.js
+npm test          # pure rules: audio selection, the UHD guard, certificates,
+                  # and the virtual row's arithmetic
+npm run check     # anything in js/ or css/ that Chromium 53 cannot run
+npm run smoke     # the whole app in headless Chromium, against the mock
 ```
 
-Covers audio track selection and the UHD guard — the rules that keep an
-accidental transcode off someone else's dashboard.
+The unit tests cover the rules that keep an accidental transcode off someone
+else's dashboard, and the certificate parsing that decides what a child is shown.
+`npm run smoke` needs Playwright (`npm i -g playwright`); without it, it says so
+and stops rather than failing.

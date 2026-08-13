@@ -59,12 +59,25 @@
 <div id="toast" class="hidden"></div>
 <div id="debug"></div>
 
+<!-- No bundler, so load order is the dependency graph: settings, then the
+     services, then the pieces of screen, then the app that wires them up.
+     tools/check-es5.js fails if a file in js/ is missing from this list. -->
 <script src="js/config.js"></script>
 <script src="js/store.js"></script>
 <script src="js/media.js"></script>
 <script src="js/plex.js"></script>
-<script src="js/discover.js"></script>
+<script src="js/tmdb.js"></script>
+
+<script src="js/ui.js"></script>
+<script src="js/rows.js"></script>
+<script src="js/rail.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/masthead.js"></script>
+<script src="js/devices.js"></script>
+<script src="js/discovery.js"></script>
+<script src="js/browse.js"></script>
 <script src="js/player.js"></script>
+
 <script src="js/app.js"></script>
 </body>
 </html>

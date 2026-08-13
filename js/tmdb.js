@@ -1,4 +1,4 @@
-/* Curated discovery. Chromium 53.
+/* TMDB client. Chromium 53.
 
    Deliberately external-first: fetch a small curated list from TMDB (one
    request, ~20 titles), then ask Plex which of them it has, by TMDB id. The
@@ -7,7 +7,7 @@
 
    Needs a free TMDB v3 API key. Without one the discovery rows simply don't
    appear; nothing else is affected. */
-var Discover = (function () {
+var Tmdb = (function () {
   'use strict';
 
   var KEY = Config.tmdbKey;                      // see js/config.js
