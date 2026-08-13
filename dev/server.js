@@ -19,6 +19,16 @@ const mock = require('./mock-plex');
 
 const ROOT = path.join(__dirname, '..');
 
+/* The video the mock serves for every item, if you have given it one. */
+function fixture() {
+  const names = ['sample.mp4', 'sample.webm', 'sample.mkv'];
+  for (const name of names) {
+    const p = path.join(__dirname, 'fixtures', name);
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
 function parseArgs(argv) {
   const out = { port: 8080, films: 2000, uhd: 300, latency: 0, pinPolls: 2,
                 proxy: false, quiet: false };
@@ -116,6 +126,10 @@ function start(opts) {
                                    : 'mock Plex: ' + opts.films + ' films, ' + opts.uhd +
                                      ' 4K films, pin claims itself'));
     if (opts.latency) console.log('  ' + opts.latency + 'ms added to every server response');
+    if (!fixture()) {
+      console.log('  no video to play: OK on a film will reach its error path.');
+      console.log('  npm run fixture   (or drop one at dev/fixtures/sample.mp4)');
+    }
     console.log('  keys: arrows, Enter, Backspace = Back, F1 = red/search, ? = help');
     console.log('');
   });

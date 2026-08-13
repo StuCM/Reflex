@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node dev/server.js",
     "beacon": "node dev/beacon.js",
+    "fixture": "node dev/make-fixture.js",
     "test": "node test/run.js",
     "check": "node tools/check-es5.js",
     "smoke": "node dev/smoke.js",

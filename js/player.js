@@ -1,5 +1,5 @@
 /* Direct play only. If the decision isn't directplay we don't get here —
-   see App.playSelected. */
+   see the playback guard in js/app.js. */
 var Player = (function () {
   'use strict';
 
@@ -8,7 +8,8 @@ var Player = (function () {
   var osdTitle = document.getElementById('osd-title');
   var osdTime = document.getElementById('osd-time');
 
-  var item = null, onExit = null, ticker = null, osdTimer = null, resumeMs = 0;
+  var item = null, onExit = null, onError = null;
+  var ticker = null, osdTimer = null, resumeMs = 0;
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -17,45 +18,96 @@ var Player = (function () {
     return h ? (h + ':' + mm + ':' + ss) : (m + ':' + ss);
   }
 
+  /* Two separate things: painting the time, and putting the OSD back on screen
+     for another few seconds. Repainting must not reset the hide timer, or the
+     OSD would never go away once playback started. */
+  function paintOsd() {
+    osdTime.textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration) +
+                          (v.paused ? '   PAUSED' : '');
+  }
+
   function showOsd() {
-    osdTime.textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration) + (v.paused ? '   PAUSED' : '');
+    paintOsd();
     osd.classList.remove('hidden');
     osd.style.opacity = '1';
     clearTimeout(osdTimer);
     osdTimer = setTimeout(function () { osd.style.opacity = '0'; }, 4000);
   }
 
+  function osdShowing() { return osd.style.opacity !== '0' && !osd.classList.contains('hidden'); }
+
   function report(state) {
     if (!item) return;
     Plex.timeline(item, state, (v.currentTime || 0) * 1000, (v.duration || 0) * 1000);
   }
 
+  /* A black screen tells you nothing, and "the panel refused it" is only one of
+     the reasons this fails. Say which. */
+  function mediaErrorText(err) {
+    var code = err ? err.code : 0;
+    var detail = err && err.message ? '  ·  ' + err.message : '';
+    if (code === 1) return 'The stream was aborted.' + detail;
+    if (code === 2) return 'The network dropped the stream — the server stopped ' +
+                           'answering part way through.' + detail;
+    if (code === 3) return 'The panel could not decode this stream (media error 3). ' +
+                           'The server said it would direct play, so the declared ' +
+                           'profile in js/plex.js claims something this panel cannot ' +
+                           'actually decode.' + detail;
+    if (code === 4) return 'The stream would not open (media error 4) — the server ' +
+                           'refused the request, or the container is one the panel ' +
+                           'will not accept at all.' + detail;
+    return 'The stream failed (media error ' + code + ').' + detail;
+  }
+
+  function fail(msg) {
+    var report_ = onError;
+    UI.debug('playback failed: ' + msg);
+    stop('stopped');
+    if (report_) report_(msg);
+  }
+
   function play(opts) {
     item = opts.item;
     onExit = opts.onExit;
+    onError = opts.onError;
     resumeMs = opts.item.viewOffset || 0;
 
+    var url = Plex.streamUrl(opts.part);
     osdTitle.textContent = opts.item.title || '';
-    v.src = Plex.streamUrl(opts.part);
     v.classList.remove('hidden');
-    showOsd();
 
     v.onloadedmetadata = function () {
-      if (resumeMs > 10000 && resumeMs < (v.duration * 1000) - 30000) {
+      /* Only now does currentTime mean anything. Don't resume within half a
+         minute of the end — that is a film you finished. */
+      if (resumeMs > 10000 && v.duration && resumeMs < (v.duration * 1000) - 30000) {
         v.currentTime = resumeMs / 1000;
       }
-      v.play();
+      showOsd();
       report('playing');
     };
-    v.onplay = function () { showOsd(); };
+    v.onplaying = function () { showOsd(); };
+    v.ontimeupdate = function () { if (osdShowing()) paintOsd(); };
     v.onended = function () { stop('stopped'); };
-    v.onerror = function () {
-      var code = v.error ? v.error.code : '?';
-      stop('stopped');
-      if (opts.onError) opts.onError('The panel refused the stream (media error ' + code + ').');
-    };
+    v.onerror = function () { fail(mediaErrorText(v.error)); };
 
+    v.src = url;
     v.load();
+    showOsd();
+    UI.debug('playing ' + String(url).split('?')[0]);
+
+    /* preload="none" means nothing loads until something asks it to, and
+       loadedmetadata may never fire on its own. Ask directly, and report it if
+       the request is refused rather than sitting on a black screen — a play()
+       that rejects is otherwise completely silent. */
+    var started = v.play();
+    if (started && started.then) {
+      started.then(null, function (e) {
+        fail('The player refused to start: ' + ((e && (e.name + ' ' + e.message)) || 'unknown') +
+             '. If this is the TV, it is usually the media pipeline rejecting the ' +
+             'container rather than the codec.');
+      });
+    }
+
     clearInterval(ticker);
     ticker = setInterval(function () { report(v.paused ? 'paused' : 'playing'); }, 10000);
   }
@@ -66,13 +118,13 @@ var Player = (function () {
     clearInterval(ticker); ticker = null;
     clearTimeout(osdTimer);
     v.pause();
-    v.onloadedmetadata = v.onplay = v.onended = v.onerror = null;
+    v.onloadedmetadata = v.onplaying = v.ontimeupdate = v.onended = v.onerror = null;
     v.removeAttribute('src');
     v.load();
     v.classList.add('hidden');
     osd.classList.add('hidden');
     var done = onExit;
-    item = null; onExit = null;
+    item = null; onExit = null; onError = null;
     if (done) done();
   }
 

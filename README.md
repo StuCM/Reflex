@@ -38,9 +38,17 @@ out, never on disk.
 to sign in properly and browse the real library from a desktop browser. Your
 token passes through the local process.
 
-To exercise playback, drop any browser-playable video at
-`dev/fixtures/sample.mp4`; every item then plays it. Without one, playback takes
-its error path, which is worth seeing once too.
+Playback needs a video to play, and the mock cannot invent one:
+
+```sh
+npm run fixture        # records dev/fixtures/sample.webm, ~30s
+```
+
+Every item then plays that file, so you can check the OSD, resume, seeking and
+stopping. Without it, pressing OK reaches the player's error path instead —
+which is worth seeing once, but is not playback working. `npm run dev` says so
+on startup. Any browser-playable file dropped at `dev/fixtures/sample.mp4` does
+the same job.
 
 ## Put it on the TV
 

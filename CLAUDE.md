@@ -136,6 +136,10 @@ thing, `--latency 140` to feel a distant server). Nothing leaves the machine —
 the smoke test fails if a request does. Press `?` in the browser for the key
 mapping.
 
+The one thing it cannot generate is a video, so playback needs `npm run fixture`
+first (or any playable file at `dev/fixtures/sample.mp4`). Until then, OK on a
+film reaches the player's error path rather than playing.
+
 The three checks, and what each is for:
 
 - `npm run check` — scans `js/` and `css/` for anything newer than Chromium 53.

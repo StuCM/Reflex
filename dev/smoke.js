@@ -69,6 +69,13 @@ function findTitles() {
   };
 }
 
+/* Playback can only really be tested if there is something to play. */
+function hasFixture() {
+  return ['sample.mp4', 'sample.webm', 'sample.mkv'].some(function (n) {
+    return fs.existsSync(path.join(__dirname, 'fixtures', n));
+  });
+}
+
 const results = [];
 function ok(name) { results.push([true, name]); console.log('  ok    ' + name); }
 function fail(name, err) {
@@ -109,13 +116,20 @@ function drive(page, titles) {
   page.on('pageerror', function (e) {
     if (e.message.indexOf('no supported source') < 0) errors.push('pageerror: ' + e.message);
   });
+  /* Every UI.debug line is echoed to the console, so collecting them gives the
+     app's own account of what it did — more reliable than sampling #debug,
+     which only ever holds the latest line. */
+  const trace = [];
   page.on('console', function (m) {
+    const text = m.text();
+    if (text.indexOf('REFLEX ') === 0) { trace.push(text.slice(7)); return; }
     /* Without a dev/fixtures/sample.* the stream 404s on purpose. */
     const where = (m.location() && m.location().url) || '';
     if (m.type() === 'error' && where.indexOf('library/parts') < 0) {
-      errors.push('console: ' + m.text() + ' ' + where);
+      errors.push('console: ' + text + ' ' + where);
     }
   });
+  function tracedThat(re) { return trace.some(function (l) { return re.test(l); }); }
   /* Nothing may leave this machine in mock mode. The whole point of the mock is
      that developing the app never touches the server we do not own. */
   page.on('request', function (r) {
@@ -430,17 +444,46 @@ function drive(page, titles) {
     .then(function () {
       return step('plays a file that direct plays', function () {
         return openTitle(titles.directPlays.title)
+          .then(function () { return page.waitForTimeout(600); })
           .then(function () {
-            return waitFor('/decision: directplay/.test(document.querySelector("#debug").textContent)',
-                           'a directplay verdict');
+            if (!tracedThat(/decision: directplay/)) {
+              throw new Error('no directplay verdict in: ' + trace.slice(-3).join(' | '));
+            }
           })
           .then(function () {
-            /* With no dev/fixtures/sample.* the panel error path is the correct
-               outcome; with one, the video element takes over. Either proves the
-               guard let it through. */
-            return page.waitForTimeout(400);
+            /* With a fixture, the video element has to actually get going —
+               "the guard let it through" is not the same as "it played". Without
+               one, the error path is the correct outcome and all we can check is
+               that the guard did not refuse it. */
+            if (!hasFixture()) return page.waitForTimeout(400);
+            return waitFor('(function(){var v=document.getElementById("video");' +
+                           'return !v.classList.contains("hidden") && !v.paused &&' +
+                           ' v.currentTime > 0.2 && !v.error;})()',
+                           'the video to start advancing', 15000);
           })
           .then(function () { return shot('play'); });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('the OSD follows playback, and Back stops it', function () {
+        var at;
+        return waitFor('document.getElementById("osd-time").textContent.indexOf("0:00 /") !== 0',
+                       'the OSD clock to move off zero', 15000)
+          .then(function () { return page.evaluate(function () { return document.getElementById('video').currentTime; }); })
+          .then(function (t) {
+            at = t;
+            return press('Backspace');            // stop
+          })
+          .then(function () {
+            return waitFor('document.getElementById("video").classList.contains("hidden") &&' +
+                           ' !document.getElementById("browse").classList.contains("hidden")',
+                           'playback to stop and the rail to come back');
+          })
+          .then(function () {
+            if (!(at > 0)) throw new Error('playback never advanced');
+          });
       });
     })
 
