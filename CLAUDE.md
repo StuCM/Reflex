@@ -221,6 +221,13 @@ The three checks, and what each is for:
   deduplication and the copy-picking are covered end to end. Keep it green; add
   a step when you add a screen.
 
+**Never judge playback on the laptop.** A desktop browser decodes far less than
+this panel: Firefox has no AC3/E-AC3 and no HEVC at all, Chrome has no
+Matroska. A silent film or a decode error there is the browser, not the app —
+and it looks exactly like the bugs that matter. Browsing, the guard, the audio
+choice and the merge are all fair to test on the laptop; smoothness and sound
+are not.
+
 None of that says anything about how it feels on the panel, which is still the
 question. When benchmarking on the TV, use the **second** pass through a
 section. The first pays for server-side poster generation and the cold

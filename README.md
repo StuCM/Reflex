@@ -57,6 +57,11 @@ Your token passes through the local process.
 
 Browsing is safe to do this way — it is the same handful of requests per screen
 the TV makes, and every playback check uses `hasMDE=1`, which opens no session.
+
+Do not judge *playback* here. A browser decodes far less than the panel does:
+Firefox has no AC3/E-AC3 and no HEVC, Chrome has no Matroska. Silence, a decode
+error or stuttering on the laptop is the browser, and looks identical to the
+bugs that matter.
 Do not point the smoke test at it: it asserts nothing leaves the machine, and it
 would be asserting against someone else's server.
 

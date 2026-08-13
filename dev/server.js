@@ -139,6 +139,11 @@ function start(opts) {
       console.log('  plex.tv proxied for real — sign in with your own account.');
       console.log('  No mock library is served. Your real servers are reached directly,');
       console.log('  so posters and playback come straight from them.');
+      console.log('');
+      console.log('  Browsing and the playback guard are fair to test here.');
+      console.log('  PLAYBACK IS NOT: a browser decodes far less than the panel does.');
+      console.log('  Firefox has no AC3/E-AC3 and no HEVC, Chrome has no Matroska —');
+      console.log('  silence or a decode error here says nothing about the B8.');
     } else {
       console.log('  mock Plex: two servers sharing ' + opts.films +
                   ' films, pin claims itself.');

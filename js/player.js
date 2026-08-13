@@ -62,6 +62,21 @@ var Player = (function () {
     return 'The stream failed (media error ' + code + ').' + detail;
   }
 
+  /* A desktop browser is not this panel, and its codec support is much
+     narrower — Firefox has no AC3/E-AC3 and no HEVC at all, Chrome has no
+     Matroska. Silence or a decode error on the laptop usually says nothing
+     about the TV, and mistaking one for the other costs an evening. */
+  function laptopNote(media) {
+    if (!Config.dev) return '';
+    var codec = (media && media.videoCodec) || '?';
+    var container = (media && media.container) || '?';
+    return '  ·  You are on the dev server, so this is a desktop browser, not ' +
+           'the B8. It is playing ' + String(codec).toUpperCase() + ' in ' +
+           String(container).toUpperCase() + ', and browsers do not decode AC3, ' +
+           'E-AC3, HEVC or Matroska the way the panel does. Judge playback on ' +
+           'the TV.';
+  }
+
   function fail(msg) {
     var report_ = onError;
     UI.debug('playback failed: ' + msg);
@@ -92,7 +107,10 @@ var Player = (function () {
     v.onplaying = function () { showOsd(); };
     v.ontimeupdate = function () { if (osdShowing()) paintOsd(); };
     v.onended = function () { stop('stopped'); };
-    v.onerror = function () { fail(mediaErrorText(v.error)); };
+    v.onerror = function () {
+      fail(mediaErrorText(v.error) + laptopNote(opts.item && opts.item.Media &&
+                                                opts.item.Media[opts.mediaIndex || 0]));
+    };
 
     /* preload only matters between the element existing and a src being set,
        and the src is only ever set here, at the moment we play. Leaving it at
