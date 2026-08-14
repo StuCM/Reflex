@@ -57,6 +57,16 @@ else's two remote servers, connecting directly (not via relay).
   confirming the panel can actually decode it. Claiming a codec it can't
   gives a black screen; omitting one it can pushes needless load onto
   someone else's hardware.
+- Codec support is the panel's, but **Plex cannot see the panel** — it obeys
+  what the client declares in `X-Plex-Client-Profile-Extra` and transcodes
+  everything else. `js/panel.js` builds that declaration by asking the panel
+  with `canPlayType`, so widening is a matter of evidence rather than editing
+  a string. Only `"probably"` is acted on: `"maybe"` is what a TV says when it
+  has not been asked precisely enough, and acting on it is how you get a black
+  screen. The `panel` chip shows what was asked and what came back.
+- What the panel can *decode* and what survives *HDMI ARC* are different
+  questions. `js/panel.js` answers the first, `js/media.js` the second, and the
+  audio rules below are not affected by any of this.
 - Sync library data incrementally and infrequently. Do not full-crawl a
   server we don't own.
 
@@ -131,6 +141,8 @@ Settings and services:
   plex.tv base URL, TMDB key, debug beacon. Nothing else may hardcode these.
 - `js/store.js` — IndexedDB cache. The rail paints from cache before any
   network call.
+- `js/panel.js` — what this panel claims it can play, and the client profile
+  built from it.
 - `js/media.js` — the rules, as pure functions: audio track selection, the UHD
   guard, certificate ages, film identity. No network, no DOM. These are the
   parts that must not be wrong, so they are the parts that are unit tested.

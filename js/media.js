@@ -122,14 +122,12 @@ var Media = (function () {
      decode and this panel cannot — VP9 or AV1 in a WebM, say — and claiming a
      codec the panel cannot decode gives a black screen. */
 
-  var PANEL_VIDEO = { h264: true, hevc: true };
-  var PANEL_CONTAINER = { mkv: true, mp4: true, mpegts: true };
-
   function canDecode(media) {
     if (!media) return false;
-    var codec = String(media.videoCodec || '').toLowerCase();
-    var container = String(media.container || '').toLowerCase();
-    return PANEL_VIDEO[codec] === true && PANEL_CONTAINER[container] === true;
+    /* Whatever we declared to the server, checked again on the way back — the
+       two must agree or a widened profile turns into a black screen. */
+    return Panel.supports('video', media.videoCodec) &&
+           Panel.supports('container', media.container);
   }
 
   /* ---------- resolution ---------- */

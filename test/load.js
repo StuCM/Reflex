@@ -16,6 +16,14 @@ module.exports = function load(files) {
   const store = {};
   const ctx = {
     console: console,
+    /* js/panel.js asks the video element what it can play. In Node there is no
+       panel, so it answers nothing and Panel falls back to its baseline —
+       which is exactly the set the tests are written against. */
+    document: {
+      getElementById: function () {
+        return { canPlayType: function () { return ''; } };
+      }
+    },
     /* servers.js persists the server list and the preference. */
     localStorage: {
       getItem: function (k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },

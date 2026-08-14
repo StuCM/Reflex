@@ -1,11 +1,10 @@
 /* Certificate parsing decides what lands in the kids section, so a wrong answer
    here puts an 18 in front of a child. Run: node test/rating.test.js */
 var assert = require('assert');
-var fs = require('fs');
-var path = require('path');
 
-var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'media.js'), 'utf8');
-var Media = new Function(src + '; return Media;')();
+/* panel.js first: what the panel claims it can play is what Media.canDecode
+   checks against. In Node it claims nothing, so the baseline applies. */
+var Media = require('./load.js')(['panel', 'media']).Media;
 var age = Media.ageLimit;
 
 // BBFC

@@ -26,23 +26,11 @@ var Plex = (function () {
   var PLATFORM_VERSION = '53.0';
   var DEVICE   = 'LG OLED B8';
 
-  /* Direct play profile we declare to the server. The server has no built-in
-     profile for an unknown product, so without this it falls back to something
-     conservative and transcodes. Do NOT widen this without confirming the B8
-     panel actually decodes it — see CLAUDE.md. probe.py exists to test rows
-     against a real file before they land here. */
-  /* Items per category row. The rail shows ten across and you have to scroll to
-     reach the rest, so asking for thirty per hub per server was mostly payload
-     we never drew — and it is on the critical path of the first paint. */
-  var HUB_COUNT = 12;
-
-  var PROFILE = [
-    'add-direct-play-profile(type=videoProfile&container=mkv&codec=h264,hevc&audioCodec=aac,ac3,eac3,mp3)',
-    'add-direct-play-profile(type=videoProfile&container=mp4&codec=h264,hevc&audioCodec=aac,ac3,eac3,mp3)',
-    'add-direct-play-profile(type=videoProfile&container=mpegts&codec=h264&audioCodec=aac,ac3,eac3,mp3)',
-    'add-limitation(scope=videoCodec&scopeName=h264&type=upperBound&name=video.level&value=51&isRequired=false)',
-    'add-limitation(scope=videoCodec&scopeName=hevc&type=upperBound&name=video.bitDepth&value=10&isRequired=false)'
-  ].join('+');
+  /* What we declare to the server is built from what the panel says it can
+     play — see js/panel.js. It used to be a constant here, which meant the
+     server re-encoded anything outside a hand-written list even when the B8
+     would have played it untouched. */
+  function profile() { return Panel.clientProfile(); }
 
   /* Two kinds of token, and they are not interchangeable. The account token is
      for plex.tv. Each server hands out its own access token via
@@ -522,7 +510,7 @@ var Plex = (function () {
          a 401 when it is missing, which reads as a malformed request rather
          than an unauthenticated one. */
       'X-Plex-Token': server.token,
-      'X-Plex-Client-Profile-Extra': PROFILE
+      'X-Plex-Client-Profile-Extra': profile()
     };
   }
 

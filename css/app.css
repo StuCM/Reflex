@@ -239,7 +239,12 @@ html, body {
 .device-count { font-size: 22px; color: #6a6a72; }
 
 .msg-title { font-size: 48px; font-weight: 300; margin-bottom: 24px; }
-.msg-body { font-size: 28px; color: #9a9aa2; line-height: 1.5; max-width: 1200px; margin: 0 auto; }
+.msg-body {
+  font-size: 26px; color: #9a9aa2; line-height: 1.45;
+  max-width: 1400px; margin: 0 auto;
+  /* Some messages are a paragraph, some are a report with its own layout. */
+  white-space: pre-wrap;
+}
 .msg-hint { font-size: 22px; color: #5a5a62; margin-top: 40px; }
 
 /* ---- player ---- */

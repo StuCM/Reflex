@@ -130,6 +130,7 @@ var Browse = (function () {
       out.push({ label: 'prefer: ' + (pref ? pref.name : '?'), kind: 'prefer', current: false });
     }
     out.push({ label: 'devices', kind: 'devices', current: false });
+    out.push({ label: 'panel', kind: 'panel', current: false });
     out.push({ label: 'search', kind: 'search', current: false });
     return out;
   }
@@ -174,6 +175,10 @@ var Browse = (function () {
       headerFocus = true;
       chipIdx = at;
       renderChips();
+      return;
+    }
+    if (chip.kind === 'panel') {
+      UI.message('What this panel claims it can play', Panel.report());
       return;
     }
     if (chip.kind === 'devices') {
