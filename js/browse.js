@@ -22,6 +22,7 @@ var Browse = (function () {
   var savedRows = null;                   // rows parked while showing search results
   var searchQuery = null;                 // non-null while the results page is showing
   var searchCount = 0;
+  var searchNoun = 'results';             // films, shows, or a mix of both
   var generation = 0;                     // bumps on any row change, kills stale paints
   var lastChips = null;                   // last chip HTML written, to skip pointless writes
   var pageTimer = null;
@@ -81,9 +82,11 @@ var Browse = (function () {
       list = perServer[i].sections || [];
       for (j = 0; j < list.length; j++) {
         sec = list[j];
-        key = sec.title.toLowerCase();
+        /* Title and type: a "Films" section and a "Films" show section would be
+           two different things, however unlikely that is. */
+        key = sec.title.toLowerCase() + '/' + sec.type;
         if (!byTitle[key]) {
-          byTitle[key] = { title: sec.title, parts: [] };
+          byTitle[key] = { title: sec.title, type: sec.type, parts: [] };
           order.push(key);
         }
         byTitle[key].parts.push({ server: perServer[i].server, key: sec.key,
@@ -140,7 +143,7 @@ var Browse = (function () {
        as the library screen having reloaded. */
     if (searchQuery) {
       return '<span class="chip cur">' + UI.escapeHtml(searchQuery) + '</span>' +
-             '<span class="chip">' + searchCount + ' film' + (searchCount === 1 ? '' : 's') +
+             '<span class="chip">' + searchCount + ' ' + searchNoun +
              '</span><span class="chip">back to library</span>';
     }
     var list = chips(), html = '', i, cls;
@@ -214,11 +217,18 @@ var Browse = (function () {
   }
 
   function allRow(sec, title, filter, tag) {
+    /* type 2 asks a show section for shows rather than every episode in it. */
+    var base = { type: sec.type === 'show' ? 2 : 1 };
+    if (filter) {
+      var keys = Object.keys(filter), i;
+      for (i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
+    }
     var parts = sec.parts.map(function (p) {
       return { server: p.server, key: p.key, updatedAt: p.updatedAt,
-               filter: filter || null, tag: tag || '' };
+               filter: base, tag: tag || '' };
     });
-    return Rows.merged(title || 'All films', parts, pageFetcher());
+    return Rows.merged(title || (sec.type === 'show' ? 'All shows' : 'All films'),
+                       parts, pageFetcher());
   }
 
   /* A section's length, cheaply: size=0 returns totalSize and no items, once
@@ -244,7 +254,7 @@ var Browse = (function () {
       if (!isCurrent()) return;
       row.total = Merge.estimate(row.state);
       render();
-      UI.debug(row.title + ': about ' + row.total + ' films across ' +
+      UI.debug(row.title + ': about ' + row.total + ' across ' +
                row.state.streams.length + ' server' +
                (row.state.streams.length === 1 ? '' : 's'));
     });
@@ -280,7 +290,13 @@ var Browse = (function () {
         if (!isCurrent()) return;
         var built = [];
 
-        var deck = Devices.mine(Merge.lists(res[0]));
+        /* onDeck is per server, not per section: it hands back films and
+           episodes together. A show section should carry on with episodes and a
+           film section with films. */
+        var want = sec.type === 'show' ? 'episode' : 'movie';
+        var deck = Devices.mine(Merge.lists(res[0])).filter(function (m) {
+          return m.type === want;
+        });
         deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
         if (deck.length) built.push({ title: 'Continue watching', items: deck });
 
@@ -373,8 +389,9 @@ var Browse = (function () {
         Devices.ensureHistory()
       ]).then(function (res) {
         if (!isCurrent()) return;
+        var kidsWant = sec.type === 'show' ? 'episode' : 'movie';
         var watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
-          return Media.isKidsRating(m.contentRating);
+          return m.type === kidsWant && Media.isKidsRating(m.contentRating);
         });
         rows = [];
         if (watching.length) rows.push(Rows.list('Kids · carry on watching', watching));
@@ -470,6 +487,7 @@ var Browse = (function () {
       if (!savedRows) savedRows = rows;
       searchQuery = q;
       searchCount = found.length;
+      searchNoun = countNoun(found);
       headerFocus = false;
       rows = [];
       for (var i = 0; i < found.length; i += RESULTS_PER_ROW) {
@@ -478,11 +496,23 @@ var Browse = (function () {
       if (!rows.length) rows = [Rows.list('No matches', [])];
       rowIdx = 0;
       render();
-      UI.debug('search "' + q + '": ' + found.length + ' film' +
-               (found.length === 1 ? '' : 's'));
+      UI.debug('search "' + q + '": ' + found.length + ' ' + searchNoun);
     }).catch(function (e) {
       UI.message('Search failed', e.message);
     });
+  }
+
+  /* "3 films", "1 show", or "7 results" when it is both. Saying "films" over a
+     list that is half shows is the kind of small lie that makes a screen feel
+     untrustworthy. */
+  function countNoun(found) {
+    var films = 0, shows = 0, i;
+    for (i = 0; i < found.length; i++) {
+      if (found[i].type === 'show') shows++; else films++;
+    }
+    if (shows && films) return 'results';
+    if (shows) return 'show' + (shows === 1 ? '' : 's');
+    return 'film' + (films === 1 ? '' : 's');
   }
 
   /* Back out of a results list to the rows we parked. */

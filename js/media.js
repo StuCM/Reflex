@@ -219,13 +219,39 @@ var Media = (function () {
     return 'title://' + t + '/' + ((item && item.year) || '');
   }
 
+  /* An episode is identified by which show it belongs to and where it sits in
+     it. Episodes often carry no external ids of their own, and their titles are
+     not unique across shows — "Pilot" is everywhere — so season and episode
+     number against the show's identity is what actually holds. */
+  function episodeKey(item) {
+    var show = String(item.grandparentGuid || item.grandparentTitle || '')
+      .toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/[^a-z0-9:/.]+/g, '');
+    var season = item.parentIndex === undefined ? '?' : item.parentIndex;
+    var number = item.index === undefined ? '?' : item.index;
+    return 'episode://' + show + '/' + season + '/' + number;
+  }
+
   /* Every key this item could be recognised by, best first. */
   function identities(item) {
     var out = externalIds(item);
     var guid = String((item && item.guid) || '');
     if (guid.indexOf('plex://') === 0) out.push(guid.toLowerCase());
+    if (item && item.type === 'episode') {
+      out.push(episodeKey(item));
+      return out;
+    }
     out.push(titleKey(item));
     return out;
+  }
+
+  /* "Adventure Time · S2E7" — an episode's title alone says nothing. */
+  function episodeLabel(item) {
+    if (!item || item.type !== 'episode') return '';
+    var s = item.parentIndex, e = item.index;
+    if (s === undefined && e === undefined) return item.grandparentTitle || '';
+    return (item.grandparentTitle || '') +
+           '  ·  S' + (s === undefined ? '?' : s) +
+           'E' + (e === undefined ? '?' : (e < 10 ? '0' + e : e));
   }
 
   /* One stable key, for caching and for saying "this film" in a log line. */
@@ -237,7 +263,7 @@ var Media = (function () {
     audioTracks: audioTracks, streamById: streamById,
     allows: allows,
     ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
-    identities: identities, identity: identity
+    identities: identities, identity: identity, episodeLabel: episodeLabel
   };
 })();
 

@@ -14,18 +14,46 @@
      checks each one before you choose. Playing is a decision made there, with
      the verdict already on screen. */
 
-  function openDetail(item) {
+  function toBrowse() { UI.show('browse'); Browse.render(); }
+  function toShow() { UI.show('show'); }
+
+  /* A film opens its detail page; a show opens its series and episodes, and an
+     episode chosen there opens the same detail page a film would. */
+  function openItem(item) {
+    if (!item) return;
+    if (item.type === 'show') {
+      ShowPage.open(item, {
+        onExit: toBrowse,
+        onPlay: function (episode, verdict) {
+          playChecked(episode, verdict, false, undefined, toShow);
+        },
+        onChoose: function (episode) { openDetail(episode, toShow); }
+      });
+      return;
+    }
+    openDetail(item, toBrowse);
+  }
+
+  function openDetail(item, back) {
     if (!item) return;
     Detail.open(item, {
-      onPlay: playChecked,
-      onExit: function () { UI.show('browse'); Browse.render(); }
+      /* isExtra comes from the page: a trailer is played, but it is not the
+         film and must not inherit its resume position. */
+      onPlay: function (entry, verdict, isExtra) {
+        playChecked(entry, verdict, isExtra, undefined, back);
+      },
+      onExit: back || toBrowse
     });
   }
 
   /* The verdict has already been through Guard, so by here we know the server
      will serve it and that it is not a 4K transcode. Nothing else reaches
-     Player. */
-  function playChecked(item, verdict, isExtra, resumeAt) {
+     Player.
+
+     `back` is where stopping returns to — the show page for an episode, the
+     film's own page otherwise — so the next episode is one press away rather
+     than a search away. */
+  function playChecked(item, verdict, isExtra, resumeAt, back) {
     if (!verdict || !verdict.ok) return;
     var md = verdict.md;
     var server = Servers.of(md);
@@ -51,7 +79,7 @@
             return;
           }
           Player.stop('stopped', true);
-          playChecked(item, v2, isExtra, at);
+          playChecked(item, v2, isExtra, at, back);
         });
       },
       /* Direct play reads the file itself. Otherwise the server has to serve a
@@ -60,7 +88,7 @@
         ? Plex.transcodeUrl(server, md, verdict.mediaIndex || 0, 0, verdict.audio && verdict.audio.id)
         : null,
       transcode: !!verdict.transcode,
-      onExit: function () { openDetail(item); },
+      onExit: back || function () { openDetail(item, toBrowse); },
       onError: function (msg) { UI.message('Playback failed', msg); }
     });
   }
@@ -79,6 +107,7 @@
       case 'search':  handled = Browse.searchKey(code); break;
       case 'devices': handled = Devices.key(code); break;
       case 'detail':  handled = Detail.key(code); break;
+      case 'show':    handled = ShowPage.key(code); break;
       case 'message': handled = messageKey(code); break;
       case 'browse':  handled = Browse.key(code); break;
       default:        handled = false;             // the link screen waits, that is all
@@ -92,7 +121,8 @@
     if (!UI.isBack(code) && code !== UI.KEY.OK) return false;
     if (!Plex.hasToken()) doLink();
     else if (Detail.current()) UI.show('detail');
-    else { UI.show('browse'); Browse.render(); }
+    else if (ShowPage.current()) UI.show('show');
+    else toBrowse();
     return true;
   }
 
@@ -144,7 +174,7 @@
     }).then(function (perServer) {
       var any = perServer.filter(function (r) { return r.sections.length; });
       if (!any.length) {
-        UI.message('No movie libraries', 'Neither server shares a movie section.');
+        UI.message('No libraries', 'Neither server shares a film or show section.');
         return;
       }
       Store.put('sections', perServer.map(function (r) {
@@ -213,7 +243,7 @@
   };
 
   Rail.build();
-  Browse.init({ onOpen: openDetail, onExit: exitApp });
+  Browse.init({ onOpen: openItem, onExit: exitApp });
   document.addEventListener('keydown', onKey, false);
   Plex.init();
   Devices.init();

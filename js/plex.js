@@ -278,7 +278,9 @@ var Plex = (function () {
     return ask(server, '/library/sections').then(function (res) {
       var dirs = (res.MediaContainer && res.MediaContainer.Directory) || [], out = [], i;
       for (i = 0; i < dirs.length; i++) {
-        if (dirs[i].type !== 'movie') continue;   // shows: task 3
+        /* Movies and shows. Music and photos are not something this app has any
+           business drawing. */
+        if (dirs[i].type !== 'movie' && dirs[i].type !== 'show') continue;
         /* updatedAt is what lets us skip re-crawling an unchanged section. */
         out.push({ key: dirs[i].key, title: dirs[i].title, type: dirs[i].type,
                    updatedAt: dirs[i].updatedAt || 0, server: server.id });
@@ -287,6 +289,7 @@ var Plex = (function () {
     }).catch(function () { return []; });
   }
 
+  /* type 1 is movies, 2 is shows — pass it in `extra` for a show section. */
   function items(server, sectionKey, start, size, extra) {
     var params = {
       type: 1,
@@ -325,10 +328,25 @@ var Plex = (function () {
 
   /* Continue Watching. /library/onDeck is the universally supported endpoint —
      /hubs/continueWatching only exists on newer servers. One request. */
+  /* Films and episodes both turn up here, and an episode is the more common
+     case on a real server. */
   function onDeck(server) {
     return ask(server, '/library/onDeck').then(function (res) {
       var md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
-      return Servers.stamp(md.filter(function (m) { return m.type === 'movie'; }), server);
+      return Servers.stamp(md.filter(function (m) {
+        return m.type === 'movie' || m.type === 'episode';
+      }), server);
+    }).catch(function () { return []; });
+  }
+
+  /* The show hierarchy, one level at a time: a show's children are its seasons,
+     a season's are its episodes. Never /allLeaves on a library we don't own —
+     one show at a time is the whole point. */
+  function children(server, ratingKey) {
+    return ask(server, '/library/metadata/' + ratingKey + '/children?' +
+               qs({ includeGuids: 1 }), { timeout: 20000 }).then(function (res) {
+      var md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
+      return Servers.stamp(md, server);
     }).catch(function () { return []; });
   }
 
@@ -341,7 +359,8 @@ var Plex = (function () {
       var list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, h;
       for (i = 0; i < list.length; i++) {
         h = list[i];
-        if (h.type !== 'movie' || !h.Metadata || !h.Metadata.length) continue;
+        if (!h.Metadata || !h.Metadata.length) continue;
+        if (h.type !== 'movie' && h.type !== 'show') continue;
         out.push({ title: h.title, items: Servers.stamp(h.Metadata, server) });
       }
       return out;
@@ -356,9 +375,11 @@ var Plex = (function () {
         var list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, j, h;
         for (i = 0; i < list.length; i++) {
           h = list[i];
-          if (h.type !== 'movie' || !h.Metadata) continue;
+          if (!h.Metadata) continue;
           for (j = 0; j < h.Metadata.length; j++) {
-            if (h.Metadata[j].type === 'movie') out.push(h.Metadata[j]);
+            if (h.Metadata[j].type === 'movie' || h.Metadata[j].type === 'show') {
+              out.push(h.Metadata[j]);
+            }
           }
         }
         return Servers.stamp(out, server);
@@ -578,7 +599,7 @@ var Plex = (function () {
     discover: discover, state: s,
     sections: sections, items: items, metadata: metadata,
     posterUrl: posterUrl, artUrl: artUrl, photoUrl: photoUrl,
-    onDeck: onDeck, hubs: hubs, search: search,
+    onDeck: onDeck, hubs: hubs, search: search, children: children,
     history: history, devices: devices, findByGuid: findByGuid, tmdbId: tmdbId,
     allVersions: allVersions,
     contentRatings: contentRatings,

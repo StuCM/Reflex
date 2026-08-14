@@ -70,6 +70,13 @@ else's two remote servers, connecting directly (not via relay).
 - Sync library data incrementally and infrequently. Do not full-crawl a
   server we don't own.
 
+**Films and shows both.** A show is not playable; an episode is. Everything
+the guard cares about therefore lives on the episode, and the show and season
+exist to be browsed through — one level at a time, never `/allLeaves` on a
+library we do not own. Episodes are matched across servers by the show's
+identity plus season and episode number, because episodes rarely carry ids of
+their own and "Pilot" is not a unique title.
+
 **There are two servers, and they share much of the same library.** Plex syncs
 watch state between them at the account level, by matching the item's global
 ids — so the same film picked up on one resumes in the right place on the
@@ -165,8 +172,12 @@ Screen:
 - `js/guard.js` — will this copy play, and at what cost to someone else's
   server. Everything that reaches Player goes through it first.
 - `js/masthead.js` — title, badges, and the audio track we would pick.
-- `js/detail.js` — the page OK opens: cast, ratings, extras, and every copy of
-  the film with its verdict, which is where playback is actually chosen.
+- `js/shows.js` — seasons and episodes of a show, merged across servers.
+- `js/detail.js` — the page OK opens on a film or an episode: cast, ratings,
+  extras, and every copy with its verdict, which is where playback is actually
+  chosen.
+- `js/showpage.js` — a show: its series across the top, its episodes down the
+  side, each checked in place so OK means something.
 - `js/devices.js` — whose viewing is this; filters Continue watching.
 - `js/discovery.js` — turns a TMDB list into rows of what the servers have.
 - `js/browse.js` — the state: sections, rows, focus, mode, paging, search.
@@ -193,7 +204,9 @@ Tools:
 2. ~~Audio track selection~~ — done: `Media.pickAudio`, passed as
    `audioStreamID` on the decision call, shown in the masthead before you press
    OK. The rules are unit tested but have never met the real ARC path.
-3. Show/episode drill-down (currently movies only).
+3. ~~Show/episode drill-down~~ — done: show sections, a show page with series
+   and episodes, episodes merged across servers by show identity and episode
+   number, and playback through the same guard as a film.
 3a. Subtitles. Nothing is wired: the decision call sends `subtitles=none`.
    Burning them in is a transcode; the direct-play-safe route is an external
    SRT fetched and rendered as text over the video, which is the only approach

@@ -127,6 +127,60 @@ html, body {
   overflow: hidden;
 }
 
+/* ---- show ----
+   Series across the top, episodes down the left. Same flat-gradient treatment
+   as the detail page: no blur, nothing animated but the focus. */
+
+#sh-art {
+  position: absolute; top: 0; right: 0; width: 1100px; height: 560px;
+  background-position: center; background-size: cover;
+  opacity: 0.45;
+}
+
+#sh-shade {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 560px;
+  background-image: -webkit-linear-gradient(left, #0b0b0d 0%, #0b0b0d 44%, rgba(11,11,13,0) 100%);
+  background-image: linear-gradient(to right, #0b0b0d 0%, #0b0b0d 44%, rgba(11,11,13,0) 100%);
+}
+
+#sh-head { position: absolute; top: 56px; left: 64px; width: 1000px; }
+
+#sh-title {
+  font-size: 54px; font-weight: 300; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#sh-meta { margin-top: 10px; font-size: 24px; color: #9a9aa2; }
+#sh-summary {
+  margin-top: 12px; font-size: 21px; line-height: 1.4; color: #b8b8c0;
+  max-height: 60px; overflow: hidden;
+}
+
+#sh-seasons { position: absolute; top: 280px; left: 64px; height: 42px; }
+
+#sh-episodes { position: absolute; top: 340px; left: 64px; width: 1180px; }
+
+/* Reserved border, so moving the selection shifts nothing sideways. */
+.sh-episode {
+  position: relative; height: 62px; padding: 14px 18px;
+  border-left: 6px solid transparent;
+  background: #131318;
+  margin-bottom: 5px;
+  font-size: 24px; color: #9a9aa2;
+  white-space: nowrap; overflow: hidden;
+}
+.sh-episode.on { background: #1c1c24; border-left-color: #e5a00d; color: #e8e8ea; }
+
+.sh-ep-num {
+  display: inline-block; width: 54px; color: #6a6a72; font-size: 22px;
+}
+.sh-episode.on .sh-ep-num { color: #e5a00d; }
+.sh-ep-title { display: inline-block; width: 560px; overflow: hidden; vertical-align: top; }
+.sh-ep-mins { display: inline-block; width: 110px; font-size: 21px; color: #6a6a72; }
+.sh-ep-seen { display: inline-block; width: 120px; font-size: 21px; color: #6a6a72; }
+.sh-verdict { position: absolute; right: 16px; top: 15px; }
+
+#sh-hint { position: absolute; left: 64px; bottom: 40px; margin-top: 0; }
+
 /* ---- detail ----
    Chromium 53: no grid, so the columns are absolutely positioned. The artwork
    is a static background image, never animated. */

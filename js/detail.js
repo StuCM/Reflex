@@ -242,6 +242,7 @@ var Detail = (function () {
 
   function metaLine(entry, md) {
     var bits = [];
+    if (entry.type === 'episode') bits.push(Media.episodeLabel(entry));
     if (entry.year) bits.push(entry.year);
     if (entry.duration) bits.push(Math.round(entry.duration / 60000) + ' min');
     if (entry.contentRating) bits.push(entry.contentRating);
@@ -250,6 +251,7 @@ var Detail = (function () {
     if (md && md.Genre && md.Genre.length) {
       bits.push(md.Genre.slice(0, 3).map(function (g) { return g.tag; }).join(', '));
     }
+    if (entry.originallyAvailableAt) bits.push('aired ' + entry.originallyAvailableAt);
     if (entry.viewOffset && entry.duration) {
       bits.push(Math.round(100 * entry.viewOffset / entry.duration) + '% watched');
     }

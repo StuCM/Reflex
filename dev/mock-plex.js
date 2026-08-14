@@ -40,13 +40,25 @@ function create(opts) {
     const list = srv.items['1'];
     srv.deck = [];
     srv.history = [];
-    for (let i = 0; i < list.length && srv.deck.length < 9;
+    for (let i = 0; i < list.length && srv.deck.length < 6;
          i += Math.max(1, Math.floor(list.length / 5))) {
       const m = JSON.parse(JSON.stringify(list[i]));
       m.viewOffset = Math.floor(m.duration * (0.1 + (i % 7) / 10));
       m.lastViewedAt = 1720000000 + i;
       srv.deck.push(m);
     }
+    /* Part-watched episodes too — onDeck on a real server is mostly these, and
+       an episode is a different shape from a film: it needs its show's name and
+       its season and episode numbers to make any sense on screen. */
+    srv.items['3'].slice(0, 4).forEach(function (show, n) {
+      const eps = srv.episodesByShow[show.ratingKey] || [];
+      const ep = eps[Math.min(2 + n, eps.length - 1)];
+      if (!ep) return;
+      const m = JSON.parse(JSON.stringify(ep));
+      m.viewOffset = Math.floor(m.duration * (0.2 + (n % 5) / 10));
+      m.lastViewedAt = 1720000500 + n;
+      srv.deck.push(m);
+    });
     srv.deck.forEach(function (m, i) {
       srv.history.push({
         ratingKey: m.ratingKey, title: m.title, type: 'movie',
@@ -87,8 +99,15 @@ function create(opts) {
     return { total: list.length, page: list.slice(start, start + size) };
   }
 
+  const TYPE = { '1': 'movie', '2': 'show', '3': 'season', '4': 'episode' };
+
   function filtered(srv, sectionKey, q) {
     let list = srv.items[sectionKey] || [];
+    /* type=1 is movies, type=2 is shows. Asking a section for the wrong type is
+       a client bug, and answering nothing is how a real server would say so. */
+    if (q.type && TYPE[String(q.type)]) {
+      list = list.filter(function (m) { return m.type === TYPE[String(q.type)]; });
+    }
     /* Only the filters the app actually sends. contentRating arrives as a
        comma-separated list, applied server side — see Plex.items. */
     if (q.contentRating) {
@@ -138,8 +157,10 @@ function create(opts) {
     const m = url.match(/\/library\/metadata\/(\d+)\//);
     const item = m ? srv.byKey[m[1]] : null;
     const art = url.indexOf('/art/') >= 0;
-    const film = item ? lib.films[item._film] : null;
-    const hue = film ? (film.i * 37) % 360 : 210;
+    /* Films key off the film, shows and their episodes off the show, so a
+       show's episodes look like they belong together. */
+    const subject = item ? lib.subject(item) : null;
+    const hue = subject ? (subject.i * 37 + (item.type === 'movie' ? 0 : 140)) % 360 : 210;
 
     if (art) {
       res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
@@ -152,7 +173,10 @@ function create(opts) {
     }
 
     const title = item ? item.title : '?';
-    const year = item ? item.year : '';
+    /* An episode is identified by its number, not the year of its show. */
+    const year = item && item.type === 'episode'
+      ? 'S' + item.parentIndex + 'E' + item.index
+      : (item ? item.year : '');
     const words = title.split(' ');
     let lines = [], line = '';
     words.forEach(function (word) {
@@ -356,18 +380,20 @@ function create(opts) {
     m = pathname.match(/^\/hubs\/sections\/(\w+)$/);
     if (m) {
       const list = srv.items[m[1]] || [];
+      const kind = list.length ? list[0].type : 'movie';
       const byAdded = list.slice().sort(function (a, b) { return b.addedAt - a.addedAt; });
       const byYear = list.slice().sort(function (a, b) { return b.year - a.year; });
       json(res, 200, container({
         size: 4,
         Hub: [
-          { title: 'Recently Added', hubIdentifier: 'recentlyAdded', type: 'movie',
+          { title: 'Recently Added', hubIdentifier: 'recentlyAdded', type: kind,
             Metadata: byAdded.slice(0, 20).map(stripStreams) },
-          { title: 'Recently Released', hubIdentifier: 'newest', type: 'movie',
+          { title: kind === 'show' ? 'Recently Aired' : 'Recently Released',
+            hubIdentifier: 'newest', type: kind,
             Metadata: byYear.slice(0, 20).map(stripStreams) },
-          { title: 'Top Rated', hubIdentifier: 'topRated', type: 'movie',
-            Metadata: list.slice(30, 50).map(stripStreams) },
-          /* A non-movie hub, to prove the app skips it. */
+          { title: 'Top Rated', hubIdentifier: 'topRated', type: kind,
+            Metadata: list.slice(10, 30).map(stripStreams) },
+          /* A hub of a type the app cannot show, to prove it skips it. */
           { title: 'Directors', hubIdentifier: 'director', type: 'director', Metadata: [] }
         ]
       }));
@@ -381,17 +407,17 @@ function create(opts) {
 
     if (pathname === '/hubs/search') {
       const needle = String(q.query || '').toLowerCase();
-      const hits = [];
-      Object.keys(srv.items).forEach(function (k) {
-        srv.items[k].forEach(function (item) {
-          if (k === '1' && hits.length < Number(q.limit || 40) &&
-              item.title.toLowerCase().indexOf(needle) >= 0) hits.push(item);
-        });
-      });
+      const limit = Number(q.limit || 40);
+      function match(list) {
+        return list.filter(function (item) {
+          return item.title.toLowerCase().indexOf(needle) >= 0;
+        }).slice(0, limit).map(stripStreams);
+      }
       json(res, 200, container({
-        size: 2,
+        size: 3,
         Hub: [
-          { title: 'Movies', type: 'movie', Metadata: hits.map(stripStreams) },
+          { title: 'Movies', type: 'movie', Metadata: match(srv.items['1']) },
+          { title: 'Shows', type: 'show', Metadata: match(srv.items['3']) },
           { title: 'People', type: 'actor', Metadata: [] }
         ]
       }));
@@ -418,6 +444,37 @@ function create(opts) {
     if (pathname === '/library/all') {
       const hit = srv.byGuid[q.guid];
       json(res, 200, container({ size: hit ? 1 : 0, Metadata: hit ? [stripStreams(hit)] : [] }));
+      return true;
+    }
+
+    /* The show hierarchy. /children on a show gives its seasons; on a season,
+       its episodes. This is how a show is drilled into without ever asking for
+       a whole library's worth of episodes. */
+    m = pathname.match(/^\/library\/metadata\/(\d+)\/children$/);
+    if (m) {
+      const parent = srv.byKey[m[1]];
+      const kids = srv.children[m[1]] || [];
+      if (!parent) { json(res, 404, container({ size: 0 })); return true; }
+      const cut = slice(kids, q);
+      json(res, 200, container({
+        size: cut.page.length,
+        totalSize: cut.total,
+        title1: parent.type === 'show' ? parent.title : parent.parentTitle,
+        title2: parent.type === 'show' ? '' : parent.title,
+        parentTitle: parent.title,
+        key: parent.ratingKey,
+        Metadata: cut.page.map(stripStreams)
+      }));
+      return true;
+    }
+
+    /* Every episode of a show, in order — what "play next" needs. */
+    m = pathname.match(/^\/library\/metadata\/(\d+)\/allLeaves$/);
+    if (m) {
+      const eps = srv.episodesByShow[m[1]] || [];
+      const cut = slice(eps, q);
+      json(res, 200, container({ size: cut.page.length, totalSize: cut.total,
+                                 Metadata: cut.page.map(stripStreams) }));
       return true;
     }
 

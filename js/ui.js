@@ -6,7 +6,7 @@ var UI = (function () {
   /* Every full-screen view in index.html. show() hides all of them and reveals
      one; show('player') is a legitimate call that reveals none of them, since
      the video element sits above the lot. */
-  var VIEWS = ['browse', 'detail', 'link', 'message', 'search', 'devices'];
+  var VIEWS = ['browse', 'show', 'detail', 'link', 'message', 'search', 'devices'];
 
   /* Remote keycodes. The TV sends 461 for Back; a desktop browser sends 8 or
      27, which is what lets the whole app be driven from a keyboard in dev. */

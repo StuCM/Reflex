@@ -61,7 +61,11 @@ function findTitles() {
   /* Search is a substring match, so a title is only usable here if no other
      title contains it — otherwise "one result" is not a safe assertion. */
   function unambiguous(m) {
-    return lib.films.filter(function (f) { return f.title.indexOf(m.title) >= 0; }).length === 1;
+    const inFilms = lib.films.filter(function (f) { return f.title.indexOf(m.title) >= 0; }).length;
+    /* Search returns shows as well now, and shows are named from the same
+       vocabulary — a title is only safe here if nothing else contains it. */
+    const inShows = lib.shows.filter(function (sh) { return sh.title.indexOf(m.title) >= 0; }).length;
+    return inFilms === 1 && inShows === 0;
   }
 
   /* A film only one server has, so its verdict is the only one on offer. */
@@ -237,7 +241,8 @@ function drive(page, titles) {
       return page.evaluate(function () {
         return {
           browse: !document.getElementById('browse').classList.contains('hidden') &&
-                  document.getElementById('detail').classList.contains('hidden'),
+                  document.getElementById('detail').classList.contains('hidden') &&
+                  document.getElementById('show').classList.contains('hidden'),
           results: document.querySelector('#sections').textContent.indexOf('back to library') >= 0
         };
       }).then(function (st) {
@@ -254,6 +259,7 @@ function drive(page, titles) {
      decision made there against a named copy. */
   function openTitle(title) {
     return backToLibrary()
+      .then(function () { return pressChip('Films'); })
       .then(function () { return press('F1'); })
       .then(function () { return page.waitForSelector('#search-input', { state: 'visible' }); })
       .then(function () { return page.fill('#search-input', title); })
@@ -307,8 +313,8 @@ function drive(page, titles) {
                        'return n > 5;})()', 'filled tiles', 20000)
           .then(function () { return page.textContent('#sections'); })
           .then(function (chips) {
-            if (chips.indexOf('TV Shows') >= 0) throw new Error('show section should be filtered out');
             if (chips.indexOf('Films') < 0) throw new Error('no Films chip');
+            if (chips.indexOf('TV Shows') < 0) throw new Error('no TV Shows chip');
           });
       });
     })
@@ -396,6 +402,111 @@ function drive(page, titles) {
             return waitFor('!/Kids/.test(document.querySelector("#rows").textContent)',
                            'the library rows back');
           });
+      });
+    })
+
+    .then(function () {
+      return step('a show section drills into series and episodes', function () {
+        return backToLibrary()
+          .then(function () { return pressChip('TV Shows'); })
+          .then(function () {
+            /* The All shows row is below the visible pool, so wait on the chip
+               and on the rows having been rebuilt. */
+            return waitFor('(function(){var c=document.querySelectorAll("#sections .chip");' +
+                           'for (var i=0;i<c.length;i++) {' +
+                           ' if (c[i].textContent.trim()==="TV Shows" &&' +
+                           '     c[i].classList.contains("cur")) return true; }' +
+                           'return false;})()', 'the shows section', 20000);
+          })
+          .then(function () { return page.waitForTimeout(800); })
+          .then(function () { return press('ArrowDown'); })   // off Continue watching
+          .then(function () {
+            /* Shows are not films: no runtime, no audio verdict, a series count
+               instead. */
+            return waitFor('/\\d+ series/.test(document.querySelector("#mh-meta").textContent)',
+                           'a show in the masthead', 15000);
+          })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('!document.getElementById("show").classList.contains("hidden") &&' +
+                           ' document.querySelectorAll("#sh-seasons .chip").length > 0 &&' +
+                           ' document.querySelectorAll(".sh-episode").length > 1',
+                           'the show page with series and episodes', 20000);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return {
+                title: document.getElementById('sh-title').textContent,
+                seasons: document.querySelectorAll('#sh-seasons .chip').length,
+                episodes: Array.prototype.map.call(document.querySelectorAll('.sh-episode'),
+                  function (e) { return e.textContent.replace(/\s+/g, ' '); })
+              };
+            });
+          })
+          .then(function (st) {
+            if (!st.title) throw new Error('the show page has no title');
+            /* Episode rows must carry their number and a runtime, or the list is
+               just a wall of titles. */
+            if (!/^\s*1/.test(st.episodes[0])) {
+              throw new Error('first episode row does not start with its number: ' + st.episodes[0]);
+            }
+            if (!/\d+ min/.test(st.episodes[0])) {
+              throw new Error('no runtime on the episode row: ' + st.episodes[0]);
+            }
+          })
+          .then(function () { return shot('show'); })
+          .then(function () {
+            /* The focused episode is checked in place, so OK means something. */
+            return waitFor('(function(){var e=document.querySelector(".sh-episode.on");' +
+                           'return e && /direct play|transcode|no passable/.test(e.textContent);})()',
+                           'a verdict on the focused episode', 20000);
+          });
+      });
+    })
+
+    .then(function () {
+      return step('a series with more than one season can be switched', function () {
+        return page.evaluate(function () {
+          return document.querySelectorAll('#sh-seasons .chip').length;
+        }).then(function (n) {
+          if (n < 2) return;              // this show has one series; nothing to switch
+          return press('ArrowUp', 12)     // up out of the episode list, to the series chips
+            .then(function () {
+              return waitFor('document.querySelector("#sh-seasons .chip.on") !== null',
+                             'series focus');
+            })
+            .then(function () { return press('ArrowRight'); })
+            .then(function () {
+              return waitFor('document.querySelectorAll(".sh-episode").length > 0',
+                             'the next series to load', 15000);
+            });
+        });
+      });
+    })
+
+    .then(function () {
+      return step('an episode opens the same copy chooser a film does', function () {
+        return page.evaluate(function () {
+          /* Make sure we are back on the episode list before pressing right. */
+          return !!document.querySelector('.sh-episode');
+        }).then(function () { return press('ArrowDown'); })
+          .then(function () { return page.keyboard.press('ArrowRight'); })
+          .then(function () {
+            return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
+                           ' document.querySelectorAll(".dt-source").length > 0',
+                           'the copy chooser for an episode', 20000);
+          })
+          .then(function () {
+            return page.textContent('#dt-meta');
+          })
+          .then(function (meta) {
+            /* An episode has to say which show and which number it is. */
+            if (!/S\d+E\d+/.test(meta)) {
+              throw new Error('no season/episode in the detail meta: ' + meta);
+            }
+          })
+          .then(function () { return shot('episode-copies'); })
+          .then(backToLibrary);
       });
     })
 

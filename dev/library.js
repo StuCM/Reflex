@@ -6,16 +6,21 @@
    reaches every branch of the playback guard, and — since the real account has
    two servers sharing much of the same library — overlap.
 
-   Films exist in a canonical list. Each server holds a subset:
+   Films and shows exist in canonical lists. Each server holds a subset:
 
-     - most films are on Main
+     - most are on Main
      - a third are on both, with DIFFERENT media on each (that is the whole
        point of choosing a source: one copy direct plays, the other doesn't)
      - some are only on Backup, so merging has to add as well as deduplicate
 
-   A film's identity is the same on both servers — same plex:// guid, same
-   title, same year — because that is what Plex itself syncs watch state
-   against, and therefore what the app deduplicates on. */
+   Identity is the same on both servers — same plex:// guid, same title, same
+   year — because that is what Plex itself syncs watch state against, and
+   therefore what the app deduplicates on.
+
+   Shows carry the same idea one level down: a show is on both servers, its
+   episodes have the same season and episode numbers, and the media differs per
+   server. An episode is the thing that plays, so it is the thing that gets a
+   verdict. */
 'use strict';
 
 const ADJECTIVES = [
@@ -95,6 +100,30 @@ function rand(seed) {
 
 function pick(rng, list) { return list[Math.floor(rng() * list.length)]; }
 
+/* One version of one item: what the server says it holds, minus the streams,
+   which only appear on the full metadata payload. */
+function mediaFor(profile, ratingKey, duration) {
+  return {
+    id: Number(ratingKey),
+    videoResolution: profile.res,
+    videoCodec: profile.codec,
+    audioCodec: profile.audio[0][0],
+    container: profile.container,
+    width: profile.w,
+    height: profile.h,
+    duration: duration,
+    bitrate: profile.res === '4k' ? 48000 : 9000,
+    Part: [{
+      id: Number(ratingKey) + 500000,
+      key: '/library/parts/' + (Number(ratingKey) + 500000) + '/' +
+           ratingKey + '/file.' + profile.container,
+      container: profile.container,
+      duration: duration,
+      size: profile.res === '4k' ? 62000000000 : 9000000000
+    }]
+  };
+}
+
 /* What a film IS, independent of which server is holding a copy of it. Both
    servers agree on all of this, which is what makes deduplication possible. */
 function makeFilm(i) {
@@ -165,25 +194,7 @@ function makeCopy(film, serverIndex) {
     studio: film.studio,
     rating: film.rating,
     audienceRating: film.audienceRating,
-    Media: [{
-      id: Number(ratingKey),
-      videoResolution: profile.res,
-      videoCodec: profile.codec,
-      audioCodec: profile.audio[0][0],
-      container: profile.container,
-      width: profile.w,
-      height: profile.h,
-      duration: film.duration,
-      bitrate: profile.res === '4k' ? 48000 : 9000,
-      Part: [{
-        id: Number(ratingKey) + 500000,
-        key: '/library/parts/' + (Number(ratingKey) + 500000) + '/' +
-             (1600000000 + film.i) + '/file.' + profile.container,
-        container: profile.container,
-        duration: film.duration,
-        size: profile.res === '4k' ? 62000000000 : 9000000000
-      }]
-    }]
+    Media: [mediaFor(profile, ratingKey, film.duration)]
   };
   if (film.contentRating) item.contentRating = film.contentRating;
   item._profile = profile.id;
@@ -241,6 +252,17 @@ function makeExtra(parent, n, withStreams) {
    lands, and why the detail page has to fetch. */
 function fullMetadata(item, film) {
   const copy = JSON.parse(JSON.stringify(item));
+
+  /* A show has no media of its own — only its episodes do. */
+  if (!copy.Media || !copy.Media.length) {
+    copy.Genre = (film.genres || []).map(function (g) { return { tag: g }; });
+    copy.Role = (film.cast || []).map(function (c, n) {
+      return { tag: c.name, role: c.role,
+               thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
+    });
+    return copy;
+  }
+
   const profile = PROFILES.filter(function (p) { return p.id === item._profile; })[0];
   const media = copy.Media[0];
 
@@ -271,10 +293,10 @@ function fullMetadata(item, film) {
   });
   copy.Media[0].Part[0].Stream = streams;
 
-  copy.Genre = film.genres.map(function (g) { return { tag: g }; });
-  copy.Director = [{ tag: film.director }];
-  copy.Writer = [{ tag: film.writer }];
-  copy.Role = film.cast.map(function (c, n) {
+  copy.Genre = (film.genres || []).map(function (g) { return { tag: g }; });
+  if (film.director) copy.Director = [{ tag: film.director }];
+  if (film.writer) copy.Writer = [{ tag: film.writer }];
+  copy.Role = (film.cast || []).map(function (c, n) {
     return { tag: c.name, role: c.role,
              thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
   });
@@ -283,6 +305,162 @@ function fullMetadata(item, film) {
     Metadata: EXTRA_KINDS.map(function (k, n) { return makeExtra(item, n, false); })
   };
   return copy;
+}
+
+/* ---------- shows ----------
+
+   A show is not playable; an episode is. Everything the guard cares about
+   therefore lives on the episode, and the show and season exist to be browsed
+   through. */
+
+const SHOW_SUFFIX = ['', '', '', ': The Return', ': Origins', ' (UK)'];
+
+function makeShow(i) {
+  const rng = rand(i * 40503 + 7);
+  const title = pick(rng, ADJECTIVES) + ' ' + pick(rng, NOUNS) + pick(rng, SHOW_SUFFIX);
+  const year = 1990 + Math.floor(rng() * 34);
+  const seasonCount = 1 + Math.floor(rng() * 5);
+  const cast = [];
+  for (let n = 0; n < 4 + Math.floor(rng() * 5); n++) {
+    cast.push({
+      name: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
+      role: pick(rng, FIRST_NAMES)
+    });
+  }
+
+  const seasons = [];
+  for (let sn = 1; sn <= seasonCount; sn++) {
+    const episodes = [];
+    const count = 6 + Math.floor(rng() * 8);
+    for (let en = 1; en <= count; en++) {
+      episodes.push({
+        season: sn,
+        number: en,
+        title: pick(rng, ADJECTIVES) + ' ' + pick(rng, NOUNS),
+        duration: (22 + Math.floor(rng() * 40)) * 60000,
+        summary: 'Series ' + sn + ', episode ' + en + '. ' +
+                 pick(rng, NOUNS).toLowerCase() + ', and a ' +
+                 pick(rng, NOUNS).toLowerCase() + '.',
+        airedAt: (2000 + sn) + '-0' + (1 + (en % 9)) + '-1' + (en % 10)
+      });
+    }
+    seasons.push({ number: sn, episodes: episodes });
+  }
+
+  return {
+    i: i,
+    guid: 'plex://show/' + (7000000 + i),
+    tvdb: 80000 + i * 3,
+    tmdb: 60000 + i * 5,
+    title: title,
+    year: year,
+    contentRating: pick(rng, RATINGS),
+    studio: pick(rng, STUDIOS),
+    rating: Math.round((45 + rng() * 55)) / 10,
+    audienceRating: Math.round((40 + rng() * 60)) / 10,
+    genres: [pick(rng, GENRES)],
+    cast: cast,
+    seasons: seasons,
+    summary: title + '. ' + pick(rng, ADJECTIVES).toLowerCase() + ' ' +
+             pick(rng, NOUNS).toLowerCase() + ', across ' + seasonCount +
+             ' series.'
+  };
+}
+
+/* One server's copy of a show, with its seasons and episodes. The media profile
+   is chosen per show per server — a whole run is usually one encode — so a show
+   that direct plays on one server may not on the other. */
+function makeShowCopy(show, serverIndex) {
+  const rng = rand(show.i * 15485863 + serverIndex * 32452843);
+  const profile = PROFILES[PROFILE_PICK[Math.floor(rng() * PROFILE_PICK.length)]];
+  const base = serverIndex * 1000000;
+  const showKey = String(base + 500000 + show.i);
+
+  const item = {
+    ratingKey: showKey,
+    key: '/library/metadata/' + showKey + '/children',
+    guid: show.guid,
+    Guid: [{ id: 'tvdb://' + show.tvdb }, { id: 'tmdb://' + show.tmdb }],
+    type: 'show',
+    title: show.title,
+    titleSort: show.title,
+    year: show.year,
+    summary: show.summary,
+    studio: show.studio,
+    rating: show.rating,
+    audienceRating: show.audienceRating,
+    addedAt: 1600000000 + show.i * 7200 + serverIndex * 900,
+    updatedAt: 1600000000 + show.i * 7200,
+    thumb: '/library/metadata/' + showKey + '/thumb/' + (1600000000 + show.i),
+    art: '/library/metadata/' + showKey + '/art/' + (1600000000 + show.i),
+    childCount: show.seasons.length,
+    leafCount: show.seasons.reduce(function (n, s) { return n + s.episodes.length; }, 0),
+    viewedLeafCount: 0,
+    _show: show.i,
+    _profile: profile.id
+  };
+  if (show.contentRating) item.contentRating = show.contentRating;
+
+  const seasons = show.seasons.map(function (season) {
+    const seasonKey = String(base + 600000 + show.i * 10 + season.number);
+    return {
+      ratingKey: seasonKey,
+      key: '/library/metadata/' + seasonKey + '/children',
+      type: 'season',
+      title: 'Season ' + season.number,
+      index: season.number,
+      parentRatingKey: showKey,
+      parentTitle: show.title,
+      parentGuid: show.guid,
+      thumb: '/library/metadata/' + seasonKey + '/thumb/' + (1600000000 + show.i),
+      leafCount: season.episodes.length,
+      viewedLeafCount: 0,
+      addedAt: item.addedAt,
+      _show: show.i,
+      _season: season.number
+    };
+  });
+
+  const episodes = [];
+  show.seasons.forEach(function (season) {
+    season.episodes.forEach(function (ep) {
+      const epKey = String(base + 700000 + show.i * 1000 + season.number * 100 + ep.number);
+      /* One episode per show is deliberately a different encode, so a show that
+         otherwise direct plays still has an awkward one in it. */
+      const epProfile = (ep.number === 3)
+        ? PROFILES[PROFILE_PICK[(show.i + serverIndex + 4) % PROFILE_PICK.length]]
+        : profile;
+      episodes.push({
+        ratingKey: epKey,
+        key: '/library/metadata/' + epKey,
+        guid: 'plex://episode/' + (8000000 + show.i * 1000 + season.number * 100 + ep.number),
+        type: 'episode',
+        title: ep.title,
+        titleSort: ep.title,
+        index: ep.number,
+        parentIndex: season.number,
+        parentTitle: 'Season ' + season.number,
+        parentRatingKey: String(base + 600000 + show.i * 10 + season.number),
+        grandparentTitle: show.title,
+        grandparentRatingKey: showKey,
+        grandparentGuid: show.guid,
+        grandparentThumb: item.thumb,
+        duration: ep.duration,
+        summary: ep.summary,
+        originallyAvailableAt: ep.airedAt,
+        contentRating: show.contentRating,
+        addedAt: item.addedAt + ep.number * 60,
+        updatedAt: item.addedAt,
+        thumb: '/library/metadata/' + epKey + '/thumb/' + (1600000000 + show.i),
+        art: item.art,
+        Media: [mediaFor(epProfile, epKey, ep.duration)],
+        _show: show.i,
+        _profile: epProfile.id
+      });
+    });
+  });
+
+  return { show: item, seasons: seasons, episodes: episodes };
 }
 
 /* ---------- servers ---------- */
@@ -305,26 +483,50 @@ const SERVERS = [
 
 function build(counts) {
   const filmCount = counts.films;
+  /* One show per ten films, near enough to the real ratio and enough to make
+     the show rail work. */
+  const showCount = Math.max(6, Math.round(filmCount / 10));
+
   const films = [];
   for (let i = 0; i < filmCount; i++) films.push(makeFilm(i));
+  const shows = [];
+  for (let i = 0; i < showCount; i++) shows.push(makeShow(i));
 
-  const held = holdings(filmCount);
+  const filmsHeld = holdings(filmCount);
+  const showsHeld = holdings(showCount);
+
+  function byTitle(a, b) {
+    return a.titleSort < b.titleSort ? -1 : (a.titleSort > b.titleSort ? 1 : 0);
+  }
 
   const servers = SERVERS.map(function (spec, n) {
-    const mine = held[n];
-    /* Section 1 is everything this server holds; section 2 is its 4K subset,
-       so the two servers do not even agree on how many sections there are. */
-    const all = mine.map(function (i) { return makeCopy(films[i], spec.index); });
-    all.sort(function (a, b) {
-      return a.titleSort < b.titleSort ? -1 : (a.titleSort > b.titleSort ? 1 : 0);
+    const allFilms = filmsHeld[n].map(function (i) { return makeCopy(films[i], spec.index); });
+    allFilms.sort(byTitle);
+    const uhd = allFilms.filter(function (m) { return m.Media[0].videoResolution === '4k'; });
+
+    /* Shows, and everything hanging off them. `children` is what
+       /library/metadata/<key>/children answers with. */
+    const children = {};
+    const allShows = [];
+    const episodesByShow = {};
+    showsHeld[n].forEach(function (i) {
+      const built = makeShowCopy(shows[i], spec.index);
+      allShows.push(built.show);
+      children[built.show.ratingKey] = built.seasons;
+      built.seasons.forEach(function (season) {
+        children[season.ratingKey] = built.episodes.filter(function (ep) {
+          return ep.parentIndex === season.index;
+        });
+      });
+      episodesByShow[built.show.ratingKey] = built.episodes;
     });
-    const uhd = all.filter(function (m) { return m.Media[0].videoResolution === '4k'; });
+    allShows.sort(byTitle);
 
     const sections = [
       { key: '1', title: 'Films', type: 'movie', updatedAt: 1700000000 + n },
-      { key: '3', title: 'TV Shows', type: 'show', updatedAt: 1700000200 }
+      { key: '3', title: 'TV Shows', type: 'show', updatedAt: 1700000200 + n }
     ];
-    const items = { '1': all, '3': [] };
+    const items = { '1': allFilms, '3': allShows };
     /* Only Main separates its 4K films into their own section. */
     if (n === 0) {
       sections.splice(1, 0, { key: '2', title: '4K Films', type: 'movie', updatedAt: 1700000100 });
@@ -332,9 +534,15 @@ function build(counts) {
     }
 
     const byKey = {};
-    all.forEach(function (m) { byKey[m.ratingKey] = m; });
+    allFilms.forEach(function (m) { byKey[m.ratingKey] = m; });
+    allShows.forEach(function (m) { byKey[m.ratingKey] = m; });
+    Object.keys(children).forEach(function (k) {
+      children[k].forEach(function (child) { byKey[child.ratingKey] = child; });
+    });
+
     const byGuid = {};
-    all.forEach(function (m) { byGuid['tmdb://' + films[m._film].tmdb] = m; });
+    allFilms.forEach(function (m) { byGuid['tmdb://' + films[m._film].tmdb] = m; });
+    allShows.forEach(function (m) { byGuid['tmdb://' + shows[m._show].tmdb] = m; });
 
     return {
       spec: spec,
@@ -343,6 +551,8 @@ function build(counts) {
       prefix: spec.prefix,
       sections: sections,
       items: items,
+      children: children,
+      episodesByShow: episodesByShow,
       byKey: byKey,
       byGuid: byGuid,
       contentRatings: function (key) {
@@ -355,10 +565,18 @@ function build(counts) {
     };
   });
 
+  /* The canonical record behind whichever copy is being asked about. */
+  function subject(item) {
+    if (item.type === 'movie') return films[item._film];
+    return shows[item._show];
+  }
+
   return {
     films: films,
+    shows: shows,
     servers: servers,
-    fullMetadata: function (item) { return fullMetadata(item, films[item._film]); }
+    subject: subject,
+    fullMetadata: function (item) { return fullMetadata(item, subject(item)); }
   };
 }
 

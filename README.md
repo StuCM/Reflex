@@ -27,7 +27,10 @@ constraints that shape every decision here.
   convert. **4K is the exception**: if it will not direct play it is refused
   outright, because that is the one thing the server kills mid-stream.
 
-Not yet: shows, and filters beyond the kids certificate cut.
+TV shows work the same way: show sections, a show page with its series and
+episodes, and the same copy-per-server choice on an episode as on a film.
+
+Not yet: filters beyond the kids certificate cut, and subtitles.
 
 ## Run it on the laptop
 
@@ -121,14 +124,15 @@ First launch shows a code — enter it at plex.tv/link.
 
 ## Keys
 
-| Key | Browse | Detail page | Playing |
-|---|---|---|---|
-| ← → | move in rail | choose a copy | seek ∓30s |
-| ↑ ↓ | change row / reach the chips | choose a copy | seek ∓5 min |
-| ⏪ ⏩ | — | — | seek ∓5 min |
-| OK | open the film | play the selected copy | play / pause |
-| Red | search | — | next audio track |
-| Back | exit app | back to the rail | stop, back to the film |
+| Key | Browse | Show page | Detail page | Playing |
+|---|---|---|---|---|
+| ← → | move in rail | change series | choose a copy | seek ∓30s |
+| ↑ ↓ | change row / reach the chips | choose an episode | choose a copy | seek ∓5 min |
+| ⏪ ⏩ | — | — | — | seek ∓5 min |
+| OK | open it | play the episode | play the selected copy | play / pause |
+| → | — | other copies of the episode | — | — |
+| Red | search | — | — | next audio track |
+| Back | exit app | back to the rail | back | stop, back where you started |
 
 Holding a seek key accumulates rather than seeking on every press: the OSD shows
 where you are heading and the seek happens once you stop, because each one is a

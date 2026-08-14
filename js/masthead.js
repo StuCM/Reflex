@@ -42,14 +42,33 @@ var Masthead = (function () {
     elSummary.textContent = item.summary || '';
 
     var meta = [];
+    /* An episode's title says nothing on its own — which show, and where in it,
+       is the part you actually read. */
+    if (item.type === 'episode') meta.push(Media.episodeLabel(item));
     if (item.year) meta.push(item.year);
-    if (item.duration) meta.push(Math.round(item.duration / 60000) + ' min');
+    if (item.type === 'show') {
+      var counts = Shows.summary(item);
+      if (counts) meta.push(counts);
+    } else if (item.duration) {
+      meta.push(Math.round(item.duration / 60000) + ' min');
+    }
     if (item.contentRating) meta.push(item.contentRating);
     if (item.viewOffset && item.duration) {
       meta.push(Math.round(100 * item.viewOffset / item.duration) + '% watched');
     }
     meta.push(position);
     elMeta.textContent = meta.join('   ·   ');
+
+    /* A show has no media of its own, so there is no verdict to give and
+       nothing to badge but where it lives. */
+    if (item.type === 'show') {
+      var sb = '';
+      if (Merge.isShared(item)) {
+        sb += badge('ON ' + Merge.sources(item).length + ' SERVERS');
+      }
+      elBadges.innerHTML = sb;
+      return;
+    }
 
     var media = (item.Media && item.Media[0]) || {};
     var b = '';
