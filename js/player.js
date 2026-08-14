@@ -285,6 +285,10 @@ var Player = (function () {
     cues = [];
     subNote = '';
     subEl.textContent = '';
+    /* Clear what is drawn AND the note of what was drawn: paintSub skips a cue
+       identical to the last one, so leaving the note behind means turning a
+       track off and back on inside one cue draws nothing. */
+    subEl.setAttribute('data-cue', '');
     subEl.classList.add('hidden');
     currentSub = stream || null;
     wantedLang = stream ? String(stream.languageCode || '') : null;
