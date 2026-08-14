@@ -55,6 +55,7 @@ var Panel = (function () {
 
   var answers = null;          // [{ kind, name, mime, said }]
   var caps = null;             // BASE plus whatever the probe added
+  var features = null;         // what the media element exposes beyond src/play
 
   function ask(mime) {
     var el = document.getElementById('video');
@@ -84,6 +85,34 @@ var Panel = (function () {
       if (said === 'probably' && c.kind !== 'audio') caps[c.kind][c.name] = true;
     }
     return answers;
+  }
+
+  /* What the pipeline offers past the basics. On webOS a <video> element is not
+     the browser decoding — WAM hands playback to the TV's own media pipeline,
+     the same hardware decoder the built-in player uses, which is why 4K HEVC
+     direct plays here and fails in a desktop browser. So the question is not
+     whether to replace <video> with a native player; it is what this pipeline
+     already exposes that we are not using.
+
+     audioTracks is the one that matters most: with it, switching audio is a
+     client-side selection, and without it the only honest way is to ask the
+     server for that track and restart, which is what the player does today. */
+  function probeFeatures() {
+    if (features) return features;
+    var el = document.getElementById('video');
+    function has(name) { return !!(el && name in el); }
+    features = {
+      audioTracks: has('audioTracks') ? String((el.audioTracks || {}).length) : 'no',
+      videoTracks: has('videoTracks') ? 'yes' : 'no',
+      textTracks: has('textTracks') ? 'yes' : 'no',
+      playbackQuality: !!(el && (el.getVideoPlaybackQuality ||
+                                 el.webkitDecodedFrameCount !== undefined)),
+      mediaSource: (typeof window !== 'undefined' && !!window.MediaSource),
+      webOS: (typeof window !== 'undefined' && !!window.webOS),
+      webOSVersion: (typeof window !== 'undefined' && window.webOS &&
+                     window.webOS.device && window.webOS.device.platformVersion) || '?'
+    };
+    return features;
   }
 
   function supports(kind, name) {
@@ -132,12 +161,19 @@ var Panel = (function () {
       lines.push(kinds[k] + (kinds[k] === 'video' ? '        ' : (kinds[k] === 'audio' ? '        ' : '    ')) +
                  said.join('  '));
     }
+    var f = probeFeatures();
+    lines.push('');
+    lines.push('PIPELINE');
+    lines.push('audioTracks  ' + f.audioTracks + '    textTracks ' + f.textTracks +
+               '    MediaSource ' + (f.mediaSource ? 'yes' : 'no'));
+    lines.push('webOS ' + (f.webOS ? f.webOSVersion : 'no') +
+               '    frame stats ' + (f.playbackQuality ? 'yes' : 'no'));
     lines.push('');
     lines.push('Audio over ARC is a separate question: TrueHD and DTS-HD MA never');
     lines.push('pass, whatever the panel decodes.');
     return lines.join('\n');
   }
 
-  return { probe: probe, supports: supports, list: list,
+  return { probe: probe, supports: supports, list: list, features: probeFeatures,
            clientProfile: clientProfile, report: report };
 })();
