@@ -101,19 +101,24 @@ is the webOS OSE profile, not a retail set. A retail TV in Dev Mode is
 ```sh
 ares-setup-device --modify tv -i "host=<TV_IP>" -i "port=9922" -i "username=prisoner"
 ares-novacom --device tv --getkey      # prompts for the passphrase
-npm run package                        # 32KB, app files only
-ares-install --device tv com.stu.plexlite_0.0.1_all.ipk
-ares-launch  --device tv com.stu.plexlite
+```
+
+That is the setup, once. After it, every trip to the TV is one command:
+
+```sh
+npm run deploy                         # check, package, install, launch
+TV=lounge npm run deploy               # against a differently-named device
 ares-inspect --device tv --app com.stu.plexlite   # DevTools, use Chromium ~53
 ```
+
+`deploy` runs `npm run check` first, so code Chromium 53 cannot run never
+reaches the panel — the one failure that costs a whole sideload trip to
+diagnose.
 
 Use `npm run package`, not `ares-package .` — its `--exclude` was silently
 ignored here, and a bare `ares-package .` ships the git history, the dev
 harness, the tests and the tooling to the TV. `tools/package.sh` stages exactly
 what runs and nothing else.
-
-```sh
-```
 
 The TV must be awake and on the same subnet — a B8 in standby drops its network
 interface unless Quick Start+ is on, and nothing will answer on 9922.

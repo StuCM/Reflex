@@ -11,7 +11,8 @@
     "check": "node tools/check-es5.js",
     "smoke": "node dev/smoke.js",
     "verify": "npm run check && npm test && npm run smoke",
-    "package": "sh tools/package.sh"
+    "package": "sh tools/package.sh",
+    "deploy": "npm run check && npm run package && ares-install -d ${TV:-tv} *.ipk && ares-launch -d ${TV:-tv} com.stu.plexlite"
   },
   "devDependencies": {},
   "engines": {
