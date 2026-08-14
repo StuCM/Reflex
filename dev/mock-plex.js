@@ -231,7 +231,14 @@ function create(opts) {
     let verdict = 'directplay';
     let text = '';
 
-    if (video.codec === 'vc1' || full.Media[0].container === 'avi') {
+    /* The quality menu. Asking for a bitrate cap IS asking for a re-encode, so
+       the server says so — which is what makes the app refuse a capped 4K
+       stream rather than starting one and being killed. */
+    if (Number(q.maxVideoBitrate || 0) > 0) {
+      verdict = 'transcode';
+      text = 'Conversion required. Video: Bitrate exceeds the requested maximum (' +
+             q.maxVideoBitrate + ' kbps).';
+    } else if (video.codec === 'vc1' || full.Media[0].container === 'avi') {
       verdict = 'transcode';
       text = 'Conversion required. Video: Unsupported codec (' + video.codec +
              '). Container: Unsupported container (' + full.Media[0].container + ').';
@@ -493,6 +500,28 @@ function create(opts) {
       const full = lib.fullMetadata(item);
       if (deckHit) full.viewOffset = deckHit.viewOffset;
       json(res, 200, container({ size: 1, Metadata: [full] }));
+      return true;
+    }
+
+    /* A text subtitle track, handed over as a file. This is the entire cost of
+       subtitles in this app: one GET, no session, nothing to burn in. An image
+       track has no text to give, and answering 415 is how the app finds out —
+       though it should never ask, because Media.isTextSub stops it first. */
+    m = pathname.match(/^\/library\/streams\/(\d+)$/);
+    if (m) {
+      const srt = library.subtitleFile(m[1]);
+      if (!srt) {
+        log(srv.name + ' subtitle ' + m[1] + ' is an image track — refused');
+        res.writeHead(415, { 'Content-Type': 'text/plain',
+                             'Access-Control-Allow-Origin': '*' });
+        res.end('image subtitles cannot be served as text');
+        return true;
+      }
+      log(srv.name + ' subtitle ' + m[1] + ' fetched');
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8',
+                           'Access-Control-Allow-Origin': '*',
+                           'Content-Length': Buffer.byteLength(srt) });
+      res.end(srt);
       return true;
     }
 

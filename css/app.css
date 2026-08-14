@@ -314,20 +314,103 @@ html, body {
 /* Position at a glance. Seeking blind is what made the player feel like it had
    no controls at all. */
 #osd-bar {
-  position: relative; height: 8px; margin-top: 18px; width: 1792px;
-  background: #2a2a32; border-radius: 4px; overflow: hidden;
+  position: relative; height: 10px; margin-top: 18px; width: 1792px;
+  background: #2a2a32; border-radius: 5px;
 }
 #osd-buffered {
-  position: absolute; top: 0; left: 0; height: 8px; width: 0;
-  background: #44444e;
+  position: absolute; top: 0; left: 0; height: 10px; width: 0;
+  background: #44444e; border-radius: 5px;
 }
 #osd-fill {
-  position: absolute; top: 0; left: 0; height: 8px; width: 0;
-  background: #e5a00d;
+  position: absolute; top: 0; left: 0; height: 10px; width: 0;
+  background: #e5a00d; border-radius: 5px;
+}
+
+/* Chapters as ticks, intro and credits as bands — where you can jump to, and
+   what is worth jumping over. Drawn once when the duration is known. */
+#osd-ticks {
+  position: absolute; top: 0; left: 0; height: 10px; width: 1792px;
+  /* A file whose chapters run past what the element reports as its duration
+     would otherwise scatter ticks across the picture. */
+  overflow: hidden;
+}
+.osd-tick {
+  position: absolute; top: 0; width: 2px; height: 10px;
+  background: #0b0b0d;
+}
+.osd-band {
+  position: absolute; top: 0; height: 10px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* The one thing that moves every frame, so it moves on transform alone. */
+#osd-knob {
+  position: absolute; top: -4px; left: 0; width: 6px; height: 18px;
+  background: #fff; border-radius: 3px;
 }
 
 #osd-time { font-size: 28px; color: #9a9aa2; margin-top: 10px; }
 #osd-tracks { font-size: 22px; color: #6a6a72; margin-top: 6px; }
+#osd-hint { font-size: 20px; color: #4a4a52; margin-top: 8px; }
+
+/* ---- skip intro ----
+
+   The server already knows where the intro is; this is the offer, and OK is
+   the whole interaction. */
+#osd-skip {
+  position: absolute; right: 96px; bottom: 300px;
+  padding: 18px 34px; border-radius: 6px;
+  background: #e5a00d; color: #1a1408;
+  font-size: 30px; letter-spacing: 0.02em;
+}
+
+/* ---- subtitles ----
+
+   Text over the video, never burned into it. A shadow rather than a box, so
+   nothing but the words covers the picture. */
+#subtitle {
+  position: absolute; left: 160px; bottom: 96px; width: 1600px;
+  text-align: center; white-space: pre-line;
+  font-size: 42px; line-height: 1.3; color: #fff;
+  text-shadow: 0 2px 6px #000, 0 0 14px #000;
+}
+#subtitle.lifted { bottom: 320px; }
+
+/* ---- the in-player menu ---- */
+
+#menu {
+  position: absolute; left: 64px; bottom: 288px; width: 1180px;
+  padding: 22px 26px 18px; border-radius: 8px;
+  background: rgba(12, 12, 16, 0.94);
+}
+
+.menu-tab {
+  display: inline-block; margin-right: 40px; padding-bottom: 6px;
+  font-size: 26px; color: #6a6a72; letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 4px solid transparent;   /* reserved, so focus shifts nothing */
+}
+.menu-tab.on { color: #e8e8ea; border-bottom-color: #e5a00d; }
+
+#menu-list { height: 392px; overflow: hidden; margin-top: 18px; }
+#menu-inner {
+  -webkit-transition: -webkit-transform 140ms ease-out;
+  transition: transform 140ms ease-out;
+}
+
+.menu-row {
+  height: 56px; line-height: 56px; padding: 0 16px;
+  font-size: 26px; color: #c9c9d1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-radius: 4px;
+}
+.menu-row.sel { background: #2a2a32; color: #fff; }
+.menu-row.off { color: #5a5a62; }
+.menu-mark { display: inline-block; width: 34px; color: #e5a00d; }
+.menu-label { display: inline-block; }
+.menu-note-inline { margin-left: 18px; font-size: 21px; color: #6a6a72; }
+
+#menu-note { margin-top: 12px; font-size: 20px; color: #5a5a62; height: 24px; }
 
 /* ---- toast / debug ---- */
 

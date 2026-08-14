@@ -19,9 +19,15 @@
 
   /* webOS keycodes the app listens for that a keyboard cannot produce.
      Arrows, Enter, Escape and Backspace already arrive with the right codes. */
+  /* Colour buttons are shortcuts into the player's menu; the arrows reach the
+     same place, which is what the TV remote without them relies on. PageUp and
+     PageDown already arrive as 33/34, the codes the channel keys send. */
   const MAP = {
-    F1: 403,     // red button — search
+    F1: 403,     // red button — search, or audio while playing
     F2: 461,     // webOS Back, the code the TV actually sends
+    F3: 404,     // green — subtitles
+    F4: 405,     // yellow — quality
+    F6: 406,     // blue — chapters
     KeyP: 415,   // play
     KeyO: 19,    // pause
     KeyS: 413,   // stop
@@ -51,13 +57,16 @@
   /* ---- help ---- */
 
   const KEYS = [
-    ['Arrows', 'move · seek while playing'],
-    ['Enter', 'OK — play, or activate a chip'],
+    ['Arrows', 'move · ◀ ▶ seek and ▲ ▼ menu while playing'],
+    ['Enter', 'OK — play, activate a chip, take a skip'],
     ['Backspace / Esc', 'Back'],
-    ['F1', 'red button (search)'],
+    ['F1', 'red button — search, or audio while playing'],
     ['F2', 'Back, using the TV\'s own keycode 461'],
+    ['F3 / F4 / F6', 'green · yellow · blue — subtitles, quality, chapters'],
     ['P / O / S', 'play · pause · stop'],
-    [', / .', 'rewind · fast forward'],
+    [', / .', 'rewind · fast forward (5 min)'],
+    ['0 – 9', 'jump to that tenth of the film'],
+    ['PgUp / PgDn', 'next · previous chapter'],
     ['?', 'this list']
   ];
 

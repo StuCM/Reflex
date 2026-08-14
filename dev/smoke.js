@@ -183,9 +183,12 @@ function drive(page, titles) {
     });
   }
   function visible(sel) { return page.isVisible(sel); }
+  /* times === 0 means do not press at all — "walk zero steps to the tab you are
+     already on" is a real thing to ask for, and `times || 1` turned it into one
+     press, which is a whole tab out. */
   function press(key, times) {
     let p = Promise.resolve();
-    for (let i = 0; i < (times || 1); i++) {
+    for (let i = 0; i < (times === undefined ? 1 : times); i++) {
       p = p.then(function () { return page.keyboard.press(key); })
            .then(function () { return page.waitForTimeout(60); });
     }
@@ -197,6 +200,62 @@ function drive(page, titles) {
   }
   function step(name, fn) {
     return Promise.resolve().then(fn).then(function () { ok(name); }, function (e) { fail(name, e); });
+  }
+
+  /* ---- the in-player menu ----
+
+     Same idea as pressChip: find the row by what it says rather than by an
+     index, walk the selection to it and press OK. The menu is what audio,
+     subtitles and quality are chosen from without leaving playback. */
+
+  function menuLabels() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(document.querySelectorAll('#menu .menu-row'),
+        function (r) {
+          return (r.classList.contains('on') ? '* ' : '') +
+                 r.querySelector('.menu-label').textContent.trim();
+        });
+    });
+  }
+
+  function menuTabs() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(document.querySelectorAll('#menu .menu-tab'),
+        function (t) { return t.textContent.trim() + (t.classList.contains('on') ? '*' : ''); });
+    });
+  }
+
+  function menuChoose(re) {
+    return page.evaluate(function (src) {
+      const rows = document.querySelectorAll('#menu .menu-row');
+      const want = new RegExp(src);
+      let sel = 0, to = -1;
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].classList.contains('sel')) sel = i;
+        if (to < 0 && want.test(rows[i].textContent)) to = i;
+      }
+      return [sel, to];
+    }, re.source).then(function (idx) {
+      if (idx[1] < 0) {
+        return menuLabels().then(function (labels) {
+          throw new Error('no menu row matching ' + re + ' in: ' + labels.join(' | '));
+        });
+      }
+      return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]))
+        .then(function () { return page.keyboard.press('Enter'); })
+        .then(function () { return page.waitForTimeout(80); });
+    });
+  }
+
+  /* The menu opens on Audio; the tabs are reached with left and right, which is
+     all the remote is guaranteed to have. */
+  function openMenu(tabIndex) {
+    return press('ArrowUp')
+      .then(function () {
+        return waitFor('!document.getElementById("menu").classList.contains("hidden")',
+                       'the player menu');
+      })
+      .then(function () { return press('ArrowRight', tabIndex || 0); });
   }
 
   /* Walk the chip focus to a named chip and press OK on it, rather than
@@ -568,15 +627,23 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('refuses 4K that will not direct play', function () {
-        /* The one thing still refused outright: a 4K remux whose only tracks are
-           TrueHD and DTS-HD MA cannot direct play, and converting it is what the
-           server kills mid-stream. */
+      /* A 4K remux whose only tracks are TrueHD and DTS-HD MA. Neither can cross
+         plain ARC, so the film's own track is offered to the server for
+         re-encoding — and re-encoding anything on a 4K file is the one thing
+         the admin's kill-stream fires on, so it is refused. The decision call
+         is how we learn that, and it opens no session (hasMDE=1), which is
+         why asking is the design rather than a cost. */
+      return step('refuses a 4K remux whose only audio would be re-encoded', function () {
         return openTitle(titles.truehdOnly.title)
           .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
-            return waitFor(shown('4K', titles.truehdOnly.title),
+            return waitFor(shown('4K transcode refused', titles.truehdOnly.title),
                            'the 4K refusal, naming ' + titles.truehdOnly.title);
+          })
+          .then(function () {
+            if (!tracedThat(/decision: transcode/)) {
+              throw new Error('the verdict was reached without asking the server');
+            }
           })
 
           .then(function () { return shot('refuse-truehd'); })
@@ -630,6 +697,8 @@ function drive(page, titles) {
             if (n !== 1) throw new Error('the same film appeared ' + n + ' times');
           })
           .then(function () {
+            /* Scoped to the copies: extras render the same row shape, in their
+               own list, and counting those as copies makes this never settle. */
             return waitFor('(function(){var s=document.querySelectorAll("#dt-sources .dt-source");' +
                            'if (s.length !== 2) return false;' +
                            'return !/checking/.test(s[0].textContent) &&' +
@@ -679,9 +748,12 @@ function drive(page, titles) {
             });
           })
           .then(function (text) {
-            /* Anything the guard will not play: below 4K it converts instead,
-               so the only outright refusals left are 4K and undecodable. */
-            const refusing = /no passable audio|4K, would transcode|cannot decode/.test(text);
+            /* Read the verdict the page is showing rather than assuming which
+               way this copy went — "4K, would transcode" is a refusal and
+               "audio transcode" is not, and both contain the same word. Guard
+               says yes to exactly these three and no to everything else, so
+               listing the yeses is the formulation that cannot go stale. */
+            const refusing = !/direct play|audio transcode|server transcodes/.test(text);
             return page.keyboard.press('Enter').then(function () {
               return waitFor('(function(){var m=document.getElementById("message");' +
                              'var v=document.getElementById("video");' +
@@ -767,6 +839,145 @@ function drive(page, titles) {
                            'the video to start advancing', 15000);
           })
           .then(function () { return shot('play'); });
+      });
+    })
+
+    /* Everything the player can do while a film runs. All of it needs something
+       actually playing, so it is skipped without a fixture — npm run fixture. */
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('the menu offers audio, subtitles, quality and chapters', function () {
+        return openMenu(0)
+          .then(menuTabs)
+          .then(function (tabs) {
+            if (tabs.join(',') !== 'Audio*,Subtitles,Quality,Chapters') {
+              throw new Error('tabs are: ' + tabs.join(', '));
+            }
+          })
+          .then(menuLabels)
+          .then(function (labels) {
+            /* This film is the h264-eac3 profile: E-AC3 5.1, AC3 5.1 and a
+               French AAC stereo. All three have to be offered, named by
+               language rather than by stream id. */
+            if (labels.length !== 3 || !/English/.test(labels[0]) ||
+                !/French/.test(labels[2])) {
+              throw new Error('audio rows: ' + labels.join(' | '));
+            }
+          })
+          .then(function () { return press('ArrowRight'); })          // subtitles
+          .then(menuLabels)
+          .then(function (labels) {
+            if (!/Off/.test(labels[0])) throw new Error('subtitle rows: ' + labels.join(' | '));
+            /* An image track is listed and refused by name — the only way to
+               show it is to have the server burn it in, which is a transcode. */
+            const image = labels.filter(function (l) { return /image/.test(l); });
+            if (!image.length) throw new Error('the PGS track is not named as an image track');
+          })
+          .then(function () { return press('ArrowRight'); })          // quality
+          .then(menuLabels)
+          .then(function (labels) {
+            if (!/Original/.test(labels[0])) throw new Error('quality rows: ' + labels.join(' | '));
+            if (labels.length < 2) throw new Error('no bitrate caps offered');
+          })
+          .then(function () { return press('ArrowRight'); })          // chapters
+          .then(menuLabels)
+          .then(function (labels) {
+            if (labels.length < 9) throw new Error('chapter rows: ' + labels.join(' | '));
+          })
+          .then(function () { return shot('player-menu'); })
+          .then(function () { return press('Backspace'); })           // close the menu
+          .then(function () {
+            return waitFor('document.getElementById("menu").classList.contains("hidden")',
+                           'the menu to close');
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('subtitles are fetched as text and survive an audio switch', function () {
+        return openMenu(1)
+          .then(function () { return menuChoose(/French/); })
+          .then(function () {
+            return waitFor('/français/.test(document.getElementById("subtitle").textContent)',
+                           'the French subtitle track to be drawn over the video', 15000);
+          })
+          .then(function () { return shot('subtitles'); })
+          .then(function () {
+            /* Switching audio is a restart — the panel picks its own track out
+               of a direct-played file, so honouring a choice means asking the
+               server for that one and starting again from here. The subtitle
+               choice has to come back with it, matched by language. */
+            const before = trace.length;
+            return openMenu(0)
+              .then(function () { return menuChoose(/French · AAC/); })
+              .then(function () {
+                return waitFor('(function(){var v=document.getElementById("video");' +
+                               'return !v.classList.contains("hidden") && !v.paused &&' +
+                               ' v.currentTime > 0 && !v.error;})()',
+                               'playback to resume on the other audio track', 15000);
+              })
+              .then(function () {
+                const after = trace.slice(before).filter(function (l) { return /decision:/.test(l); });
+                if (!after.length) throw new Error('no second decision call for the new track');
+              })
+              .then(function () {
+                return waitFor('/français/.test(document.getElementById("subtitle").textContent)',
+                               'the subtitle language to survive the restart', 15000);
+              });
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('skip intro appears inside the marker and takes you past it', function () {
+        /* Back to the start first — by now the film is well past the intro, and
+           the offer is only made while you are inside one. */
+        return press('ArrowLeft')
+          .then(function () {
+            return waitFor('!document.getElementById("osd-skip").classList.contains("hidden")',
+                           'the skip-intro offer', 20000);
+          })
+          .then(function () { return page.textContent('#osd-skip'); })
+          .then(function (text) {
+            if (!/Skip intro/.test(text)) throw new Error('the offer says: ' + text);
+          })
+          .then(function () { return shot('skip-intro'); })
+          /* OK means "take it" while the offer is up — the one moment that
+             button is not pause, and the moment you are reaching for it. */
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('document.getElementById("video").currentTime >= 11.5',
+                           'playback to land past the end of the intro', 10000);
+          })
+          .then(function () {
+            return waitFor('document.getElementById("osd-skip").classList.contains("hidden")',
+                           'the offer to go away once taken');
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('the trackbar shows chapters, and a digit jumps', function () {
+        return page.evaluate(function () {
+          return [document.querySelectorAll('#osd-ticks .osd-tick').length,
+                  document.querySelectorAll('#osd-ticks .osd-band').length];
+        }).then(function (n) {
+          if (n[0] < 7) throw new Error('only ' + n[0] + ' chapter ticks on the bar');
+          if (n[1] < 2) throw new Error('the intro and credits are not marked on the bar');
+        })
+        /* 0 is the safe digit to prove the jump with: the fixture is thirty
+           seconds and the film says two hours, so anything else aims past the
+           end of what the harness can serve. */
+        .then(function () { return page.keyboard.press('0'); })
+        .then(function () {
+          return waitFor('/SEEKING/.test(document.getElementById("osd-time").textContent)',
+                         'the OSD to show where the jump is aiming');
+        })
+        .then(function () { return shot('trackbar'); });
       });
     })
 

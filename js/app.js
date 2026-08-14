@@ -56,8 +56,12 @@
 
      `back` is where stopping returns to — the show page for an episode, the
      film's own page otherwise — so the next episode is one press away rather
-     than a search away. */
-  function playChecked(item, verdict, isExtra, resumeAt, back) {
+     than a search away.
+
+     `subLang` is the subtitle language that was on before a restart. Both
+     survive a switch of audio track, version or quality, because a switch is
+     a restart and neither of them should be lost to it. */
+  function playChecked(item, verdict, isExtra, resumeAt, back, subLang) {
     if (!verdict || !verdict.ok) return;
     var md = verdict.md;
     var server = Servers.of(md);
@@ -71,25 +75,37 @@
       part: verdict.part,
       audio: verdict.audio,
       mediaIndex: verdict.mediaIndex || 0,
-      /* Switching track means asking the server for that one and starting
-         again from where we were — the panel chooses for itself out of a
-         direct-played file, so there is nothing to switch client-side. */
-      onAudio: function (streamId, at) {
-        Guard.check(verdict.md, verdict.mediaIndex || 0, streamId).then(function (v2) {
-          if (!v2.ok) {
-            var why = Guard.refusal(item, v2);
+      maxBitrate: verdict.maxBitrate || null,
+      /* Which subtitle language was on before a restart. By language, not by
+         stream id: another version of the film is a different file with
+         different ids, and "French" is what the user chose. */
+      subLang: subLang,
+      /* Audio, another version, and a quality cap are all the same move:
+         ask the server for a different stream and start again from here. The
+         panel picks its own track out of a direct-played file, so there is
+         nothing to switch client-side. Subtitles are not here — they are drawn
+         over the video and never restart anything. */
+      onSwitch: function (change) {
+        Guard.check(verdict.md, change.mediaIndex, change.audioId, change.maxBitrate)
+          .then(function (v2) {
+            if (!v2.ok) {
+              /* Refusing a switch must not end the film. Say why in a line and
+                 leave what is already playing alone — the full explanation is
+                 on the detail page, and stopping playback to deliver it is a
+                 worse answer than not switching. */
+              UI.toast('Kept as it was — ' + Guard.label(v2));
+              UI.debug('switch refused: ' + Guard.refusal(item, v2)[1]);
+              return;
+            }
             Player.stop('stopped', true);
-            UI.message(why[0], why[1]);
-            return;
-          }
-          Player.stop('stopped', true);
-          playChecked(item, v2, isExtra, at, back);
-        });
+            playChecked(item, v2, isExtra, change.at, back, change.subLang);
+          });
       },
       /* Direct play reads the file itself. Otherwise the server has to serve a
          converted stream, which means HLS and an actual session on it. */
       url: verdict.transcode
-        ? Plex.transcodeUrl(server, md, verdict.mediaIndex || 0, 0, verdict.audio && verdict.audio.id)
+        ? Plex.transcodeUrl(server, md, verdict.mediaIndex || 0, 0,
+                            verdict.audio && verdict.audio.id, verdict.maxBitrate)
         : null,
       transcode: !!verdict.transcode,
       onExit: back || function () { openDetail(item, toBrowse); },

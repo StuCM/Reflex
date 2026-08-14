@@ -465,9 +465,15 @@ var Plex = (function () {
     return m ? m[1] : null;
   }
 
+  /* includeMarkers is where "Skip intro" comes from: the server has already
+     analysed the film and knows where the intro and the end credits are, so
+     there is nothing to detect on the panel — only something to offer at the
+     right moment. includeChapters gives the trackbar its ticks. Both are part
+     of the same payload the app already fetches, so neither costs a request. */
   function metadata(server, ratingKey) {
     return ask(server, '/library/metadata/' + ratingKey + '?' +
-               qs({ includeGuids: 1, includeExtras: 1 })).then(function (res) {
+               qs({ includeGuids: 1, includeExtras: 1,
+                    includeMarkers: 1, includeChapters: 1 })).then(function (res) {
       var m = res.MediaContainer && res.MediaContainer.Metadata;
       if (!m || !m[0]) return null;
       /* Extras arrive nested and are playable in their own right, so they need
@@ -509,19 +515,31 @@ var Plex = (function () {
   /* hasMDE=1 returns the verdict WITHOUT opening a session, so this is safe to
      call on a server we don't own. Never call the non-decision transcode
      endpoints. */
-  function playbackParams(server, item, mediaIndex, partIndex, audioStreamId) {
+  /* maxBitrate (kbps) is the quality menu. It only means anything on a
+     converted stream — asking for a cap IS asking the server to re-encode —
+     so the decision call is given it too, and answers honestly that it will
+     transcode. On a 4K file that is a refusal, which is the point. */
+  function playbackParams(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate) {
     return {
       hasMDE: 1,
       path: '/library/metadata/' + item.ratingKey,
       mediaIndex: mediaIndex,
       partIndex: partIndex,
       protocol: 'http',
-      directPlay: 1,
+      directPlay: maxBitrate ? 0 : 1,
       directStream: 1,
       directStreamAudio: 1,
       fastSeek: 1,
+      /* Never burned in. Subtitles are fetched as text and drawn over the
+         video — see js/subs.js — because burning them into the picture is a
+         transcode, and a transcode of a 4K file is what gets a session
+         killed. */
       subtitles: 'none',
       audioBoost: 100,
+      /* directPlay is off the table once a cap is asked for; leaving it on
+         makes the server answer directplay and ignore the cap entirely. */
+      maxVideoBitrate: maxBitrate || null,
+      videoBitrate: maxBitrate || null,
       autoAdjustQuality: 0,
       mediaBufferSize: 102400,
       /* ponytail: we connect directly, not via relay, so 'lan' is what keeps
@@ -540,8 +558,8 @@ var Plex = (function () {
     };
   }
 
-  function decide(server, item, mediaIndex, partIndex, audioStreamId) {
-    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId);
+  function decide(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate) {
+    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate);
     return ask(server, '/video/:/transcode/universal/decision?' + qs(params),
                { timeout: 20000 }).then(function (res) {
       var mc = res.MediaContainer || {};
@@ -568,8 +586,8 @@ var Plex = (function () {
      because that is what the panel's own media pipeline handles — a desktop
      browser will not play this, so it cannot be tested on the laptop.
      Calling this DOES open a session on the server. */
-  function transcodeUrl(server, item, mediaIndex, partIndex, audioStreamId) {
-    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId);
+  function transcodeUrl(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate) {
+    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate);
     params.hasMDE = null;
     params.protocol = 'hls';
     params.copyts = 1;
@@ -579,6 +597,30 @@ var Plex = (function () {
 
   function streamUrl(server, part) {
     return server.base + part.key + '?' + qs({ 'X-Plex-Token': server.token });
+  }
+
+  /* ---------- subtitles ----------
+
+     One small GET for the whole text track, which is the entire cost of
+     subtitles here — no session, no re-encode, nothing on the admin's
+     dashboard. An embedded track is extracted by the server on request; a
+     sidecar file is served as it is. Both arrive as SRT or WebVTT, which
+     js/subs.js parses. */
+
+  function subtitleUrl(server, stream) {
+    var path = (stream && stream.key) || ('/library/streams/' + (stream && stream.id));
+    return server.base + path + '?' + qs({ encoding: 'utf-8', 'X-Plex-Token': server.token });
+  }
+
+  function subtitles(server, stream) {
+    return request('GET', subtitleUrl(server, stream), { timeout: 15000 })
+      .then(function (body) {
+        /* request() parses JSON when it can; a subtitle file never is one, so
+           anything but a string here means the server answered with something
+           other than the track. */
+        if (typeof body !== 'string' || !body) throw new Error('the server returned no text');
+        return body;
+      });
   }
 
   /* ---------- progress ---------- */
@@ -608,6 +650,7 @@ var Plex = (function () {
     history: history, devices: devices, findByGuid: findByGuid, tmdbId: tmdbId,
     allVersions: allVersions,
     contentRatings: contentRatings,
-    decide: decide, streamUrl: streamUrl, transcodeUrl: transcodeUrl, timeline: timeline
+    decide: decide, streamUrl: streamUrl, transcodeUrl: transcodeUrl, timeline: timeline,
+    subtitles: subtitles, subtitleUrl: subtitleUrl
   };
 })();

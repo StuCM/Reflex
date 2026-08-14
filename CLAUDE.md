@@ -150,9 +150,13 @@ Settings and services:
   network call.
 - `js/panel.js` — what this panel claims it can play, and the client profile
   built from it.
-- `js/media.js` — the rules, as pure functions: audio track selection, the UHD
-  guard, certificate ages, film identity. No network, no DOM. These are the
-  parts that must not be wrong, so they are the parts that are unit tested.
+- `js/media.js` — the rules, as pure functions: audio and subtitle track
+  selection, the UHD guard, certificate ages, markers, chapters, quality caps,
+  film identity. No network, no DOM. These are the parts that must not be
+  wrong, so they are the parts that are unit tested.
+- `js/subs.js` — SRT and WebVTT in, cues out, and what should be on screen at
+  time t. Pure, and unit tested. Subtitles are drawn over the video rather than
+  burned into it, which is what makes them free — see the player, below.
 - `js/servers.js` — the servers we can reach, which one an item came from, and
   which one is preferred.
 - `js/merge.js` — one entry per film across servers: folding fetched lists, and
@@ -181,9 +185,23 @@ Screen:
 - `js/devices.js` — whose viewing is this; filters Continue watching.
 - `js/discovery.js` — turns a TMDB list into rows of what the servers have.
 - `js/browse.js` — the state: sections, rows, focus, mode, paging, search.
-- `js/player.js` — playback, the OSD, seeking and audio track cycling.
+- `js/player.js` — playback and everything you can do during it: the trackbar
+  with its chapter ticks and marker bands, seeking, skip intro, and a menu of
+  audio tracks, subtitle languages, quality and chapters.
   Seeks accumulate: every `currentTime` assignment on a direct-played file is a
   real range request, so holding a key aims first and seeks once.
+
+  Audio, another version and a quality cap are all the same move — ask the
+  server for a different stream and restart from here — and all three go back
+  through `Guard.check` first, so a quality cap on a 4K file is refused by the
+  ordinary rule rather than a special case. A refused switch leaves the film
+  playing and says why in a toast; it never stops playback to deliver a
+  message.
+
+  Keys while playing: ◀ ▶ nudge 30s · ▲ ▼ open the menu · RW/FF 5 min ·
+  0–9 jump to that tenth · CH± next/previous chapter · red/green/yellow/blue
+  jump straight to a menu section · OK pauses, or takes the skip when one is
+  offered · BACK closes the menu, then dismisses a skip, then stops.
 - `js/app.js` — boot, and where each key goes.
 
 Tools:
@@ -218,19 +236,28 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 - Next episode: play the following one when this one ends, with a countdown
   that can be cancelled. The main reason a show is easier to watch in the
   official app.
-- Subtitles. `subtitles=none` is on the decision call. Burning in is a
-  transcode; fetching the external SRT and drawing it over the video is the
-  route that costs the server nothing.
+- ~~Subtitles~~ — done, and `subtitles=none` stays on the decision call
+  deliberately. Burning in is a transcode; the track is fetched as text from
+  `/library/streams/<id>`, parsed by `js/subs.js` and drawn over the video, so
+  it costs the server one GET and no session. **TV**: none of it has met the
+  panel, and `js/panel.js` will say on the first deploy whether the pipeline
+  exposes `textTracks` at all — if it does, handing it a track is worth
+  comparing against drawing them ourselves.
 
 ### 2. The player on screen
 
-- A scrub bar: position, duration and buffered ranges. The OSD says the time
-  but not where you are.
+- ~~A scrub bar~~ — done: position, duration, buffered, a knob, chapter ticks
+  and bands for the intro and end credits.
+- ~~Subtitle and audio track pickers in one place~~ — done: one menu on the
+  arrows with Audio, Subtitles, Quality and Chapters, and the colour buttons
+  as shortcuts into it. Quality is versions plus bitrate caps, and every cap
+  goes back through the guard, so a 4K cap is refused as the transcode it is.
 - The OSD titles an episode by its own name only — it should say the show and
   the number, as everywhere else does.
 - Next/previous episode while playing.
-- Subtitle and audio track pickers in one place, rather than audio on the red
-  button and subtitles nowhere.
+- **TV** The quality menu has never met a real transcode: a cap restarts
+  playback against `Plex.transcodeUrl`, and whether the panel seeks inside a
+  Plex HLS playlist is unknown.
 
 ### 3. The pages that lead into playback
 
@@ -306,10 +333,13 @@ The three checks, and what each is for:
   parser: a clean run means nothing obviously wrong, not proof.
 - `npm test` — the pure rules in `js/media.js` and the row arithmetic.
 - `npm run smoke` — drives the whole app in headless Chromium: link, browse,
-  paging, kids, discovery, search, devices, the detail page, and all three
-  playback verdicts. The mock serves **two** servers sharing a library, so the
-  deduplication and the copy-picking are covered end to end. Keep it green; add
-  a step when you add a screen.
+  paging, kids, discovery, search, devices, the detail page, all three playback
+  verdicts, and the player itself — the menu, a subtitle language fetched and
+  drawn, an audio switch that restarts and keeps the subtitle language, skip
+  intro, and the trackbar. The mock serves **two** servers sharing a library,
+  so the deduplication and the copy-picking are covered end to end. The player
+  steps need a fixture and skip without one. Keep it green; add a step when you
+  add a screen.
 
 **Never judge playback on the laptop.** A desktop browser decodes far less than
 this panel: Firefox has no AC3/E-AC3 and no HEVC at all, Chrome has no

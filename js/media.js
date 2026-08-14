@@ -33,14 +33,23 @@ var Media = (function () {
     return NOT_THE_FILM.test(text);
   }
 
+  /* Can this track reach the amplifier untouched? TrueHD and DTS-HD MA cannot
+     cross plain ARC at all, and anything the ranking does not know about is
+     assumed not to. Says nothing about whether the track is worth playing —
+     that is isCommentary's job. */
+  function passesArc(st) {
+    var codec = ((st && st.codec) || '').toLowerCase();
+    var profile = ((st && st.profile) || '').toLowerCase();
+    if (codec === 'truehd') return false;
+    if ((codec === 'dca' || codec === 'dts') && profile.indexOf('ma') === 0) return false;
+    return AUDIO_RANK[codec] !== undefined;
+  }
+
   function audioScore(st) {
     var codec = (st.codec || '').toLowerCase();
-    var profile = (st.profile || '').toLowerCase();
     if (isCommentary(st)) return -1;
-    if (codec === 'truehd') return -1;
-    if ((codec === 'dca' || codec === 'dts') && profile.indexOf('ma') === 0) return -1;
+    if (!passesArc(st)) return -1;
     var rank = AUDIO_RANK[codec];
-    if (rank === undefined) return -1;
     var ch = st.channels || 2, bonus;
     if (rank >= 4) bonus = Math.min(ch, 6);          // AC3/E-AC3: 5.1 preferred
     else bonus = (ch <= 2 ? 6 : 1);                  // AAC and below: stereo preferred
@@ -75,12 +84,27 @@ var Media = (function () {
     return best;
   }
 
+  function channelLabel(st) {
+    return st.channels === 6 ? '5.1' : (st.channels === 8 ? '7.1' : (st.channels || '?') + '.0');
+  }
+
   function audioLabel(st) {
     if (!st) return 'no passable track';
     var codec = (st.codec || '?').toUpperCase();
-    var ch = st.channels === 6 ? '5.1' : (st.channels === 8 ? '7.1' : (st.channels || '?') + '.0');
     var lang = st.languageCode ? ' ' + st.languageCode.toUpperCase() : '';
-    return codec + ' ' + ch + lang;
+    return codec + ' ' + channelLabel(st) + lang;
+  }
+
+  /* The same track, named for a menu the user is reading rather than a badge
+     they are glancing at: language first, because that is what they are
+     choosing between, and the codec after, because that is what decides
+     whether it passes over ARC. */
+  function audioMenuLabel(st) {
+    if (!st) return 'no passable track';
+    return (langName(st) || 'Unknown') + ' · ' +
+           (st.codec || '?').toUpperCase() + ' ' + channelLabel(st) +
+           (isCommentary(st) ? ' · commentary' : '') +
+           (passesArc(st) ? '' : ' · needs re-encoding');
   }
 
   /* Every audio track on a part, in file order — what the player cycles
@@ -112,6 +136,180 @@ var Media = (function () {
       out.push(audioLabel(st) + (isCommentary(st) ? ' (commentary)' : ''));
     }
     return out.join(', ') || 'no audio tracks at all';
+  }
+
+  /* ---------- languages ----------
+
+     Plex reports a stream's language as an ISO 639-2 code and, usually, a
+     `language` field with the name already in it. Usually is not always, and
+     "FRA" on a menu row is a worse answer than "French", so there is a table
+     for the ones a shared library actually turns up. Anything unlisted falls
+     back to the code, which is still better than nothing. */
+
+  var LANGUAGES = {
+    eng: 'English', fre: 'French', fra: 'French', ger: 'German', deu: 'German',
+    spa: 'Spanish', ita: 'Italian', por: 'Portuguese', dut: 'Dutch', nld: 'Dutch',
+    rus: 'Russian', pol: 'Polish', swe: 'Swedish', nor: 'Norwegian', dan: 'Danish',
+    fin: 'Finnish', ice: 'Icelandic', isl: 'Icelandic', gle: 'Irish', gla: 'Gaelic',
+    cym: 'Welsh', wel: 'Welsh', cze: 'Czech', ces: 'Czech', hun: 'Hungarian',
+    gre: 'Greek', ell: 'Greek', tur: 'Turkish', ara: 'Arabic', heb: 'Hebrew',
+    hin: 'Hindi', ben: 'Bengali', tam: 'Tamil', tel: 'Telugu', urd: 'Urdu',
+    jpn: 'Japanese', kor: 'Korean', chi: 'Chinese', zho: 'Chinese',
+    tha: 'Thai', vie: 'Vietnamese', ind: 'Indonesian', may: 'Malay',
+    ukr: 'Ukrainian', ron: 'Romanian', rum: 'Romanian', bul: 'Bulgarian',
+    hrv: 'Croatian', srp: 'Serbian', slo: 'Slovak', slk: 'Slovak', slv: 'Slovenian',
+    cat: 'Catalan', baq: 'Basque', eus: 'Basque', glg: 'Galician',
+    per: 'Persian', fas: 'Persian', fil: 'Filipino', tgl: 'Tagalog',
+    und: 'Unknown', mul: 'Multiple', zxx: 'None'
+  };
+
+  function langName(st) {
+    if (!st) return '';
+    if (st.language) return st.language;
+    var code = String(st.languageCode || st.languageTag || '').toLowerCase();
+    if (!code) return '';
+    return LANGUAGES[code] || code.toUpperCase();
+  }
+
+  /* ---------- subtitles ----------
+
+     Two kinds, and the difference decides whether they can be shown at all.
+     A text subtitle is a file of words: fetch it, parse it, draw it over the
+     video, and the server does no work. An image subtitle (PGS on a Blu-ray
+     remux, VOBSUB on a DVD rip) is a picture of words, and the only way to put
+     it on screen is to have the server paint it into the video — which is a
+     transcode, which on a 4K file is exactly what gets the session killed.
+
+     So image tracks are listed and refused, with the reason, rather than
+     quietly missing. */
+
+  var TEXT_SUBS = { srt: 1, subrip: 1, ass: 1, ssa: 1, vtt: 1, webvtt: 1,
+                    text: 1, mov_text: 1, subtitle: 1 };
+
+  function isTextSub(st) {
+    return !!(st && TEXT_SUBS[String(st.codec || '').toLowerCase()]);
+  }
+
+  function subtitleTracks(part) {
+    var streams = (part && part.Stream) || [], out = [], i;
+    for (i = 0; i < streams.length; i++) {
+      if (streams[i].streamType === 3) out.push(streams[i]);
+    }
+    return out;
+  }
+
+  function subLabel(st) {
+    if (!st) return 'Off';
+    var name = langName(st) || 'Unknown';
+    var bits = [];
+    if (st.forced) bits.push('forced');
+    if (isCommentary(st)) bits.push('commentary');
+    if (st.hearingImpaired || /sdh/i.test(String(st.title || ''))) bits.push('SDH');
+    if (!isTextSub(st)) bits.push(String(st.codec || '?').toUpperCase() + ', image');
+    else if (st.title && String(st.title).length < 24) bits.push(String(st.title));
+    return name + (bits.length ? ' · ' + bits.join(' · ') : '');
+  }
+
+  /* Which track to start with when the user asks for subtitles and has not
+     said which: the one the file marks selected, else a plain forced track
+     (a foreign-dialogue caption on an English film), else the first text one.
+     Never an image track — it cannot be drawn — and never a commentary. */
+  function pickSubtitle(part, languageCode) {
+    var list = subtitleTracks(part), usable = [], i, st, want;
+    for (i = 0; i < list.length; i++) {
+      st = list[i];
+      if (isTextSub(st) && !isCommentary(st)) usable.push(st);
+    }
+    if (!usable.length) return null;
+    want = String(languageCode || '').toLowerCase();
+    if (want) {
+      for (i = 0; i < usable.length; i++) {
+        if (String(usable[i].languageCode || '').toLowerCase() === want) return usable[i];
+      }
+    }
+    for (i = 0; i < usable.length; i++) if (usable[i].selected) return usable[i];
+    for (i = 0; i < usable.length; i++) if (usable[i].forced) return usable[i];
+    return usable[0];
+  }
+
+  /* ---------- markers and chapters ----------
+
+     Plex analyses a film for an intro and an end-credits sequence and reports
+     them as Marker entries in milliseconds. That is where "Skip intro" comes
+     from — there is nothing to detect client side, only something to offer at
+     the right moment. Chapters are the same shape and are what the trackbar's
+     ticks are drawn from. */
+
+  function markerAt(item, seconds) {
+    var list = (item && item.Marker) || [], t = seconds * 1000, i, m;
+    for (i = 0; i < list.length; i++) {
+      m = list[i];
+      if (t >= (m.startTimeOffset || 0) && t < (m.endTimeOffset || 0)) return m;
+    }
+    return null;
+  }
+
+  function markerLabel(m) {
+    var type = String((m && m.type) || '').toLowerCase();
+    if (type === 'intro') return 'Skip intro';
+    if (type === 'credits') return 'Skip credits';
+    if (type === 'commercial') return 'Skip ad break';
+    return 'Skip';
+  }
+
+  /* [{ title, start, end }] in seconds, in order. Both Marker and Chapter use
+     the same offsets, so the trackbar can draw either. */
+  function chapters(item) {
+    var list = (item && item.Chapter) || [], out = [], i, c;
+    for (i = 0; i < list.length; i++) {
+      c = list[i];
+      out.push({
+        title: c.tag || c.title || ('Chapter ' + (c.index || i + 1)),
+        start: (c.startTimeOffset || 0) / 1000,
+        end: (c.endTimeOffset || 0) / 1000
+      });
+    }
+    out.sort(function (a, b) { return a.start - b.start; });
+    return out;
+  }
+
+  /* ---------- quality ----------
+
+     Plex's quality menu is a cap on the video bitrate, which the server obeys
+     by re-encoding. So every entry below "Original" is a transcode by
+     definition — which means the 4K rule applies to all of them, and on a 4K
+     file the guard will refuse every one. That is correct and is left to the
+     guard rather than hidden here, so the refusal explains itself.
+
+     Only caps below what the file already is are offered; capping a 9 Mbps
+     file at 20 would make the server work for a worse picture. */
+
+  var BITRATES = [20000, 12000, 8000, 4000, 3000, 2000, 720];
+
+  function bitrateLabel(kbps) {
+    return kbps >= 1000 ? (kbps / 1000) + ' Mbps' : kbps + ' Kbps';
+  }
+
+  function versionLabel(media) {
+    if (!media) return 'this version';
+    var res = String(media.videoResolution || '').toLowerCase();
+    var name = res === '4k' ? '4K' : (res ? res + 'p' : (media.height || '?') + 'p');
+    var out = name + ' ' + String(media.videoCodec || '?').toUpperCase();
+    if (media.bitrate) out += ' · ' + bitrateLabel(media.bitrate);
+    return out;
+  }
+
+  /* [{ label, bitrate }] — bitrate null means the file as it is. */
+  function qualities(media) {
+    var source = (media && media.bitrate) || 0, out = [], i;
+    out.push({ label: 'Original (' + versionLabel(media) + ')', bitrate: null });
+    for (i = 0; i < BITRATES.length; i++) {
+      if (!source || BITRATES[i] < source) {
+        out.push({ label: bitrateLabel(BITRATES[i]) + ' — server converts',
+                   bitrate: BITRATES[i] });
+      }
+    }
+    return out;
   }
 
   /* ---------- what the panel can actually decode ----------
@@ -259,9 +457,14 @@ var Media = (function () {
 
   return {
     pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD, canDecode: canDecode,
+    audioMenuLabel: audioMenuLabel, passesArc: passesArc,
     isCommentary: isCommentary, audioSummary: audioSummary, bestAudio: bestAudio,
     audioTracks: audioTracks, streamById: streamById,
     allows: allows,
+    langName: langName, isTextSub: isTextSub, subtitleTracks: subtitleTracks,
+    subLabel: subLabel, pickSubtitle: pickSubtitle,
+    markerAt: markerAt, markerLabel: markerLabel, chapters: chapters,
+    versionLabel: versionLabel, qualities: qualities, bitrateLabel: bitrateLabel,
     ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
     identities: identities, identity: identity, episodeLabel: episodeLabel
   };

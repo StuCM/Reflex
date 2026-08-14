@@ -287,11 +287,52 @@ function fullMetadata(item, film) {
     if (a[2]) st.profile = a[2];
     streams.push(st);
   });
-  streams.push({
-    id: Number(item.ratingKey) * 10 + 9,
-    streamType: 3, codec: 'subrip', languageCode: 'eng'
+  /* Three subtitle tracks, because the interesting cases are all about which
+     one you get: two languages that can be fetched as text and drawn over the
+     video, and a PGS track that is a picture of words and therefore cannot be
+     shown without the server burning it in. */
+  const base = Number(item.ratingKey) * 10;
+  [
+    { n: 6, codec: 'subrip', lang: 'eng', name: 'English', selected: true },
+    { n: 7, codec: 'subrip', lang: 'fre', name: 'French' },
+    { n: 8, codec: 'pgs', lang: 'eng', name: 'English (PGS)' }
+  ].forEach(function (s) {
+    streams.push({
+      id: base + s.n, streamType: 3, codec: s.codec,
+      languageCode: s.lang, language: s.name,
+      key: '/library/streams/' + (base + s.n),
+      selected: !!s.selected
+    });
   });
   copy.Media[0].Part[0].Stream = streams;
+
+  /* What "Skip intro" is made of. A real server has analysed the item and
+     reports these; there is nothing for the client to detect. An episode is
+     exactly where they matter most, so they hang off the copy's own duration
+     rather than the film's — the canonical record behind an episode is the
+     show, and a show has no runtime.
+
+     The intro is deliberately in the first few seconds rather than at a
+     realistic minute or two: the harness fixture is thirty seconds long, and a
+     marker the smoke test cannot reach is a marker nothing tests. */
+  const runtime = copy.duration || film.duration || 0;
+  if (runtime) {
+    copy.Marker = [
+      { id: base + 90, type: 'intro', startTimeOffset: 5000, endTimeOffset: 12000 },
+      { id: base + 91, type: 'credits', final: true,
+        startTimeOffset: Math.max(0, runtime - 180000), endTimeOffset: runtime }
+    ];
+
+    /* Chapters, which the trackbar draws as ticks and the menu jumps between. */
+    copy.Chapter = [];
+    for (let c = 0; c < 8; c++) {
+      copy.Chapter.push({
+        id: base + 70 + c, index: c + 1, tag: 'Chapter ' + (c + 1),
+        startTimeOffset: Math.round(runtime * c / 8),
+        endTimeOffset: Math.round(runtime * (c + 1) / 8)
+      });
+    }
+  }
 
   copy.Genre = (film.genres || []).map(function (g) { return { tag: g }; });
   if (film.director) copy.Director = [{ tag: film.director }];
@@ -580,6 +621,32 @@ function build(counts) {
   };
 }
 
+/* The subtitle track itself, as a real server hands it over: an SRT file, one
+   GET, no session and no transcode. The last digit of the stream id says which
+   track it is — see fullMetadata. A PGS track has no text to hand over, which
+   is the whole reason the app refuses it. */
+function stamp(t) {
+  const ms = Math.round(t * 1000);
+  const two = function (n) { return (n < 10 ? '0' : '') + n; };
+  return two(Math.floor(ms / 3600000)) + ':' + two(Math.floor(ms / 60000) % 60) + ':' +
+         two(Math.floor(ms / 1000) % 60) + ',' +
+         ('00' + (ms % 1000)).slice(-3);
+}
+
+function subtitleFile(streamId) {
+  const kind = Number(streamId) % 10;
+  if (kind !== 6 && kind !== 7) return null;
+  const french = kind === 7;
+  let out = '';
+  for (let i = 0; i < 400; i++) {
+    const start = 0.2 + i * 3;
+    out += (i + 1) + '\n' + stamp(start) + ' --> ' + stamp(start + 2.6) + '\n' +
+           (french ? 'Réplique ' + (i + 1) + ' — en français'
+                   : 'Line ' + (i + 1) + ' — in English') + '\n\n';
+  }
+  return out;
+}
+
 /* '<parentKey>00<n>' -> the extra, with streams, or null. */
 function resolveExtra(byKey, key) {
   const m = String(key).match(/^(\d+)00(\d)$/);
@@ -591,4 +658,4 @@ function resolveExtra(byKey, key) {
 }
 
 module.exports = { build: build, PROFILES: PROFILES, SERVERS: SERVERS,
-                   resolveExtra: resolveExtra };
+                   resolveExtra: resolveExtra, subtitleFile: subtitleFile };

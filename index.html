@@ -85,11 +85,31 @@
 </div>
 
 <video id="video" class="hidden" preload="auto"></video>
+
+<!-- Subtitles are drawn here rather than burned into the picture: burning them
+     in is a transcode, and a transcode of a 4K file is what gets the session
+     killed. See js/subs.js. -->
+<div id="subtitle" class="hidden"></div>
+
+<div id="osd-skip" class="hidden"></div>
+
+<div id="menu" class="hidden">
+  <div id="menu-tabs"></div>
+  <div id="menu-list"><div id="menu-inner"></div></div>
+  <div id="menu-note"></div>
+</div>
+
 <div id="osd" class="hidden">
   <div id="osd-title"></div>
-  <div id="osd-bar"><div id="osd-buffered"></div><div id="osd-fill"></div></div>
+  <div id="osd-bar">
+    <div id="osd-buffered"></div>
+    <div id="osd-fill"></div>
+    <div id="osd-ticks"></div>
+    <div id="osd-knob"></div>
+  </div>
   <div id="osd-time"></div>
   <div id="osd-tracks"></div>
+  <div id="osd-hint"></div>
 </div>
 
 <div id="toast" class="hidden"></div>
@@ -101,6 +121,7 @@
 <script src="js/config.js"></script>
 <script src="js/store.js"></script>
 <script src="js/panel.js"></script>
+<script src="js/subs.js"></script>
 <script src="js/media.js"></script>
 <script src="js/servers.js"></script>
 <script src="js/merge.js"></script>

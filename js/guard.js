@@ -32,7 +32,11 @@ var Guard = (function () {
   /* forceAudioId overrides the choice — that is how switching track in the
      player works, since the ranking would otherwise just pick the same one
      again. */
-  function check(item, mediaIndex, forceAudioId) {
+  /* maxBitrate is the quality menu in the player. Asking for a cap is asking
+     the server to re-encode, so the decision comes back 'transcode' — which on
+     a 4K file is a refusal, arrived at by the ordinary rule rather than by a
+     special case. */
+  function check(item, mediaIndex, forceAudioId, maxBitrate) {
     var n = mediaIndex || 0;
     return Meta.load(item).then(function (md) {
       if (!md) return { ok: false, state: 'nometa', text: 'No metadata for this copy.' };
@@ -58,7 +62,7 @@ var Guard = (function () {
       }
 
       var server = Servers.of(md);
-      return Plex.decide(server, md, n, 0, audio.id).then(function (v) {
+      return Plex.decide(server, md, n, 0, audio.id, maxBitrate).then(function (v) {
         var direct = v.decision === 'directplay';
         var uhd = Media.isUHD(media);
         /* Only direct play hands the panel the original file. A re-encode
@@ -78,6 +82,7 @@ var Guard = (function () {
           transcode: !direct,
           video: v.video, audioDecision: v.audio,
           audio: audio, passes: !!passes,
+          maxBitrate: maxBitrate || null,
           md: md, media: media, part: part, mediaIndex: n,
           text: v.text || ''
         };
