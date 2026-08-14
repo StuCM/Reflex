@@ -26,6 +26,11 @@ var Plex = (function () {
   var PLATFORM_VERSION = '53.0';
   var DEVICE   = 'LG OLED B8';
 
+  /* Items per category row. The rail shows ten across and you have to scroll to
+     reach the rest, so asking for thirty per hub per server was mostly payload
+     we never drew — and it is on the critical path of the first paint. */
+  var HUB_COUNT = 12;
+
   /* What we declare to the server is built from what the panel says it can
      play — see js/panel.js. It used to be a constant here, which meant the
      server re-encoded anything outside a hand-written list even when the B8

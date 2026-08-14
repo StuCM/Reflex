@@ -568,19 +568,17 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('refuses a TrueHD-only file without asking the server', function () {
+      return step('refuses 4K that will not direct play', function () {
+        /* The one thing still refused outright: a 4K remux whose only tracks are
+           TrueHD and DTS-HD MA cannot direct play, and converting it is what the
+           server kills mid-stream. */
         return openTitle(titles.truehdOnly.title)
           .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
-            return waitFor(shown('No passable audio', titles.truehdOnly.title),
-                           'the no-passable-audio refusal, naming ' + titles.truehdOnly.title);
+            return waitFor(shown('4K', titles.truehdOnly.title),
+                           'the 4K refusal, naming ' + titles.truehdOnly.title);
           })
-          .then(debugLine)
-          .then(function (line) {
-            if (/decision:/.test(line)) {
-              throw new Error('a decision call was made for a file we already knew was unplayable');
-            }
-          })
+
           .then(function () { return shot('refuse-truehd'); })
           .then(backToLibrary);
       });
@@ -632,7 +630,7 @@ function drive(page, titles) {
             if (n !== 1) throw new Error('the same film appeared ' + n + ' times');
           })
           .then(function () {
-            return waitFor('(function(){var s=document.querySelectorAll(".dt-source");' +
+            return waitFor('(function(){var s=document.querySelectorAll("#dt-sources .dt-source");' +
                            'if (s.length !== 2) return false;' +
                            'return !/checking/.test(s[0].textContent) &&' +
                            ' !/checking/.test(s[1].textContent);})()',
@@ -640,7 +638,9 @@ function drive(page, titles) {
           })
           .then(function () {
             return page.evaluate(function () {
-              return Array.prototype.map.call(document.querySelectorAll('.dt-source'),
+              /* Copies only: extras render as .dt-source too, in their own list. */
+              return Array.prototype.map.call(
+                document.querySelectorAll('#dt-sources .dt-source'),
                 function (s) {
                   return { on: s.classList.contains('on'),
                            text: s.textContent.replace(/\s+/g, ' ') };
@@ -679,7 +679,9 @@ function drive(page, titles) {
             });
           })
           .then(function (text) {
-            const refusing = /no passable audio/.test(text);
+            /* Anything the guard will not play: below 4K it converts instead,
+               so the only outright refusals left are 4K and undecodable. */
+            const refusing = /no passable audio|4K, would transcode|cannot decode/.test(text);
             return page.keyboard.press('Enter').then(function () {
               return waitFor('(function(){var m=document.getElementById("message");' +
                              'var v=document.getElementById("video");' +

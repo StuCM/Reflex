@@ -38,9 +38,13 @@
     if (!item) return;
     Detail.open(item, {
       /* isExtra comes from the page: a trailer is played, but it is not the
-         film and must not inherit its resume position. */
+         film and must not inherit its resume position.
+
+         Stopping returns to this page rather than past it — the page is where
+         you pick another copy, or the next extra. */
       onPlay: function (entry, verdict, isExtra) {
-        playChecked(entry, verdict, isExtra, undefined, back);
+        playChecked(entry, verdict, isExtra, undefined,
+                    function () { openDetail(item, back); });
       },
       onExit: back || toBrowse
     });
