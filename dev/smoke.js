@@ -95,6 +95,10 @@ function findTitles() {
   };
 }
 
+/* The two paths the mock serves the video from, both of which 404 when there is
+   no fixture. See the console handler in drive(). */
+const NO_FIXTURE_404 = /library\/parts|transcode\/universal\/start/;
+
 /* Playback can only really be tested if there is something to play. */
 function hasFixture() {
   return ['sample.mp4', 'sample.webm', 'sample.mkv'].some(function (n) {
@@ -149,9 +153,13 @@ function drive(page, titles) {
   page.on('console', function (m) {
     const text = m.text();
     if (text.indexOf('REFLEX ') === 0) { trace.push(text.slice(7)); return; }
-    /* Without a dev/fixtures/sample.* the stream 404s on purpose. */
+    /* Without a dev/fixtures/sample.* every route that serves the video 404s on
+       purpose — the original file at /library/parts/, and the converted stream
+       at /video/:/transcode/universal/start. Both are the same missing fixture,
+       so both have to be excused, or a fresh clone fails this step with a 404
+       that reads like a broken transcode path. */
     const where = (m.location() && m.location().url) || '';
-    if (m.type() === 'error' && where.indexOf('library/parts') < 0) {
+    if (m.type() === 'error' && !NO_FIXTURE_404.test(where)) {
       errors.push('console: ' + text + ' ' + where);
     }
   });
