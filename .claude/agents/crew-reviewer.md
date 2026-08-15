@@ -39,7 +39,33 @@ outside the diff only when you cannot judge a change without it.
 6. **Simplification.** Only where it is clearly simpler and behaviour is
    identical. Do not redesign, and do not raise style preferences.
 
-Run the spec's verify command yourself. Do not take the worker's word for it.
+Run `npm run verify` yourself. Do not take the worker's word for it. It is
+**20/21 on a clean tree** — the mock does not serve
+`/video/:/transcode/universal/start.m3u8`. That one failure is pre-existing;
+any other is a finding.
+
+## This project, specifically
+
+These are where a plausible-looking diff does real damage:
+
+- **Chromium 53.** `async`/`await`, CSS Grid, object spread,
+  `Object.entries`, `position: sticky`, or a transition on anything but
+  `transform`/`opacity` is a black screen on the panel. `npm run check` is a
+  text scan, not a parser — read the diff yourself rather than trusting it.
+- A new `js/` file must appear in `index.html`'s script list, in dependency
+  order.
+- **The direct play profile.** Widening `PROFILE` or `Media.canDecode` to make
+  something work is the single most damaging change possible here: claiming a
+  codec the panel cannot decode gives a black screen. Only evidence from the
+  panel justifies it, and evidence from a laptop browser is not evidence.
+- **The 4K rule.** 4K must direct play or be refused. A bitrate cap on 4K is a
+  transcode request and must be refused by the ordinary rule, not special-cased.
+- **Audio.** TrueHD and DTS-HD MA can never pass ARC. A commentary track can
+  never be selected. If the diff touches `Media.pickAudio`, `Media.bestAudio`
+  or `Media.isCommentary`, check the tests cover both tiers.
+- `js/guard.js` has no unit test. A change there without one is a finding.
+- Anything claiming playback works because it worked on a laptop is wrong on
+  its face — desktop browsers decode far less than the panel.
 
 ## What is not a finding
 

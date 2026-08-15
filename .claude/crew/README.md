@@ -9,14 +9,25 @@ the same context. Project-agnostic: everything specific to a repo lives in
 ```
 YOU + ORCHESTRATOR (the main session — not an agent)
   /crew-spec    discuss → query the graph once → write the spec → YOU APPROVE
-  /crew-run     worker (isolated worktree)
-                  → deterministic gate: scope-check + verify   [no model]
-                  → reviewer (read-only, max 2 rounds)
-  /crew-close   merge → record to the graph → deploy, or queue for hardware
-  /crew-status  where everything stands
+  /crew-run     hand the task to its own session in its own worktree
+                    │
+                    ├─ TASK SESSION (crew/roles/worker.md)
+                    │    implements
+                    │    gate: scope-check + verify        [no model]
+                    │    spawns crew-reviewer (read-only, max 2 rounds)
+                    │    writes its own status back to the task file
+                    │
+  /crew-close   YOU APPROVE → merge → record to the graph → deploy or queue
+  /crew-status  the board, rendered from the task files
 ```
 
-Two human gates: **the spec**, and **anything only real hardware can prove**.
+**Two human gates: the spec, and the merge.** Everything between them runs
+unattended, which is only safe because those two hold. Deploying to the TV
+always asks as well — nothing there can be proven without a person at the
+panel.
+
+One session per task, one worktree per session. The orchestrator hands over
+and reads the board; it does not watch, poll, or narrate.
 
 ## Why it is arranged this way
 
@@ -71,16 +82,23 @@ app"* recorded once stops every future agent chasing it.
 
 | Path | What it is |
 |---|---|
-| `.claude/crew.config.json` | **the only project-specific file** |
+| `.claude/crew.config.json` | project settings — verify, scopes, environments |
 | `.claude/tasks/NNN-slug.md` | task state: spec, status, review history |
+| `.claude/tasks/BOARD.md` | glance view, **generated** from the task files |
 | `.claude/crew/templates/task.md` | the spec template |
-| `.claude/agents/crew-{worker,reviewer}.md` | the two agents |
+| `.claude/crew/roles/worker.md` | the task session's brief |
+| `.claude/agents/crew-reviewer.md` | the reviewer, spawned by the task session |
 | `.claude/skills/crew-*/` | the orchestrator's four commands |
 | `bin/commit-msg.js` | commit convention, enforced by git hook |
 | `bin/scope-check.js` | changed files vs the spec's declared files |
+| `bin/board.js` | renders the board from task frontmatter |
 | `bin/preflight.js` | what this machine can and cannot prove |
 | `bin/graph.sh` | read-only memory graph access |
 | `bin/install.sh` | copy the system into another project |
+
+The board is **derived, never hand-maintained**. Task files are the single
+source of truth, so a session that updates its own task cannot leave the board
+disagreeing with it.
 
 ## Setup
 
@@ -90,6 +108,18 @@ git config core.hooksPath .claude/crew/githooks
 
 Without it the commit convention is advisory. With it, every commit — human or
 agent — is checked for free.
+
+## Reflex, specifically
+
+The roles carry this project's rules rather than generic advice: Chromium 53,
+the `index.html` script list, the direct play profile, the 4K rule, the ARC
+audio tiers, and the fact that `npm run verify` is **20/21 on a clean tree**
+(the mock does not serve the HLS transcode URL) so a worker can tell its own
+breakage from the baseline.
+
+`env: tv` is the state that matters most. Decode, containers, HLS, smoothness
+and audio over ARC cannot be answered on a laptop, and a loop that marks them
+`done` is lying.
 
 ## Porting to another project
 

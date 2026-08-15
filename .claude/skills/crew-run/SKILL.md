@@ -1,75 +1,68 @@
 ---
 name: crew-run
-description: Run an approved task through worker, the deterministic gate, and review. Use when the user says "run task N", "start building it", or approves a spec.
+description: Hand an approved task to its own session in an isolated worktree. Use when the user says "run task N", "start building it", or approves a spec.
 ---
 
-# Running a task
+# Handing a task to a session
 
-Refuse to start unless the spec's `status:` is `approved`. If it is `draft`,
-send the user back to `/crew-spec` — the approval gate is the point.
+Refuse to start unless `status:` is `approved`. A `draft` goes back to
+`/crew-spec` — the approval gate is the point of the whole system.
 
-## 1. Isolate
+Each task gets **its own session and its own worktree**. The orchestrator does
+not implement, does not review, and does not watch. It hands over, then reads
+the board.
 
-```sh
-git worktree add ../crew-<id> -b crew/<id>-<slug>
-```
+## 1. Check it can run alongside what is already in flight
 
-One worktree per task. Two workers in one tree corrupt each other, and
-parallelism without isolation is a lie.
+Read the board. If another in-flight task declares any of the same `files:`,
+**do not start this one** — say which task it collides with and offer to queue
+it. Two sessions editing `js/player.js` will conflict at merge and you pay for
+both.
 
-## 2. Worker
-
-Spawn `crew-worker` with the model in the spec's `model:` field. Give it:
-
-- the task file path
-- the worktree path
-- **nothing else.** No context dump, no summary of the conversation. If it
-  needs something, that belongs in the spec, and the spec is the thing that
-  gets reused.
-
-Let it run. Do not narrate its progress.
-
-## 3. The deterministic gate — no model, no tokens
-
-Before any reviewer is spawned:
+## 2. Worktree
 
 ```sh
-node .claude/crew/bin/scope-check.js .claude/tasks/<id>-<slug>.md
-<the spec's verify command>
+git worktree add ../reflex-<id> -b crew/<id>-<slug>
 ```
 
-If either fails, send it back to the **same worker** with the output. Do not
-spawn a reviewer to look at work that does not build — that is paying a model
-to read a stack trace a script already printed.
+## 3. Hand over
 
-## 4. Reviewer
+Set `status: building`, run `node .claude/crew/bin/board.js`, then start the
+session in `../reflex-<id>` with exactly this brief — nothing more:
 
-Only once the gate is green. Spawn `crew-reviewer` with the task file and the
-diff. It judges; it never edits.
+```
+Read .claude/crew/roles/worker.md and follow it for task
+.claude/tasks/<id>-<slug>.md. You are in a worktree; the spec is the brief.
+```
 
-- **PASS** → set `status: review-passed`, go to step 5.
-- **CHANGES** → back to the worker with the findings verbatim. Then re-review.
-- **BLOCKED**, or a second CHANGES round → **stop and bring it to the user.**
-  Two rounds is the limit. A third is two agents disagreeing, and that is a
-  decision, not a loop iteration. Put the disagreement in front of the user in
-  a few lines and let them settle it.
+No conversation summary, no context dump. If the session needs something, it
+belongs in the spec — that is the artifact that gets reused, and re-explaining
+in a prompt is exactly the cost this system exists to remove.
 
-Append each round to the spec's **Review rounds** section, so the history
-survives this session.
+If `mcp__Claude_Code_Remote__create_session` is available, spawn it there with
+that prompt and record the session id in the task file. Otherwise give the
+user the `cd` and the prompt to paste.
 
-## 5. Land it
+## 4. Then stop
 
-Set the final status:
+The task session owns the loop from here: it implements, runs the
+deterministic gate, spawns `crew-reviewer` itself, and takes up to two rounds
+of findings. It writes its own status back into the task file.
 
-- `env: laptop` → `status: done`
-- `env: tv` → `status: pending-tv`, and tell the user what to check on the
-  panel. The loop cannot clear this and must not pretend to. Anything about
-  decode, containers, HLS, smoothness or audio over ARC ends here.
+**Do not poll it and do not narrate it.** Re-render the board when the user
+asks where things stand, or when a session reports back.
 
-Then `/crew-close <id>` to merge and record.
+## 5. When a session reports
 
-## Running several at once
+The task file's `status:` tells you what happened:
 
-Only when the specs' `files:` lists do not intersect. Check before you start —
-two tasks editing `js/player.js` will conflict at merge, and you will pay for
-both. Sequence them instead.
+- `review` → still going. Leave it.
+- `done` → the gate and review passed on the laptop. Go to `/crew-close`.
+- `pending-tv` → code-complete, and only the panel can prove it. Tell the user
+  what to check. The loop cannot clear this and must not pretend to: decode,
+  containers, HLS, smoothness and audio over ARC are all in this category.
+- `blocked` → two rounds disagreed, or the spec could not be judged. Put the
+  disagreement in front of the user in a few lines and let them settle it.
+  Do not spawn a third round to break the tie.
+
+Re-render the board after any status change.

@@ -5,16 +5,17 @@ description: Show the state of every task and what is worth doing next. Use when
 
 # Where things stand
 
-Cheap and mechanical. Read the frontmatter of every `.claude/tasks/*.md` —
-do not read the bodies, and do not spawn anything.
+Cheap and mechanical. Render the board and read it — do not read task bodies,
+and do not spawn anything.
 
 ```sh
-head -12 .claude/tasks/*.md
+node .claude/crew/bin/board.js
+cat .claude/tasks/BOARD.md
 git worktree list
-git branch --list 'crew/*'
 ```
 
-Report as a short table: id, title, status, env, branch.
+The board is generated from the task files' frontmatter, so it cannot drift
+from what the sessions have actually written.
 
 Then, in a couple of lines each, the three things the user actually wants:
 

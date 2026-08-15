@@ -9,24 +9,37 @@ Only the orchestrator does this. Workers never push and never deploy.
 
 ## 1. Check the status
 
-- `done` → merge now.
-- `pending-tv` → **do not merge on your own judgement.** Ask the user whether
-  it has been checked on the panel. If it has not, leave it; a pending-tv task
-  that gets merged as "done" is exactly the failure this state exists to stop.
+- `done` → go to step 2.
+- `pending-tv` → ask whether it has been checked on the panel. If it has not,
+  leave it. A pending-tv task merged as "done" is exactly the failure this
+  state exists to stop.
+- `blocked` → not yours to close. Put the disagreement to the user first.
 
-## 2. Merge
+## 2. Ask before merging — this is the second hard gate
+
+Show the user, in a few lines: what the diff does, the review verdict, the
+gate output, and anything the worker said the spec got wrong.
+
+**Do not merge until they say yes.** The spec gate and the merge gate are the
+two places a human is in this loop by design; everything between them runs
+unattended, which is only safe because these two hold.
+
+## 3. Merge
 
 ```sh
 git checkout main && git merge --no-ff crew/<id>-<slug>
-<the spec's verify command>
-git worktree remove ../crew-<id>
+npm run verify
+git worktree remove ../reflex-<id>
 git branch -d crew/<id>-<slug>
+node .claude/crew/bin/board.js
 ```
 
-Verify on `main` after merging, not just in the worktree. Two tasks that each
-passed alone can still fail together.
+Verify on `main` after merging, not just in the worktree — two tasks that each
+passed alone can still fail together. `npm run verify` is 20/21 on a clean
+tree; anything beyond that pre-existing failure means the merge broke
+something.
 
-## 3. Record what was learnt — the step that pays for itself
+## 4. Record what was learnt — the step that pays for itself
 
 You are the **only** writer to the graph. Workers and reviewers proposed
 triples in the spec's **Graph writes proposed** section; you decide what is
@@ -57,7 +70,7 @@ Then add a line to `docs/decisions.md` for anything a human would want to read
 without the graph running. The graph owns the links; the file owns the prose;
 neither restates the other.
 
-## 4. Deploy, or say why not
+## 5. Deploy, or say why not
 
 ```sh
 node .claude/crew/bin/preflight.js tv
@@ -68,7 +81,7 @@ sideload, do not diagnose the failure, do not try another way. Report to the
 user that it is merged and waiting for the bench. Three agents each solving
 deployment is the problem this whole gate exists to prevent.
 
-## 5. Next
+## 6. Next
 
 Tell the user what is now unblocked, and what you would pick up next and why.
 That judgement is the job — it is why the orchestrator is the session they
