@@ -206,8 +206,13 @@ function drive(page, titles) {
     return page.waitForFunction(fn, null, { timeout: ms || 10000, polling: 100 })
       .then(function () { return true; }, function () { throw new Error('timed out waiting for ' + what); });
   }
+  /* On failure, print the app's own last words alongside the assertion. A
+     timeout says only what did not happen; the trace says what did. */
   function step(name, fn) {
-    return Promise.resolve().then(fn).then(function () { ok(name); }, function (e) { fail(name, e); });
+    return Promise.resolve().then(fn).then(function () { ok(name); }, function (e) {
+      fail(name, e);
+      trace.slice(-5).forEach(function (l) { console.log('        · ' + l); });
+    });
   }
 
   /* ---- the in-player menu ----
@@ -216,12 +221,16 @@ function drive(page, titles) {
      index, walk the selection to it and press OK. The menu is what audio,
      subtitles and quality are chosen from without leaving playback. */
 
+  /* The label, plus the note beside it — the note is where a row says what
+     choosing it will cost, so a check that cannot see it is not checking. */
   function menuLabels() {
     return page.evaluate(function () {
       return Array.prototype.map.call(document.querySelectorAll('#menu .menu-row'),
         function (r) {
+          const note = r.querySelector('.menu-note-inline');
           return (r.classList.contains('on') ? '* ' : '') +
-                 r.querySelector('.menu-label').textContent.trim();
+                 r.querySelector('.menu-label').textContent.trim() +
+                 (note ? '  [' + note.textContent.trim() + ']' : '');
         });
     });
   }
@@ -904,36 +913,154 @@ function drive(page, titles) {
 
     .then(function () {
       if (!hasFixture()) return;
-      return step('subtitles are fetched as text and survive an audio switch', function () {
+      return step('subtitles are fetched as text and drawn over the video', function () {
         return openMenu(1)
           .then(function () { return menuChoose(/French/); })
           .then(function () {
             return waitFor('/français/.test(document.getElementById("subtitle").textContent)',
                            'the French subtitle track to be drawn over the video', 15000);
           })
-          .then(function () { return shot('subtitles'); })
+          .then(function () { return shot('subtitles'); });
+      });
+    })
+
+    /* Audio track selection, which is the one thing in the player that cannot
+       be done by asking nicely.
+
+       On a direct play the server hands over the original file with every
+       track still in it, and the panel plays whichever it likes. Passing
+       audioStreamID to the decision call changes nothing about those bytes, so
+       a "switch" that stays a direct play is silent and total nonsense — the
+       OSD renames the track and you go on hearing the first one.
+
+       There are two ways out and the panel decides which. Both are tested. */
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('a track the panel owns is switched without asking the server', function () {
+        /* Desktop Chrome exposes no audioTracks, so stand one in: this is the
+           seam the TV may or may not have, and the logic behind it — mapping a
+           Plex stream to a pipeline track and selecting it — has to be right
+           either way. */
+        return page.evaluate(function () {
+          var v = document.getElementById('video');
+          var list = [];
+          /* Three, to match the three audio streams on this file, in order. */
+          for (var i = 0; i < 3; i++) list.push({ id: 'p' + i, enabled: i === 0 });
+          list.length = 3;
+          Object.defineProperty(v, 'audioTracks', { configurable: true, value: list });
+        })
           .then(function () {
-            /* Switching audio is a restart — the panel picks its own track out
-               of a direct-played file, so honouring a choice means asking the
-               server for that one and starting again from here. The subtitle
-               choice has to come back with it, matched by language. */
             const before = trace.length;
             return openMenu(0)
+              .then(menuLabels)
+              .then(function (labels) {
+                /* No row may warn about a restart now — the panel owns them. */
+                if (/restarts/.test(labels.join(' '))) {
+                  throw new Error('offered a restart for a track the panel can select: ' +
+                                  labels.join(' | '));
+                }
+              })
               .then(function () { return menuChoose(/French · AAC/); })
               .then(function () {
+                return waitFor('/French/.test(document.getElementById("osd-tracks").textContent)',
+                               'the OSD to name the new track', 10000);
+              })
+              .then(function () {
+                return page.evaluate(function () {
+                  var l = document.getElementById('video').audioTracks;
+                  return [l[0].enabled, l[1].enabled, l[2].enabled];
+                });
+              })
+              .then(function (enabled) {
+                if (!enabled[2] || enabled[0] || enabled[1]) {
+                  throw new Error('the panel track was not selected: ' + JSON.stringify(enabled));
+                }
+                const after = trace.slice(before);
+                if (after.filter(function (l) { return /decision:/.test(l); }).length) {
+                  throw new Error('asked the server for a track the panel could select itself');
+                }
+                if (after.filter(function (l) { return /playing /.test(l); }).length) {
+                  throw new Error('restarted playback for a switch that costs nothing');
+                }
+              })
+              /* And playback never stopped, which is the whole point of it. */
+              .then(function () {
                 return waitFor('(function(){var v=document.getElementById("video");' +
-                               'return !v.classList.contains("hidden") && !v.paused &&' +
-                               ' v.currentTime > 0 && !v.error;})()',
-                               'playback to resume on the other audio track', 15000);
-              })
-              .then(function () {
-                const after = trace.slice(before).filter(function (l) { return /decision:/.test(l); });
-                if (!after.length) throw new Error('no second decision call for the new track');
-              })
-              .then(function () {
-                return waitFor('/français/.test(document.getElementById("subtitle").textContent)',
-                               'the subtitle language to survive the restart', 15000);
+                               'return !v.paused && !v.error;})()',
+                               'playback to carry straight on');
               });
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              delete document.getElementById('video').audioTracks;
+            });
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('a track the panel cannot select stops asking for the file', function () {
+        /* The fallback, and the actual bug: with no audioTracks to select from,
+           a switch must stop being a direct play. Re-fetching the same file
+           with a different audioStreamID changes nothing you can hear.
+
+           This is deliberately the last thing that runs, because it ends
+           playback in the harness and cannot not: the app correctly reaches for
+           start.m3u8, and Chrome refuses every .m3u8 there has ever been. What
+           is asserted is everything up to the bytes — the verdict changed, and
+           the converted URL is what was played. */
+        const before = trace.length;
+        return openMenu(0)
+          .then(menuLabels)
+          .then(function (labels) {
+            /* With no panel list, the menu has to warn that this one restarts. */
+            if (!/restarts/.test(labels.join(' '))) {
+              throw new Error('no restart warning without a panel track list: ' +
+                              labels.join(' | '));
+            }
+          })
+          /* Not the AAC one — the step before this switched to it on the panel,
+             and choosing what is already playing is correctly a no-op. */
+          .then(function () { return menuChoose(/· AC3 5\.1/); })
+          /* The decision, the restart and the media error all land inside a
+             second; there is no end state to wait for, because the end state
+             here is a failure the harness cannot avoid. */
+          .then(function () { return page.waitForTimeout(1500); })
+          .then(function () {
+            const after = trace.slice(before);
+            /* The switch's OWN verdict — the first one after the press. Later
+               lines are the film page re-checking every copy once the harness
+               fails to play the stream, and those are direct plays for
+               unrelated parts. */
+            const verdict = after.filter(function (l) { return /decision:/.test(l); })[0];
+            if (!verdict) throw new Error('no second decision call for the new track');
+            /* directplay here would mean the same file, every track still in
+               it, and the panel going on choosing — which is exactly the bug,
+               and this is what it looked like in the trace. */
+            if (!/decision: directstream/.test(verdict)) {
+              throw new Error('the chosen track did not stop the direct play: ' + verdict);
+            }
+            /* And what it played has to be the converted stream, not the file. */
+            if (!after.filter(function (l) { return /server converting/.test(l); }).length) {
+              throw new Error('played the original file again rather than the muxed stream: ' +
+                              after.slice(-3).join(' | '));
+            }
+          })
+          /* Put the film back on so the steps after this one have something to
+             work with: out of the failure message, back to the page, play. */
+          .then(function () { return press('Backspace'); })
+          .then(function () {
+            return waitFor('!document.getElementById("detail").classList.contains("hidden")',
+                           'the film page after the harness could not play the stream');
+          })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('(function(){var v=document.getElementById("video");' +
+                           'return !v.classList.contains("hidden") && !v.paused &&' +
+                           ' v.currentTime > 0 && !v.error;})()',
+                           'playback to start again', 15000);
           });
       });
     })

@@ -191,12 +191,28 @@ Screen:
   Seeks accumulate: every `currentTime` assignment on a direct-played file is a
   real range request, so holding a key aims first and seeks once.
 
-  Audio, another version and a quality cap are all the same move — ask the
-  server for a different stream and restart from here — and all three go back
-  through `Guard.check` first, so a quality cap on a 4K file is refused by the
-  ordinary rule rather than a special case. A refused switch leaves the film
-  playing and says why in a toast; it never stops playback to deliver a
-  message.
+  **Choosing an audio track is not free, and the reason is worth knowing.** On
+  a direct play the server hands over the original file *whole*, with every
+  track still in it, and the panel plays whichever it likes — the first one.
+  `audioStreamID` on the decision call is advice to the decision engine and
+  changes not one byte of that file. So a "switch" that stays a direct play is
+  silent: the OSD renames the track and you go on hearing the old one. Exactly
+  two things actually work:
+
+  1. The panel exposes `audioTracks` and we select on it — instant, no restart,
+     no server involvement. `js/panel.js` reports on the `panel` chip whether
+     this pipeline has it.
+  2. Failing that, give up direct play (`directPlay=0`) so the server muxes the
+     stream itself. That is a real session, and on a 4K file the guard refuses
+     it — which is the honest answer, not a bug.
+
+  The menu says which of the two a row will cost before you press OK, and when
+  neither applies the OSD stops claiming a track and says *panel's choice*
+  instead. Another version and a quality cap are the same shape of move, and
+  all of them go back through `Guard.check` first, so a quality cap on a 4K
+  file is refused by the ordinary rule rather than a special case. A refused
+  switch leaves the film playing and says why in a toast; it never stops
+  playback to deliver a message.
 
   Keys while playing: ◀ ▶ nudge 30s · ▲ ▼ open the menu · RW/FF 5 min ·
   0–9 jump to that tenth · CH± next/previous chapter · red/green/yellow/blue
