@@ -39,10 +39,13 @@ outside the diff only when you cannot judge a change without it.
 6. **Simplification.** Only where it is clearly simpler and behaviour is
    identical. Do not redesign, and do not raise style preferences.
 
-Run `npm run verify` yourself. Do not take the worker's word for it. It is
-**20/21 on a clean tree** — the mock does not serve
-`/video/:/transcode/universal/start.m3u8`. That one failure is pre-existing;
-any other is a finding.
+Run `npm run verify` yourself. Do not take the worker's word for it. The
+baseline is **26/26 green**, so any failure is a finding.
+
+Run `npm run fixture` first if `dev/fixtures/` is empty — it is gitignored, and
+without it five player steps skip and one fails on a 404. That is the bench,
+not the diff. A worker who reports "20/21, pre-existing" has simply not
+generated the fixture.
 
 ## This project, specifically
 

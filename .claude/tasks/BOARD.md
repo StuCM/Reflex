@@ -5,11 +5,11 @@ Task files are the source of truth; this is the glance view.
 
 | id | task | status | env | branch |
 |---|---|---|---|---|
-| — | *no tasks yet* | | | |
+| 001 | Make a fresh clone verify green | `draft` | laptop | crew/001-verify-fixture *(gone)* |
 
 ## Waiting on you
 
-Nothing. 
+- **001 Make a fresh clone verify green** — spec needs your approval before anyone starts
 
 ## In flight
 

@@ -12,7 +12,9 @@
     "smoke": "node dev/smoke.js",
     "verify": "npm run check && npm test && npm run smoke",
     "package": "sh tools/package.sh",
+    "prepare": "node .claude/crew/bin/setup.js",
     "crew:setup": "git config core.hooksPath .claude/crew/githooks && echo 'commit hook enabled'",
+    "crew:board": "node .claude/crew/bin/board.js",
     "crew:scope": "node .claude/crew/bin/scope-check.js",
     "crew:preflight": "node .claude/crew/bin/preflight.js",
     "deploy": "npm run check && npm run package && ares-install -d ${TV:-tv} *.ipk && ares-launch -d ${TV:-tv} com.stu.plexlite"

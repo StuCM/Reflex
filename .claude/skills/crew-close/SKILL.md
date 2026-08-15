@@ -35,9 +35,8 @@ node .claude/crew/bin/board.js
 ```
 
 Verify on `main` after merging, not just in the worktree — two tasks that each
-passed alone can still fail together. `npm run verify` is 20/21 on a clean
-tree; anything beyond that pre-existing failure means the merge broke
-something.
+passed alone can still fail together. The baseline is 26/26; anything less
+means the merge broke something.
 
 ## 4. Record what was learnt — the step that pays for itself
 

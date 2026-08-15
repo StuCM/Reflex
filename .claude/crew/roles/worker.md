@@ -67,13 +67,16 @@ nothing.
 ## The gate — run this before you ask for review
 
 ```sh
+npm run fixture     # once per worktree — dev/fixtures/ is gitignored
 node .claude/crew/bin/scope-check.js .claude/tasks/<id>-<slug>.md
 npm run verify
 ```
 
-Both must pass. `npm run verify` is currently **20/21 on a clean tree** — the
-mock does not serve `/video/:/transcode/universal/start.m3u8`. If that is the
-only failure, it is not yours. Any other failure is.
+Both must pass. The baseline is **26/26 green**.
+
+Run `npm run fixture` *first*. Without it the five player steps skip and the
+"no console errors" step fails on a 404 for the converted stream — that is the
+missing fixture, not the code, and chasing it is a wasted round.
 
 Do not ask for review on work that does not build.
 
