@@ -1,0 +1,3 @@
+#!/bin/sh
+# Enable with: git config core.hooksPath .claude/crew/githooks
+exec node "$(git rev-parse --show-toplevel)/.claude/crew/bin/commit-msg.js" "$1"

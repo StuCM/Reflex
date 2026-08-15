@@ -4,4 +4,10 @@ __pycache__/
 node_modules/
 dev/fixtures/
 dev/screenshots/
-.claude/
+.claude/*
+!.claude/agents/
+!.claude/skills/
+!.claude/crew/
+!.claude/crew.config.json
+!.claude/tasks/
+.claude/settings.local.json
