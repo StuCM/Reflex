@@ -1,7 +1,7 @@
 ---
 id: 002
 slug: branch-collision
-status: approved
+status: building
 branch: crew/002-branch-collision
 model: sonnet
 env: laptop

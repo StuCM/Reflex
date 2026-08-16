@@ -1,7 +1,7 @@
 ---
 id: 003
 slug: land-audio-switch
-status: approved
+status: building
 env: laptop
 branch: crew/003-land-audio-switch
 files:
