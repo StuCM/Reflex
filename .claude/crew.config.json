@@ -1,0 +1,50 @@
+{
+  "project": "Reflex",
+  "graphProject": "Reflex",
+
+  "verify": "npm run verify",
+  "quickVerify": "npm run check && npm test",
+
+  "scopes": {
+    "fromDir": "js",
+    "extra": ["dev", "tools", "test", "docs", "crew", "deps", "ci", "css", "release"]
+  },
+
+  "commit": {
+    "types": ["feat", "fix", "docs", "refactor", "perf", "test", "build", "chore", "revert"],
+    "subjectMax": 72,
+    "bodyMaxLines": 4,
+    "requireScope": false,
+    "banned": [
+      "Co-Authored-By:",
+      "Co-authored-by:",
+      "Generated with [Claude Code]",
+      "Claude-Session:",
+      "🤖 Generated"
+    ]
+  },
+
+  "comments": {
+    "warnAddedRatio": 0.25
+  },
+
+  "environments": {
+    "laptop": {
+      "proves": ["browsing", "guard", "audio selection", "merge", "row arithmetic"],
+      "command": "npm run verify"
+    },
+    "tv": {
+      "proves": ["decode", "container support", "HLS", "smoothness", "audio over ARC"],
+      "command": "npm run deploy",
+      "reachableFromAgents": false,
+      "note": "Only a human at the panel can clear a pending-tv task."
+    }
+  },
+
+  "deploy": {
+    "command": "npm run deploy",
+    "orchestratorOnly": true,
+    "requires": ["ares-install", "ares-launch"],
+    "note": "Workers never deploy. Sideloading needs a paired TV that no agent can reach."
+  }
+}
