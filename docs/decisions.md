@@ -44,3 +44,29 @@ revised. History is not rewritten.
 
 Enforced by `.claude/crew/bin/commit-msg.js` via `core.hooksPath`, so it costs
 no agent tokens and cannot be talked past.
+
+## 2026-08-16 — A green baseline is a load-bearing thing
+
+`npm run verify` on a fresh clone was red, and not because anything was broken:
+`dev/fixtures/` is gitignored, so there is no video, and the mock 404s the route
+that serves one. The failure was real output from a working system.
+
+The cost was never the minute it takes to explain. It is that a red baseline
+teaches everyone — human or agent — to explain failures away, and the next real
+regression gets explained away with the same shrug. It had already happened
+once: the 404 was read as a gap in the mock's transcode handling, which it is
+not.
+
+`verify` now generates the fixture if it is missing, and the console-error step
+excuses that 404 **only while no fixture exists**, saying how many it ignored.
+The earlier fix (537e26a) excused the path unconditionally, which also hid a
+genuine transcode failure when a fixture was present — the exact thing the step
+is there to catch. This supersedes it.
+
+`npm run smoke` deliberately does *not* generate the fixture. If it did, the
+no-fixture branch of that filter would never run again and could rot unnoticed.
+
+Two smaller rules fell out of it, both recorded in the graph: a script joining
+an `&&` chain inherits the chain's exit semantics, and the orchestrator's spec
+edits must be committed before the task worktree is cut, or the worker reads a
+stale spec.
