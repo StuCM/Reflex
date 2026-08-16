@@ -6,7 +6,7 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 002 | Make the collision check see unmerged branches | `draft` | laptop | crew/002-branch-collision *(gone)* |
-| 001 | Make a fresh clone verify green | `building` | laptop | crew/001-verify-fixture |
+| 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture |
 
 ## Waiting on you
 
@@ -14,4 +14,4 @@ Task files are the source of truth; this is the glance view.
 
 ## In flight
 
-- **001 Make a fresh clone verify green** — `building` on `crew/001-verify-fixture`
+Nothing running.
