@@ -6,12 +6,14 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 002 | Make the collision check see unmerged branches | `draft` | laptop | crew/002-branch-collision *(gone)* |
+| 003 | Land the audio-switch fix stranded on claude/player-features | `draft` | laptop | claude/player-features *(gone)* |
 | 004 | Replace filter-then-index with find | `draft` | laptop | crew/004-find-over-filter *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 
 ## Waiting on you
 
 - **002 Make the collision check see unmerged branches** — spec needs your approval before anyone starts
+- **003 Land the audio-switch fix stranded on claude/player-features** — spec needs your approval before anyone starts
 - **004 Replace filter-then-index with find** — spec needs your approval before anyone starts
 
 ## In flight
