@@ -10,7 +10,7 @@
     "test": "node test/run.js",
     "check": "node tools/check-es5.js",
     "smoke": "node dev/smoke.js",
-    "verify": "npm run check && npm test && npm run smoke",
+    "verify": "npm run check && npm test && npm run fixture && npm run smoke",
     "package": "sh tools/package.sh",
     "prepare": "node .claude/crew/bin/setup.js",
     "crew:setup": "git config core.hooksPath .claude/crew/githooks && echo 'commit hook enabled'",

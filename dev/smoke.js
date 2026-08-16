@@ -146,12 +146,20 @@ function drive(page, titles) {
      app's own account of what it did — more reliable than sampling #debug,
      which only ever holds the latest line. */
   const trace = [];
+  /* Without a dev/fixtures/sample.* there is nothing to convert, so the HLS
+     stream 404s on purpose. Expected only while the fixture is missing, and only
+     for that path — every other 404 still fails the step. */
+  const noFixture = !hasFixture();
+  let expected404 = 0;
   page.on('console', function (m) {
     const text = m.text();
     if (text.indexOf('REFLEX ') === 0) { trace.push(text.slice(7)); return; }
-    /* Without a dev/fixtures/sample.* the stream 404s on purpose. */
     const where = (m.location() && m.location().url) || '';
     if (m.type() === 'error' && where.indexOf('library/parts') < 0) {
+      if (noFixture && where.indexOf('/video/:/transcode/universal/start') >= 0) {
+        expected404++;
+        return;
+      }
       errors.push('console: ' + text + ' ' + where);
     }
   });
@@ -1010,6 +1018,11 @@ function drive(page, titles) {
         if (errors.length) throw new Error(errors.slice(0, 4).join('\n        '));
         if (offSite.length) {
           throw new Error('requests escaped the mock: ' + offSite.slice(0, 3).join(', '));
+        }
+      }).then(function () {
+        if (expected404) {
+          console.log('        ignored ' + expected404 + ' × 404 on the converted stream: ' +
+                      'no dev/fixtures/sample.*, so there is nothing to convert');
         }
       });
     });

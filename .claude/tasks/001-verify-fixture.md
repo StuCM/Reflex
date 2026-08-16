@@ -1,7 +1,7 @@
 ---
 id: 001
 slug: verify-fixture
-status: building
+status: done
 env: laptop
 branch: crew/001-verify-fixture
 files:
@@ -94,8 +94,63 @@ is unusual here, and it is why the file list is what it is.
 
 ## Review rounds
 
-*(none yet)*
+1. **PASS** (crew-reviewer). Re-ran all four Definition-of-done checks itself
+   rather than taking the gate on trust. Confirmed the two judgement calls
+   below: `make-fixture` exiting 0 without Playwright is right now that
+   `verify` depends on it, and this branch's conditional exclusion should win
+   over `origin/main`'s unconditional one at merge time.
+
+## What changed
+
+- `package.json` — `verify` now runs `npm run fixture` between `test` and
+  `smoke`. `smoke` is untouched, so the no-fixture path stays exercisable.
+- `dev/make-fixture.js` — exits 0 with a one-line report if any of
+  `dev/fixtures/sample.{mp4,webm,mkv}` already exists, before Playwright is
+  even loaded. Missing Playwright now also exits 0 with `SKIPPED:`, matching
+  `dev/smoke.js` (see below).
+- `dev/smoke.js` — the console handler counts, instead of recording, a 404
+  under `/video/:/transcode/universal/start` **when no fixture is present**;
+  the console-error step prints how many it ignored and why. Every other 404,
+  and that same 404 with a fixture in place, still fails.
+
+## What the spec got wrong
+
+- **`origin/main` already carries part of step 3.** Commit 537e26a, "Excuse the
+  converted stream's 404 when there is no fixture", is not in this branch —
+  the branch point 87994eb predates it. It excuses the path *unconditionally*
+  via a `NO_FIXTURE_404` regex, which also hides a genuine transcode 404 when a
+  fixture is present. **`dev/smoke.js` will conflict on merge, and this
+  branch's conditional version is the one to keep.** Steps 1 and 2 are not on
+  `origin/main` at all.
+- **Wiring `fixture` into `verify` regressed the no-Playwright path.**
+  `dev/smoke.js` exits 0 when Playwright is absent, so `verify` was green on
+  such a machine; `make-fixture` exited 1, which would have turned it red. It
+  now exits 0 with the same `SKIPPED:` wording. Not in the spec, but the
+  alternative is a new red baseline — the exact harm this task exists to
+  prevent.
+- **`scope-check.js` defaults to `origin/main`, which is not this branch's
+  base.** It listed the four crew commits already on the branch as out of
+  scope. Passing the branch point explicitly
+  (`scope-check.js <task> 709cc1e`) gives `in scope`, 3/3 declared files.
+- **Graph context was empty**, as the spec itself flagged. Nothing was
+  retrieved and this session has no memory-graph access either.
 
 ## Graph writes proposed
 
-*(worker fills this in)*
+- **Pattern — a skipped test step must be free to run.** `npm run verify`
+  generating the fixture, while `npm run smoke` deliberately does not, is what
+  keeps the no-fixture branch of the console-error filter reachable. Folding
+  the fixture into `smoke` would make the baseline green and the skip path
+  permanently untested.
+- **Decision — excuse the missing-fixture 404 conditionally, not by path
+  alone.** `origin/main`'s regex silences
+  `/video/:/transcode/universal/start` always; gating on `hasFixture()` means a
+  transcode that breaks *with* a fixture present still fails the step. Same
+  green baseline, one less blind spot.
+- **Pattern — sibling dev scripts should agree on how they fail.** Chaining
+  `make-fixture` (exit 1 on missing Playwright) ahead of `smoke` (exit 0 on the
+  same condition) would have made `verify` red on a machine where it used to be
+  green. When a script joins an `&&` chain, its exit codes become the chain's.
+- **Gotcha — `scope-check.js` trusts `origin/main` as the base.** On a task
+  branch cut from something newer, every commit in between reads as scope
+  creep. Pass the branch point.
