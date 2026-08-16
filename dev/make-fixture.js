@@ -22,6 +22,17 @@ const path = require('path');
 const SECONDS = Number(process.argv[2] || 30);
 const OUT = path.join(__dirname, 'fixtures', 'sample.webm');
 
+/* npm run verify calls this every time, so an existing fixture is left alone —
+   the smoke test only needs something playable, not a fresh recording. */
+const existing = ['sample.mp4', 'sample.webm', 'sample.mkv']
+  .map(function (n) { return path.join(__dirname, 'fixtures', n); })
+  .filter(fs.existsSync)[0];
+if (existing) {
+  console.log('  fixture already present: ' + path.relative(process.cwd(), existing) +
+              '  (delete it to re-record)');
+  process.exit(0);
+}
+
 let chromium;
 try {
   chromium = require('playwright').chromium;
@@ -31,10 +42,13 @@ try {
       require('child_process').execSync('npm root -g').toString().trim(),
       'playwright')).chromium;
   } catch (e2) {
-    console.log('\n  Playwright is needed to generate a fixture:');
+    /* Exit 0, as dev/smoke.js does for the same reason: without Playwright the
+       smoke test skips rather than fails, and npm run verify must not go red
+       over a tool that is only needed to test playback. */
+    console.log('\n  SKIPPED: Playwright is needed to generate a fixture:');
     console.log('  npm i -g playwright && npx playwright install chromium');
     console.log('\n  Or drop any playable video at dev/fixtures/sample.mp4 instead.\n');
-    process.exit(1);
+    process.exit(0);
   }
 }
 
