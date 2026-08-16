@@ -13,6 +13,10 @@ var fs = require('fs');
 var root = path.resolve(__dirname, '..', '..', '..');
 var cfg = require(path.join(root, '.claude', 'crew.config.json'));
 
+// stderr is swallowed on purpose: outside a repo, git's complaint is not this
+// script's news to break.
+var GIT = { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] };
+
 if (process.argv[2] === 'collisions') {
   collisions(process.argv[3]);
   process.exit(0);
@@ -101,8 +105,7 @@ function doneBranches() {
 
 function currentBranch() {
   try {
-    return execSync('git rev-parse --abbrev-ref HEAD',
-                    { cwd: root, encoding: 'utf8' }).trim();
+    return execSync('git rev-parse --abbrev-ref HEAD', GIT).trim();
   } catch (e) { return ''; }
 }
 
@@ -127,7 +130,7 @@ function parseFiles(text) {
 
 function sh(cmd) {
   try {
-    return execSync(cmd, { cwd: root, encoding: 'utf8' })
+    return execSync(cmd, GIT)
       .split('\n').filter(function (s) { return s.trim() !== ''; });
   } catch (e) { return []; }
 }
