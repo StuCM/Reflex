@@ -54,6 +54,20 @@ that section looks empty or wrong, say so in the task file.
 
 Match the file you are editing: its naming, its idiom, its comment density.
 
+**Reuse before you write.** If a helper in this file or the one next door
+already does the job, call it. A second implementation of the same check is the
+most common slop there is, and the reviewer will catch it.
+
+**The plainest construct that does the job.** A `map().filter()[0]` chain to
+learn one fact is three steps the reader has to assemble; a loop or `find()` is
+one. Prefer a named intermediate over a long chain, and an early return over
+nesting.
+
+**Never hand a function straight to `map`/`filter`/`forEach` unless it takes
+exactly one argument.** `.filter(fs.existsSync)` works by luck — `filter` passes
+`(element, index, array)` and `existsSync` ignores the rest. `map(parseInt)` is
+the same shape and does not.
+
 Comments are **one concise line** on an exported function — what it does, and
 any non-obvious why. Never restate the signature. Never narrate your reasoning
 inline; that goes in **Graph writes proposed**, not the source.
