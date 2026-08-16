@@ -50,6 +50,22 @@ Talk it through with the user. Push on:
   CLAUDE.md says must not be wrong — the guard, the media rules, anything that
   decides what plays.
 
+Once `files:` is settled, ask whether the work already exists:
+
+```sh
+node .claude/crew/bin/preflight.js collisions .claude/tasks/<NNN>-<slug>.md
+```
+
+The board only knows about *tasks*. A commit sitting on a branch nobody turned
+into a task is invisible to it, and specifying over the top of one wastes a
+whole session on work that is already written. This asks git instead.
+
+Whatever it prints, put in the task file under a `## Existing work` heading,
+above **Graph context** — verbatim, plus one line on what you make of each hit
+after reading it (`git log -p HEAD..<branch> -- <file>`). The person approving
+the spec has to see it; finding it at dispatch is a round too late. If it
+prints nothing, say `None.` so the reader knows the question was asked.
+
 ## 3. Write it
 
 Copy `.claude/crew/templates/task.md` to
