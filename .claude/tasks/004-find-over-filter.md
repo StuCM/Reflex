@@ -1,7 +1,7 @@
 ---
 id: 004
 slug: find-over-filter
-status: building
+status: blocked
 branch: crew/004-find-over-filter
 model: sonnet
 env: laptop
@@ -87,10 +87,53 @@ check each call site rather than assuming.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `js/detail.js` — the copy for a newly found version is taken with `find`.
+- `dev/library.js` — the profile for an item is taken with `find`.
+- `dev/mock-plex.js` — four sites: video stream, audio by id, selected audio,
+  deck entry (at line 539, not 499 as the spec says).
+- `dev/make-fixture.js` — the fixture check now reads as `hasFixture()` in
+  `dev/smoke.js` does: same name list, same `fs.existsSync(path.join(...))`
+  body. `find` rather than `some` because the matched filename is needed for
+  the "already present" message. Not `.find(fs.existsSync)` — that is the
+  one-argument trap.
+
+Gate: scope-check in scope, `npm run verify` 28/28, `npm run check` clean.
+
+## What the spec got wrong
+
+There are **eight** sites, not seven. `dev/smoke.js:1037` —
+`after.filter(function (l) { return /decision:/.test(l); })[0]` — was there
+before this task and the Approach section missed it.
+
+That makes the Definition of done self-contradictory: item 1 wants the grep to
+return nothing, item 5 forbids touching a file outside `files:`, and
+`dev/smoke.js` is not in `files:`. The same boundary is what makes exporting
+`hasFixture()` "awkward" in item 3.
+
+Left `dev/smoke.js` untouched — "touch only the paths in `files:`" is the
+harder rule — so the DoD grep still returns that one line. Needs a human
+decision: either add `dev/smoke.js` to `files:` (it is a `dev/` file, and the
+Out of scope section only fences off other `js/` files) and convert the eighth
+site, or drop it to a follow-up task and amend DoD item 1.
+
 ## Review rounds
 
 <!-- Reviewer appends one block per round. Max 2, then escalate to the user. -->
 
+### Round 1 — BLOCKED
+
+Reviewer found the seven declared conversions correct and behaviour-preserving,
+the `make-fixture.js` fallback acceptable, and the gate green — but blocked on
+the DoD contradiction above rather than on the diff. Confirmed the eighth site
+exists at `origin/main`, so the spec undercounted at authoring time.
+
 ## Graph writes proposed
 
 <!-- Worker and reviewer append; only the orchestrator commits them. -->
+
+- **Pattern — "a spec that enumerates grep hits pins the count, not the
+  query"**: the DoD ran the grep again while the Approach listed a fixed seven.
+  When the two disagree the worker cannot satisfy both without leaving scope. A
+  spec should either list the sites *or* assert the grep, not both.
