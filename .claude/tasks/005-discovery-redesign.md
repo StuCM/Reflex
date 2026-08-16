@@ -1,7 +1,7 @@
 ---
 id: 005
 slug: discovery-redesign
-status: building
+status: review
 model: sonnet
 env: laptop
 branch: crew/005-discovery-redesign
@@ -162,6 +162,58 @@ editing those, stop — the spec is wrong.
 - [ ] the tile pool is still four rows of twelve, whatever the library size
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
+
+## What changed
+
+- `css/app.css` — palette 5a in `:root`, every colour in the file now comes
+  from it; hero, scrims, sidebar, landscape tiles and the search pill added.
+- `index.html` — `#hero-art` and two scrims, `#mh-row` and `#mh-actions` in the
+  masthead, `#top-right` with an inlined magnifier, `#sidebar`, and
+  `js/sidebar.js` in the script list. `#sections` is gone.
+- `js/rail.js` — 372 / 209 / 416 geometry, title moved out of the image into a
+  line below it, `Plex.artUrl` with `posterUrl` as the stand-in, and a `LEAD`
+  constant because four tiles across cannot keep three to the left of focus.
+- `js/masthead.js` — row title, the action pills, and `Masthead.art()` for the
+  backdrop.
+- `js/sidebar.js` — new, `Sidebar` global, an overlay rather than a `UI.VIEWS`
+  entry, so `js/app.js` and `js/ui.js` are untouched.
+- `js/browse.js` — chips and `headerFocus` gone, sidebar wired to Left on the
+  first tile, category titles remembered per section, `loadSection` gained a
+  `focusRow` argument so picking a category of another section lands on it.
+- `dev/smoke.js` — `pressChip`/`chipTexts` replaced by
+  `openSidebar`/`sidebarRows`/`sidebarPick`; every step asserts what it did
+  before, plus one new step for the sidebar itself. 29/29.
+
+## What the spec got wrong, or left to invent
+
+1. **The Play and More info pills are labels, not targets.** The spec removed
+   `headerFocus`, which was the only focus model above the rail, so there is
+   nothing to move between two pills with. OK on the rail still opens the
+   detail page — unchanged behaviour, and the place playback is actually chosen
+   after `Guard`. Wiring a real Play from the rail would mean calling `Guard`
+   from `js/browse.js` and inventing a focus model the spec deleted, so the
+   pills are drawn and OK does what it always did. **This is the one thing in
+   the diff a reviewer should look at hardest.**
+
+2. **The sidebar carries more than the five entries listed.** `prefer:`,
+   `devices` and `panel` were chips, and the spec's list of five would have made
+   all three unreachable — the smoke test asserts two of them. They are extra
+   top-level rows below Search. The DoD list is satisfied as a "lists at least".
+
+3. **Categories only appear for sections that have been built.** The spec says
+   to pass in the hub titles Browse already has; Browse only has them for
+   sections it has loaded, and fetching the others is explicitly out. A section
+   never visited lists no categories and OK on it simply switches to it. After
+   one visit it has them, and they persist for the session.
+
+4. **`--dim2` was added to the palette.** Eight tokens could not carry the three
+   grey levels the existing detail, show and player rules use, and flattening
+   them all to `--dim` lost the hierarchy on screens this task must not break.
+
+5. The results-page header had nowhere to go once the chips went. It is now the
+   first results row's own title — the query, the count and `BACK to library` —
+   and `#browse` carries a `results` class so the harness can tell the two
+   states apart without reading text.
 
 ## Review rounds
 
