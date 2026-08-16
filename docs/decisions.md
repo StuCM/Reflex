@@ -70,3 +70,27 @@ Two smaller rules fell out of it, both recorded in the graph: a script joining
 an `&&` chain inherits the chain's exit semantics, and the orchestrator's spec
 edits must be committed before the task worktree is cut, or the worker reads a
 stale spec.
+
+## 2026-08-16 — Choosing an audio track, and what a direct play actually gives you
+
+Choosing a different audio track did nothing. The OSD renamed it and the first
+track kept playing.
+
+On a direct play the server hands over the original file whole, every track
+still in it, and the panel plays whichever it likes. `audioStreamID` on the
+decision call is advice to the decision engine and changes not one byte of that
+file — so restarting playback with a different id re-fetched the same bytes.
+The code even said so in a comment and then did the thing the comment ruled out.
+
+Two things work, and the panel decides which. It exposes `audioTracks` and we
+select on it: instant, no restart, nothing asked of the server. Or it does not,
+and direct play has to be given up (`directPlay=0`) so the server muxes — a real
+session, and on a 4K file the guard refuses it by the ordinary rule, because
+`Media.allows` does not know *why* a stream isn't direct. A forced mux, a
+quality cap and the server's own choice all refuse 4K identically. No special
+case was added for audio, which is the point.
+
+Desktop Chrome exposes no `audioTracks` at all, so which path the B8 takes is
+unknown until it runs there. The task is merged and **pending-tv**: the code is
+reviewed and the suite is green, but the behaviour this change exists for has
+never been observed.
