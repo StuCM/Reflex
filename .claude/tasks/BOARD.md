@@ -5,12 +5,13 @@ Task files are the source of truth; this is the glance view.
 
 | id | task | status | env | branch |
 |---|---|---|---|---|
-| 001 | Make a fresh clone verify green | `draft` | laptop | crew/001-verify-fixture *(gone)* |
+| 002 | Make the collision check see unmerged branches | `draft` | laptop | crew/002-branch-collision *(gone)* |
+| 001 | Make a fresh clone verify green | `building` | laptop | crew/001-verify-fixture |
 
 ## Waiting on you
 
-- **001 Make a fresh clone verify green** — spec needs your approval before anyone starts
+- **002 Make the collision check see unmerged branches** — spec needs your approval before anyone starts
 
 ## In flight
 
-Nothing running.
+- **001 Make a fresh clone verify green** — `building` on `crew/001-verify-fixture`

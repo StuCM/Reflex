@@ -1,7 +1,7 @@
 ---
 id: 001
 slug: verify-fixture
-status: draft
+status: building
 env: laptop
 branch: crew/001-verify-fixture
 files:
@@ -70,9 +70,20 @@ about the console-error step and the baseline.
 
 ## Graph context
 
-*(Nothing retrieved: this session has no memory-graph tools. Query before
-starting and fill this in — `crew-fix`, `dev-harness`, `smoke-test` are the
-likely entities.)*
+Queried 2026-08-16. The graph knows this project well but holds **nothing about
+the harness, the smoke test or the verify baseline** — so there is no prior art
+to follow here and nothing to contradict. Two entries are worth carrying:
+
+- Decision *"verify a peer's branch in a detached throwaway worktree, not their
+  worktree"* — `git worktree add --detach /tmp/... <sha>` runs the full suite
+  without disturbing anyone. Relevant because this task changes what `verify`
+  means, and that is the command every other session uses to judge itself.
+- Pattern *"debugging a webOS app with no usable console"* — only to rule it
+  out: the 404 in question is on the laptop, in the mock, and has nothing to do
+  with the TV.
+
+Nothing recorded about the misread itself. That is the write worth proposing
+when this closes — see *Graph writes proposed*.
 
 ## Notes for the worker
 
