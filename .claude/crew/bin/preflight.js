@@ -9,8 +9,14 @@
 var path = require('path');
 var execSync = require('child_process').execSync;
 
+var fs = require('fs');
 var root = path.resolve(__dirname, '..', '..', '..');
 var cfg = require(path.join(root, '.claude', 'crew.config.json'));
+
+if (process.argv[2] === 'collisions') {
+  collisions(process.argv[3]);
+  process.exit(0);
+}
 
 var target = process.argv[2] || 'laptop';
 var env = cfg.environments[target];
@@ -44,3 +50,84 @@ if (missing.length) {
 }
 
 console.log('\nverify: ' + cfg.verify);
+
+// ---------------------------------------------------------------------
+
+// Names unmerged local branches whose commits already touch a task's declared
+// files. Advisory: it informs the spec and the dispatch, and never blocks —
+// anything git cannot answer prints nothing and still exits 0.
+function collisions(taskFile) {
+  if (!taskFile) {
+    console.error('usage: preflight.js collisions <task-file>');
+    process.exit(2);
+  }
+
+  var spec = fs.readFileSync(path.resolve(root, taskFile), 'utf8');
+  var declared = parseFiles(spec);
+  if (!declared.length) return;
+
+  var skip = [currentBranch(), field(spec, 'branch')].concat(doneBranches());
+  var hits = 0;
+
+  sh('git for-each-ref --format="%(refname:short)" refs/heads').forEach(function (branch) {
+    if (skip.indexOf(branch) !== -1) return;
+    declared.forEach(function (file) {
+      sh('git log --oneline "HEAD..' + branch + '" -- "' + file + '"').forEach(function (line) {
+        console.log(branch + '  ' + line + '  [' + file + ']');
+        hits++;
+      });
+    });
+  });
+
+  if (hits) {
+    console.log('\n' + hits + ' unmerged commit(s) already touch these files.');
+    console.log('Read them before starting: git log -p HEAD..<branch> -- <file>');
+  }
+}
+
+// crew/* branches of finished tasks are merged history, not work in flight.
+function doneBranches() {
+  var dir = path.join(root, '.claude', 'tasks');
+  var out = [];
+  fs.readdirSync(dir).forEach(function (f) {
+    if (!/^\d{3}-.*\.md$/.test(f)) return;
+    var text = fs.readFileSync(path.join(dir, f), 'utf8');
+    if (field(text, 'status') !== 'done') return;
+    var branch = field(text, 'branch');
+    if (branch) out.push(branch);
+  });
+  return out;
+}
+
+function currentBranch() {
+  try {
+    return execSync('git rev-parse --abbrev-ref HEAD',
+                    { cwd: root, encoding: 'utf8' }).trim();
+  } catch (e) { return ''; }
+}
+
+function field(text, key) {
+  var m = new RegExp('^' + key + ':\\s*(.+)$', 'm').exec(text);
+  return m ? m[1].trim() : null;
+}
+
+// ponytail: same shape as scope-check.js's parser — the two scripts are run
+// standalone and share no module, so there is nothing to import.
+function parseFiles(text) {
+  var m = /^files:\s*$/m.exec(text);
+  if (!m) return [];
+  var rest = text.slice(m.index + m[0].length).split('\n');
+  var out = [];
+  for (var i = 0; i < rest.length; i++) {
+    if (/^\s*-\s+\S/.test(rest[i])) out.push(rest[i].replace(/^\s*-\s+/, '').trim());
+    else if (rest[i].trim() !== '') break;
+  }
+  return out;
+}
+
+function sh(cmd) {
+  try {
+    return execSync(cmd, { cwd: root, encoding: 'utf8' })
+      .split('\n').filter(function (s) { return s.trim() !== ''; });
+  } catch (e) { return []; }
+}
