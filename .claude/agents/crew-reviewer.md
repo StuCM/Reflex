@@ -40,7 +40,7 @@ outside the diff only when you cannot judge a change without it.
    identical. Do not redesign, and do not raise style preferences.
 
 Run `npm run verify` yourself. Do not take the worker's word for it. The
-baseline is **26/26 green**, so any failure is a finding.
+baseline is **28/28 green**, so any failure is a finding.
 
 Run `npm run fixture` first if `dev/fixtures/` is empty — it is gitignored, and
 without it five player steps skip and one fails on a 404. That is the bench,

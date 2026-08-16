@@ -5,11 +5,11 @@ Task files are the source of truth; this is the glance view.
 
 | id | task | status | env | branch |
 |---|---|---|---|---|
-| 003 | Land the audio-switch fix stranded on claude/player-features | `pending-tv` | laptop | crew/003-land-audio-switch |
+| 003 | Land the audio-switch fix stranded on claude/player-features | `pending-tv` | laptop | crew/003-land-audio-switch *(gone)* |
 | 004 | Replace filter-then-index with find | `draft` | laptop | crew/004-find-over-filter *(gone)* |
 | 005 | The discovery screen: hero, landscape tiles, and a sidebar | `draft` | laptop | crew/005-discovery-redesign *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
-| 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision |
+| 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 
 ## Waiting on you
 

@@ -113,7 +113,7 @@ agent — is checked for free.
 
 The roles carry this project's rules rather than generic advice: Chromium 53,
 the `index.html` script list, the direct play profile, the 4K rule, the ARC
-audio tiers, and the fact that `npm run verify` is **26/26 green** once
+audio tiers, and the fact that `npm run verify` is **28/28 green** once
 `npm run fixture` has been run — so a worker can tell its own breakage from the
 baseline instead of inventing an explanation for a failure it inherited.
 

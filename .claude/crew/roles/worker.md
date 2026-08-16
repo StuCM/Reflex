@@ -86,7 +86,7 @@ node .claude/crew/bin/scope-check.js .claude/tasks/<id>-<slug>.md
 npm run verify
 ```
 
-Both must pass. The baseline is **26/26 green**.
+Both must pass. The baseline is **28/28 green**.
 
 Run `npm run fixture` *first*. Without it the five player steps skip and the
 "no console errors" step fails on a 404 for the converted stream — that is the
