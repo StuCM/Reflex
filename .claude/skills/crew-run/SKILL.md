@@ -19,6 +19,20 @@ Read the board. If another in-flight task declares any of the same `files:`,
 it. Two sessions editing `js/player.js` will conflict at merge and you pay for
 both.
 
+Then ask git the same question, because the board only sees tasks:
+
+```sh
+node .claude/crew/bin/preflight.js collisions .claude/tasks/<id>-<slug>.md
+```
+
+Any output is a hit: an unmerged branch already carries commits touching these
+files. **Do not dispatch.** Name the branch and the commits, and offer to land
+them, respec around them, or proceed anyway. The user may say proceed; you may
+not decide it for them, exactly as with a `draft`.
+
+It exits 0 whether or not it finds anything — the advisory layer never stalls
+the loop, so read what it printed rather than its status.
+
 ## 2. Worktree
 
 ```sh
