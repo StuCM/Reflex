@@ -1,4 +1,4 @@
-/* The panel above the rail: what is focused, and whether it will play.
+/* The hero over the rail: what is focused, and whether it will play.
 
    The badges are the point. Resolution, codec and container come free with the
    list response; the audio badge is the one that matters, because it says which
@@ -8,10 +8,25 @@
 var Masthead = (function () {
   'use strict';
 
+  var elRow = document.getElementById('mh-row');
   var elTitle = document.getElementById('mh-title');
   var elMeta = document.getElementById('mh-meta');
+  var elActions = document.getElementById('mh-actions');
   var elBadges = document.getElementById('mh-badges');
   var elSummary = document.getElementById('mh-summary');
+  var elArt = document.getElementById('hero-art');
+  var lastArt = '';
+
+  /* The backdrop. Called only from Browse's debounced focus callback, never per
+     keypress: each of these is a full-screen transcode on a server we do not
+     own. An item with no art keeps whatever is already there, because flashing
+     to black between two films is worse than a backdrop that lags. */
+  function art(item) {
+    var url = Plex.artUrl(item, 1920, 1080);
+    if (!url || url === lastArt) return;
+    lastArt = url;
+    elArt.style.backgroundImage = 'url("' + url + '")';
+  }
 
   function badge(text, cls) {
     return '<span class="badge' + (cls ? ' ' + cls : '') + '">' +
@@ -29,6 +44,9 @@ var Masthead = (function () {
 
   function render(row, item, hasRows) {
     var position = row && row.total ? ((row.focus + 1) + ' of ' + row.total) : '';
+
+    elRow.textContent = (row && row.title) || '';
+    elActions.classList.toggle('hidden', !item);
 
     if (!item) {
       elTitle.textContent = hasRows ? '…' : 'Loading…';
@@ -86,5 +104,5 @@ var Masthead = (function () {
     elBadges.innerHTML = b;
   }
 
-  return { render: render };
+  return { render: render, art: art };
 })();
