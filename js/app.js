@@ -76,6 +76,9 @@
       audio: verdict.audio,
       mediaIndex: verdict.mediaIndex || 0,
       maxBitrate: verdict.maxBitrate || null,
+      /* Set when this stream is being muxed by the server purely so that a
+         chosen audio track is actually the one playing — see js/player.js. */
+      forceStream: !!verdict.forceStream,
       /* Which subtitle language was on before a restart. By language, not by
          stream id: another version of the film is a different file with
          different ids, and "French" is what the user chose. */
@@ -86,7 +89,8 @@
          nothing to switch client-side. Subtitles are not here — they are drawn
          over the video and never restart anything. */
       onSwitch: function (change) {
-        Guard.check(verdict.md, change.mediaIndex, change.audioId, change.maxBitrate)
+        Guard.check(verdict.md, change.mediaIndex, change.audioId,
+                    { maxBitrate: change.maxBitrate, forceStream: change.forceStream })
           .then(function (v2) {
             if (!v2.ok) {
               /* Refusing a switch must not end the film. Say why in a line and
@@ -105,7 +109,9 @@
          converted stream, which means HLS and an actual session on it. */
       url: verdict.transcode
         ? Plex.transcodeUrl(server, md, verdict.mediaIndex || 0, 0,
-                            verdict.audio && verdict.audio.id, verdict.maxBitrate)
+                            verdict.audio && verdict.audio.id,
+                            { maxBitrate: verdict.maxBitrate,
+                              forceStream: verdict.forceStream })
         : null,
       transcode: !!verdict.transcode,
       onExit: back || function () { openDetail(item, toBrowse); },

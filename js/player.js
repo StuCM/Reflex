@@ -46,7 +46,7 @@ var Player = (function () {
 
   var item = null, server = null, onExit = null, onError = null, onSwitch = null;
   var currentPart = null, currentAudio = null, currentMedia = null;
-  var mediaIndex = 0, maxBitrate = null, transcoding = false;
+  var mediaIndex = 0, maxBitrate = null, transcoding = false, forceStream = false;
   var ticker = null, osdTimer = null, resumeMs = 0;
 
   /* A stall is the thing you actually see as a blip, and it is over before the
@@ -165,6 +165,99 @@ var Player = (function () {
       : '◀ ▶ ' + NUDGE + 's · ▲ ▼ menu · 0–9 jump · CH± chapter · OK pause';
   }
 
+  /* ---------- choosing the audio track ----------
+
+     The thing that is easy to get wrong, and was: on a DIRECT PLAY the server
+     hands over the original file, whole, with every track still in it. The
+     `audioStreamID` sent with the decision call is advice to the decision
+     engine and changes not one byte of that file, so the panel goes on playing
+     whichever track it prefers — the first one. Restarting playback with a
+     different id therefore did nothing at all, while the OSD cheerfully named
+     the track we had asked for.
+
+     There are exactly two ways to actually be listening to a chosen track:
+
+       1. The panel exposes audioTracks and lets us select one. Free, instant,
+          no server involvement, no restart. This is the good case, and
+          js/panel.js reports on the chip whether it is available.
+       2. Failing that, the server has to mux the stream itself, which means
+          giving up direct play — a real session on someone else's hardware,
+          and on a 4K file a refusal. That is the honest price of choosing, and
+          it is only paid when the panel will not choose for us. */
+
+  /* The panel's own track list, or null when it does not have one. Only useful
+     once metadata has loaded, so never cached. */
+  function panelTracks() {
+    var list = v.audioTracks;
+    if (!list || typeof list.length !== 'number' || list.length < 2) return null;
+    return list;
+  }
+
+  /* Which entry of the panel's list is this Plex stream? The file's audio
+     streams and the pipeline's track list are the same tracks in the same
+     order — but only if they are the same length. If they are not, we do not
+     know what we are looking at, and guessing would select the wrong track
+     silently, which is the bug this whole section exists to fix. */
+  function panelIndexOf(st) {
+    var tracks = Media.audioTracks(currentPart), list = panelTracks(), i;
+    if (!list || list.length !== tracks.length) return -1;
+    for (i = 0; i < tracks.length; i++) {
+      if (String(tracks[i].id) === String(st.id)) return i;
+    }
+    return -1;
+  }
+
+  function selectPanelTrack(n) {
+    var list = panelTracks(), i;
+    if (!list || n < 0 || n >= list.length) return false;
+    for (i = 0; i < list.length; i++) {
+      if (list[i]) list[i].enabled = (i === n);
+    }
+    /* Trust nothing: read it back. A pipeline that exposes the list read-only
+       would otherwise look like a successful switch and sound like the old
+       track — the exact failure being fixed. */
+    return !!(list[n] && list[n].enabled);
+  }
+
+  /* Is the track named on screen the track you are hearing? Only if we chose
+     it: the server muxed the stream, or the panel let us select it. */
+  function audioIsOurs() {
+    return transcoding || Media.audioTracks(currentPart).length < 2 || !!panelTracks();
+  }
+
+  /* The track the guard picked is a promise the masthead already made before
+     OK was pressed. If the panel lets us keep that promise, keep it at once
+     rather than waiting to be asked — otherwise the first thing you hear is
+     whatever the file happens to list first, which on a remux is routinely
+     the one track that cannot cross ARC. */
+  function applyChosenTrack() {
+    if (!currentAudio || transcoding) return;
+    var n = panelIndexOf(currentAudio);
+    if (n < 0) { paintTracks(); return; }
+    var list = panelTracks();
+    if (list[n] && list[n].enabled) return;          // already right, say nothing
+    if (selectPanelTrack(n)) {
+      UI.debug('audio set on the panel (track ' + n + '): ' + Media.audioLabel(currentAudio));
+    }
+    paintTracks();
+  }
+
+  function chooseAudio(st) {
+    if (currentAudio && String(currentAudio.id) === String(st.id)) { closeMenu(); return; }
+    var n = panelIndexOf(st);
+    if (n >= 0 && selectPanelTrack(n)) {
+      /* The good case: the panel switched it, nothing restarted, the server
+         was not asked for anything. */
+      currentAudio = st;
+      UI.debug('audio switched on the panel (track ' + n + '): ' + Media.audioLabel(st));
+      paintTracks();
+      closeMenu();
+      showOsd();
+      return;
+    }
+    switchTo({ audioId: st.id, forceStream: true }, Media.audioMenuLabel(st));
+  }
+
   /* Which audio the panel is actually carrying, and what else is on, named on
      screen — the file usually has several tracks and until now nothing said
      which one you had. */
@@ -172,7 +265,8 @@ var Player = (function () {
     var bits = [];
     var tracks = Media.audioTracks(currentPart);
     bits.push('Audio: ' + Media.audioMenuLabel(currentAudio) +
-              (tracks.length > 1 ? ' (' + tracks.length + ')' : ''));
+              (tracks.length > 1 ? ' (' + tracks.length + ')' : '') +
+              (audioIsOurs() ? '' : ' — panel’s choice'));
     bits.push('Subtitles: ' + (currentSub ? Media.subLabel(currentSub) : 'off') +
               (subNote ? ' — ' + subNote : ''));
     bits.push('Quality: ' + (maxBitrate ? Media.bitrateLabel(maxBitrate) + ' converted'
@@ -245,6 +339,11 @@ var Player = (function () {
 
   function checkMarker() {
     var found = Media.markerAt(item, v.currentTime || 0);
+    /* A dismissal lasts as long as you are inside the thing you dismissed, and
+       no longer. Rewinding back over an intro and being refused the offer —
+       because you happened to seek while it was on screen an hour ago — is not
+       a decision anyone made. */
+    if (skipDismissed && found !== skipDismissed) skipDismissed = null;
     if (found && skipDismissed === found) found = null;
     if (found === marker) return;
     marker = found;
@@ -358,11 +457,14 @@ var Player = (function () {
   function audioRow(st) {
     return {
       label: Media.audioMenuLabel(st),
+      /* Say which switches are free. When the panel owns the track list this
+         is instant; otherwise it restarts against a stream the server has to
+         mux, and knowing that before you press OK is the difference between a
+         choice and a surprise. */
+      note: (currentAudio && String(currentAudio.id) === String(st.id)) ? ''
+        : (panelIndexOf(st) >= 0 ? '' : 'restarts — the server has to mux this one'),
       on: !!(currentAudio && String(currentAudio.id) === String(st.id)),
-      act: function () {
-        if (currentAudio && String(currentAudio.id) === String(st.id)) { closeMenu(); return; }
-        switchTo({ audioId: st.id }, 'audio ' + Media.audioLabel(st));
-      }
+      act: function () { chooseAudio(st); }
     };
   }
 
@@ -507,7 +609,8 @@ var Player = (function () {
     return true;                       // the menu swallows everything else
   }
 
-  /* Audio, version and quality all mean: ask the server for a different
+  /* Another version, a quality cap, and an audio track the panel will not
+     select for us all mean the same thing: ask the server for a different
      stream and start again from here. The guard decides whether that is
      allowed, which is what keeps a quality cap on a 4K file refused. */
   function switchTo(change, what) {
@@ -517,6 +620,9 @@ var Player = (function () {
     if (change.audioId === undefined) change.audioId = currentAudio && currentAudio.id;
     if (change.mediaIndex === undefined) change.mediaIndex = mediaIndex;
     if (change.maxBitrate === undefined) change.maxBitrate = maxBitrate;
+    /* Carried so a later switch does not silently drop back to a direct play
+       and lose the track the user chose. */
+    if (change.forceStream === undefined) change.forceStream = forceStream;
     closeMenu();
     osdTracks.textContent = 'Switching to ' + what + '…';
     showOsd();
@@ -588,6 +694,7 @@ var Player = (function () {
     mediaIndex = opts.mediaIndex || 0;
     maxBitrate = opts.maxBitrate || null;
     transcoding = !!opts.transcode;
+    forceStream = !!opts.forceStream;
     currentMedia = (item.Media && item.Media[mediaIndex]) || null;
     marker = null; skipDismissed = null;
     skipEl.classList.add('hidden');
@@ -607,6 +714,7 @@ var Player = (function () {
         v.currentTime = resumeMs / 1000;
       }
       paintTicks();
+      applyChosenTrack();
       showOsd();
       report('playing');
       /* The subtitle track the user had before a restart, matched by language
@@ -616,7 +724,9 @@ var Player = (function () {
         if (again) setSub(again);
       }
     };
-    v.onplaying = function () { showOsd(); };
+    /* The track list is not always populated by loadedmetadata, so try again
+       once the picture is actually running. */
+    v.onplaying = function () { applyChosenTrack(); showOsd(); };
     /* 'waiting' is the panel telling us it has run dry. */
     v.onwaiting = function () { stalls++; };
     v.ontimeupdate = function () {
