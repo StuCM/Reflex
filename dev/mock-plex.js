@@ -231,6 +231,46 @@ function create(opts) {
     let verdict = 'directplay';
     let text = '';
 
+    /* directPlay=0 is the client saying "do not hand me the file" — which is
+       what asking for a specific audio track amounts to, since a direct play
+       delivers every track and lets the panel choose. The server then muxes
+       the streams itself: no re-encoding, but not a direct play either. A real
+       server calls this 'directstream', and the app has to treat it as a
+       session rather than as a free file read. */
+    if (String(q.directPlay) === '0' && !Number(q.maxVideoBitrate || 0)) {
+      /* The video is copied either way; whether the audio can be is the same
+         question as anywhere else. TrueHD and DTS-HD MA have to be re-encoded,
+         which turns a remux into a transcode and is exactly the distinction
+         the guard cares about. */
+      const lossless = audio && (audio.codec === 'truehd' ||
+        (audio.codec === 'dca' && String(audio.profile || '').indexOf('ma') === 0));
+      verdict = lossless ? 'transcode' : 'directstream';
+      text = lossless
+        ? 'Conversion required. Audio: Unsupported codec (' + audio.codec + ').'
+        : 'Direct stream: the client asked for a specific stream.';
+
+      /* A real decision response carries only the streams that were chosen,
+         each with its own decision — which is how the app can tell "the audio
+         is being re-encoded" from "the whole thing is". Returning all of them
+         would let it read the verdict off the wrong track. */
+      video.decision = 'copy';
+      if (audio) audio.decision = lossless ? 'transcode' : 'copy';
+      part.Stream = audio ? [video, audio] : [video];
+      part.decision = verdict;
+
+      log(srv.name + ' decision ' + full.title + ' audio=' + (audio ? audio.codec : 'none') +
+          ' directPlay=0 -> ' + verdict);
+      json(res, 200, container({
+        size: 1,
+        transcodeDecisionText: text,
+        generalDecisionText: text,
+        mdeDecisionText: text,
+        directPlayDecisionCode: 2000,
+        Metadata: [full]
+      }));
+      return;
+    }
+
     /* The quality menu. Asking for a bitrate cap IS asking for a re-encode, so
        the server says so — which is what makes the app refuse a capped 4K
        stream rather than starting one and being killed. */
@@ -529,10 +569,16 @@ function create(opts) {
     if (pathname === '/video/:/transcode/universal/decision') { decision(srv, res, q); return true; }
     if (pathname.indexOf('/library/parts/') === 0) { streamFile(req, res); return true; }
 
-    /* A real server answers this with HLS, which a desktop browser will not
-       play — so the harness serves the same fixture instead. It proves the app
-       reaches for the converted stream when the verdict says to; whether the
-       panel plays actual HLS is a question only the TV can answer. */
+    /* A real server answers this with an HLS playlist, which the panel plays
+       and a desktop browser does not — so the harness serves the same fixture
+       instead. It proves the app reaches for the converted stream when the
+       verdict says to, and no more than that.
+
+       Measured, so nobody spends an evening trying to close the gap: Chrome
+       rejects ANY response at a .m3u8 URL with NotSupportedError, whatever the
+       content type says and even through a 302 to a .webm it plays happily on
+       its own. It decides from the extension before it looks at a byte. So
+       "the converted stream actually plays" is a TV question, permanently. */
     if (pathname.indexOf('/video/:/transcode/universal/start') === 0) {
       log(srv.name + ' transcode session requested (the harness serves the fixture)');
       streamFile(req, res);

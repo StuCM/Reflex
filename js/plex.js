@@ -515,18 +515,28 @@ var Plex = (function () {
   /* hasMDE=1 returns the verdict WITHOUT opening a session, so this is safe to
      call on a server we don't own. Never call the non-decision transcode
      endpoints. */
-  /* maxBitrate (kbps) is the quality menu. It only means anything on a
+  /* opts.maxBitrate (kbps) is the quality menu. It only means anything on a
      converted stream — asking for a cap IS asking the server to re-encode —
      so the decision call is given it too, and answers honestly that it will
-     transcode. On a 4K file that is a refusal, which is the point. */
-  function playbackParams(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate) {
+     transcode. On a 4K file that is a refusal, which is the point.
+
+     opts.forceStream is audio track selection, and it exists because of a
+     thing that is easy to get wrong: on a DIRECT PLAY the server hands over
+     the original file, whole. `audioStreamID` is advisory to the decision
+     engine and changes not one byte of it, so the panel goes on playing
+     whichever track it likes — usually the first. The only way to be given a
+     specific track is to stop asking for a direct play, so that the server
+     muxes the stream itself. That costs a session; it is the honest price of
+     choosing, and it is only paid when the panel cannot choose for us. */
+  function playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts) {
+    opts = opts || {};
     return {
       hasMDE: 1,
       path: '/library/metadata/' + item.ratingKey,
       mediaIndex: mediaIndex,
       partIndex: partIndex,
       protocol: 'http',
-      directPlay: maxBitrate ? 0 : 1,
+      directPlay: (opts.maxBitrate || opts.forceStream) ? 0 : 1,
       directStream: 1,
       directStreamAudio: 1,
       fastSeek: 1,
@@ -538,8 +548,8 @@ var Plex = (function () {
       audioBoost: 100,
       /* directPlay is off the table once a cap is asked for; leaving it on
          makes the server answer directplay and ignore the cap entirely. */
-      maxVideoBitrate: maxBitrate || null,
-      videoBitrate: maxBitrate || null,
+      maxVideoBitrate: opts.maxBitrate || null,
+      videoBitrate: opts.maxBitrate || null,
       autoAdjustQuality: 0,
       mediaBufferSize: 102400,
       /* ponytail: we connect directly, not via relay, so 'lan' is what keeps
@@ -558,8 +568,8 @@ var Plex = (function () {
     };
   }
 
-  function decide(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate) {
-    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate);
+  function decide(server, item, mediaIndex, partIndex, audioStreamId, opts) {
+    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts);
     return ask(server, '/video/:/transcode/universal/decision?' + qs(params),
                { timeout: 20000 }).then(function (res) {
       var mc = res.MediaContainer || {};
@@ -586,8 +596,8 @@ var Plex = (function () {
      because that is what the panel's own media pipeline handles — a desktop
      browser will not play this, so it cannot be tested on the laptop.
      Calling this DOES open a session on the server. */
-  function transcodeUrl(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate) {
-    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, maxBitrate);
+  function transcodeUrl(server, item, mediaIndex, partIndex, audioStreamId, opts) {
+    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts);
     params.hasMDE = null;
     params.protocol = 'hls';
     params.copyts = 1;

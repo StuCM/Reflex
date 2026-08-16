@@ -32,12 +32,19 @@ var Guard = (function () {
   /* forceAudioId overrides the choice — that is how switching track in the
      player works, since the ranking would otherwise just pick the same one
      again. */
-  /* maxBitrate is the quality menu in the player. Asking for a cap is asking
-     the server to re-encode, so the decision comes back 'transcode' — which on
-     a 4K file is a refusal, arrived at by the ordinary rule rather than by a
-     special case. */
-  function check(item, mediaIndex, forceAudioId, maxBitrate) {
+  /* opts.maxBitrate is the quality menu in the player. Asking for a cap is
+     asking the server to re-encode, so the decision comes back 'transcode' —
+     which on a 4K file is a refusal, arrived at by the ordinary rule rather
+     than by a special case.
+
+     opts.forceStream is the same shape of thing for audio: a direct play hands
+     the panel the whole file and the panel picks its own track, so being given
+     a chosen track means giving up direct play. On a 4K file that is refused
+     too, by the same rule — which is the honest answer, because the server
+     would be muxing a 4K stream and that is what gets killed. */
+  function check(item, mediaIndex, forceAudioId, opts) {
     var n = mediaIndex || 0;
+    opts = opts || {};
     return Meta.load(item).then(function (md) {
       if (!md) return { ok: false, state: 'nometa', text: 'No metadata for this copy.' };
 
@@ -62,7 +69,7 @@ var Guard = (function () {
       }
 
       var server = Servers.of(md);
-      return Plex.decide(server, md, n, 0, audio.id, maxBitrate).then(function (v) {
+      return Plex.decide(server, md, n, 0, audio.id, opts).then(function (v) {
         var direct = v.decision === 'directplay';
         var uhd = Media.isUHD(media);
         /* Only direct play hands the panel the original file. A re-encode
@@ -82,7 +89,8 @@ var Guard = (function () {
           transcode: !direct,
           video: v.video, audioDecision: v.audio,
           audio: audio, passes: !!passes,
-          maxBitrate: maxBitrate || null,
+          maxBitrate: opts.maxBitrate || null,
+          forceStream: !!opts.forceStream,
           md: md, media: media, part: part, mediaIndex: n,
           text: v.text || ''
         };
@@ -100,6 +108,11 @@ var Guard = (function () {
     if (!v) return 'checking…';
     if (v.ok && !v.transcode) return 'direct play';
     if (v.ok) {
+      /* Not a direct play, but nothing is being re-encoded either: the server
+         is muxing the file's own streams into a container, which is what
+         choosing an audio track costs. Worth its own name — calling a remux a
+         transcode is how you end up avoiding something that was cheap. */
+      if (v.video === 'copy' && v.audioDecision === 'copy') return 'direct stream';
       /* Audio-only re-encoding is cheap and is the common case for a remux
          whose only track is TrueHD; a full re-encode is worth naming. */
       if (v.video && v.video !== 'transcode') return 'audio transcode';
