@@ -1,7 +1,7 @@
 ---
 id: 002
 slug: branch-collision
-status: approved
+status: done
 branch: crew/002-branch-collision
 model: sonnet
 env: laptop
@@ -107,9 +107,51 @@ Nothing else in the graph touches the crew scripts.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `.claude/crew/bin/preflight.js` — a `collisions <task-file>` mode: reads the
+  spec's `files:`, walks `refs/heads` skipping the current branch, the task's
+  own branch and any branch of a `done` task, and prints one line per commit in
+  `HEAD..<branch>` touching a declared file. Exits 0 always; git's stderr is
+  suppressed so a missing repo prints nothing at all.
+- `.claude/skills/crew-spec/SKILL.md` — §2 now runs it once `files:` is settled
+  and inlines the result under `## Existing work`, so the human approving sees
+  it, with `None.` when it finds nothing.
+- `.claude/skills/crew-run/SKILL.md` — §1 now runs it too and refuses to
+  dispatch on any output, offering to land, respec or proceed. Only the user
+  may choose to proceed.
+
+Commits: `9a3d973`, `0c10c89`, `ab1e3b8`.
+
+## What the spec got wrong
+
+- **DoD item 1 is time-locked.** `537e26a` has since been merged into `main`,
+  so it is in `HEAD` and `git log HEAD..<branch>` correctly excludes it. The
+  check still names `claude/player-features` on task 001 — via `57407f1`. The
+  behaviour the item was testing for is present; the sha it named is not
+  reachable any more, and making it reachable would mean reporting merged work
+  as a collision. Reviewer confirmed independently.
+- **"reuse the parse `board.js` already does"** — `board.js` has no `files:`
+  parser; `scope-check.js` does. Neither is importable: both are standalone
+  scripts that run (and can `process.exit`) on require, and neither is in this
+  task's `files:`. `parseFiles` is therefore duplicated, ~10 lines, marked with
+  a `ponytail:` comment. Extracting a shared `bin/task-file.js` is the real fix
+  and wants its own task touching all three scripts.
+- **`scope-check.js` with its default base is misleading here.** `origin/main`
+  is two commits behind local `main`, so the orchestrator's own approve and
+  dispatch commits read as scope creep. Against the handover point it is clean:
+  `scope-check.js .claude/tasks/002-branch-collision.md 37cf45d` → in scope,
+  3 declared / 3 changed. `npm run verify` 26/26.
+
 ## Review rounds
 
 <!-- Reviewer appends one block per round. Max 2, then escalate to the user. -->
+
+**Round 1 — PASS.** Verified the fail-open cases independently (single branch,
+detached HEAD, `.git` removed: all silent, exit 0), confirmed `537e26a` is an
+ancestor of `HEAD`, accepted the `parseFiles` duplication as forced by scope,
+and re-ran `npm run verify` (26/26) and `preflight.js laptop` (unchanged).
+Comments 7% of added lines, under the 25% threshold.
 
 ## Graph writes proposed
 
@@ -117,3 +159,19 @@ Nothing else in the graph touches the crew scripts.
 
 - The trap Pattern is already recorded. On close, link it to this task's
   Decision so recall goes from the failure to the fix.
+- **Decision — "the collision check asks git, not the board"**: unmerged work
+  is found with `git log HEAD..<branch> -- <files>` over local `refs/heads`,
+  run at spec time *and* at dispatch. `HEAD..` is the whole point: merged work
+  is not a collision, so the check quietly stops reporting a branch the moment
+  its work lands, with no bookkeeping. Fails open by design — an advisory layer
+  that can stall the loop is worse than no advisory layer.
+- **Pattern (trap) — "a spec's Definition of done can name a sha that merges
+  before the worker reads it"**: DoD item 1 named `537e26a`, which landed on
+  `main` between approval and dispatch, so the correct implementation could not
+  produce it. Prefer naming the *branch* and the behaviour over a sha when the
+  spec is about unmerged state. Cost one round of judgement, not a rewrite.
+- **Pattern — "crew's `bin/` scripts cannot share code"**: every one of them is
+  a standalone script that executes on require, so `parseFiles` and `field` are
+  now duplicated across `scope-check.js`, `board.js` and `preflight.js`. A
+  third copy is the point at which `bin/task-file.js` earns itself; until then
+  the duplication is the smaller diff and is marked in the source.
