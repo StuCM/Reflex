@@ -119,7 +119,7 @@ var Detail = (function () {
           copies.push({ item: other, server: Servers.of(other), versions: null });
           Meta.load(other).then(function (omd) {
             if (gen !== generation || !omd) return;
-            expand(copies.filter(function (c) { return c.item === other; })[0], omd);
+            expand(copies.find(function (c) { return c.item === other; }), omd);
           });
         });
         if (added) {
