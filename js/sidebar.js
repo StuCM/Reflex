@@ -19,12 +19,13 @@ var Sidebar = (function () {
   var showing = false;
   var expanded = -1;    // which section's categories are listed, if any
   var onPick = null;
+  var atMode = '';      // the mode showing, so it can be marked as the sections are
 
   /* Kids, discovery and search are modes rather than sections; the last three
      are the settings the chip row used to carry. */
   function modes() {
-    var out = [{ label: 'Discovery', kind: 'discover' },
-               { label: 'Kids', kind: 'kids' },
+    var out = [{ label: 'Discovery', kind: 'discover', current: atMode === 'discover' },
+               { label: 'Kids', kind: 'kids', current: atMode === 'kids' },
                { label: 'Search', kind: 'search' }];
     if (Servers.count() > 1) {
       var pref = Servers.get(Servers.preferred());
@@ -70,10 +71,12 @@ var Sidebar = (function () {
 
   /* sections: what Browse holds — title, the section's row titles, and whether
      it is the one showing. The current section opens expanded, so the thing
-     most likely to be wanted is already on screen. */
-  function open(sections, pick) {
+     most likely to be wanted is already on screen. mode marks kids or discovery
+     the same way, since neither is a section and both can be what you are in. */
+  function open(sections, pick, mode) {
     secs = sections || [];
     onPick = pick;
+    atMode = mode || '';
     expanded = -1;
     var i;
     for (i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;

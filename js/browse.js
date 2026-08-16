@@ -124,7 +124,7 @@ var Browse = (function () {
          so this fetches nothing. A section never visited simply lists none. */
       return { title: sec.title, categories: cats[sec.title] || [],
                current: mode === 'library' && i === secIdx };
-    }), activate);
+    }), activate, mode);
   }
 
   function activate(choice) {
