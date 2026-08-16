@@ -12,19 +12,17 @@
 var Browse = (function () {
   'use strict';
 
-  var elSections = document.getElementById('sections');
+  var elBrowse = document.getElementById('browse');
   var elInput = document.getElementById('search-input');
 
   var sections = [], secIdx = 0;
   var rows = [], rowIdx = 0;
-  var headerFocus = false, chipIdx = 0;   // d-pad focus on the chips above the rail
+  var cats = {};                          // section title -> its row titles, for the sidebar
+  var wantRow = 0;                        // row to land on once the next section is built
   var mode = 'library';                   // library | kids | discover
   var savedRows = null;                   // rows parked while showing search results
   var searchQuery = null;                 // non-null while the results page is showing
-  var searchCount = 0;
-  var searchNoun = 'results';             // films, shows, or a mix of both
   var generation = 0;                     // bumps on any row change, kills stale paints
-  var lastChips = null;                   // last chip HTML written, to skip pointless writes
   var pageTimer = null;
   var opts = {};
 
@@ -58,14 +56,17 @@ var Browse = (function () {
   }
 
   function render() {
-    renderChips();
+    elBrowse.classList.toggle('results', !!searchQuery);
     Rail.render(rows, rowIdx);
     Masthead.render(focusedRow(), focusedItem(), rows.length > 0);
     scheduleWalk();
+    /* The backdrop rides the same debounce the audio badge does — one settled
+       focus, one metadata fetch, one full-screen image. */
     Meta.schedule(focusedItem(), function (ratingKey) {
       var here = focusedItem();
       if (here && here.ratingKey === ratingKey) {
         Masthead.render(focusedRow(), here, true);
+        Masthead.art(here);
       }
     });
   }
@@ -112,89 +113,61 @@ var Browse = (function () {
     return out;
   }
 
-  /* ---------- the chips above the rail ----------
+  /* ---------- the sidebar ----------
 
      The Magic Remote has no colour buttons, so every action has to be reachable
-     with the d-pad. Up from the top row lands here. */
+     with the d-pad. Left from the first tile of a row lands here. */
 
-  function chips() {
-    var out = [], i;
-    for (i = 0; i < sections.length; i++) {
-      out.push({ label: sections[i].title, kind: 'section', index: i,
-                 current: mode === 'library' && i === secIdx });
-    }
-    out.push({ label: 'kids', kind: 'kids', current: mode === 'kids' });
-    out.push({ label: 'discover', kind: 'discover', current: mode === 'discover' });
-    /* Which server a film is shown as, when both have it. One chip that names
-       the current choice and cycles on OK — the remote has no colour buttons,
-       and a whole settings screen for one preference would be worse. */
-    if (Servers.count() > 1) {
-      var pref = Servers.get(Servers.preferred());
-      out.push({ label: 'prefer: ' + (pref ? pref.name : '?'), kind: 'prefer', current: false });
-    }
-    out.push({ label: 'devices', kind: 'devices', current: false });
-    out.push({ label: 'panel', kind: 'panel', current: false });
-    out.push({ label: 'search', kind: 'search', current: false });
-    return out;
+  function openSidebar() {
+    Sidebar.open(sections.map(function (sec, i) {
+      /* Category titles are the row titles of a section we have already built,
+         so this fetches nothing. A section never visited simply lists none. */
+      return { title: sec.title, categories: cats[sec.title] || [],
+               current: mode === 'library' && i === secIdx };
+    }), activate);
   }
 
-  function chipHtml() {
-    /* On the results page the chips are replaced by a header, so it never reads
-       as the library screen having reloaded. */
-    if (searchQuery) {
-      return '<span class="chip cur">' + UI.escapeHtml(searchQuery) + '</span>' +
-             '<span class="chip">' + searchCount + ' ' + searchNoun +
-             '</span><span class="chip">back to library</span>';
-    }
-    var list = chips(), html = '', i, cls;
-    for (i = 0; i < list.length; i++) {
-      cls = 'chip' + (list[i].current ? ' cur' : '') +
-            (headerFocus && i === chipIdx ? ' on' : '');
-      html += '<span class="' + cls + '">' + UI.escapeHtml(list[i].label) + '</span>';
-    }
-    return html;
-  }
-
-  function renderChips() {
-    var html = chipHtml();
-    if (html === lastChips) return;      // rebuilding this on every keypress is not free
-    lastChips = html;
-    elSections.innerHTML = html;
-  }
-
-  function activateChip() {
-    var chip = chips()[chipIdx];
-    if (!chip) return;
-    if (chip.kind === 'search') { openSearch(); return; }
-    if (chip.kind === 'kids') { loadKids(); return; }
-    if (chip.kind === 'discover') { loadDiscover(); return; }
-    if (chip.kind === 'prefer') {
-      var at = chipIdx;
+  function activate(choice) {
+    if (choice.kind === 'search') { openSearch(); return; }
+    if (choice.kind === 'kids') { loadKids(); return; }
+    if (choice.kind === 'discover') { loadDiscover(); return; }
+    if (choice.kind === 'prefer') {
       var now = Servers.get(Servers.cyclePreferred());
       UI.debug('preferring ' + (now ? now.name : '?') + ' where both servers have a film');
       /* Rebuild the rows: which copy of a shared film is shown changes with
          the preference. */
       loadSection(secIdx, true);
-      headerFocus = true;
-      chipIdx = at;
-      renderChips();
       return;
     }
-    if (chip.kind === 'panel') {
+    if (choice.kind === 'panel') {
       UI.message('What this panel claims it can play', Panel.report());
       return;
     }
-    if (chip.kind === 'devices') {
+    if (choice.kind === 'devices') {
       Devices.open(function (changed) {
         UI.show('browse');
         if (changed) loadSection(secIdx, true); else render();
       });
       return;
     }
-    headerFocus = false;
+    if (choice.kind === 'row') {
+      if (mode === 'library' && choice.index === secIdx) {
+        rowIdx = UI.clamp(choice.row, 0, rows.length - 1);
+        render();
+      } else {
+        loadSection(choice.index, true, choice.row);
+      }
+      return;
+    }
     mode = 'library';
-    if (chip.index !== secIdx) loadSection(chip.index, true);
+    if (choice.index !== secIdx) loadSection(choice.index, true);
     else render();
+  }
+
+  /* Row titles are what the sidebar lists under a section, and their positions
+     are what picking one jumps to, so the two must be the same list. */
+  function noteCategories(sec) {
+    cats[sec.title] = rows.map(function (r) { return r.title; });
   }
 
   /* ---------- building rows ---------- */
@@ -202,7 +175,6 @@ var Browse = (function () {
   function reset(newMode) {
     generation++;
     mode = newMode;
-    headerFocus = false;
     rows = [];
     rowIdx = 0;
     render();
@@ -260,8 +232,12 @@ var Browse = (function () {
     });
   }
 
-  function loadSection(i, allowFetch) {
+  /* focusRow lands on a named category once its section is built, which is what
+     picking one out of the sidebar has to do when it belongs to another
+     section. */
+  function loadSection(i, allowFetch, focusRow) {
     secIdx = i;
+    wantRow = focusRow || 0;
     reset('library');
     var isCurrent = generationGuard();
     var sec = sections[i];
@@ -272,6 +248,8 @@ var Browse = (function () {
       if (cached && cached.rows && cached.rows.length) {
         rows = cached.rows.map(function (r) { return Rows.list(r.title, r.items); });
         rows.push(allRow(sec));
+        noteCategories(sec);
+        rowIdx = UI.clamp(wantRow, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
         render();
         UI.debug(sec.title + ': rows from cache');
@@ -305,7 +283,8 @@ var Browse = (function () {
         Store.put(cacheKey, { rows: built });
         rows = built.map(function (r) { return Rows.list(r.title, r.items); });
         rows.push(allRow(sec));
-        rowIdx = UI.clamp(rowIdx, 0, rows.length - 1);
+        noteCategories(sec);
+        rowIdx = UI.clamp(rowIdx || wantRow, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
         render();
         UI.debug(sec.title + ': ' + rows.length + ' rows from ' + servers.length + ' server' +
@@ -486,17 +465,18 @@ var Browse = (function () {
       var found = Merge.lists(perServer);
       if (!savedRows) savedRows = rows;
       searchQuery = q;
-      searchCount = found.length;
-      searchNoun = countNoun(found);
-      headerFocus = false;
+      var noun = countNoun(found);
+      /* The results page has no chips to head it any more, so the first row's
+         own title carries what was asked, what came back, and the way out. */
+      var header = q + '  ·  ' + found.length + ' ' + noun + '  ·  BACK to library';
       rows = [];
       for (var i = 0; i < found.length; i += RESULTS_PER_ROW) {
-        rows.push(Rows.list(i === 0 ? 'Results' : '', found.slice(i, i + RESULTS_PER_ROW)));
+        rows.push(Rows.list(i === 0 ? header : '', found.slice(i, i + RESULTS_PER_ROW)));
       }
-      if (!rows.length) rows = [Rows.list('No matches', [])];
+      if (!rows.length) rows = [Rows.list(header, [])];
       rowIdx = 0;
       render();
-      UI.debug('search "' + q + '": ' + found.length + ' ' + searchNoun);
+      UI.debug('search "' + q + '": ' + found.length + ' ' + noun);
     }).catch(function (e) {
       UI.message('Search failed', e.message);
     });
@@ -536,36 +516,35 @@ var Browse = (function () {
   }
 
   function key(code) {
+    if (Sidebar.isOpen()) return Sidebar.key(code);
+
     var row = focusedRow(), K = UI.KEY;
 
     switch (code) {
       case K.LEFT:
-        if (headerFocus) { chipIdx = UI.clamp(chipIdx - 1, 0, chips().length - 1); renderChips(); }
-        else if (row && row.focus > 0) { row.focus--; render(); }
+        /* Left off the front of a row is the way to the sections — there is
+           nowhere else for it to go, and the rail has no header any more. */
+        if (row && row.focus > 0) { row.focus--; render(); }
+        else openSidebar();
         break;
       case K.RIGHT:
-        if (headerFocus) { chipIdx = UI.clamp(chipIdx + 1, 0, chips().length - 1); renderChips(); }
-        else if (row && row.focus < row.total - 1) { row.focus++; render(); }
+        if (row && row.focus < row.total - 1) { row.focus++; render(); }
         break;
       case K.UP:
-        if (headerFocus) break;
         if (rowIdx > 0) { rowIdx--; render(); }
-        else if (!searchQuery) { headerFocus = true; chipIdx = secIdx; renderChips(); }
         break;
       case K.DOWN:
-        if (headerFocus) { headerFocus = false; renderChips(); }
-        else if (rowIdx < rows.length - 1) { rowIdx++; render(); }
+        if (rowIdx < rows.length - 1) { rowIdx++; render(); }
         break;
       case K.OK:
-        if (headerFocus) activateChip(); else if (opts.onOpen) opts.onOpen(focusedItem());
+        if (opts.onOpen) opts.onOpen(focusedItem());
         break;
       case K.RED:                                 // red, on remotes that have it
         openSearch();
         break;
       default:
         if (!UI.isBack(code)) return false;
-        if (headerFocus) { headerFocus = false; renderChips(); }
-        else if (!clearResults() && !leaveMode() && opts.onExit) opts.onExit();
+        if (!clearResults() && !leaveMode() && opts.onExit) opts.onExit();
         break;
     }
     return true;
