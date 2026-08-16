@@ -1,7 +1,7 @@
 ---
 id: 005
 slug: discovery-redesign
-status: review
+status: done
 model: sonnet
 env: laptop
 branch: crew/005-discovery-redesign
@@ -217,7 +217,74 @@ editing those, stop — the spec is wrong.
 
 ## Review rounds
 
-<!-- Reviewer appends one block per round. Max 2, then escalate to the user. -->
+### Round 1 — `crew-reviewer` — **PASS**
+
+Read the spec and the full diff, re-ran `npm run verify` (29/29, matching the
+claim) and drove a separate Playwright session at 1920×1080 to see the hero,
+pills, badges, tiles and sidebar settle. Confirmed:
+
+- `js/plex.js`, `js/merge.js`, `js/rows.js`, `js/guard.js`, `js/meta.js`,
+  `js/app.js` and `js/ui.js` are untouched.
+- No Chrome 55+ syntax in anything shipped; `dev/smoke.js` is Node only.
+- No `gap`, `color-mix`, `inset`, `position: sticky`, and no transition on
+  anything but `transform`/`opacity`.
+- `js/sidebar.js` is loaded before `js/browse.js`.
+- The pool is still `ROW_POOL 4` × `TILE_POOL 12`.
+- The rewritten smoke steps assert equivalent behaviour, step by step.
+
+On the deviation flagged for a verdict — the Play / More info pills as labels —
+the reviewer traced `opts.onOpen` through `js/app.js`, confirmed OK on a tile
+opened the detail page both before and after the diff, and agreed the call was
+honest and minimal given the spec itself deleted the only focus model above the
+rail.
+
+One non-blocking nit raised: `Sidebar`'s modes never set `current`, so opening
+the sidebar from inside Kids or Discovery highlighted nothing as the mode
+showing — something the chip row did. **Fixed** in `fix(sidebar): mark kids and
+discovery as the mode showing`: `Sidebar.open` takes the mode as an optional
+third argument and marks it the same way a section is marked. `npm run verify`
+re-run after the fix, still 29/29.
+
+## Notes for the orchestrator
+
+`node .claude/crew/bin/scope-check.js` reports the task file itself as out of
+scope once it has been committed, because `files:` does not list it. The gate
+was clean on every run against the code alone. Worth either adding the task file
+to the checker's allow list or running the gate before the write-up.
+
+## Graph writes proposed
+
+**Decision — "the rail's tile geometry is a landscape 372 × 209 on a 416
+stride".** Four tiles across 1920 rather than ten, so the rail cannot keep
+three tiles to the left of focus the way the portrait layout did; a `LEAD`
+constant of 1 replaces the hardcoded `- 3`. Supersedes the 160 × 240 portrait
+geometry. Rationale: the design is a television screen, and landscape art is
+what a Plex server actually holds as `art`.
+
+**Decision — "the sidebar is an overlay inside the browse view, not a
+`UI.VIEWS` entry".** `Browse.key` hands it every key while it is open and takes
+them back when it closes, so `js/app.js` and `js/ui.js` need no knowledge of it
+at all. The alternative — a seventh view — would have put sidebar state into the
+one place in the app that owns which screen is showing, for a panel that is only
+ever a part of one screen.
+
+**Pattern — "an absolutely-positioned overlay declared before the content it
+covers needs an explicit `z-index`".** `#sidebar` sits before `#viewport` in
+`index.html` so that opening it never reflows the rail; with both at `z-index:
+auto`, document order put the rail on top and the sidebar rendered *behind* the
+tiles while still taking every keypress — which reads exactly like a broken
+key handler and is not. Cost a screenshot to find. One `z-index: 5` fixes it.
+
+**Pattern — "a hero backdrop must ride an existing debounce, never the
+keypress".** `Masthead.art` is called only from `Browse`'s `Meta.schedule`
+callback, so a settled focus costs one full-screen `photo/:/transcode` on a
+server we do not own; calling it from `Masthead.render` would have fired one per
+arrow press. Same reasoning as the rail's deferred posters.
+
+**Gotcha — "widening a palette to eight tokens is not enough for a screen with
+three grey levels".** Palette 5a's single `--dim` flattened the detail, show and
+player hierarchies that the task was explicitly not allowed to break; `--dim2`
+was added rather than losing them.
 
 ## Graph writes proposed
 
