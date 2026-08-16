@@ -1,9 +1,9 @@
 ---
 id: 003
 slug: land-audio-switch
-status: draft
+status: approved
 env: laptop
-branch: claude/player-features
+branch: crew/003-land-audio-switch
 files:
   - js/player.js
   - js/panel.js
