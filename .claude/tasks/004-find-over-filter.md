@@ -1,7 +1,7 @@
 ---
 id: 004
 slug: find-over-filter
-status: blocked
+status: done
 branch: crew/004-find-over-filter
 model: sonnet
 env: laptop
@@ -79,7 +79,7 @@ check each call site rather than assuming.
 
 ## Definition of done
 
-- [ ] `grep -rn "\.filter(.*)\[0\]" js/ dev/` returns nothing
+- [ ] `grep -rn "\.filter(.*)\[0\]" js/ dev/` returns nothing outside `dev/smoke.js`
 - [ ] `dev/make-fixture.js` no longer contains a second implementation of the
       fixture check — it reuses `hasFixture()` or reads identically to it
 - [ ] `npm run verify` passes at the current baseline (28/28 today — check `crew/README.md`, do not hardcode it)
@@ -107,16 +107,19 @@ There are **eight** sites, not seven. `dev/smoke.js:1037` —
 `after.filter(function (l) { return /decision:/.test(l); })[0]` — was there
 before this task and the Approach section missed it.
 
-That makes the Definition of done self-contradictory: item 1 wants the grep to
+That made the Definition of done self-contradictory: item 1 wanted the grep to
 return nothing, item 5 forbids touching a file outside `files:`, and
 `dev/smoke.js` is not in `files:`. The same boundary is what makes exporting
 `hasFixture()` "awkward" in item 3.
 
-Left `dev/smoke.js` untouched — "touch only the paths in `files:`" is the
-harder rule — so the DoD grep still returns that one line. Needs a human
-decision: either add `dev/smoke.js` to `files:` (it is a `dev/` file, and the
-Out of scope section only fences off other `js/` files) and convert the eighth
-site, or drop it to a follow-up task and amend DoD item 1.
+Orchestrator amended DoD item 1 to exempt `dev/smoke.js`, and the eighth site
+is deferred to a follow-up: task 005 (`crew/005-discovery-redesign`) is in
+flight and rewriting `dev/smoke.js`'s assertions wholesale, so adding it here
+would put two sessions in one file — and the site may not survive 005 anyway.
+`dev/smoke.js` left untouched.
+
+Line numbers had drifted too: the deck entry is `dev/mock-plex.js:539`, not
+499 as the Approach section says.
 
 ## Review rounds
 
@@ -129,6 +132,9 @@ the `make-fixture.js` fallback acceptable, and the gate green — but blocked on
 the DoD contradiction above rather than on the diff. Confirmed the eighth site
 exists at `origin/main`, so the spec undercounted at authoring time.
 
+Resolved by the orchestrator: DoD item 1 amended, `dev/smoke.js` deferred to a
+follow-up because task 005 owns that file. The diff stands as reviewed.
+
 ## Graph writes proposed
 
 <!-- Worker and reviewer append; only the orchestrator commits them. -->
@@ -137,3 +143,12 @@ exists at `origin/main`, so the spec undercounted at authoring time.
   query"**: the DoD ran the grep again while the Approach listed a fixed seven.
   When the two disagree the worker cannot satisfy both without leaving scope. A
   spec should either list the sites *or* assert the grep, not both.
+
+- **Pattern — `scope-check.js` flags the crew's own bookkeeping.** It compares
+  every changed file against `files:`, including untracked and unstaged, so
+  once the worker writes its status and notes into
+  `.claude/tasks/NNN-slug.md` — which the role requires — the check goes red on
+  that file and on `BOARD.md`. Only clean if the gate is run before any task
+  file edit. Either exempt `.claude/tasks/*` in the tool or say in the role
+  that the gate runs first; today it is neither, and the worker has to explain
+  a red gate every time.
