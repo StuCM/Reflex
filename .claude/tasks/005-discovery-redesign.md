@@ -1,7 +1,7 @@
 ---
 id: 005
 slug: discovery-redesign
-status: draft
+status: approved
 model: sonnet
 env: laptop
 branch: crew/005-discovery-redesign

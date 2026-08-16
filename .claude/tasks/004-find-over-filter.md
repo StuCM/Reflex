@@ -1,7 +1,7 @@
 ---
 id: 004
 slug: find-over-filter
-status: draft
+status: approved
 branch: crew/004-find-over-filter
 model: sonnet
 env: laptop
