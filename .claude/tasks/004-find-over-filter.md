@@ -82,7 +82,7 @@ check each call site rather than assuming.
 - [ ] `grep -rn "\.filter(.*)\[0\]" js/ dev/` returns nothing
 - [ ] `dev/make-fixture.js` no longer contains a second implementation of the
       fixture check — it reuses `hasFixture()` or reads identically to it
-- [ ] `npm run verify` passes — 26/26, the baseline
+- [ ] `npm run verify` passes at the current baseline (28/28 today — check `crew/README.md`, do not hardcode it)
 - [ ] `npm run check` passes, confirming `find` is acceptable to the ES5 scan
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)

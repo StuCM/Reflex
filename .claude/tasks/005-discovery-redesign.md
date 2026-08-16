@@ -157,7 +157,7 @@ editing those, stop — the spec is wrong.
 - [ ] the search button reaches the search screen in one press
 - [ ] `npm run check` passes — no `gap`, no `color-mix`, no `inset`, no
       `box-shadow` transition
-- [ ] `npm run verify` is 26/26, with the smoke steps rewritten against the new
+- [ ] `npm run verify` is green at the current baseline (28/28 today), with the smoke steps rewritten against the new
       UI and asserting the same behaviour as before
 - [ ] the tile pool is still four rows of twelve, whatever the library size
 - [ ] no file outside `files:` is touched
