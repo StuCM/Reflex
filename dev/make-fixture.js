@@ -23,11 +23,13 @@ const SECONDS = Number(process.argv[2] || 30);
 const OUT = path.join(__dirname, 'fixtures', 'sample.webm');
 
 /* npm run verify calls this every time, so an existing fixture is left alone —
-   the smoke test only needs something playable, not a fresh recording. */
-const existing = ['sample.mp4', 'sample.webm', 'sample.mkv']
-  .map(function (n) { return path.join(__dirname, 'fixtures', n); })
-  .filter(fs.existsSync)[0];
-if (existing) {
+   the smoke test only needs something playable, not a fresh recording. The
+   check is hasFixture() in dev/smoke.js, kept reading the same way. */
+const found = ['sample.mp4', 'sample.webm', 'sample.mkv'].find(function (n) {
+  return fs.existsSync(path.join(__dirname, 'fixtures', n));
+});
+if (found) {
+  const existing = path.join(__dirname, 'fixtures', found);
   console.log('  fixture already present: ' + path.relative(process.cwd(), existing) +
               '  (delete it to re-record)');
   process.exit(0);

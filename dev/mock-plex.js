@@ -220,13 +220,13 @@ function create(opts) {
     const full = extra || lib.fullMetadata(item);
     const part = full.Media[0].Part[0];
     const streams = part.Stream;
-    const video = streams.filter(function (s) { return s.streamType === 1; })[0];
+    const video = streams.find(function (s) { return s.streamType === 1; });
 
     let audio = null;
     if (q.audioStreamID) {
-      audio = streams.filter(function (s) { return String(s.id) === String(q.audioStreamID); })[0] || null;
+      audio = streams.find(function (s) { return String(s.id) === String(q.audioStreamID); }) || null;
     }
-    if (!audio) audio = streams.filter(function (s) { return s.streamType === 2 && s.selected; })[0];
+    if (!audio) audio = streams.find(function (s) { return s.streamType === 2 && s.selected; });
 
     let verdict = 'directplay';
     let text = '';
@@ -536,7 +536,7 @@ function create(opts) {
         json(res, 404, container({ size: 0 }));
         return true;
       }
-      const deckHit = srv.deck.filter(function (d) { return d.ratingKey === item.ratingKey; })[0];
+      const deckHit = srv.deck.find(function (d) { return d.ratingKey === item.ratingKey; });
       const full = lib.fullMetadata(item);
       if (deckHit) full.viewOffset = deckHit.viewOffset;
       json(res, 200, container({ size: 1, Metadata: [full] }));

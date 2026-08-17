@@ -1,7 +1,7 @@
 ---
 id: 004
 slug: find-over-filter
-status: building
+status: done
 branch: crew/004-find-over-filter
 model: sonnet
 env: laptop
@@ -79,7 +79,7 @@ check each call site rather than assuming.
 
 ## Definition of done
 
-- [ ] `grep -rn "\.filter(.*)\[0\]" js/ dev/` returns nothing
+- [ ] `grep -rn "\.filter(.*)\[0\]" js/ dev/` returns nothing outside `dev/smoke.js`
 - [ ] `dev/make-fixture.js` no longer contains a second implementation of the
       fixture check — it reuses `hasFixture()` or reads identically to it
 - [ ] `npm run verify` passes at the current baseline (28/28 today — check `crew/README.md`, do not hardcode it)
@@ -87,10 +87,68 @@ check each call site rather than assuming.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `js/detail.js` — the copy for a newly found version is taken with `find`.
+- `dev/library.js` — the profile for an item is taken with `find`.
+- `dev/mock-plex.js` — four sites: video stream, audio by id, selected audio,
+  deck entry (at line 539, not 499 as the spec says).
+- `dev/make-fixture.js` — the fixture check now reads as `hasFixture()` in
+  `dev/smoke.js` does: same name list, same `fs.existsSync(path.join(...))`
+  body. `find` rather than `some` because the matched filename is needed for
+  the "already present" message. Not `.find(fs.existsSync)` — that is the
+  one-argument trap.
+
+Gate: scope-check in scope, `npm run verify` 28/28, `npm run check` clean.
+
+## What the spec got wrong
+
+There are **eight** sites, not seven. `dev/smoke.js:1037` —
+`after.filter(function (l) { return /decision:/.test(l); })[0]` — was there
+before this task and the Approach section missed it.
+
+That made the Definition of done self-contradictory: item 1 wanted the grep to
+return nothing, item 5 forbids touching a file outside `files:`, and
+`dev/smoke.js` is not in `files:`. The same boundary is what makes exporting
+`hasFixture()` "awkward" in item 3.
+
+Orchestrator amended DoD item 1 to exempt `dev/smoke.js`, and the eighth site
+is deferred to a follow-up: task 005 (`crew/005-discovery-redesign`) is in
+flight and rewriting `dev/smoke.js`'s assertions wholesale, so adding it here
+would put two sessions in one file — and the site may not survive 005 anyway.
+`dev/smoke.js` left untouched.
+
+Line numbers had drifted too: the deck entry is `dev/mock-plex.js:539`, not
+499 as the Approach section says.
+
 ## Review rounds
 
 <!-- Reviewer appends one block per round. Max 2, then escalate to the user. -->
 
+### Round 1 — BLOCKED
+
+Reviewer found the seven declared conversions correct and behaviour-preserving,
+the `make-fixture.js` fallback acceptable, and the gate green — but blocked on
+the DoD contradiction above rather than on the diff. Confirmed the eighth site
+exists at `origin/main`, so the spec undercounted at authoring time.
+
+Resolved by the orchestrator: DoD item 1 amended, `dev/smoke.js` deferred to a
+follow-up because task 005 owns that file. The diff stands as reviewed.
+
 ## Graph writes proposed
 
 <!-- Worker and reviewer append; only the orchestrator commits them. -->
+
+- **Pattern — "a spec that enumerates grep hits pins the count, not the
+  query"**: the DoD ran the grep again while the Approach listed a fixed seven.
+  When the two disagree the worker cannot satisfy both without leaving scope. A
+  spec should either list the sites *or* assert the grep, not both.
+
+- **Pattern — `scope-check.js` flags the crew's own bookkeeping.** It compares
+  every changed file against `files:`, including untracked and unstaged, so
+  once the worker writes its status and notes into
+  `.claude/tasks/NNN-slug.md` — which the role requires — the check goes red on
+  that file and on `BOARD.md`. Only clean if the gate is run before any task
+  file edit. Either exempt `.claude/tasks/*` in the tool or say in the role
+  that the gate runs first; today it is neither, and the worker has to explain
+  a red gate every time.

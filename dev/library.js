@@ -263,7 +263,7 @@ function fullMetadata(item, film) {
     return copy;
   }
 
-  const profile = PROFILES.filter(function (p) { return p.id === item._profile; })[0];
+  const profile = PROFILES.find(function (p) { return p.id === item._profile; });
   const media = copy.Media[0];
 
   const streams = [{
