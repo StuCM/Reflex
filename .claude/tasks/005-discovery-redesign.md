@@ -1,7 +1,7 @@
 ---
 id: 005
 slug: discovery-redesign
-status: review
+status: done
 model: sonnet
 env: laptop
 branch: crew/005-discovery-redesign
@@ -307,6 +307,19 @@ an assertion against the artwork alone would not have seen it. Verified failing
 against the old single-constant clamp.
 
 ## Review rounds
+
+### Round 2 — `crew-reviewer` — **CHANGES**, then **PASS** on the fix
+
+Re-ran the gate, and checked out the pre-round-two commit with the *new*
+`dev/smoke.js` to confirm all three new steps genuinely fail there and pass at
+HEAD rather than taking the claim on trust. Confirmed the `Meta.schedule`
+early-return root cause against `js/meta.js:65` and accepted `Masthead.art`
+carrying its own debounce as the minimal fix — the spec line forbidding a second
+timer rested on a false premise.
+
+Found one fault, which round two had introduced: the `ROWS_VISIBLE` clamp left
+the last row of every section clipped with its title invisible. Fixed in
+`4d13506` by splitting the constant; re-reviewed and **PASS**.
 
 ### Round 1 — `crew-reviewer` — **PASS**
 
