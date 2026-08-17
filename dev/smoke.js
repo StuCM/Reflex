@@ -655,6 +655,146 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('the last sidebar entry can be reached and is on screen', function () {
+        /* There is no pointer on this device, so anything past the fold is
+           simply unreachable unless the list winds itself.
+
+           The generated library is small enough that the real sidebar happens
+           to fit, which is exactly why this drives Sidebar.open directly with a
+           section that does not — the fault is about long lists, and asserting
+           it against a short one proves nothing. */
+        return backToLibrary()
+          .then(openSidebar)
+          .then(function () {
+            return page.evaluate(function () {
+              var many = [], i;
+              for (i = 0; i < 30; i++) many.push('Category ' + (i + 1));
+              Sidebar.open([{ title: 'Films', categories: many, current: true }],
+                           function () {}, 'library');
+              return document.querySelectorAll('#sidebar .sb-row').length;
+            });
+          })
+          .then(function (n) {
+            if (n < 30) throw new Error('only ' + n + ' sidebar rows built');
+            return press('ArrowDown', n);        // more than enough to hit the end
+          })
+          .then(function () { return page.waitForTimeout(300); })
+          .then(function () {
+            return page.evaluate(function () {
+              var rows = document.querySelectorAll('#sidebar .sb-row');
+              var last = rows[rows.length - 1];
+              var panel = document.getElementById('sidebar').getBoundingClientRect();
+              var r = last.getBoundingClientRect();
+              return { focused: last.classList.contains('on'), label: last.textContent.trim(),
+                       top: Math.round(r.top), bottom: Math.round(r.bottom),
+                       panelBottom: Math.round(panel.bottom) };
+            });
+          })
+          .then(function (st) {
+            if (!st.focused) throw new Error('the last entry never took focus');
+            if (st.top < 0 || st.bottom > st.panelBottom) {
+              throw new Error('"' + st.label + '" is focused but off screen at ' +
+                              st.top + '–' + st.bottom + ' of ' + st.panelBottom);
+            }
+          })
+          .then(function () { return press('ArrowLeft'); });        // close it again
+      });
+    })
+
+    .then(function () {
+      return step('the hero art is the focused item, not the one before it', function () {
+        /* Resting on a title, moving on, and coming back used to leave the
+           previous backdrop on screen: the art was painted from Meta's
+           callback, and Meta skips an item whose payload it already holds. */
+        function keys() {
+          return page.evaluate(function () {
+            function key(u) {
+              var m = String(u).match(/metadata%2F(\d+)%2F(art|thumb)/);
+              return m ? m[1] : '?';
+            }
+            var tile = document.querySelector('#rows .row.on .tile.on img');
+            return { hero: key(document.getElementById('hero-art').style.backgroundImage),
+                     focused: key(tile && tile.src),
+                     title: document.getElementById('mh-title').textContent.trim() };
+          });
+        }
+        function settle() { return page.waitForTimeout(900); }
+        return backToLibrary()
+          .then(function () { return press('ArrowUp', 8); })      // to the first row
+          .then(settle)
+          .then(function () { return press('ArrowRight'); })       // rest on A
+          .then(settle)
+          .then(function () { return press('ArrowRight'); })       // rest on B
+          .then(settle)
+          .then(function () { return press('ArrowLeft'); })        // back to A, now cached
+          .then(settle)
+          .then(keys)
+          .then(function (st) {
+            if (st.focused === '?') throw new Error('no artwork on the focused tile to compare');
+            if (st.hero !== st.focused) {
+              throw new Error('hero shows ' + st.hero + ' while "' + st.title +
+                              '" (' + st.focused + ') is focused');
+            }
+          })
+          /* And it must survive a fast sweep, where every item but the last is
+             passed over before its request could have finished. */
+          .then(function () { return press('ArrowRight', 12); })
+          .then(settle)
+          .then(keys)
+          .then(function (st) {
+            if (st.hero !== st.focused) {
+              throw new Error('after a fast sweep the hero shows ' + st.hero +
+                              ' while ' + st.focused + ' is focused');
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('stepping down collapses the hero and keeps the row on screen', function () {
+        /* The tall hero leaves room for one row. If it does not collapse when
+           the focus moves off row 0, the row you just moved to is drawn below
+           the fold and moving down looks like nothing happening. */
+        return backToLibrary()
+          .then(function () { return press('ArrowUp', 8); })
+          .then(function () { return page.waitForTimeout(500); })
+          .then(function () {
+            return page.evaluate(function () {
+              return document.getElementById('browse').classList.contains('dense');
+            });
+          })
+          .then(function (dense) {
+            if (dense) throw new Error('the hero is a band while the first row is focused');
+          })
+          .then(function () { return press('ArrowDown'); })
+          .then(function () { return page.waitForTimeout(600); })
+          .then(function () {
+            return page.evaluate(function () {
+              var row = document.querySelector('#rows .row.on');
+              var tile = row && row.querySelector('.tile.on');
+              var vp = document.getElementById('viewport').getBoundingClientRect();
+              var t = tile && tile.getBoundingClientRect();
+              return {
+                dense: document.getElementById('browse').classList.contains('dense'),
+                label: row ? row.querySelector('.row-label').textContent.trim() : '',
+                top: t ? Math.round(t.top) : null, bottom: t ? Math.round(t.bottom) : null,
+                vpTop: Math.round(vp.top), vpBottom: Math.round(vp.bottom)
+              };
+            });
+          })
+          .then(function (st) {
+            if (!st.dense) throw new Error('the hero did not collapse off the first row');
+            if (st.top === null) throw new Error('no focused tile on row 1');
+            if (st.top < st.vpTop - 1 || st.bottom > st.vpBottom + 1) {
+              throw new Error('"' + st.label + '" is focused but drawn at ' + st.top + '–' +
+                              st.bottom + ', outside the viewport ' + st.vpTop + '–' + st.vpBottom);
+            }
+          })
+          .then(function () { return shot('dense'); });
+      });
+    })
+
+    .then(function () {
       return step('discovery says what it needs rather than failing quietly', function () {
         /* No TMDB key in the harness, so this is the path a first run takes.
            It has to name the setting, not just refuse. */
