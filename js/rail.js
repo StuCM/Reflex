@@ -1,4 +1,4 @@
-/* The rail: stacked rows of poster tiles, drawn from a fixed pool of elements.
+/* The rail: stacked rows of landscape tiles, drawn from a fixed pool of elements.
 
    Nothing here grows with the library. Four row elements and twelve tiles each
    exist for the life of the app; scrolling moves transforms and reassigns
@@ -10,12 +10,23 @@
 var Rail = (function () {
   'use strict';
 
-  var TILE_W = 160, TILE_H = 240, GAP = 24, STRIDE = TILE_W + GAP;
-  var ROW_H = 304;
+  var TILE_W = 372, TILE_H = 209, GAP = 44, STRIDE = TILE_W + GAP;
+  var ROW_H = 335;               // 44 header + 209 art + 48 title + 34 below
   var TILE_POOL = 12;            // tiles per row element
   var ROW_POOL = 4;              // row elements in the DOM, ever
-  var TILES_VISIBLE = 10;        // tiles across at 1920 wide
-  var ROWS_VISIBLE = 2;
+  var TILES_VISIBLE = 4;         // tiles across at 1920 wide
+  var LEAD = 1;                  // tiles kept to the left of the focused one
+  /* Two different questions, and answering both with one number clipped the
+     last row of every section. ROWS_FIT is how many rows fit *whole* in the
+     viewport, and is what stops the window scrolling past the end — get it
+     wrong and the final row is pinned half below the fold, title and all.
+     ROWS_VISIBLE is how many are on screen at all, including the one peeking
+     at the bottom, and is only about which posters are worth fetching. */
+  var ROWS_FIT = 2;              // 335 + 301 fits in 862; a third would not
+  var ROWS_VISIBLE = 3;          // the third peeks, so its posters still load
+  /* The tall hero and the band differ by this much, and the rows carry the
+     whole move on one transform rather than anything animating a height. */
+  var BIG_DROP = 408;
 
   var elRows = document.getElementById('rows');
   var rowEls = [];
@@ -27,7 +38,7 @@ var Rail = (function () {
   }
 
   function build() {
-    var r, i, rowEl, label, strip, tile, inner, img, fb, prog;
+    var r, i, rowEl, label, strip, tile, inner, img, name, prog;
     for (r = 0; r < ROW_POOL; r++) {
       rowEl = document.createElement('div');
       rowEl.className = 'row hidden';
@@ -46,17 +57,19 @@ var Rail = (function () {
         tile.className = 'tile hidden';
         inner = document.createElement('div');
         inner.className = 'tile-inner';
-        fb = document.createElement('div');
-        fb.className = 'tile-fallback';
         img = document.createElement('img');
         img.alt = '';
         prog = document.createElement('div');
         prog.className = 'tile-progress';
-        inner.appendChild(fb);
+        /* The title sits under the art rather than over it: landscape art is
+           often the title card already, and text on top of it is unreadable. */
+        name = document.createElement('div');
+        name.className = 'tile-title';
         inner.appendChild(img);
         inner.appendChild(prog);
         tile.appendChild(inner);
-        tile._img = img; tile._fb = fb; tile._prog = prog;
+        tile.appendChild(name);
+        tile._img = img; tile._name = name; tile._prog = prog;
         tile._idx = -1; tile._filled = false;
         strip.appendChild(tile);
         rowEl._tiles.push(tile);
@@ -97,7 +110,7 @@ var Rail = (function () {
       rowEl._label.textContent = row.title + (row.total ? '  (' + row.total + ')' : '');
     }
 
-    firstVisible = UI.clamp(row.focus - 3, 0, Math.max(0, row.total - TILES_VISIBLE));
+    firstVisible = UI.clamp(row.focus - LEAD, 0, Math.max(0, row.total - TILES_VISIBLE));
     start = UI.clamp(firstVisible - 2, 0, Math.max(0, row.total - TILE_POOL));
     translate(rowEl._strip, -firstVisible * STRIDE, 0);
 
@@ -115,12 +128,12 @@ var Rail = (function () {
       item = Rows.itemAt(row, idx);
       tile._filled = !!item;
       if (!item) {
-        tile._fb.textContent = '';
+        tile._name.textContent = '';
         tile._prog.style.width = '0';
         tile._img.removeAttribute('src');
         continue;
       }
-      tile._fb.textContent = item.title || '';
+      tile._name.textContent = item.title || '';
       tile._prog.style.width = (item.viewOffset && item.duration)
         ? Math.round(100 * item.viewOffset / item.duration) + '%' : '0';
       /* Rows below the fold get their titles but not their posters. On a first
@@ -133,16 +146,21 @@ var Rail = (function () {
         continue;
       }
       tile._deferred = false;
-      url = Plex.posterUrl(item, TILE_W, TILE_H);
+      /* Landscape art, with the poster as a stand-in: plenty of a library has
+         no art at all, and half a rail of empty boxes is worse than a crop. */
+      url = Plex.artUrl(item, TILE_W, TILE_H) || Plex.posterUrl(item, TILE_W, TILE_H);
       if (url) tile._img.src = url; else tile._img.removeAttribute('src');
     }
   }
 
   function render(rows, rowIdx) {
-    var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
+    var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_FIT));
     var start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
     var i, r;
-    translate(elRows, 0, -firstVisible * ROW_H);
+    /* Row 0 sits under the tall hero; everything below it sits under the band.
+       Both states are one translate on this element, so the collapse animates
+       for free on the transform that was moving anyway. */
+    translate(elRows, 0, (rowIdx === 0 ? BIG_DROP : 0) - firstVisible * ROW_H);
     for (i = 0; i < ROW_POOL; i++) {
       r = start + i;
       if (r >= rows.length) { rowEls[i].classList.add('hidden'); rowEls[i]._row = -1; continue; }

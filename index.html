@@ -8,14 +8,42 @@
 <body>
 
 <div id="browse" class="view">
+  <!-- The backdrop of whatever is focused, and two flat scrims over it so the
+       title reads on the left and the tiles read along the bottom. -->
+  <div id="hero-art"></div>
+  <div id="hero-scrim-x"></div>
+  <div id="hero-scrim-y"></div>
   <div id="masthead">
+    <div id="mh-row">&nbsp;</div>
     <div id="mh-title">&nbsp;</div>
     <div id="mh-meta"></div>
+    <!-- Decorative: OK on a tile opens the detail page, which is where a copy
+         is chosen and playback actually starts. Wiring these is a separate
+         task. The heart shows in the tall hero, the info circle in the band. -->
+    <div id="mh-actions">
+      <span class="pill primary">Play</span>
+      <span class="pill" id="mh-more">More info</span>
+      <span class="circle" id="mh-heart"><svg width="26" height="26" viewBox="0 0 256 256"
+        fill="currentColor"><path d="M128 224S24 168 24 96a56 56 0 0 1 104-29 56 56 0 0 1 104 29c0 72-104 128-104 128Z"/></svg></span>
+      <span class="circle" id="mh-info"><svg width="24" height="24" viewBox="0 0 256 256"
+        fill="none" stroke="currentColor" stroke-width="18"><circle cx="128" cy="128" r="96"/>
+        <line x1="128" y1="118" x2="128" y2="182"/><line x1="128" y1="74" x2="128" y2="80"/></svg></span>
+    </div>
     <div id="mh-badges"></div>
     <div id="mh-summary"></div>
   </div>
-  <div id="sections"></div>
+  <!-- Phosphor's magnifying glass, inlined: the app runs from file:// on the
+       TV, so there is no CDN to fetch an icon font from. -->
+  <div id="top-right">
+    <span class="pill"><svg class="pill-icon" width="24" height="24" viewBox="0 0 256 256"
+      fill="none" stroke="currentColor" stroke-width="16"><circle cx="112" cy="112" r="80"/>
+      <line x1="168" y1="168" x2="224" y2="224"/></svg>Search</span>
+  </div>
+  <div id="sidebar"><div id="sidebar-list"></div></div>
   <div id="viewport"><div id="rows"></div></div>
+  <!-- Which keys mean what changes with the hero, so the text comes from CSS
+       rather than a branch in js/browse.js. -->
+  <div id="browse-hint"></div>
 </div>
 
 <div id="show" class="view hidden">
@@ -139,6 +167,7 @@
 <script src="js/showpage.js"></script>
 <script src="js/devices.js"></script>
 <script src="js/discovery.js"></script>
+<script src="js/sidebar.js"></script>
 <script src="js/browse.js"></script>
 <script src="js/player.js"></script>
 

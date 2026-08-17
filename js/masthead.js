@@ -1,4 +1,4 @@
-/* The panel above the rail: what is focused, and whether it will play.
+/* The hero over the rail: what is focused, and whether it will play.
 
    The badges are the point. Resolution, codec and container come free with the
    list response; the audio badge is the one that matters, because it says which
@@ -8,10 +8,38 @@
 var Masthead = (function () {
   'use strict';
 
+  var elRow = document.getElementById('mh-row');
   var elTitle = document.getElementById('mh-title');
   var elMeta = document.getElementById('mh-meta');
+  var elActions = document.getElementById('mh-actions');
   var elBadges = document.getElementById('mh-badges');
   var elSummary = document.getElementById('mh-summary');
+  var elArt = document.getElementById('hero-art');
+  var HOLD = 280;                // ms of stillness before asking for a backdrop
+  var artTimer = null, artWant = null, lastArt = '';
+
+  /* The backdrop, debounced on its own account.
+
+     It cannot ride Meta's debounce, which is what it used to do: Meta.schedule
+     short-circuits when a payload is already cached and never calls back, so
+     returning to a film you had already rested on left the *previous* film's
+     art on screen. The art is on the list item anyway and never needed the
+     metadata. Only the last item asked for is drawn, so sweeping a row costs
+     one full-screen transcode on a server we do not own, not one per key. */
+  function art(item) {
+    artWant = item;
+    clearTimeout(artTimer);
+    artTimer = setTimeout(paintArt, HOLD);
+  }
+
+  function paintArt() {
+    /* Plenty of a library has no art. Its poster, cropped, is still this film
+       rather than the last one — which is the whole complaint. */
+    var url = Plex.artUrl(artWant, 1920, 1080) || Plex.posterUrl(artWant, 1920, 1080);
+    if (!url || url === lastArt) return;
+    lastArt = url;
+    elArt.style.backgroundImage = 'url("' + url + '")';
+  }
 
   function badge(text, cls) {
     return '<span class="badge' + (cls ? ' ' + cls : '') + '">' +
@@ -29,6 +57,9 @@ var Masthead = (function () {
 
   function render(row, item, hasRows) {
     var position = row && row.total ? ((row.focus + 1) + ' of ' + row.total) : '';
+
+    elRow.textContent = (row && row.title) || '';
+    elActions.classList.toggle('hidden', !item);
 
     if (!item) {
       elTitle.textContent = hasRows ? '…' : 'Loading…';
@@ -86,5 +117,5 @@ var Masthead = (function () {
     elBadges.innerHTML = b;
   }
 
-  return { render: render };
+  return { render: render, art: art };
 })();

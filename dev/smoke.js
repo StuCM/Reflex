@@ -184,12 +184,6 @@ function drive(page, titles) {
   }
 
   function debugLine() { return page.textContent('#debug'); }
-  function chipTexts() {
-    return page.evaluate(function () {
-      return Array.prototype.map.call(document.querySelectorAll('#sections .chip'),
-        function (c) { return c.textContent.trim(); });
-    });
-  }
   function visible(sel) { return page.isVisible(sel); }
   /* times === 0 means do not press at all — "walk zero steps to the tab you are
      already on" is a real thing to ask for, and `times || 1` turned it into one
@@ -217,7 +211,7 @@ function drive(page, titles) {
 
   /* ---- the in-player menu ----
 
-     Same idea as pressChip: find the row by what it says rather than by an
+     Same idea as sidebarPick: find the row by what it says rather than by an
      index, walk the selection to it and press OK. The menu is what audio,
      subtitles and quality are chosen from without leaving playback. */
 
@@ -275,29 +269,73 @@ function drive(page, titles) {
       .then(function () { return press('ArrowRight', tabIndex || 0); });
   }
 
-  /* Walk the chip focus to a named chip and press OK on it, rather than
-     assuming an index — the chip row grows as the app does. */
-  function pressChip(label) {
-    return press('ArrowUp', 8)
-      .then(function () {
-        return waitFor('document.querySelector("#sections .chip.on") !== null', 'chip focus');
-      })
+  /* ---- the sidebar ----
+
+     What the chip row used to be. Left off the front of a row opens it, so
+     "however far into a row we are, get the sections on screen" is a loop of
+     lefts rather than a count of them. */
+
+  function sidebarIsOpen() {
+    return page.evaluate(function () {
+      return document.getElementById('sidebar').classList.contains('open');
+    });
+  }
+
+  function openSidebar() {
+    function attempt(n) {
+      return sidebarIsOpen().then(function (isOpen) {
+        if (isOpen) return true;
+        if (n <= 0) throw new Error('the sidebar would not open');
+        return press('ArrowLeft').then(function () { return attempt(n - 1); });
+      });
+    }
+    return attempt(60);
+  }
+
+  /* One string per row: '* ' marks the section showing, '- ' marks a category
+     nested under one. */
+  function sidebarRows() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(document.querySelectorAll('#sidebar .sb-row'),
+        function (r) {
+          return (r.classList.contains('cur') ? '* ' : '') +
+                 (r.classList.contains('sub') ? '- ' : '') + r.textContent.trim();
+        });
+    });
+  }
+
+  /* Walk the sidebar focus to a named row and press OK on it, rather than
+     assuming an index — the list grows as the app does. */
+  function sidebarPick(label) {
+    return openSidebar()
       .then(function () {
         return page.evaluate(function (want) {
-          const chips = document.querySelectorAll('#sections .chip');
-          let on = -1, to = -1;
-          for (let i = 0; i < chips.length; i++) {
-            if (chips[i].classList.contains('on')) on = i;
-            if (chips[i].textContent.trim() === want) to = i;
+          const rows = document.querySelectorAll('#sidebar .sb-row');
+          let on = 0, to = -1;
+          for (let i = 0; i < rows.length; i++) {
+            if (rows[i].classList.contains('on')) on = i;
+            if (to < 0 && rows[i].textContent.trim() === want) to = i;
           }
           return [on, to];
         }, label);
       })
       .then(function (idx) {
-        if (idx[1] < 0) throw new Error('no "' + label + '" chip');
-        return press(idx[1] > idx[0] ? 'ArrowRight' : 'ArrowLeft', Math.abs(idx[1] - idx[0]));
+        if (idx[1] < 0) {
+          return sidebarRows().then(function (rows) {
+            throw new Error('no "' + label + '" in the sidebar: ' + rows.join(' | '));
+          });
+        }
+        return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]));
       })
-      .then(function () { return page.keyboard.press('Enter'); });
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () { return page.waitForTimeout(80); })
+      /* OK on a section whose categories are known opens them in place; it
+         takes a second press to actually switch to it. */
+      .then(sidebarIsOpen)
+      .then(function (still) {
+        if (!still) return;
+        return page.keyboard.press('Enter').then(function () { return page.waitForTimeout(80); });
+      });
   }
 
   /* The refusal screen has to be *showing*, and it has to be about the film we
@@ -319,7 +357,7 @@ function drive(page, titles) {
           browse: !document.getElementById('browse').classList.contains('hidden') &&
                   document.getElementById('detail').classList.contains('hidden') &&
                   document.getElementById('show').classList.contains('hidden'),
-          results: document.querySelector('#sections').textContent.indexOf('back to library') >= 0
+          results: document.getElementById('browse').classList.contains('results')
         };
       }).then(function (st) {
         if (st.browse && !st.results) return true;
@@ -335,7 +373,7 @@ function drive(page, titles) {
      decision made there against a named copy. */
   function openTitle(title) {
     return backToLibrary()
-      .then(function () { return pressChip('Films'); })
+      .then(function () { return sidebarPick('Films'); })
       .then(function () { return press('F1'); })
       .then(function () { return page.waitForSelector('#search-input', { state: 'visible' }); })
       .then(function () { return page.fill('#search-input', title); })
@@ -387,11 +425,14 @@ function drive(page, titles) {
         return waitFor('(function(){var t=document.querySelectorAll("#rows .tile:not(.hidden)");' +
                        'var n=0,i;for(i=0;i<t.length;i++) if(t[i].textContent.trim()) n++;' +
                        'return n > 5;})()', 'filled tiles', 20000)
-          .then(function () { return page.textContent('#sections'); })
-          .then(function (chips) {
-            if (chips.indexOf('Films') < 0) throw new Error('no Films chip');
-            if (chips.indexOf('TV Shows') < 0) throw new Error('no TV Shows chip');
-          });
+          .then(openSidebar)
+          .then(sidebarRows)
+          .then(function (rows) {
+            const text = rows.join(' | ');
+            if (text.indexOf('Films') < 0) throw new Error('no Films section: ' + text);
+            if (text.indexOf('TV Shows') < 0) throw new Error('no TV Shows section: ' + text);
+          })
+          .then(function () { return press('ArrowLeft'); });      // close it again
       });
     })
 
@@ -462,7 +503,7 @@ function drive(page, titles) {
 
     .then(function () {
       return step('kids rows exclude everything above the cutoff', function () {
-        return pressChip('kids')
+        return sidebarPick('Kids')
           .then(function () {
             return waitFor('/Kids/.test(document.querySelector("#rows").textContent)',
                            'a kids row', 15000);
@@ -484,15 +525,12 @@ function drive(page, titles) {
     .then(function () {
       return step('a show section drills into series and episodes', function () {
         return backToLibrary()
-          .then(function () { return pressChip('TV Shows'); })
+          .then(function () { return sidebarPick('TV Shows'); })
           .then(function () {
-            /* The All shows row is below the visible pool, so wait on the chip
-               and on the rows having been rebuilt. */
-            return waitFor('(function(){var c=document.querySelectorAll("#sections .chip");' +
-                           'for (var i=0;i<c.length;i++) {' +
-                           ' if (c[i].textContent.trim()==="TV Shows" &&' +
-                           '     c[i].classList.contains("cur")) return true; }' +
-                           'return false;})()', 'the shows section', 20000);
+            /* The All shows row is below the visible pool, so wait on the hero
+               naming the section and on the rows having been rebuilt. */
+            return waitFor('!document.getElementById("sidebar").classList.contains("open")',
+                           'the shows section', 20000);
           })
           .then(function () { return page.waitForTimeout(800); })
           .then(function () { return press('ArrowDown'); })   // off Continue watching
@@ -587,11 +625,209 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('the sidebar lists the modes and jumps to a category', function () {
+        let cats;
+        return backToLibrary()
+          .then(openSidebar)
+          .then(sidebarRows)
+          .then(function (rows) {
+            const text = rows.join(' | ');
+            ['Discovery', 'Kids', 'Search'].forEach(function (want) {
+              if (rows.indexOf(want) < 0) throw new Error('no ' + want + ' row: ' + text);
+            });
+            const current = rows.filter(function (r) { return r.indexOf('* ') === 0; });
+            if (current.length !== 1) throw new Error('sections showing as current: ' + text);
+            cats = rows.filter(function (r) { return r.indexOf('- ') === 0; })
+                       .map(function (r) { return r.slice(2); });
+            if (cats[0] !== 'Continue watching') {
+              throw new Error('Continue watching is not the first row: ' + cats.join(' | '));
+            }
+          })
+          .then(function () { return shot('sidebar'); })
+          /* Picking a category is how the sidebar replaces scrolling to a row,
+             so it has to actually land the rail on it. */
+          .then(function () { return sidebarPick(cats[1]); })
+          .then(function () {
+            return waitFor('document.getElementById("mh-row").textContent.trim() === ' +
+                           JSON.stringify(cats[1]), 'the rail to land on ' + cats[1]);
+          });
+      });
+    })
+
+    .then(function () {
+      return step('the last sidebar entry can be reached and is on screen', function () {
+        /* There is no pointer on this device, so anything past the fold is
+           simply unreachable unless the list winds itself.
+
+           The generated library is small enough that the real sidebar happens
+           to fit, which is exactly why this drives Sidebar.open directly with a
+           section that does not — the fault is about long lists, and asserting
+           it against a short one proves nothing. */
+        return backToLibrary()
+          .then(openSidebar)
+          .then(function () {
+            return page.evaluate(function () {
+              var many = [], i;
+              for (i = 0; i < 30; i++) many.push('Category ' + (i + 1));
+              Sidebar.open([{ title: 'Films', categories: many, current: true }],
+                           function () {}, 'library');
+              return document.querySelectorAll('#sidebar .sb-row').length;
+            });
+          })
+          .then(function (n) {
+            if (n < 30) throw new Error('only ' + n + ' sidebar rows built');
+            return press('ArrowDown', n);        // more than enough to hit the end
+          })
+          .then(function () { return page.waitForTimeout(300); })
+          .then(function () {
+            return page.evaluate(function () {
+              var rows = document.querySelectorAll('#sidebar .sb-row');
+              var last = rows[rows.length - 1];
+              var panel = document.getElementById('sidebar').getBoundingClientRect();
+              var r = last.getBoundingClientRect();
+              return { focused: last.classList.contains('on'), label: last.textContent.trim(),
+                       top: Math.round(r.top), bottom: Math.round(r.bottom),
+                       panelBottom: Math.round(panel.bottom) };
+            });
+          })
+          .then(function (st) {
+            if (!st.focused) throw new Error('the last entry never took focus');
+            if (st.top < 0 || st.bottom > st.panelBottom) {
+              throw new Error('"' + st.label + '" is focused but off screen at ' +
+                              st.top + '–' + st.bottom + ' of ' + st.panelBottom);
+            }
+          })
+          .then(function () { return press('ArrowLeft'); });        // close it again
+      });
+    })
+
+    .then(function () {
+      return step('the hero art is the focused item, not the one before it', function () {
+        /* Resting on a title, moving on, and coming back used to leave the
+           previous backdrop on screen: the art was painted from Meta's
+           callback, and Meta skips an item whose payload it already holds. */
+        function keys() {
+          return page.evaluate(function () {
+            function key(u) {
+              var m = String(u).match(/metadata%2F(\d+)%2F(art|thumb)/);
+              return m ? m[1] : '?';
+            }
+            var tile = document.querySelector('#rows .row.on .tile.on img');
+            return { hero: key(document.getElementById('hero-art').style.backgroundImage),
+                     focused: key(tile && tile.src),
+                     title: document.getElementById('mh-title').textContent.trim() };
+          });
+        }
+        function settle() { return page.waitForTimeout(900); }
+        return backToLibrary()
+          .then(function () { return press('ArrowUp', 8); })      // to the first row
+          .then(settle)
+          .then(function () { return press('ArrowRight'); })       // rest on A
+          .then(settle)
+          .then(function () { return press('ArrowRight'); })       // rest on B
+          .then(settle)
+          .then(function () { return press('ArrowLeft'); })        // back to A, now cached
+          .then(settle)
+          .then(keys)
+          .then(function (st) {
+            if (st.focused === '?') throw new Error('no artwork on the focused tile to compare');
+            if (st.hero !== st.focused) {
+              throw new Error('hero shows ' + st.hero + ' while "' + st.title +
+                              '" (' + st.focused + ') is focused');
+            }
+          })
+          /* And it must survive a fast sweep, where every item but the last is
+             passed over before its request could have finished. */
+          .then(function () { return press('ArrowRight', 12); })
+          .then(settle)
+          .then(keys)
+          .then(function (st) {
+            if (st.hero !== st.focused) {
+              throw new Error('after a fast sweep the hero shows ' + st.hero +
+                              ' while ' + st.focused + ' is focused');
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('stepping down collapses the hero and keeps the row on screen', function () {
+        /* The tall hero leaves room for one row. If it does not collapse when
+           the focus moves off row 0, the row you just moved to is drawn below
+           the fold and moving down looks like nothing happening. */
+        return backToLibrary()
+          .then(function () { return press('ArrowUp', 8); })
+          .then(function () { return page.waitForTimeout(500); })
+          .then(function () {
+            return page.evaluate(function () {
+              return document.getElementById('browse').classList.contains('dense');
+            });
+          })
+          .then(function (dense) {
+            if (dense) throw new Error('the hero is a band while the first row is focused');
+          })
+          .then(function () { return press('ArrowDown'); })
+          .then(function () { return page.waitForTimeout(600); })
+          .then(function () {
+            return page.evaluate(function () {
+              var row = document.querySelector('#rows .row.on');
+              var tile = row && row.querySelector('.tile.on');
+              var vp = document.getElementById('viewport').getBoundingClientRect();
+              var t = tile && tile.getBoundingClientRect();
+              return {
+                dense: document.getElementById('browse').classList.contains('dense'),
+                label: row ? row.querySelector('.row-label').textContent.trim() : '',
+                top: t ? Math.round(t.top) : null, bottom: t ? Math.round(t.bottom) : null,
+                vpTop: Math.round(vp.top), vpBottom: Math.round(vp.bottom)
+              };
+            });
+          })
+          .then(function (st) {
+            if (!st.dense) throw new Error('the hero did not collapse off the first row');
+            if (st.top === null) throw new Error('no focused tile on row 1');
+            if (st.top < st.vpTop - 1 || st.bottom > st.vpBottom + 1) {
+              throw new Error('"' + st.label + '" is focused but drawn at ' + st.top + '–' +
+                              st.bottom + ', outside the viewport ' + st.vpTop + '–' + st.vpBottom);
+            }
+          })
+          .then(function () { return shot('dense'); })
+          /* And at the *end* of the list, where the window stops scrolling and
+             the last row sits wherever the clamp leaves it. This is where the
+             row height and the viewport height have to agree: get it wrong and
+             the final row's title is below the clip, invisible. Every section
+             has an All row at the bottom, so there is always one to land on. */
+          .then(function () { return press('ArrowDown', 12); })
+          .then(function () { return page.waitForTimeout(700); })
+          .then(function () {
+            return page.evaluate(function () {
+              var row = document.querySelector('#rows .row.on');
+              var tile = row && row.querySelector('.tile.on');
+              var title = tile && tile.querySelector('.tile-title');
+              var vp = document.getElementById('viewport').getBoundingClientRect();
+              var n = title && title.getBoundingClientRect();
+              return {
+                label: row ? row.querySelector('.row-label').textContent.trim() : '',
+                titleBottom: n ? Math.round(n.bottom) : null,
+                vpBottom: Math.round(vp.bottom)
+              };
+            });
+          })
+          .then(function (st) {
+            if (st.titleBottom === null) throw new Error('no focused tile on the last row');
+            if (st.titleBottom > st.vpBottom + 1) {
+              throw new Error('the last row is clipped: "' + st.label + '" title ends at ' +
+                              st.titleBottom + ', past the viewport at ' + st.vpBottom);
+            }
+          });
+      });
+    })
+
+    .then(function () {
       return step('discovery says what it needs rather than failing quietly', function () {
         /* No TMDB key in the harness, so this is the path a first run takes.
            It has to name the setting, not just refuse. */
         return backToLibrary()
-          .then(function () { return pressChip('discover'); })
+          .then(function () { return sidebarPick('Discovery'); })
           .then(function () {
             return waitFor('!document.getElementById("message").classList.contains("hidden") &&' +
                            ' /TMDB/.test(document.getElementById("message-title").textContent) &&' +
@@ -610,16 +846,18 @@ function drive(page, titles) {
           .then(function () { return page.fill('#search-input', titles.directPlays.title); })
           .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
-            return waitFor('(function(){var c=document.querySelectorAll("#sections .chip");' +
-                           'return c.length === 3 && c[1].textContent === "1 film";})()',
-                           'the results header');
+            /* The results page has no chip row any more: the first row's own
+               title is the header, and it still has to say what was asked, how
+               many came back, and the way out. */
+            return waitFor('document.getElementById("browse").classList.contains("results")',
+                           'the results page');
           })
-          .then(function () { return chipTexts(); })
-          .then(function (chips) {
-            if (chips[0] !== titles.directPlays.title) {
-              throw new Error('header names "' + chips[0] + '"');
-            }
-            if (chips[2] !== 'back to library') throw new Error('no way back: ' + chips.join(' / '));
+          .then(function () { return page.textContent('#mh-row'); })
+          .then(function (header) {
+            const safe = titles.directPlays.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const want = new RegExp('^' + safe +
+                                    '\\s+·\\s+1 film\\s+·\\s+BACK to library$');
+            if (!want.test(header.trim())) throw new Error('the header reads "' + header + '"');
           })
           .then(function () { return shot('search'); })
           .then(function () { return press('Backspace'); });
@@ -629,7 +867,7 @@ function drive(page, titles) {
     .then(function () {
       return step('the device screen lists who has been watching', function () {
         return backToLibrary()
-          .then(function () { return pressChip('devices'); })
+          .then(function () { return sidebarPick('Devices'); })
           .then(function () {
             return waitFor('/Living room/.test(document.querySelector("#device-list").textContent)',
                            'the device list', 15000);
@@ -702,11 +940,11 @@ function drive(page, titles) {
     .then(function () {
       return step('a film on both servers is one entry with two copies', function () {
         return openTitle(titles.shared.title)
-          .then(chipTexts)
           .then(function () {
-            /* One search result, not two — that is the whole point. */
+            /* One search result, not two — that is the whole point. The count
+               is in the results header the search left in the hero. */
             return page.evaluate(function () {
-              const m = document.querySelector('#sections').textContent.match(/(\d+) films?/);
+              const m = document.getElementById('mh-row').textContent.match(/(\d+) films?/);
               return m ? Number(m[1]) : -1;
             });
           })

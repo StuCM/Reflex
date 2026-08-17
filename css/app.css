@@ -1,13 +1,29 @@
-/* Chromium 53. Flexbox / inline-block only, no grid, no sticky.
-   Transitions on transform and opacity only. */
+/* Chromium 53. Flexbox / inline-block only, no grid, no sticky, no gap.
+   Transitions on transform and opacity only.
+
+   Palette 5a, ink & citron. Every colour in this file comes from here; the
+   gradients spell --bg out as rgba() because a gradient stop needs a real
+   colour with an alpha channel, and color-mix() is Chrome 111. */
+
+:root {
+  --bg:      #0c0f16;
+  --surface: #141a26;
+  --raised:  #171b24;
+  --ac:      #cfe06a;
+  --ac2:     #d8794f;
+  --fg:      #eef0f2;
+  --dim:     rgba(238, 240, 242, .44);
+  --dim2:    rgba(238, 240, 242, .26);
+  --soft:    rgba(238, 240, 242, .07);
+}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
   width: 1920px; height: 1080px;
   overflow: hidden;
-  background: #0b0b0d;
-  color: #e8e8ea;
+  background: var(--bg);
+  color: var(--fg);
   font-family: "LG Smart UI", "Helvetica Neue", Arial, sans-serif;
   -webkit-user-select: none;
   cursor: none;
@@ -23,69 +39,233 @@ html, body {
   text-align: center;
 }
 
-/* ---- masthead ---- */
+/* ---- the hero ----
 
-#masthead { position: absolute; top: 56px; left: 64px; width: 1500px; height: 300px; }
+   The backdrop of whatever is focused, full bleed, with two flat scrims over
+   it: one darkening the left so the title reads, one darkening the bottom so
+   the tiles do. Gradients, never a blur — blurring a full-screen image on a
+   2018 SoC costs a frame we do not have. */
+
+#hero-art {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  background-position: center top; background-size: cover;
+  background-repeat: no-repeat;
+}
+
+#hero-scrim-x {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, rgba(12, 15, 22, .82) 44%, rgba(12, 15, 22, 0) 100%);
+  background-image: linear-gradient(to right, var(--bg) 0%, rgba(12, 15, 22, .82) 44%, rgba(12, 15, 22, 0) 100%);
+}
+
+#hero-scrim-y {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 50%, rgba(12, 15, 22, 0) 86%);
+  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 50%, rgba(12, 15, 22, 0) 86%);
+}
+
+/* The backdrop belongs to the tall hero. In the band there is nothing left for
+   it to sit behind, and a full-screen image under three rows of tiles is only
+   noise. Opacity, so the swap costs no layout. */
+#hero-art, #hero-scrim-x, #hero-scrim-y {
+  -webkit-transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
+  transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
+}
+#browse.dense #hero-art,
+#browse.dense #hero-scrim-x,
+#browse.dense #hero-scrim-y { opacity: 0; }
+
+/* ---- masthead ----
+
+   Two states of the same markup. Tall while the focus is on the first row, a
+   132px band the moment it leaves — which is what gives the rows room for
+   three of themselves instead of one and a half. */
+
+#masthead { position: absolute; top: 96px; left: 96px; width: 1080px; height: 444px; }
+
+#mh-row {
+  font-size: 22px; letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--ac2);
+  white-space: nowrap; overflow: hidden;
+}
 
 #mh-title {
-  font-size: 62px; font-weight: 300; line-height: 1.1;
+  margin-top: 22px;
+  font-size: 100px; font-weight: 500; line-height: 1.02; letter-spacing: -0.028em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-#mh-meta { margin-top: 10px; font-size: 26px; color: #9a9aa2; }
+#mh-meta { margin-top: 12px; font-size: 26px; color: var(--dim); }
 
-#mh-badges { margin-top: 18px; height: 40px; }
+#mh-actions { margin-top: 26px; height: 66px; }
+
+.pill {
+  display: inline-block; vertical-align: top;
+  margin-right: 16px; padding: 17px 36px;
+  border-radius: 999px; font-size: 26px;
+  background: var(--soft); color: var(--fg);
+}
+.pill.primary { padding: 17px 44px; background: var(--ac); color: var(--bg); }
+.pill-icon { display: inline-block; vertical-align: -3px; margin-right: 12px; }
+
+/* Round buttons beside the pills — heart in the tall hero, info in the band. */
+.circle {
+  display: inline-block; vertical-align: top;
+  width: 66px; height: 66px; border-radius: 50%;
+  background: var(--soft); color: var(--dim);
+  text-align: center; line-height: 66px;
+}
+#mh-info { display: none; }
+
+#mh-badges { margin-top: 20px; height: 40px; }
 
 .badge {
   display: inline-block; vertical-align: top;
   margin-right: 10px; padding: 6px 14px;
   border-radius: 4px; font-size: 20px; letter-spacing: 0.04em;
-  background: #22222a; color: #c9c9d1;
+  background: var(--surface); color: var(--dim);
 }
 .badge.good { background: #17402a; color: #7fe0a8; }
 .badge.warn { background: #4a3410; color: #f0c070; }
 .badge.bad  { background: #4a1414; color: #ff8f8f; }
 
 #mh-summary {
-  margin-top: 16px; font-size: 22px; line-height: 1.45; color: #8b8b93;
-  max-height: 96px; overflow: hidden;
+  margin-top: 18px; font-size: 22px; line-height: 1.45; color: var(--dim);
+  max-height: 68px; overflow: hidden; width: 900px;
 }
 
-/* ---- section chips ---- */
+/* ---- the hero as a band ----
 
-#sections { position: absolute; top: 392px; left: 64px; height: 42px; }
+   Same elements, laid out across instead of down. Flex `order` does the
+   rearranging, so nothing moves in the DOM. The badges stay: CLAUDE.md is
+   explicit that the audio verdict has to be readable before OK is pressed, and
+   that is true whichever row you are on. */
 
-.chip {
-  display: inline-block; margin-right: 26px; padding-bottom: 6px;
-  font-size: 24px; color: #6a6a72; letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-bottom: 4px solid transparent;   /* reserved, so focus shifts nothing */
+#browse.dense #masthead {
+  top: 0; left: 0; width: 1920px; height: 132px;
+  padding: 0 300px 0 96px;      /* room on the right for the search pill */
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+  border-bottom: 1px solid var(--soft);
+  background: var(--bg);
 }
-.chip.cur { color: #e8e8ea; }
-.chip.on { color: #e8e8ea; border-bottom-color: #e5a00d; }
 
-/* ---- rows ---- */
+#browse.dense #mh-row,
+#browse.dense #mh-summary,
+#browse.dense #mh-more,
+#browse.dense #mh-heart { display: none; }
 
-#viewport { position: absolute; top: 440px; left: 0; width: 1920px; height: 640px; overflow: hidden; }
+#browse.dense #mh-title {
+  -webkit-order: 1; order: 1;
+  margin-top: 0; margin-right: 32px; max-width: 660px;
+  font-size: 46px; font-weight: 500; letter-spacing: -0.02em;
+}
+#browse.dense #mh-meta {
+  -webkit-order: 2; order: 2;
+  margin-top: 0; font-size: 25px; font-weight: 400; white-space: nowrap;
+}
+#browse.dense #mh-badges {
+  -webkit-order: 3; order: 3;
+  margin-top: 0; margin-left: 26px; height: auto; white-space: nowrap;
+}
+#browse.dense #mh-actions {
+  -webkit-order: 4; order: 4;
+  margin-top: 0; margin-left: auto; height: 58px; white-space: nowrap;
+}
+#browse.dense .pill { margin-right: 0; padding: 14px 34px; font-size: 24px; }
+#browse.dense #mh-info {
+  display: inline-block;
+  width: 58px; height: 58px; line-height: 58px; margin-left: 14px;
+}
 
-#rows {
-  position: absolute; top: 0; left: 0; width: 100%;
+/* Vertically centred in the band rather than sitting above it. */
+#browse.dense #top-right { top: 41px; right: 96px; }
+
+/* What the keys do here, which is not the same in the two states. */
+#browse-hint {
+  position: absolute; left: 96px; bottom: 32px;
+  font-size: 20px; color: var(--dim2); letter-spacing: 0.04em;
+}
+/* A CSS escape swallows one following space, so each of these carries two. */
+#browse-hint::after { content: "\25C0  \25B6  browse  \00B7   \25BC  into the rows  \00B7   OK opens"; }
+#browse.dense #browse-hint::after { content: "\25B2  back up to the hero  \00B7   OK opens the title"; }
+
+/* ---- the search button ----
+   An affordance, not a target: the red key reaches search in one press from
+   anywhere on the rail, and the sidebar lists it for remotes that have no
+   colour buttons. */
+
+#top-right { position: absolute; top: 56px; right: 64px; }
+
+/* ---- the sidebar ----
+
+   Off-screen by default and slid in on transform alone, so opening it costs
+   one composited layer and no layout. */
+
+#sidebar {
+  position: absolute; top: 0; left: 0; width: 520px; height: 1080px;
+  padding-top: 72px;
+  /* Over the hero and the rail both: it comes before #viewport in the document
+     so that opening it never reflows the rail, and z-index is what buys that. */
+  z-index: 5;
+  background: var(--surface);
+  /* The list is wound with a transform, so what runs past the bottom has to be
+     clipped here. Never overflow:auto — a scrollbar is a control this remote
+     cannot reach. */
+  overflow: hidden;
+  -webkit-transform: translateX(-520px); transform: translateX(-520px);
+  -webkit-transition: -webkit-transform 180ms ease-out;
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+#sidebar.open { -webkit-transform: translateX(0); transform: translateX(0); }
+
+#sidebar-list {
+  position: relative;           /* the offset parent reveal() measures against */
   -webkit-transition: -webkit-transform 180ms ease-out;
   transition: transform 180ms ease-out;
   will-change: transform;
 }
 
-.row { position: absolute; top: 0; left: 0; width: 1920px; height: 304px; }
+.sb-row {
+  height: 64px; line-height: 64px; padding: 0 34px;
+  border-left: 8px solid transparent;    /* reserved, so focus shifts nothing */
+  font-size: 28px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-row.sub {
+  height: 52px; line-height: 52px; padding-left: 70px;
+  font-size: 24px; color: var(--dim2);
+}
+.sb-row.cur { color: var(--ac2); }
+.sb-row.on {
+  background: var(--ac); border-left-color: var(--ac); color: var(--bg);
+}
+
+/* ---- rows ---- */
+
+/* Fixed in both hero states: it is #rows that moves, by BIG_DROP, so the
+   collapse is one transform and nothing animates a height. */
+#viewport { position: absolute; top: 154px; left: 0; width: 1920px; height: 862px; overflow: hidden; }
+
+#rows {
+  position: absolute; top: 0; left: 0; width: 100%;
+  -webkit-transition: -webkit-transform 340ms cubic-bezier(.2, .7, .2, 1);
+  transition: transform 340ms cubic-bezier(.2, .7, .2, 1);
+  will-change: transform;
+}
+
+.row { position: absolute; top: 0; left: 0; width: 1920px; height: 335px; }
 
 .row-label {
-  position: absolute; top: 0; left: 64px;
+  position: absolute; top: 0; left: 96px; height: 44px;
   font-size: 24px; letter-spacing: 0.06em; text-transform: uppercase;
-  color: #6a6a72;
+  color: var(--dim2);
 }
-.row.on .row-label { color: #e8e8ea; }
+.row.on .row-label { color: var(--ac); }
 
 .strip {
-  position: absolute; top: 36px; left: 64px; width: 100%; height: 260px;
+  position: absolute; top: 44px; left: 96px; width: 100%; height: 257px;
   -webkit-transition: -webkit-transform 180ms ease-out;
   transition: transform 180ms ease-out;
   will-change: transform;
@@ -94,37 +274,46 @@ html, body {
 /* Outer tile is repositioned when recycled, so it must NOT transition —
    otherwise a recycled tile flies across the screen. Only the inner element
    animates, and only its transform. */
-.tile { position: absolute; top: 0; left: 0; width: 160px; height: 240px; }
+.tile { position: absolute; top: 0; left: 0; width: 372px; height: 257px; }
 
 .tile-inner {
   position: relative;
-  width: 100%; height: 100%;
-  background: #17171c;
+  width: 372px; height: 209px;
+  background: var(--surface);
   border: 4px solid transparent;
   border-radius: 6px;
   overflow: hidden;
-  -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%;
+  -webkit-transform-origin: 50% 50%; transform-origin: 50% 50%;
   -webkit-transition: -webkit-transform 180ms ease-out;
   transition: transform 180ms ease-out;
 }
+/* Focus is a citron ring and a lift. A border colour swap costs a repaint of
+   the border box; a box-shadow transition would repaint the lot. */
 .tile.on .tile-inner {
-  border-color: #e8e8ea;
-  -webkit-transform: scale(1.08); transform: scale(1.08);
+  border-color: var(--ac);
+  -webkit-transform: scale(1.05); transform: scale(1.05);
 }
 
-.tile img { position: relative; display: block; width: 100%; height: 100%; }
+/* Landscape art in a landscape box, but a poster stands in when an item has no
+   art at all — cover crops it rather than stretching it into a smear. */
+.tile img {
+  position: relative; display: block; width: 100%; height: 100%;
+  -o-object-fit: cover; object-fit: cover;
+}
+
+.tile-title {
+  margin-top: 18px; padding: 0 4px;
+  font-size: 22px; line-height: 1.3; color: var(--dim);
+  height: 30px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.tile.on .tile-title { color: var(--fg); }
 
 /* Resume position, for the Continue Watching row. */
 .tile-progress {
   position: absolute; left: 0; bottom: 0; height: 5px;
-  background: #e5a00d;
+  background: var(--ac2);
   z-index: 2;
-}
-
-.tile-fallback {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  padding: 12px; font-size: 20px; line-height: 1.3; color: #7a7a82;
-  overflow: hidden;
 }
 
 /* ---- show ----
@@ -139,8 +328,8 @@ html, body {
 
 #sh-shade {
   position: absolute; top: 0; left: 0; width: 1920px; height: 560px;
-  background-image: -webkit-linear-gradient(left, #0b0b0d 0%, #0b0b0d 44%, rgba(11,11,13,0) 100%);
-  background-image: linear-gradient(to right, #0b0b0d 0%, #0b0b0d 44%, rgba(11,11,13,0) 100%);
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 44%, rgba(12, 15, 22, 0) 100%);
+  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 44%, rgba(12, 15, 22, 0) 100%);
 }
 
 #sh-head { position: absolute; top: 56px; left: 64px; width: 1000px; }
@@ -149,9 +338,9 @@ html, body {
   font-size: 54px; font-weight: 300; line-height: 1.1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#sh-meta { margin-top: 10px; font-size: 24px; color: #9a9aa2; }
+#sh-meta { margin-top: 10px; font-size: 24px; color: var(--dim); }
 #sh-summary {
-  margin-top: 12px; font-size: 21px; line-height: 1.4; color: #b8b8c0;
+  margin-top: 12px; font-size: 21px; line-height: 1.4; color: var(--dim);
   max-height: 60px; overflow: hidden;
 }
 
@@ -163,23 +352,33 @@ html, body {
 .sh-episode {
   position: relative; height: 62px; padding: 14px 18px;
   border-left: 6px solid transparent;
-  background: #131318;
+  background: var(--surface);
   margin-bottom: 5px;
-  font-size: 24px; color: #9a9aa2;
+  font-size: 24px; color: var(--dim);
   white-space: nowrap; overflow: hidden;
 }
-.sh-episode.on { background: #1c1c24; border-left-color: #e5a00d; color: #e8e8ea; }
+.sh-episode.on { background: var(--raised); border-left-color: var(--ac); color: var(--fg); }
 
 .sh-ep-num {
-  display: inline-block; width: 54px; color: #6a6a72; font-size: 22px;
+  display: inline-block; width: 54px; color: var(--dim2); font-size: 22px;
 }
-.sh-episode.on .sh-ep-num { color: #e5a00d; }
+.sh-episode.on .sh-ep-num { color: var(--ac); }
 .sh-ep-title { display: inline-block; width: 560px; overflow: hidden; vertical-align: top; }
-.sh-ep-mins { display: inline-block; width: 110px; font-size: 21px; color: #6a6a72; }
-.sh-ep-seen { display: inline-block; width: 120px; font-size: 21px; color: #6a6a72; }
+.sh-ep-mins { display: inline-block; width: 110px; font-size: 21px; color: var(--dim2); }
+.sh-ep-seen { display: inline-block; width: 120px; font-size: 21px; color: var(--dim2); }
 .sh-verdict { position: absolute; right: 16px; top: 15px; }
 
 #sh-hint { position: absolute; left: 64px; bottom: 40px; margin-top: 0; }
+
+/* Season chips, on the show page. */
+.chip {
+  display: inline-block; margin-right: 26px; padding-bottom: 6px;
+  font-size: 24px; color: var(--dim2); letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 4px solid transparent;   /* reserved, so focus shifts nothing */
+}
+.chip.cur { color: var(--fg); }
+.chip.on { color: var(--fg); border-bottom-color: var(--ac); }
 
 /* ---- detail ----
    Chromium 53: no grid, so the columns are absolutely positioned. The artwork
@@ -195,8 +394,8 @@ html, body {
    costs a frame we do not have. */
 #dt-shade {
   position: absolute; top: 0; left: 0; width: 1920px; height: 620px;
-  background-image: -webkit-linear-gradient(left, #0b0b0d 0%, #0b0b0d 42%, rgba(11,11,13,0) 100%);
-  background-image: linear-gradient(to right, #0b0b0d 0%, #0b0b0d 42%, rgba(11,11,13,0) 100%);
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 42%, rgba(12, 15, 22, 0) 100%);
+  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 42%, rgba(12, 15, 22, 0) 100%);
 }
 
 #dt-body { position: absolute; top: 64px; left: 64px; width: 1000px; }
@@ -206,22 +405,22 @@ html, body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-#dt-meta { margin-top: 10px; font-size: 24px; color: #9a9aa2; }
-#dt-tagline { margin-top: 10px; font-size: 24px; color: #e5a00d; font-style: italic; }
+#dt-meta { margin-top: 10px; font-size: 24px; color: var(--dim); }
+#dt-tagline { margin-top: 10px; font-size: 24px; color: var(--ac2); font-style: italic; }
 
 #dt-summary {
-  margin-top: 14px; font-size: 22px; line-height: 1.45; color: #b8b8c0;
+  margin-top: 14px; font-size: 22px; line-height: 1.45; color: var(--dim);
   max-height: 96px; overflow: hidden;
 }
 
-#dt-crew { margin-top: 14px; font-size: 20px; color: #8b8b93; }
-#dt-crew b { color: #6a6a72; font-weight: normal; text-transform: uppercase;
+#dt-crew { margin-top: 14px; font-size: 20px; color: var(--dim); }
+#dt-crew b { color: var(--dim2); font-weight: normal; text-transform: uppercase;
              letter-spacing: 0.06em; font-size: 18px; margin-right: 8px; }
 .dt-gap { display: inline-block; width: 34px; }
 
 .dt-label {
   margin-top: 22px; font-size: 20px; letter-spacing: 0.06em;
-  text-transform: uppercase; color: #6a6a72;
+  text-transform: uppercase; color: var(--dim2);
 }
 
 #dt-sources, #dt-extras { margin-top: 10px; width: 1000px; }
@@ -230,19 +429,19 @@ html, body {
 .dt-source {
   position: relative; height: 54px; padding: 10px 18px;
   border-left: 6px solid transparent;
-  background: #131318;
+  background: var(--surface);
   margin-bottom: 6px;
 }
-.dt-source.on { background: #1c1c24; border-left-color: #e5a00d; }
+.dt-source.on { background: var(--raised); border-left-color: var(--ac); }
 
 .dt-source-name {
-  display: inline-block; width: 250px; font-size: 24px; color: #9a9aa2;
+  display: inline-block; width: 250px; font-size: 24px; color: var(--dim);
   white-space: nowrap; overflow: hidden;
 }
-.dt-source.on .dt-source-name { color: #e8e8ea; }
+.dt-source.on .dt-source-name { color: var(--fg); }
 
 .dt-source-media {
-  display: inline-block; width: 460px; font-size: 22px; color: #8b8b93;
+  display: inline-block; width: 460px; font-size: 22px; color: var(--dim);
   white-space: nowrap; overflow: hidden;
 }
 
@@ -258,16 +457,16 @@ html, body {
 }
 .dt-actor img, .dt-actor-blank {
   display: block; width: 120px; height: 120px; border-radius: 60px;
-  background: #17171c; overflow: hidden;
+  background: var(--surface); overflow: hidden;
 }
-.dt-actor-name { margin-top: 8px; font-size: 18px; line-height: 1.2; color: #c9c9d1; }
-.dt-actor-role { font-size: 16px; line-height: 1.2; color: #6a6a72; }
+.dt-actor-name { margin-top: 8px; font-size: 18px; line-height: 1.2; color: var(--fg); }
+.dt-actor-role { font-size: 16px; line-height: 1.2; color: var(--dim2); }
 
 .dt-hint { position: absolute; left: 64px; bottom: 40px; margin-top: 0; }
 
 /* ---- link / message ---- */
 
-.link-lead { font-size: 30px; color: #8b8b93; margin: 14px 0; }
+.link-lead { font-size: 30px; color: var(--dim); margin: 14px 0; }
 .link-url { font-size: 56px; font-weight: 300; }
 .link-code {
   font-size: 120px; font-weight: 300; letter-spacing: 0.18em;
@@ -277,29 +476,29 @@ html, body {
 #search-input {
   width: 1100px; padding: 18px 24px; margin: 10px 0;
   font-size: 40px; font-family: inherit;
-  color: #e8e8ea; background: #17171c;
-  border: 4px solid #3a3a44; border-radius: 6px;
+  color: var(--fg); background: var(--surface);
+  border: 4px solid var(--soft); border-radius: 6px;
   outline: none;
 }
-#search-input:focus { border-color: #e8e8ea; }
+#search-input:focus { border-color: var(--ac); }
 
 #device-list { margin: 30px auto; width: 1100px; text-align: left; }
 
 .device-row {
-  padding: 12px 20px; font-size: 30px; color: #9a9aa2;
+  padding: 12px 20px; font-size: 30px; color: var(--dim);
   border-left: 6px solid transparent;   /* reserved, so focus shifts nothing */
 }
-.device-row.on { color: #e8e8ea; border-left-color: #e5a00d; }
-.device-count { font-size: 22px; color: #6a6a72; }
+.device-row.on { color: var(--fg); border-left-color: var(--ac); }
+.device-count { font-size: 22px; color: var(--dim2); }
 
 .msg-title { font-size: 48px; font-weight: 300; margin-bottom: 24px; }
 .msg-body {
-  font-size: 26px; color: #9a9aa2; line-height: 1.45;
+  font-size: 26px; color: var(--dim); line-height: 1.45;
   max-width: 1400px; margin: 0 auto;
   /* Some messages are a paragraph, some are a report with its own layout. */
   white-space: pre-wrap;
 }
-.msg-hint { font-size: 22px; color: #5a5a62; margin-top: 40px; }
+.msg-hint { font-size: 22px; color: var(--dim2); margin-top: 40px; }
 
 /* ---- player ---- */
 
@@ -315,15 +514,15 @@ html, body {
    no controls at all. */
 #osd-bar {
   position: relative; height: 10px; margin-top: 18px; width: 1792px;
-  background: #2a2a32; border-radius: 5px;
+  background: var(--raised); border-radius: 5px;
 }
 #osd-buffered {
   position: absolute; top: 0; left: 0; height: 10px; width: 0;
-  background: #44444e; border-radius: 5px;
+  background: var(--soft); border-radius: 5px;
 }
 #osd-fill {
   position: absolute; top: 0; left: 0; height: 10px; width: 0;
-  background: #e5a00d; border-radius: 5px;
+  background: var(--ac); border-radius: 5px;
 }
 
 /* Chapters as ticks, intro and credits as bands — where you can jump to, and
@@ -336,7 +535,7 @@ html, body {
 }
 .osd-tick {
   position: absolute; top: 0; width: 2px; height: 10px;
-  background: #0b0b0d;
+  background: var(--bg);
 }
 .osd-band {
   position: absolute; top: 0; height: 10px;
@@ -349,9 +548,9 @@ html, body {
   background: #fff; border-radius: 3px;
 }
 
-#osd-time { font-size: 28px; color: #9a9aa2; margin-top: 10px; }
-#osd-tracks { font-size: 22px; color: #6a6a72; margin-top: 6px; }
-#osd-hint { font-size: 20px; color: #4a4a52; margin-top: 8px; }
+#osd-time { font-size: 28px; color: var(--dim); margin-top: 10px; }
+#osd-tracks { font-size: 22px; color: var(--dim2); margin-top: 6px; }
+#osd-hint { font-size: 20px; color: var(--dim2); margin-top: 8px; }
 
 /* ---- skip intro ----
 
@@ -360,7 +559,7 @@ html, body {
 #osd-skip {
   position: absolute; right: 96px; bottom: 300px;
   padding: 18px 34px; border-radius: 6px;
-  background: #e5a00d; color: #1a1408;
+  background: var(--ac); color: var(--bg);
   font-size: 30px; letter-spacing: 0.02em;
 }
 
@@ -381,16 +580,16 @@ html, body {
 #menu {
   position: absolute; left: 64px; bottom: 288px; width: 1180px;
   padding: 22px 26px 18px; border-radius: 8px;
-  background: rgba(12, 12, 16, 0.94);
+  background: rgba(12, 15, 22, 0.94);
 }
 
 .menu-tab {
   display: inline-block; margin-right: 40px; padding-bottom: 6px;
-  font-size: 26px; color: #6a6a72; letter-spacing: 0.04em;
+  font-size: 26px; color: var(--dim2); letter-spacing: 0.04em;
   text-transform: uppercase;
   border-bottom: 4px solid transparent;   /* reserved, so focus shifts nothing */
 }
-.menu-tab.on { color: #e8e8ea; border-bottom-color: #e5a00d; }
+.menu-tab.on { color: var(--fg); border-bottom-color: var(--ac); }
 
 #menu-list { height: 392px; overflow: hidden; margin-top: 18px; }
 #menu-inner {
@@ -400,27 +599,27 @@ html, body {
 
 .menu-row {
   height: 56px; line-height: 56px; padding: 0 16px;
-  font-size: 26px; color: #c9c9d1;
+  font-size: 26px; color: var(--dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   border-radius: 4px;
 }
-.menu-row.sel { background: #2a2a32; color: #fff; }
-.menu-row.off { color: #5a5a62; }
-.menu-mark { display: inline-block; width: 34px; color: #e5a00d; }
+.menu-row.sel { background: var(--raised); color: var(--fg); }
+.menu-row.off { color: var(--dim2); }
+.menu-mark { display: inline-block; width: 34px; color: var(--ac); }
 .menu-label { display: inline-block; }
-.menu-note-inline { margin-left: 18px; font-size: 21px; color: #6a6a72; }
+.menu-note-inline { margin-left: 18px; font-size: 21px; color: var(--dim2); }
 
-#menu-note { margin-top: 12px; font-size: 20px; color: #5a5a62; height: 24px; }
+#menu-note { margin-top: 12px; font-size: 20px; color: var(--dim2); height: 24px; }
 
 /* ---- toast / debug ---- */
 
 #toast {
-  position: absolute; top: 56px; right: 64px;
+  position: absolute; top: 130px; right: 64px;
   padding: 12px 22px; border-radius: 4px;
-  background: #22222a; font-size: 24px;
+  background: var(--raised); font-size: 24px;
 }
 
 #debug {
-  position: absolute; bottom: 8px; left: 64px; width: 1792px; height: 22px;
-  font-size: 18px; color: #4a4a52; white-space: nowrap; overflow: hidden;
+  position: absolute; bottom: 8px; left: 96px; width: 1792px; height: 22px;
+  font-size: 18px; color: var(--dim2); white-space: nowrap; overflow: hidden;
 }
