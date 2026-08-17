@@ -16,7 +16,14 @@ var Rail = (function () {
   var ROW_POOL = 4;              // row elements in the DOM, ever
   var TILES_VISIBLE = 4;         // tiles across at 1920 wide
   var LEAD = 1;                  // tiles kept to the left of the focused one
-  var ROWS_VISIBLE = 3;          // rows down the screen once the hero collapses
+  /* Two different questions, and answering both with one number clipped the
+     last row of every section. ROWS_FIT is how many rows fit *whole* in the
+     viewport, and is what stops the window scrolling past the end — get it
+     wrong and the final row is pinned half below the fold, title and all.
+     ROWS_VISIBLE is how many are on screen at all, including the one peeking
+     at the bottom, and is only about which posters are worth fetching. */
+  var ROWS_FIT = 2;              // 335 + 301 fits in 862; a third would not
+  var ROWS_VISIBLE = 3;          // the third peeks, so its posters still load
   /* The tall hero and the band differ by this much, and the rows carry the
      whole move on one transform rather than anything animating a height. */
   var BIG_DROP = 408;
@@ -147,7 +154,7 @@ var Rail = (function () {
   }
 
   function render(rows, rowIdx) {
-    var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
+    var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_FIT));
     var start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
     var i, r;
     /* Row 0 sits under the tall hero; everything below it sits under the band.

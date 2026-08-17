@@ -790,7 +790,35 @@ function drive(page, titles) {
                               st.bottom + ', outside the viewport ' + st.vpTop + '–' + st.vpBottom);
             }
           })
-          .then(function () { return shot('dense'); });
+          .then(function () { return shot('dense'); })
+          /* And at the *end* of the list, where the window stops scrolling and
+             the last row sits wherever the clamp leaves it. This is where the
+             row height and the viewport height have to agree: get it wrong and
+             the final row's title is below the clip, invisible. Every section
+             has an All row at the bottom, so there is always one to land on. */
+          .then(function () { return press('ArrowDown', 12); })
+          .then(function () { return page.waitForTimeout(700); })
+          .then(function () {
+            return page.evaluate(function () {
+              var row = document.querySelector('#rows .row.on');
+              var tile = row && row.querySelector('.tile.on');
+              var title = tile && tile.querySelector('.tile-title');
+              var vp = document.getElementById('viewport').getBoundingClientRect();
+              var n = title && title.getBoundingClientRect();
+              return {
+                label: row ? row.querySelector('.row-label').textContent.trim() : '',
+                titleBottom: n ? Math.round(n.bottom) : null,
+                vpBottom: Math.round(vp.bottom)
+              };
+            });
+          })
+          .then(function (st) {
+            if (st.titleBottom === null) throw new Error('no focused tile on the last row');
+            if (st.titleBottom > st.vpBottom + 1) {
+              throw new Error('the last row is clipped: "' + st.label + '" title ends at ' +
+                              st.titleBottom + ', past the viewport at ' + st.vpBottom);
+            }
+          });
       });
     })
 
