@@ -57,17 +57,18 @@ var Browse = (function () {
 
   function render() {
     elBrowse.classList.toggle('results', !!searchQuery);
+    /* The hero is full height on the first row and a band everywhere else, so
+       the rows have somewhere to go the moment you step into them. */
+    elBrowse.classList.toggle('dense', rowIdx !== 0);
     Rail.render(rows, rowIdx);
     Masthead.render(focusedRow(), focusedItem(), rows.length > 0);
+    /* The backdrop keeps its own debounce — Meta's skips a cached item and
+       would leave the last film's art under the new one's title. */
+    Masthead.art(focusedItem());
     scheduleWalk();
-    /* The backdrop rides the same debounce the audio badge does — one settled
-       focus, one metadata fetch, one full-screen image. */
     Meta.schedule(focusedItem(), function (ratingKey) {
       var here = focusedItem();
-      if (here && here.ratingKey === ratingKey) {
-        Masthead.render(focusedRow(), here, true);
-        Masthead.art(here);
-      }
+      if (here && here.ratingKey === ratingKey) Masthead.render(focusedRow(), here, true);
     });
   }
 

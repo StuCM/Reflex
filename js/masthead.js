@@ -15,14 +15,27 @@ var Masthead = (function () {
   var elBadges = document.getElementById('mh-badges');
   var elSummary = document.getElementById('mh-summary');
   var elArt = document.getElementById('hero-art');
-  var lastArt = '';
+  var HOLD = 280;                // ms of stillness before asking for a backdrop
+  var artTimer = null, artWant = null, lastArt = '';
 
-  /* The backdrop. Called only from Browse's debounced focus callback, never per
-     keypress: each of these is a full-screen transcode on a server we do not
-     own. An item with no art keeps whatever is already there, because flashing
-     to black between two films is worse than a backdrop that lags. */
+  /* The backdrop, debounced on its own account.
+
+     It cannot ride Meta's debounce, which is what it used to do: Meta.schedule
+     short-circuits when a payload is already cached and never calls back, so
+     returning to a film you had already rested on left the *previous* film's
+     art on screen. The art is on the list item anyway and never needed the
+     metadata. Only the last item asked for is drawn, so sweeping a row costs
+     one full-screen transcode on a server we do not own, not one per key. */
   function art(item) {
-    var url = Plex.artUrl(item, 1920, 1080);
+    artWant = item;
+    clearTimeout(artTimer);
+    artTimer = setTimeout(paintArt, HOLD);
+  }
+
+  function paintArt() {
+    /* Plenty of a library has no art. Its poster, cropped, is still this film
+       rather than the last one — which is the whole complaint. */
+    var url = Plex.artUrl(artWant, 1920, 1080) || Plex.posterUrl(artWant, 1920, 1080);
     if (!url || url === lastArt) return;
     lastArt = url;
     elArt.style.backgroundImage = 'url("' + url + '")';
