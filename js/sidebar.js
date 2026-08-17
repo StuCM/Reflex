@@ -11,7 +11,10 @@
 var Sidebar = (function () {
   'use strict';
 
-  var el = document.getElementById('sidebar');
+  var el = document.getElementById('sidebar-list');
+
+  var VIEW_H = 968;     // the panel less its top padding and a little breathing room
+  var offset = 0;       // how far the list is wound up, in px
 
   var secs = [];        // { title, categories: [string], current }
   var rows = [];        // the flattened list the d-pad walks
@@ -59,6 +62,24 @@ var Sidebar = (function () {
               UI.escapeHtml(r.label) + '</div>';
     }
     el.innerHTML = html;
+    reveal();
+  }
+
+  /* Keep the focused row in view by winding the list, the way js/rail.js moves
+     a strip: there is no pointer on this set, so overflow:auto would put the
+     entries past the fold behind a scrollbar nothing can reach. Rows are two
+     different heights, so the offsets are read off the DOM rather than
+     arithmetic that would have to know about both. */
+  function reveal() {
+    var row = el.children[idx];
+    if (!row) return;
+    var top = row.offsetTop, bottom = top + row.offsetHeight;
+    if (bottom > offset + VIEW_H) offset = bottom - VIEW_H;
+    if (top < offset) offset = top;
+    if (offset < 0) offset = 0;
+    var t = 'translateY(' + (-offset) + 'px)';
+    el.style.transform = t;
+    el.style.webkitTransform = t;
   }
 
   function at(kind, index) {
@@ -82,14 +103,15 @@ var Sidebar = (function () {
     for (i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;
     rows = build();
     idx = expanded >= 0 ? at('section', expanded) : 0;
+    offset = 0;
     showing = true;
-    el.classList.add('open');
+    el.parentNode.classList.add('open');
     render();
   }
 
   function close() {
     showing = false;
-    el.classList.remove('open');
+    el.parentNode.classList.remove('open');
   }
 
   function isOpen() { return showing; }
