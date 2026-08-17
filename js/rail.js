@@ -11,12 +11,15 @@ var Rail = (function () {
   'use strict';
 
   var TILE_W = 372, TILE_H = 209, GAP = 44, STRIDE = TILE_W + GAP;
-  var ROW_H = 328;
+  var ROW_H = 335;               // 44 header + 209 art + 48 title + 34 below
   var TILE_POOL = 12;            // tiles per row element
   var ROW_POOL = 4;              // row elements in the DOM, ever
   var TILES_VISIBLE = 4;         // tiles across at 1920 wide
   var LEAD = 1;                  // tiles kept to the left of the focused one
-  var ROWS_VISIBLE = 2;
+  var ROWS_VISIBLE = 3;          // rows down the screen once the hero collapses
+  /* The tall hero and the band differ by this much, and the rows carry the
+     whole move on one transform rather than anything animating a height. */
+  var BIG_DROP = 408;
 
   var elRows = document.getElementById('rows');
   var rowEls = [];
@@ -147,7 +150,10 @@ var Rail = (function () {
     var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
     var start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
     var i, r;
-    translate(elRows, 0, -firstVisible * ROW_H);
+    /* Row 0 sits under the tall hero; everything below it sits under the band.
+       Both states are one translate on this element, so the collapse animates
+       for free on the transform that was moving anyway. */
+    translate(elRows, 0, (rowIdx === 0 ? BIG_DROP : 0) - firstVisible * ROW_H);
     for (i = 0; i < ROW_POOL; i++) {
       r = start + i;
       if (r >= rows.length) { rowEls[i].classList.add('hidden'); rowEls[i]._row = -1; continue; }

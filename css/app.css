@@ -60,38 +60,62 @@ html, body {
 
 #hero-scrim-y {
   position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
-  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 40%, rgba(12, 15, 22, 0) 78%);
-  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 40%, rgba(12, 15, 22, 0) 78%);
+  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 50%, rgba(12, 15, 22, 0) 86%);
+  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 50%, rgba(12, 15, 22, 0) 86%);
 }
 
-/* ---- masthead ---- */
+/* The backdrop belongs to the tall hero. In the band there is nothing left for
+   it to sit behind, and a full-screen image under three rows of tiles is only
+   noise. Opacity, so the swap costs no layout. */
+#hero-art, #hero-scrim-x, #hero-scrim-y {
+  -webkit-transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
+  transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
+}
+#browse.dense #hero-art,
+#browse.dense #hero-scrim-x,
+#browse.dense #hero-scrim-y { opacity: 0; }
 
-#masthead { position: absolute; top: 96px; left: 80px; width: 1080px; height: 470px; }
+/* ---- masthead ----
+
+   Two states of the same markup. Tall while the focus is on the first row, a
+   132px band the moment it leaves — which is what gives the rows room for
+   three of themselves instead of one and a half. */
+
+#masthead { position: absolute; top: 96px; left: 96px; width: 1080px; height: 444px; }
 
 #mh-row {
-  font-size: 22px; letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: 22px; letter-spacing: 0.24em; text-transform: uppercase;
   color: var(--ac2);
   white-space: nowrap; overflow: hidden;
 }
 
 #mh-title {
-  margin-top: 6px;
-  font-size: 96px; font-weight: 300; line-height: 1.05;
+  margin-top: 22px;
+  font-size: 100px; font-weight: 500; line-height: 1.02; letter-spacing: -0.028em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-#mh-meta { margin-top: 12px; font-size: 24px; color: var(--dim); }
+#mh-meta { margin-top: 12px; font-size: 26px; color: var(--dim); }
 
-#mh-actions { margin-top: 24px; height: 56px; }
+#mh-actions { margin-top: 26px; height: 66px; }
 
 .pill {
   display: inline-block; vertical-align: top;
-  margin-right: 16px; padding: 12px 30px;
-  border-radius: 30px; font-size: 26px;
-  background: var(--surface); color: var(--fg);
+  margin-right: 16px; padding: 17px 36px;
+  border-radius: 999px; font-size: 26px;
+  background: var(--soft); color: var(--fg);
 }
-.pill.primary { background: var(--ac); color: var(--bg); }
+.pill.primary { padding: 17px 44px; background: var(--ac); color: var(--bg); }
 .pill-icon { display: inline-block; vertical-align: -3px; margin-right: 12px; }
+
+/* Round buttons beside the pills — heart in the tall hero, info in the band. */
+.circle {
+  display: inline-block; vertical-align: top;
+  width: 66px; height: 66px; border-radius: 50%;
+  background: var(--soft); color: var(--dim);
+  text-align: center; line-height: 66px;
+}
+#mh-info { display: none; }
 
 #mh-badges { margin-top: 20px; height: 40px; }
 
@@ -109,6 +133,62 @@ html, body {
   margin-top: 18px; font-size: 22px; line-height: 1.45; color: var(--dim);
   max-height: 68px; overflow: hidden; width: 900px;
 }
+
+/* ---- the hero as a band ----
+
+   Same elements, laid out across instead of down. Flex `order` does the
+   rearranging, so nothing moves in the DOM. The badges stay: CLAUDE.md is
+   explicit that the audio verdict has to be readable before OK is pressed, and
+   that is true whichever row you are on. */
+
+#browse.dense #masthead {
+  top: 0; left: 0; width: 1920px; height: 132px;
+  padding: 0 300px 0 96px;      /* room on the right for the search pill */
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+  border-bottom: 1px solid var(--soft);
+  background: var(--bg);
+}
+
+#browse.dense #mh-row,
+#browse.dense #mh-summary,
+#browse.dense #mh-more,
+#browse.dense #mh-heart { display: none; }
+
+#browse.dense #mh-title {
+  -webkit-order: 1; order: 1;
+  margin-top: 0; margin-right: 32px; max-width: 660px;
+  font-size: 46px; font-weight: 500; letter-spacing: -0.02em;
+}
+#browse.dense #mh-meta {
+  -webkit-order: 2; order: 2;
+  margin-top: 0; font-size: 25px; font-weight: 400; white-space: nowrap;
+}
+#browse.dense #mh-badges {
+  -webkit-order: 3; order: 3;
+  margin-top: 0; margin-left: 26px; height: auto; white-space: nowrap;
+}
+#browse.dense #mh-actions {
+  -webkit-order: 4; order: 4;
+  margin-top: 0; margin-left: auto; height: 58px; white-space: nowrap;
+}
+#browse.dense .pill { margin-right: 0; padding: 14px 34px; font-size: 24px; }
+#browse.dense #mh-info {
+  display: inline-block;
+  width: 58px; height: 58px; line-height: 58px; margin-left: 14px;
+}
+
+/* Vertically centred in the band rather than sitting above it. */
+#browse.dense #top-right { top: 41px; right: 96px; }
+
+/* What the keys do here, which is not the same in the two states. */
+#browse-hint {
+  position: absolute; left: 96px; bottom: 32px;
+  font-size: 20px; color: var(--dim2); letter-spacing: 0.04em;
+}
+/* A CSS escape swallows one following space, so each of these carries two. */
+#browse-hint::after { content: "\25C0  \25B6  browse  \00B7   \25BC  into the rows  \00B7   OK opens"; }
+#browse.dense #browse-hint::after { content: "\25B2  back up to the hero  \00B7   OK opens the title"; }
 
 /* ---- the search button ----
    An affordance, not a target: the red key reaches search in one press from
@@ -129,12 +209,23 @@ html, body {
      so that opening it never reflows the rail, and z-index is what buys that. */
   z-index: 5;
   background: var(--surface);
+  /* The list is wound with a transform, so what runs past the bottom has to be
+     clipped here. Never overflow:auto — a scrollbar is a control this remote
+     cannot reach. */
+  overflow: hidden;
   -webkit-transform: translateX(-520px); transform: translateX(-520px);
   -webkit-transition: -webkit-transform 180ms ease-out;
   transition: transform 180ms ease-out;
   will-change: transform;
 }
 #sidebar.open { -webkit-transform: translateX(0); transform: translateX(0); }
+
+#sidebar-list {
+  position: relative;           /* the offset parent reveal() measures against */
+  -webkit-transition: -webkit-transform 180ms ease-out;
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
 
 .sb-row {
   height: 64px; line-height: 64px; padding: 0 34px;
@@ -153,26 +244,28 @@ html, body {
 
 /* ---- rows ---- */
 
-#viewport { position: absolute; top: 596px; left: 0; width: 1920px; height: 484px; overflow: hidden; }
+/* Fixed in both hero states: it is #rows that moves, by BIG_DROP, so the
+   collapse is one transform and nothing animates a height. */
+#viewport { position: absolute; top: 154px; left: 0; width: 1920px; height: 862px; overflow: hidden; }
 
 #rows {
   position: absolute; top: 0; left: 0; width: 100%;
-  -webkit-transition: -webkit-transform 180ms ease-out;
-  transition: transform 180ms ease-out;
+  -webkit-transition: -webkit-transform 340ms cubic-bezier(.2, .7, .2, 1);
+  transition: transform 340ms cubic-bezier(.2, .7, .2, 1);
   will-change: transform;
 }
 
-.row { position: absolute; top: 0; left: 0; width: 1920px; height: 328px; }
+.row { position: absolute; top: 0; left: 0; width: 1920px; height: 335px; }
 
 .row-label {
-  position: absolute; top: 0; left: 80px;
+  position: absolute; top: 0; left: 96px; height: 44px;
   font-size: 24px; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--dim2);
 }
 .row.on .row-label { color: var(--ac); }
 
 .strip {
-  position: absolute; top: 40px; left: 80px; width: 100%; height: 288px;
+  position: absolute; top: 44px; left: 96px; width: 100%; height: 257px;
   -webkit-transition: -webkit-transform 180ms ease-out;
   transition: transform 180ms ease-out;
   will-change: transform;
@@ -181,7 +274,7 @@ html, body {
 /* Outer tile is repositioned when recycled, so it must NOT transition —
    otherwise a recycled tile flies across the screen. Only the inner element
    animates, and only its transform. */
-.tile { position: absolute; top: 0; left: 0; width: 372px; height: 288px; }
+.tile { position: absolute; top: 0; left: 0; width: 372px; height: 257px; }
 
 .tile-inner {
   position: relative;
@@ -209,9 +302,10 @@ html, body {
 }
 
 .tile-title {
-  margin-top: 10px; padding: 0 4px;
-  font-size: 22px; line-height: 1.25; color: var(--dim);
-  height: 56px; overflow: hidden;
+  margin-top: 18px; padding: 0 4px;
+  font-size: 22px; line-height: 1.3; color: var(--dim);
+  height: 30px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
 }
 .tile.on .tile-title { color: var(--fg); }
 
@@ -526,6 +620,6 @@ html, body {
 }
 
 #debug {
-  position: absolute; bottom: 8px; left: 80px; width: 1792px; height: 22px;
+  position: absolute; bottom: 8px; left: 96px; width: 1792px; height: 22px;
   font-size: 18px; color: var(--dim2); white-space: nowrap; overflow: hidden;
 }
