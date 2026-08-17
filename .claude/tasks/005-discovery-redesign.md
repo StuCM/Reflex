@@ -288,6 +288,24 @@ than leaving another film's backdrop up.
 All three new smoke steps were confirmed to **fail** against the unfixed code and
 pass against the fixed code.
 
+### Round-two review found a fourth, which round two caused
+
+`ROWS_VISIBLE` was answering two different questions with one number. It bounds
+the scroll window (`rows.length - ROWS_VISIBLE`) *and* decides which rows are
+close enough to be worth fetching posters for. At `3`, with `ROW_H` 335 in an
+862px viewport, three rows need 971px — so once the window pinned to the end of a
+list, the last row sat below the clip with its title entirely invisible. Same
+symptom fault 2 was opened for, moved from row 1 to the tail of every section.
+
+Split into two constants: `ROWS_FIT = 2` bounds the window (335 + 301 fits in
+862; a third does not), `ROWS_VISIBLE = 3` still governs poster loading, because
+the third row does peek and its posters should be there when you reach it.
+
+The dense smoke step now also walks to the end of the list and asserts the
+focused tile's **title** is above the clip — the title is what went missing, and
+an assertion against the artwork alone would not have seen it. Verified failing
+against the old single-constant clamp.
+
 ## Review rounds
 
 ### Round 1 — `crew-reviewer` — **PASS**
@@ -360,6 +378,13 @@ drawn from the cache a moment earlier — but it makes `Meta.schedule` unusable 
 a general "the focus has settled" signal. Anything that needs to repaint on a
 settled focus from data that is *not* the metadata must carry its own debounce.
 Cost: a backdrop that showed the previous film for every title visited twice.
+
+**Pattern — "one constant answering two questions is a bug waiting for the edge
+of the list".** `ROWS_VISIBLE` bounded the scroll window and chose which posters
+to prefetch. Those are different numbers — how many rows fit *whole*, and how
+many are on screen *at all* — and conflating them clipped the last row of every
+section. The tell is that the value was correct everywhere except at the end of
+a list, which is exactly where a clamp is the only thing deciding the layout.
 
 **Pattern — "a smoke step that cannot overflow proves nothing about
 overflow".** The first test for the sidebar winding walked the real list to its
