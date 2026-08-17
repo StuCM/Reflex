@@ -1,7 +1,7 @@
 ---
 id: 005
 slug: discovery-redesign
-status: done
+status: review
 model: sonnet
 env: laptop
 branch: crew/005-discovery-redesign
@@ -186,6 +186,11 @@ editing those, stop — the spec is wrong.
 
 ## What the spec got wrong, or left to invent
 
+0. **The spec omitted the dense hero state entirely** — orchestrator's error,
+   confirmed by the orchestrator in round two. Only the tall hero was described,
+   which is why the rows were obscured and why moving down looked broken. See
+   *Round two* below.
+
 1. **The Play and More info pills are labels, not targets.** The spec removed
    `headerFocus`, which was the only focus model above the rail, so there is
    nothing to move between two pills with. OK on the rail still opens the
@@ -214,6 +219,74 @@ editing those, stop — the spec is wrong.
    first results row's own title — the query, the count and `BACK to library` —
    and `#browse` carries a `results` class so the harness can tell the two
    states apart without reading text.
+
+## Round two — the three faults
+
+### Fault 1 — long lists did not scroll in the sidebar
+
+The sidebar drew every entry and clipped whatever ran past the panel, so on a
+real library the entries below the fold could not be reached at all. `js/rail.js`
+already solves this and the fix reuses its idea: an inner `#sidebar-list` wrapper
+carrying a `translateY`, wound by `reveal()` so the focused row is always inside
+the panel. No `overflow: auto` — a scrollbar is a control this remote cannot
+reach. Row heights differ (64px for a section, 52px for a category), so the
+offsets are read off the DOM rather than computed from constants that would have
+to know about both.
+
+**The first version of the smoke step for this was worthless and I nearly
+shipped it.** It walked the real sidebar to its last entry and asserted the entry
+was on screen — and it passed against the unfixed code, because the generated
+library builds a list 908px tall inside a 1080px panel and never overflows. The
+step now drives `Sidebar.open` directly with a section of thirty categories, so
+the list genuinely overruns, and it fails without `reveal()`.
+
+Not fixed, and out of `files:`: `#device-list` in `js/devices.js` and
+`#sh-episodes` in `js/showpage.js` are the same shape of list and will have the
+same problem on a long enough library. `#menu-inner` in the player already winds
+itself correctly.
+
+### Fault 2 — the hero never collapsed (spec omission, orchestrator's)
+
+**The spec described only the tall hero and never mentioned the dense band.**
+That is an orchestrator error, recorded here as asked. The consequence was
+visible: the tall hero left room for one and a half rows, so stepping down drew
+the row you had just moved to mostly below the fold, and moving down read as
+nothing happening. This is very likely what was first reported as broken row
+scrolling.
+
+Built to the geometry given: 540px hero with the backdrop on row 0, a 132px band
+with the backdrop faded out everywhere else, three rows on screen once it
+collapses. `#viewport` is fixed in both states and `#rows` carries the whole
+408px move as one transform on the transition it was already running, so nothing
+animates a height. Flex `order` rearranges the same masthead elements into the
+band; nothing moves in the DOM.
+
+One deliberate departure: **the band keeps the badges.** CLAUDE.md is explicit
+that the audio verdict has to be readable before OK is pressed, and that is true
+on every row, not just the first. They sit between the meta line and the
+right-aligned actions.
+
+### Fault 3 — the backdrop showed the wrong film
+
+Reproduced before fixing. Rest on a title, move on, come back: the hero still
+showed the *previous* film's art under the new one's title.
+
+The cause was not a stale async result — the guard for that was in place. It was
+that `Meta.schedule` returns early **without calling the callback at all** when
+the payload is already in its RAM cache:
+
+    if (cache[keyOf(item)]) return;
+
+The backdrop was painted from that callback, so every title already visited once
+silently kept the last backdrop. Hitching the art to `Meta` was the wrong idea
+from the start: `art` is on the list item and the backdrop never needed the
+metadata. `Masthead.art` now keeps its own 280ms debounce and paints whatever was
+last handed to it, so a fast sweep costs one full-screen transcode and lands on
+the item under the focus. An item with no `art` falls back to its poster rather
+than leaving another film's backdrop up.
+
+All three new smoke steps were confirmed to **fail** against the unfixed code and
+pass against the fixed code.
 
 ## Review rounds
 
@@ -280,6 +353,26 @@ keypress".** `Masthead.art` is called only from `Browse`'s `Meta.schedule`
 callback, so a settled focus costs one full-screen `photo/:/transcode` on a
 server we do not own; calling it from `Masthead.render` would have fired one per
 arrow press. Same reasoning as the rail's deferred posters.
+
+**Gotcha — "`Meta.schedule` does not call back for an item it already holds".**
+`if (cache[keyOf(item)]) return;` is correct for its own job — the badge was
+drawn from the cache a moment earlier — but it makes `Meta.schedule` unusable as
+a general "the focus has settled" signal. Anything that needs to repaint on a
+settled focus from data that is *not* the metadata must carry its own debounce.
+Cost: a backdrop that showed the previous film for every title visited twice.
+
+**Pattern — "a smoke step that cannot overflow proves nothing about
+overflow".** The first test for the sidebar winding walked the real list to its
+end and passed against the unfixed code, because the generated library builds a
+list shorter than the panel. A test for a list-too-long bug has to build a list
+that is too long — driving `Sidebar.open` with thirty synthetic categories. The
+general habit worth keeping: **break the fix and watch the new test fail before
+believing it.** All three of round two's steps were checked that way, and one of
+them was worthless until it was.
+
+**Gotcha — "a CSS escape swallows one following space".** `content: "\25C0 \25B6"`
+renders as `◀▶` with no gap, because the space terminates the hex escape. Two
+spaces are needed for one to survive.
 
 **Gotcha — "widening a palette to eight tokens is not enough for a screen with
 three grey levels".** Palette 5a's single `--dim` flattened the detail, show and

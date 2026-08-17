@@ -7,9 +7,9 @@ Task files are the source of truth; this is the glance view.
 |---|---|---|---|---|
 | 003 | Land the audio-switch fix stranded on claude/player-features | `pending-tv` | laptop | crew/003-land-audio-switch *(gone)* |
 | 004 | Replace filter-then-index with find | `building` | laptop | crew/004-find-over-filter |
-| 005 | The discovery screen: hero, landscape tiles, and a sidebar | `building` | laptop | crew/005-discovery-redesign |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
+| 005 | The discovery screen: hero, landscape tiles, and a sidebar | `done` | laptop | crew/005-discovery-redesign |
 
 ## Waiting on you
 
@@ -18,4 +18,3 @@ Task files are the source of truth; this is the glance view.
 ## In flight
 
 - **004 Replace filter-then-index with find** — `building` on `crew/004-find-over-filter`
-- **005 The discovery screen: hero, landscape tiles, and a sidebar** — `building` on `crew/005-discovery-redesign`
