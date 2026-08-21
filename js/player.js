@@ -13,6 +13,7 @@ var Player = (function () {
 
   var BAR_W = 1792;                // #osd-bar, in CSS pixels
   var SEEK_SETTLE = 400;           // ms of stillness before a seek is applied
+  var AUDIO_SETTLE = 900;          // ms of stillness before a track change is applied
 
   var item = null, server = null, onExit = null, onError = null, onAudio = null;
   var currentPart = null, currentAudio = null;
@@ -27,6 +28,14 @@ var Player = (function () {
      holding the key would otherwise fire one per press and fight the network
      the whole way. Accumulate, show where you are going, apply once you stop. */
   var pending = null, seekTimer = null;
+
+  /* Where a run of red presses is heading, and whether a change is already in
+     flight. Switching track restarts the stream with a different audio codec,
+     and every restart makes the set renegotiate the audio link with whatever is
+     on the other end of HDMI — over plain ARC that is a real handshake, not a
+     free operation. Three presses must therefore be one restart, not three, and
+     a second must never start while the first is still going. */
+  var pendingAudio = null, audioTimer = null, switching = false;
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -166,6 +175,9 @@ var Player = (function () {
     resumeMs = opts.item.viewOffset || 0;
 
     stalls = 0; lowest = 999; startedAt = Date.now();
+    switching = false;
+    pendingAudio = null;
+    clearTimeout(audioTimer);
     var url = opts.url || Plex.streamUrl(server, opts.part);
     osdTitle.textContent = opts.item.title || '';
     pending = null;
@@ -271,7 +283,12 @@ var Player = (function () {
     clearInterval(ticker); ticker = null;
     clearTimeout(osdTimer);
     clearTimeout(seekTimer);
+    clearTimeout(audioTimer);
     pending = null;
+    /* A refused switch tears down without playing again, so the flag has to
+       clear here as well as on the next play(). */
+    switching = false;
+    pendingAudio = null;
     v.pause();
     v.onloadedmetadata = v.onplaying = v.ontimeupdate = v.onended = v.onerror = null;
     v.onwaiting = null;
@@ -294,16 +311,34 @@ var Player = (function () {
     if (!onAudio) return false;
     var tracks = Media.audioTracks(currentPart);
     if (tracks.length < 2) { showOsd(); return true; }
+    /* Already restarting: let it finish. Stacking another teardown on top gives
+       two streams racing for one element, and two more audio renegotiations. */
+    if (switching) { showOsd(); return true; }
+
+    /* Cycle from where the presses have got to, not from what is playing, so
+       holding red walks the list rather than flapping between two tracks. */
+    var from = pendingAudio || currentAudio;
     var at = 0, i;
     for (i = 0; i < tracks.length; i++) {
-      if (currentAudio && String(tracks[i].id) === String(currentAudio.id)) at = i;
+      if (from && String(tracks[i].id) === String(from.id)) at = i;
     }
-    var next = tracks[(at + 1) % tracks.length];
-    osdTracks.textContent = 'Switching to ' + Media.audioLabel(next) +
-      (Media.isCommentary(next) ? ' (commentary)' : '') + '…';
+    pendingAudio = tracks[(at + 1) % tracks.length];
+    osdTracks.textContent = 'Switching to ' + Media.audioLabel(pendingAudio) +
+      (Media.isCommentary(pendingAudio) ? ' (commentary)' : '') + '…';
     showOsd();
-    onAudio(next.id, v.currentTime || 0);
+
+    clearTimeout(audioTimer);
+    audioTimer = setTimeout(commitAudio, AUDIO_SETTLE);
     return true;
+  }
+
+  /* The presses have stopped: ask for the track they landed on, once. */
+  function commitAudio() {
+    if (!onAudio || !pendingAudio || switching) return;
+    var want = pendingAudio;
+    pendingAudio = null;
+    switching = true;
+    onAudio(want.id, v.currentTime || 0);
   }
 
   function playing() { return !!item; }
