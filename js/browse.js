@@ -142,7 +142,7 @@ var Browse = (function () {
     /* On the results page the chips are replaced by a header, so it never reads
        as the library screen having reloaded. */
     if (searchQuery) {
-      return '<span class="chip cur">' + UI.escapeHtml(searchQuery) + '</span>' +
+      return '<span class="chip cur query">' + UI.escapeHtml(searchQuery) + '</span>' +
              '<span class="chip">' + searchCount + ' ' + searchNoun +
              '</span><span class="chip">back to library</span>';
     }
@@ -260,8 +260,31 @@ var Browse = (function () {
     });
   }
 
+  /* The Continue watching row as built, with the unfiltered list kept beside
+     it so history can narrow it once it arrives. */
+  var deckRow = null;
+
+  /* History landed after the row was drawn: drop anything last watched on a
+     device that is not claimed, in place. */
+  function refilterDeck(row) {
+    var kept = Devices.mine(row.all), i;
+    if (kept.length === row.items.length) return;
+    row.items = kept;
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].title === row.title && rows[i].kind === 'list') {
+        rows[i].items = kept;
+        rows[i].total = kept.length;
+        rows[i].focus = UI.clamp(rows[i].focus, 0, Math.max(0, kept.length - 1));
+      }
+    }
+    Rail.invalidateAll();
+    render();
+    UI.debug('continue watching: ' + kept.length + ' of ' + row.all.length + ' are yours');
+  }
+
   function loadSection(i, allowFetch) {
     secIdx = i;
+    deckRow = null;
     reset('library');
     var isCurrent = generationGuard();
     var sec = sections[i];
@@ -280,25 +303,34 @@ var Browse = (function () {
 
       /* Continue watching is per server; the category rows are per section. Two
          requests per server for the whole browse screen, however big the
-         library is. */
+         library is.
+
+         History is NOT waited for. It only decides whether to *drop* deck
+         entries that were watched on someone else's device, and it is the
+         slowest of these — a hundred fat entries per server. Painting a row
+         that might lose an item a second later beats an empty screen. */
       var servers = serversOf(sec);
+      Devices.ensureHistory().then(function () {
+        if (isCurrent() && deckRow) refilterDeck(deckRow);
+      });
+
       return Promise.all([
         Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
-        Promise.all(sec.parts.map(function (p) { return Plex.hubs(p.server, p.key); })),
-        Devices.ensureHistory()
+        Promise.all(sec.parts.map(function (p) { return Plex.hubs(p.server, p.key); }))
       ]).then(function (res) {
         if (!isCurrent()) return;
         var built = [];
 
-        /* onDeck is per server, not per section: it hands back films and
-           episodes together. A show section should carry on with episodes and a
-           film section with films. */
-        var want = sec.type === 'show' ? 'episode' : 'movie';
-        var deck = Devices.mine(Merge.lists(res[0])).filter(function (m) {
-          return m.type === want;
-        });
+        /* One Continue watching, spanning everything: onDeck returns films and
+           episodes together and that is how it should read. A part-watched
+           episode belongs on the film screen as much as the show screen — what
+           you are part way through is one list, not one per section. */
+        var deck = collapseToShows(Merge.lists(res[0]));
         deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
-        if (deck.length) built.push({ title: 'Continue watching', items: deck });
+        if (deck.length) {
+          deckRow = { title: 'Continue watching', items: Devices.mine(deck), all: deck };
+          built.push(deckRow);
+        }
 
         mergeHubs(res[1]).forEach(function (hub) { built.push(hub); });
 
@@ -307,6 +339,7 @@ var Browse = (function () {
         rows.push(allRow(sec));
         rowIdx = UI.clamp(rowIdx, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
+        Rail.invalidateAll();
         render();
         UI.debug(sec.title + ': ' + rows.length + ' rows from ' + servers.length + ' server' +
                  (servers.length === 1 ? '' : 's'));
@@ -318,6 +351,36 @@ var Browse = (function () {
     });
   }
 
+  /* Continue watching is a list of things, not of episodes. Two servers can
+     each have you part way through a different episode of the same show, and
+     onDeck itself can return more than one — so without this the row shows the
+     same series two or three times over, which is what it was doing. Keep the
+     one you got furthest with. */
+  function collapseToShows(list) {
+    var out = [], seen = {}, i, item, key, at;
+    for (i = 0; i < list.length; i++) {
+      item = list[i];
+      if (item.type !== 'episode') { out.push(item); continue; }
+      key = 'show:' + String(item.grandparentGuid || item.grandparentTitle || item.ratingKey)
+        .toLowerCase();
+      at = seen[key];
+      if (at === undefined) { seen[key] = out.length; out.push(item); continue; }
+      /* Already have an episode of this show: keep whichever was watched last,
+         which is the one you would actually carry on with. */
+      if ((item.lastViewedAt || 0) > (out[at].lastViewedAt || 0)) out[at] = item;
+    }
+    return out;
+  }
+
+  /* A server offers its own Continue Watching among the category hubs, and we
+     build that row ourselves from onDeck across every server — so taking the
+     server's as well drew it twice. Ours is the one to keep: the server's is
+     per-server and per-section, ours spans both. */
+  function isOwnDeck(hub) {
+    return /inprogress|ondeck|continue/i.test(hub.hubIdentifier || '') ||
+           /^continue watching$|^on deck$/i.test(hub.title || '');
+  }
+
   /* Both servers offer a "Recently Added"; they are one row, deduplicated.
      Order within it is first-seen, which keeps each server's own ordering
      intact rather than inventing a ranking across them. */
@@ -326,6 +389,7 @@ var Browse = (function () {
     for (i = 0; i < perPart.length; i++) {
       list = perPart[i] || [];
       for (j = 0; j < list.length; j++) {
+        if (isOwnDeck(list[j])) continue;
         if (!byTitle[list[j].title]) { byTitle[list[j].title] = []; order.push(list[j].title); }
         byTitle[list[j].title].push(list[j].items);
       }
@@ -389,9 +453,8 @@ var Browse = (function () {
         Devices.ensureHistory()
       ]).then(function (res) {
         if (!isCurrent()) return;
-        var kidsWant = sec.type === 'show' ? 'episode' : 'movie';
         var watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
-          return m.type === kidsWant && Media.isKidsRating(m.contentRating);
+          return Media.isKidsRating(m.contentRating);
         });
         rows = [];
         if (watching.length) rows.push(Rows.list('Kids · carry on watching', watching));
@@ -495,6 +558,10 @@ var Browse = (function () {
       }
       if (!rows.length) rows = [Rows.list('No matches', [])];
       rowIdx = 0;
+      /* The rail caches tiles by row index, so swapping the rows underneath it
+         leaves the old posters and titles in place — results wearing the
+         library's artwork. */
+      Rail.invalidateAll();
       render();
       UI.debug('search "' + q + '": ' + found.length + ' ' + searchNoun);
     }).catch(function (e) {
@@ -522,6 +589,7 @@ var Browse = (function () {
     savedRows = null;
     searchQuery = null;
     rowIdx = 0;
+    Rail.invalidateAll();
     render();
     return true;
   }

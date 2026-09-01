@@ -11,14 +11,20 @@ var Rail = (function () {
   'use strict';
 
   var TILE_W = 160, TILE_H = 240, GAP = 24, STRIDE = TILE_W + GAP;
-  var ROW_H = 304;
+  var ROW_H = 316;                // must match .row in css/app.css
   var TILE_POOL = 12;            // tiles per row element
   var ROW_POOL = 4;              // row elements in the DOM, ever
   var TILES_VISIBLE = 10;        // tiles across at 1920 wide
   var ROWS_VISIBLE = 2;
 
+  var DEFER_SETTLE = 700;        // ms of stillness before the rows below load
+
   var elRows = document.getElementById('rows');
   var rowEls = [];
+
+  /* Rows below the fold are drawn without their posters, then filled in once
+     you stop moving — see render(). eager is that second pass. */
+  var deferTimer = null, eager = false;
 
   function translate(el, x, y) {
     var t = 'translate(' + x + 'px,' + y + 'px)';
@@ -63,6 +69,21 @@ var Rail = (function () {
       }
       elRows.appendChild(rowEl);
       rowEls.push(rowEl);
+    }
+  }
+
+  /* The row set has been replaced under us. Tiles are cached by row index and
+     item index, so without this a new set of rows inherits the old set's
+     posters and titles — which is what made search results wear the library's
+     artwork. */
+  function invalidateAll() {
+    var r, i;
+    for (r = 0; r < ROW_POOL; r++) {
+      rowEls[r]._row = -1;
+      for (i = 0; i < TILE_POOL; i++) {
+        rowEls[r]._tiles[i]._idx = -1;
+        rowEls[r]._tiles[i]._filled = false;
+      }
     }
   }
 
@@ -120,7 +141,12 @@ var Rail = (function () {
         tile._img.removeAttribute('src');
         continue;
       }
-      tile._fb.textContent = item.title || '';
+      /* An episode on the Continue watching row is the *show* as far as the
+         rail is concerned: its own still and title say nothing you can pick out
+         at poster size, and the show's poster is what you are looking for. The
+         masthead still names the episode. */
+      tile._fb.textContent = (item.type === 'episode' && item.grandparentTitle)
+        ? item.grandparentTitle : (item.title || '');
       tile._prog.style.width = (item.viewOffset && item.duration)
         ? Math.round(100 * item.viewOffset / item.duration) + '%' : '0';
       /* Rows below the fold get their titles but not their posters. On a first
@@ -141,14 +167,30 @@ var Rail = (function () {
   function render(rows, rowIdx) {
     var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
     var start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
-    var i, r;
+    var i, r, deferred = false;
     translate(elRows, 0, -firstVisible * ROW_H);
     for (i = 0; i < ROW_POOL; i++) {
       r = start + i;
       if (r >= rows.length) { rowEls[i].classList.add('hidden'); rowEls[i]._row = -1; continue; }
-      drawRow(rowEls[i], rows, r, rowIdx, r < firstVisible + ROWS_VISIBLE);
+      if (!eager && r >= firstVisible + ROWS_VISIBLE) deferred = true;
+      drawRow(rowEls[i], rows, r, rowIdx, eager || r < firstVisible + ROWS_VISIBLE);
+    }
+
+    /* The rows below the fold get their posters once the screen has settled.
+       Every keypress pushes this back, so holding a direction key never asks a
+       server we do not own for artwork nobody is looking at — and standing
+       still for a moment fills the screen in rather than leaving a row of bare
+       title cards peeking at the bottom. */
+    clearTimeout(deferTimer);
+    if (deferred) {
+      deferTimer = setTimeout(function () {
+        eager = true;
+        render(rows, rowIdx);
+        eager = false;
+      }, DEFER_SETTLE);
     }
   }
 
-  return { build: build, render: render, invalidateEmpty: invalidateEmpty };
+  return { build: build, render: render,
+           invalidateEmpty: invalidateEmpty, invalidateAll: invalidateAll };
 })();

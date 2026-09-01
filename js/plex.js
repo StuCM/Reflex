@@ -487,10 +487,16 @@ var Plex = (function () {
   }
 
   /* Items are stamped with the server they came from, so callers do not have to
-     carry it around just to draw a poster. */
+     carry it around just to draw a poster.
+
+     An episode's own thumb is a still from the episode — 16:9, and unreadable
+     at poster size. Its show's poster is what belongs on a rail, and is what
+     Plex itself draws for anything on deck. */
   function posterUrl(item, w, h) {
-    if (!item || !item.thumb) return '';
-    return photoUrl(Servers.of(item), item.thumb, w, h);
+    if (!item) return '';
+    var art = (item.type === 'episode' && item.grandparentThumb) || item.thumb;
+    if (!art) return '';
+    return photoUrl(Servers.of(item), art, w, h);
   }
 
   function artUrl(item, w, h) {

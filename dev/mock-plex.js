@@ -383,9 +383,19 @@ function create(opts) {
       const kind = list.length ? list[0].type : 'movie';
       const byAdded = list.slice().sort(function (a, b) { return b.addedAt - a.addedAt; });
       const byYear = list.slice().sort(function (a, b) { return b.year - a.year; });
+      /* A real server puts its own Continue Watching in here, alongside the
+         category rows — which is how the app ended up drawing two of them, its
+         own from onDeck and the server's. Reproduced so it stays fixed. */
+      const inProgress = (kind === 'show' ? srv.deck.filter(function (m) {
+        return m.type === 'episode';
+      }) : srv.deck.filter(function (m) { return m.type === 'movie'; }));
+
       json(res, 200, container({
-        size: 4,
+        size: 5,
         Hub: [
+          { title: 'Continue Watching',
+            hubIdentifier: (kind === 'show' ? 'tv' : 'movie') + '.inprogress',
+            type: kind, Metadata: inProgress.map(stripStreams) },
           { title: 'Recently Added', hubIdentifier: 'recentlyAdded', type: kind,
             Metadata: byAdded.slice(0, 20).map(stripStreams) },
           { title: kind === 'show' ? 'Recently Aired' : 'Recently Released',

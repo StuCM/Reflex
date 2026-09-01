@@ -134,6 +134,7 @@ function run() {
 }
 
 function drive(page, titles) {
+  const titles_directPlays = titles.directPlays.title;
   const errors = [];
   const offSite = [];
 
@@ -316,6 +317,58 @@ function drive(page, titles) {
             if (chips.indexOf('Films') < 0) throw new Error('no Films chip');
             if (chips.indexOf('TV Shows') < 0) throw new Error('no TV Shows chip');
           });
+      });
+    })
+
+    .then(function () {
+      return step('one Continue watching, spanning films and shows', function () {
+        return page.evaluate(function () {
+          var labels = [];
+          document.querySelectorAll('#rows .row:not(.hidden) .row-label')
+            .forEach(function (l) { labels.push(l.textContent.trim()); });
+          return labels;
+        }).then(function (labels) {
+          /* The servers offer their own Continue Watching among the category
+             hubs and the app builds one of its own from onDeck across both, so
+             this drew twice until the server's was skipped. */
+          var decks = labels.filter(function (l) { return /continue watching/i.test(l); });
+          if (decks.length !== 1) {
+            throw new Error(decks.length + ' Continue watching rows: ' + labels.join(' | '));
+          }
+        }).then(function () {
+          /* And it spans everything you are part way through, not just the
+             section you happen to be in. */
+          return waitFor('(function(){var r=document.querySelector("#rows .row:not(.hidden)");' +
+                         'if (!r) return false;' +
+                         'var t=r.querySelectorAll(".tile:not(.hidden)"), n=0, i;' +
+                         'for (i=0;i<t.length;i++) if (t[i].textContent.trim()) n++;' +
+                         'return n > 2;})()', 'a filled Continue watching row', 15000);
+        });
+      });
+    })
+
+    .then(function () {
+      return step('a show appears once in Continue watching, as the series', function () {
+        return page.evaluate(function () {
+          var out = [];
+          document.querySelectorAll('#rows .row:not(.hidden)')[0]
+            .querySelectorAll('.tile:not(.hidden)').forEach(function (t) {
+              var s = t.textContent.replace(/\s+/g, ' ').trim();
+              if (s) out.push(s.replace(/\s*\d{4}\s*$/, '').trim());
+            });
+          return out;
+        }).then(function (titles) {
+          /* Two servers can each have you mid-way through a different episode
+             of the same show; the row is a list of things, not of episodes. */
+          var seen = {}, i;
+          for (i = 0; i < titles.length; i++) {
+            if (seen[titles[i]]) {
+              throw new Error('"' + titles[i] + '" is in Continue watching twice: ' +
+                              titles.join(' | '));
+            }
+            seen[titles[i]] = true;
+          }
+        });
       });
     })
 
@@ -546,6 +599,32 @@ function drive(page, titles) {
             if (chips[2] !== 'back to library') throw new Error('no way back: ' + chips.join(' / '));
           })
           .then(function () { return shot('search'); })
+          .then(function () {
+            /* The rail caches tiles by index, so results used to inherit the
+               library's posters and titles — the results page wearing the main
+               page's artwork. */
+            return page.evaluate(function () {
+              /* Row elements are hidden when the row set shrinks, but the tiles
+                 inside them keep their own classes — so the query has to start
+                 from the visible rows. */
+              var out = [];
+              document.querySelectorAll('#rows .row:not(.hidden) .tile:not(.hidden)')
+                .forEach(function (t) {
+                  var s = t.textContent.replace(/\s+/g, ' ').trim();
+                  if (s) out.push(s.replace(/\s*\d{4}\s*$/, '').trim());
+                });
+              return out;
+            });
+          })
+          .then(function (titles) {
+            if (titles.length !== 1) {
+              throw new Error('one result expected, the rail is showing: ' + titles.join(' | '));
+            }
+            if (titles[0] !== titles_directPlays) {
+              throw new Error('the result tile says "' + titles[0] + '", not "' +
+                              titles_directPlays + '" — stale tiles from the library');
+            }
+          })
           .then(function () { return press('Backspace'); });
       });
     })

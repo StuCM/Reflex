@@ -246,6 +246,10 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 4. The rail
 
+- Search results reuse the browse screen with a different header. It reads as
+  the library rather than as its own page — a separate view is still to do, and
+  needs the design.
+
 - **Jump to a letter.** 30,000 films is not d-pad-able, and this is the
   biggest single gap left in browsing.
 - Filters beyond the kids cut: year, unwatched, resolution, genre — all
