@@ -1,4 +1,4 @@
-/* The rail: stacked rows of landscape tiles, drawn from a fixed pool of elements.
+/* The rail: stacked rows of portrait posters, drawn from a fixed pool of elements.
 
    Nothing here grows with the library. Four row elements and twelve tiles each
    exist for the life of the app; scrolling moves transforms and reassigns
@@ -10,12 +10,13 @@
 var Rail = (function () {
   'use strict';
 
-  var TILE_W = 372, TILE_H = 209, GAP = 44, STRIDE = TILE_W + GAP;
-  var ROW_H = 361;               // 44 header + 209 art + 74 two lines + 34 below
+  /* 2:3, so seven fit across at 1920: 96 left margin + 7×209 + 6×44 = 1823. */
+  var TILE_W = 209, TILE_H = 314, GAP = 44, STRIDE = TILE_W + GAP;
+  var ROW_H = 466;               // 44 header + 314 art + 74 two lines + 34 below
   var VIEWPORT_H = 816;          // css #viewport, under the 264px header
   var TILE_POOL = 12;            // tiles per row element
   var ROW_POOL = 4;              // row elements in the DOM, ever
-  var TILES_VISIBLE = 4;         // tiles across at 1920 wide
+  var TILES_VISIBLE = 7;         // tiles across at 1920 wide
   var LEAD = 1;                  // tiles kept to the left of the focused one
   /* Two different questions, and answering both with one number clipped the
      last row of every section. ROWS_FIT is how many rows fit *whole* in the
@@ -65,8 +66,8 @@ var Rail = (function () {
         img.alt = '';
         prog = document.createElement('div');
         prog.className = 'tile-progress';
-        /* The title sits under the art rather than over it: landscape art is
-           often the title card already, and text on top of it is unreadable. */
+        /* The title sits under the art rather than over it: a poster carries
+           its own title already, and text on top of it is unreadable. */
         name = document.createElement('div');
         name.className = 'tile-title';
         sub = document.createElement('div');
@@ -185,7 +186,11 @@ var Rail = (function () {
   }
 
   function render(rows, rowIdx) {
-    var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_FIT));
+    /* Rows of context kept above the focused one — every row that fits bar the
+       focused one itself. A portrait row leaves room for exactly one, so this
+       is zero now and the focused row sits at the top; typed as 1 it would draw
+       the row you just moved to half below the fold. */
+    var firstVisible = UI.clamp(rowIdx - (ROWS_FIT - 1), 0, Math.max(0, rows.length - ROWS_FIT));
     var start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
     var i, r;
     /* Row 0 sits under the tall hero; everything below it sits under the band.

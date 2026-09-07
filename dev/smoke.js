@@ -90,10 +90,10 @@ function findTitles() {
   })[0];
   if (!shared) throw new Error('no shared film with one playable and one unplayable copy');
 
-  /* Two films the TMDB mock treats differently: one with backdrops to spare, so
-     the tile and the hero can be two pictures, and one with a single backdrop,
-     where the tile has nothing left to take and falls back to what Plex has.
-     Both must have credits, or the header's cast line has nothing to say. */
+  /* Two films the TMDB mock treats differently: one with posters and backdrops
+     both, so the tile and the hero are a poster and a backdrop, and one sparse
+     enough to have no poster at all, where the tile falls back to what Plex
+     has. Both must have credits, or the header's cast line has nothing to say. */
   function withBackdrops(want) {
     const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
       return oneBackdrop(m._film) === want && !noCredits(m._film) && unambiguous(m);
@@ -121,8 +121,8 @@ function findTitles() {
     transcodes: only('vc1-avi'),         // server says transcode, we refuse
     directPlays: only('h264-eac3'),      // plays
     shared: shared,                      // on both servers, only one copy playable
-    manyShots: withBackdrops(false),     // enough TMDB art for a tile and a hero
-    oneShot: withBackdrops(true)         // one backdrop, so the tile falls back
+    manyShots: withBackdrops(false),     // posters and backdrops both
+    oneShot: withBackdrops(true)         // no posters, so the tile falls back
   };
 }
 
@@ -464,13 +464,13 @@ function drive(page, titles) {
   }
 
   /* What the focused tile and the backdrop are showing. A picture from the TMDB
-     mock names its title and which of that title's backdrops it is; one from
+     mock names its kind, its title and which of that title's it is; one from
      Plex does not, which is how the fallback is told apart. */
   function pictures() {
     return page.evaluate(function () {
       function shotOf(u) {
-        var m = String(u).match(/backdrop\/(\d+)\/(\d+)\.svg/);
-        return m ? { title: m[1], n: m[2] } : null;
+        var m = String(u).match(/(backdrop|poster)\/(\d+)\/(\d+)\.svg/);
+        return m ? { kind: m[1], title: m[2], n: m[3] } : null;
       }
       var img = document.querySelector('#rows .row.on .tile.on img');
       var hero = document.getElementById('hero-art').style.backgroundImage;
@@ -573,10 +573,10 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('the tile and the hero are two different pictures', function () {
-        /* The whole point of the feature: Plex has one wide image per item, so
-           the hero used to be the tile blown up. Both come from TMDB now, and
-           they have to be the same title and a different backdrop. */
+      return step('the tile is a poster and the hero behind it is a backdrop', function () {
+        /* The whole point of the feature: the tile asks for a different kind of
+           picture from the hero, so the two can never be the same image. Same
+           title, both from TMDB, one portrait and one wide. */
         return searchFor(titles.manyShots.title)
           .then(function () { return page.waitForTimeout(900); })
           .then(pictures)
@@ -587,8 +587,11 @@ function drive(page, titles) {
               throw new Error('the hero is title ' + st.hero.shot.title +
                               ' while the tile is ' + st.tile.shot.title);
             }
-            if (st.tile.shot.n === st.hero.shot.n) {
-              throw new Error('the hero and the tile are the same backdrop');
+            if (st.tile.shot.kind !== 'poster') {
+              throw new Error('the tile drew a ' + st.tile.shot.kind + ': ' + st.tile.url);
+            }
+            if (st.hero.shot.kind !== 'backdrop') {
+              throw new Error('the hero drew a ' + st.hero.shot.kind + ': ' + st.hero.url);
             }
             if (!st.tile.painted) throw new Error('the tile drew nothing');
           })
@@ -598,18 +601,26 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('one backdrop still fills both the tile and the hero', function () {
-        /* TMDB has only the one picture for this title, so there is no second
-           backdrop for the tile — it must fall back to Plex rather than go blank
-           or borrow the hero's. */
+      return step('a title with no TMDB poster falls back to a Plex one', function () {
+        /* TMDB has a backdrop for this title and no poster at all, so the tile
+           must fall back to Plex rather than go blank or borrow the hero's — a
+           16:9 picture in the 2:3 box is the smear the whole shape exists to
+           stop. */
         return searchFor(titles.oneShot.title)
           .then(function () { return page.waitForTimeout(900); })
           .then(pictures)
           .then(function (st) {
             if (!st.hero.shot) throw new Error('the hero is not a TMDB picture: ' + st.hero.url);
-            if (st.tile.shot) throw new Error('the tile took TMDB art there was none of');
+            if (st.tile.shot) {
+              throw new Error('the tile took TMDB art there was none of: ' + st.tile.url);
+            }
             if (st.tile.url.indexOf('/photo/:/transcode') < 0) {
               throw new Error('the tile did not fall back to Plex: ' + st.tile.url);
+            }
+            /* Plex's own poster, never its wide `art`: the box is 2:3. */
+            if (st.tile.url.indexOf('%2Fthumb%2F') < 0) {
+              throw new Error('the tile fell back to something other than a poster: ' +
+                              st.tile.url);
             }
             if (!st.tile.painted) throw new Error('the tile drew nothing');
           })
@@ -886,6 +897,52 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('every episode row carries its still, present or not', function () {
+        /* The still moved here off the rail tile. It is a picture per visible
+           row on a page you drilled into, not one per tile in a 30,000 item
+           walk, which is why it is affordable here and was not there. */
+        return page.evaluate(function () {
+          var rows = Array.prototype.slice.call(document.querySelectorAll('.sh-episode'));
+          function shape() {
+            return rows.map(function (r) {
+              var s = r.querySelector('.sh-ep-still');
+              return {
+                height: r.offsetHeight,
+                box: s ? Math.round(s.offsetWidth) + 'x' + Math.round(s.offsetHeight) : null,
+                art: s ? getComputedStyle(s).backgroundImage : 'none'
+              };
+            });
+          }
+          var before = shape();
+          /* An episode with no thumb differs from one with it only in the
+             picture, so taking the picture away is that episode. */
+          var blanked = rows[0] && rows[0].querySelector('.sh-ep-still');
+          if (blanked) blanked.style.backgroundImage = 'none';
+          var after = shape();
+          if (blanked) blanked.style.backgroundImage = '';
+          return { before: before, after: after };
+        }).then(function (st) {
+          if (st.before.length < 2) throw new Error('too few episode rows to judge');
+          st.before.forEach(function (r, i) {
+            if (r.box !== '160x90') {
+              throw new Error('episode ' + i + ' has a ' + r.box + ' still box');
+            }
+            if (r.art === 'none') throw new Error('episode ' + i + ' drew no still');
+            if (r.height !== st.before[0].height) {
+              throw new Error('episode ' + i + ' is ' + r.height + 'px, not ' +
+                              st.before[0].height);
+            }
+          });
+          if (st.after[0].art !== 'none') throw new Error('the still would not blank');
+          if (st.after[0].height !== st.before[0].height) {
+            throw new Error('an episode with no still is ' + st.after[0].height +
+                            'px, not ' + st.before[0].height);
+          }
+        });
+      });
+    })
+
+    .then(function () {
       return step('a series with more than one season can be switched', function () {
         return page.evaluate(function () {
           return document.querySelectorAll('#sh-seasons .chip').length;
@@ -1065,6 +1122,52 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('an episode tile is its show\'s poster, for no extra request', function () {
+        /* Plex puts the show's poster on the episode as grandparentThumb, so
+           the tile is a poster like every other without a lookup of any kind.
+           Two episodes of one show therefore draw the same picture. */
+        return backToLibrary()
+          .then(function () { return sidebarPick('Continue watching'); })
+          .then(function () { return watchingPick('TV Shows'); })
+          .then(function () { return page.waitForTimeout(900); })
+          .then(function () {
+            return page.evaluate(function () {
+              var tiles = document.querySelectorAll('#rows .row.on .tile:not(.hidden)');
+              return Array.prototype.map.call(tiles, function (t) {
+                var it = t._item || {};
+                return {
+                  type: it.type || '',
+                  show: it.grandparentRatingKey || '',
+                  src: (t._img && t._img.src) || '',
+                  showThumb: encodeURIComponent(it.grandparentThumb || 'none'),
+                  ownThumb: encodeURIComponent(it.thumb || 'none')
+                };
+              });
+            });
+          })
+          .then(function (tiles) {
+            var eps = tiles.filter(function (t) { return t.type === 'episode'; });
+            if (!eps.length) throw new Error('no episodes in the TV Shows cut');
+            var byShow = {};
+            eps.forEach(function (t) {
+              if (t.src.indexOf(t.showThumb) < 0) {
+                throw new Error('an episode tile is not its show\'s poster: ' + t.src);
+              }
+              if (t.src.indexOf(t.ownThumb) >= 0) {
+                throw new Error('an episode tile is still its own still: ' + t.src);
+              }
+              if (byShow[t.show] && byShow[t.show] !== t.src) {
+                throw new Error('two episodes of one show drew different tiles');
+              }
+              byShow[t.show] = t.src;
+            });
+          })
+          /* And put the row back the way the rest of the run expects it. */
+          .then(function () { return sidebarPick('Continue watching'); });
+      });
+    })
+
+    .then(function () {
       return step('the last sidebar entry can be reached and is on screen', function () {
         /* There is no pointer on this device, so anything past the fold is
            simply unreachable unless the list winds itself.
@@ -1183,7 +1286,7 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('stepping down keeps the film on screen, over two rows and a peek', function () {
+      return step('stepping down keeps the film on screen, over one row and a peek', function () {
         /* The tall hero leaves room for one row. If it does not collapse when
            the focus moves off row 0, the row you just moved to is drawn below
            the fold and moving down looks like nothing happening — and if it
@@ -1218,9 +1321,21 @@ function drive(page, titles) {
                            shown: Math.round(Math.min(b.bottom, vp.bottom) -
                                              Math.max(b.top, vp.top)) };
                 }).sort(function (a, b) { return a.top - b.top; });
+              /* Tiles whose whole width is on screen — the row is drawn wider
+                 than the panel and clipped, so "seven across" is a count of
+                 the ones you can actually see. */
+              var across = Array.prototype.filter.call(
+                row ? row.querySelectorAll('.tile:not(.hidden)') : [], function (el) {
+                  var b = el.getBoundingClientRect();
+                  return b.left >= -1 && b.right <= 1921;
+                }).length;
               return {
                 dense: document.getElementById('browse').classList.contains('dense'),
                 label: row ? row.querySelector('.row-label').textContent.trim() : '',
+                art: tile ? { w: Math.round(tile.querySelector('.tile-inner').offsetWidth),
+                              h: Math.round(tile.querySelector('.tile-inner').offsetHeight) }
+                          : null,
+                across: across,
                 top: t ? Math.round(t.top) : null, bottom: t ? Math.round(t.bottom) : null,
                 vpTop: Math.round(vp.top), vpBottom: Math.round(vp.bottom),
                 rows: rows,
@@ -1233,6 +1348,14 @@ function drive(page, titles) {
           .then(function (st) {
             if (!st.dense) throw new Error('the hero did not collapse off the first row');
             if (st.top === null) throw new Error('no focused tile on row 1');
+            /* Portrait, 2:3, seven across. The row arithmetic hangs off these,
+               so a change here is a change to how much of the rail you see. */
+            if (!st.art || st.art.w !== 209 || st.art.h !== 314) {
+              throw new Error('the tile art is ' + JSON.stringify(st.art) + ', not 209×314');
+            }
+            if (st.across !== 7) {
+              throw new Error(st.across + ' tiles fit across, not 7');
+            }
             if (st.top < st.vpTop - 1 || st.bottom > st.vpBottom + 1) {
               throw new Error('"' + st.label + '" is focused but drawn at ' + st.top + '–' +
                               st.bottom + ', outside the viewport ' + st.vpTop + '–' + st.vpBottom);
@@ -1244,14 +1367,16 @@ function drive(page, titles) {
             }
             if (!st.desc) throw new Error('the description vanished off the first row');
             if (!st.cast) throw new Error('the key actors vanished off the first row');
-            /* Two whole rows under the header and a third peeking, which is the
-               only thing saying there is more below. */
+            /* One whole row under the header and the next peeking, which is the
+               only thing saying there is more below. A 2:3 poster is taller than
+               the landscape tile this replaced, so one row is the trade that was
+               made for it, not a regression. */
             var whole = st.rows.filter(function (r) { return r.shown >= r.height - 1; });
             var peek = st.rows.filter(function (r) {
               return r.shown > 0 && r.shown < r.height - 1;
             });
-            if (whole.length < 2) {
-              throw new Error('only ' + whole.length + ' whole rows fit under the header');
+            if (whole.length < 1) {
+              throw new Error('no whole row fits under the header');
             }
             if (!peek.length) {
               throw new Error('no row peeks below the fold, so nothing says there is more');

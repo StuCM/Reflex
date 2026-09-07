@@ -1,7 +1,7 @@
 /* The tile and the hero stop being the same picture only if the pick is right:
-   two backdrops, best first, and never the same path twice. Everything else in
-   js/art.js talks to the network or the DOM; this is the part that must not be
-   wrong.
+   the best backdrop for one and the best poster for the other, out of a single
+   payload. Everything else in js/art.js talks to the network or the DOM; this
+   is the part that must not be wrong.
    Run: node test/art.test.js */
 var assert = require('assert');
 var app = require('./load.js')(['art']);
@@ -15,63 +15,80 @@ function shot(path, avg, count) {
    this realm's — compare the two fields rather than the object. */
 function nothing(got, what) {
   assert.strictEqual(got.hero, null, what + ' should have no hero');
-  assert.strictEqual(got.tile, null, what + ' should have no tile');
+  assert.strictEqual(got.poster, null, what + ' should have no poster');
 }
 
-/* ---- two backdrops give two different pictures ---- */
+/* ---- one payload gives a backdrop and a poster ---- */
 
-var two = Art.pick({ backdrops: [shot('/a.jpg', 7.2, 40), shot('/b.jpg', 8.1, 10)] });
-assert.strictEqual(two.hero, '/b.jpg');
-assert.strictEqual(two.tile, '/a.jpg');
-assert.notStrictEqual(two.hero, two.tile);
+var both = Art.pick({ images: {
+  backdrops: [shot('/wide-a.jpg', 7.2, 40), shot('/wide-b.jpg', 8.1, 10)],
+  posters: [shot('/tall-a.jpg', 5.0, 900), shot('/tall-b.jpg', 6.4, 2)]
+} });
+assert.strictEqual(both.hero, '/wide-b.jpg');
+assert.strictEqual(both.poster, '/tall-b.jpg');
 
-/* ---- one backdrop is a hero and nothing else ---- */
+/* ---- backdrops but no posters: the tile has to fall back to Plex ---- */
 
-var one = Art.pick({ backdrops: [shot('/only.jpg', 6, 3)] });
-assert.strictEqual(one.hero, '/only.jpg');
-assert.strictEqual(one.tile, null);
+var wideOnly = Art.pick({ images: { backdrops: [shot('/only.jpg', 6, 3)], posters: [] } });
+assert.strictEqual(wideOnly.hero, '/only.jpg');
+assert.strictEqual(wideOnly.poster, null,
+                   'a backdrop must never stand in for a poster');
 
-/* ---- none gives two nulls ---- */
+/* A second backdrop is not a poster either — that was the old rule. */
+var twoWide = Art.pick({ images: { backdrops: [shot('/a.jpg', 9, 5), shot('/b.jpg', 8, 5)] } });
+assert.strictEqual(twoWide.poster, null);
 
-nothing(Art.pick({ backdrops: [] }), 'an empty list');
+/* ---- and the other way round ---- */
+
+var tallOnly = Art.pick({ images: { posters: [shot('/tall.jpg', 7, 30)] } });
+assert.strictEqual(tallOnly.hero, null);
+assert.strictEqual(tallOnly.poster, '/tall.jpg');
+
+/* ---- neither gives two nulls ---- */
+
+nothing(Art.pick({ images: { backdrops: [], posters: [] } }), 'two empty lists');
 
 /* ---- a malformed payload is a miss, not a throw ---- */
 
 nothing(Art.pick(null), 'no payload at all');
-nothing(Art.pick({}), 'a payload with no backdrops');
-nothing(Art.pick({ backdrops: 'nonsense' }), 'backdrops that are not a list');
-nothing(Art.pick({ backdrops: [null, {}, { file_path: '' }] }), 'entries with no path');
+nothing(Art.pick({}), 'a payload with no images');
+nothing(Art.pick({ images: {} }), 'an images block with nothing in it');
+nothing(Art.pick({ images: { backdrops: 'nonsense', posters: 42 } }),
+        'lists that are not lists');
+nothing(Art.pick({ images: { backdrops: [null, {}, { file_path: '' }],
+                             posters: [null, { file_path: '' }] } }),
+        'entries with no path');
 
-/* ---- the appended shape reads the same as the bare one ----
+/* ---- the bare shape reads the same as the appended one ----
 
-   The backdrops used to be the whole payload and now arrive under `images`, so
-   an entry cached before that change must still pick. */
+   The images used to be the whole payload and now arrive under `images`, so an
+   entry cached before that change must still pick. */
 
-var appended = Art.pick({ images: { backdrops: [shot('/a.jpg', 7.2, 40), shot('/b.jpg', 8.1, 10)] } });
-assert.strictEqual(appended.hero, '/b.jpg');
-assert.strictEqual(appended.tile, '/a.jpg');
-nothing(Art.pick({ images: {} }), 'an appended payload with no backdrops');
-nothing(Art.pick({ images: { backdrops: [] } }), 'an appended empty list');
+var bare = Art.pick({ backdrops: [shot('/a.jpg', 7.2, 40), shot('/b.jpg', 8.1, 10)],
+                      posters: [shot('/p.jpg', 3, 3)] });
+assert.strictEqual(bare.hero, '/b.jpg');
+assert.strictEqual(bare.poster, '/p.jpg');
 
 /* ---- the order is the votes, not the payload ----
 
-   TMDB returns backdrops in its own order and it is not the order we want, so
-   the same three in any arrangement must pick the same two. */
+   TMDB returns its images in its own order and it is not the order we want, so
+   the same three in any arrangement must pick the same one. */
 
 var best = shot('/best.jpg', 9, 5);
 var next = shot('/next.jpg', 8, 200);
 var worst = shot('/worst.jpg', 2, 9000);
 
 [[best, next, worst], [worst, next, best], [next, worst, best]].forEach(function (order) {
-  var got = Art.pick({ backdrops: order });
+  var got = Art.pick({ images: { backdrops: order, posters: order } });
   assert.strictEqual(got.hero, '/best.jpg');
-  assert.strictEqual(got.tile, '/next.jpg');
+  assert.strictEqual(got.poster, '/best.jpg');
 });
 
-/* Votes break a tie on the score, so two equally rated backdrops still order. */
-var tied = Art.pick({ backdrops: [shot('/few.jpg', 7, 8), shot('/many.jpg', 7, 900)] });
+/* Votes break a tie on the score, so two equally rated pictures still order. */
+var tied = Art.pick({ images: { backdrops: [shot('/few.jpg', 7, 8), shot('/many.jpg', 7, 900)],
+                                posters: [shot('/p-few.jpg', 7, 8), shot('/p-many.jpg', 7, 900)] } });
 assert.strictEqual(tied.hero, '/many.jpg');
-assert.strictEqual(tied.tile, '/few.jpg');
+assert.strictEqual(tied.poster, '/p-many.jpg');
 
 /* ---- the facts the header draws ---- */
 
@@ -117,4 +134,4 @@ assert.strictEqual(noCast.overview, 'Still a film.');
 assert.strictEqual(noCast.runtime, 90);
 assert.strictEqual(noCast.cast.length, 0);
 
-console.log('art: pick chooses a hero and a different tile, and facts read the header');
+console.log('art: pick chooses a backdrop and a poster, and facts read the header');
