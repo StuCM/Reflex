@@ -6,6 +6,7 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 003 | Land the audio-switch fix stranded on claude/player-features | `pending-tv` | laptop | crew/003-land-audio-switch *(gone)* |
+| 010 | OK on an episode opens the series, at that episode | `building` | laptop | crew/010-series-not-episode |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 004 | Replace filter-then-index with find | `done` | laptop | crew/004-find-over-filter *(gone)* |
@@ -21,4 +22,4 @@ Task files are the source of truth; this is the glance view.
 
 ## In flight
 
-Nothing running.
+- **010 OK on an episode opens the series, at that episode** — `building` on `crew/010-series-not-episode`

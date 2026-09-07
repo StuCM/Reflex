@@ -963,7 +963,7 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('an episode opens the same copy chooser a film does', function () {
+      return step('an episode\'s copy chooser is reached through the series page', function () {
         return page.evaluate(function () {
           /* Make sure we are back on the episode list before pressing right. */
           return !!document.querySelector('.sh-episode');
@@ -1163,6 +1163,103 @@ function drive(page, titles) {
             });
           })
           /* And put the row back the way the rest of the run expects it. */
+          .then(function () { return sidebarPick('Continue watching'); });
+      });
+    })
+
+    .then(function () {
+      return step('OK on an episode opens its series, at that episode', function () {
+        /* An episode is never a dead end: the point of landing on the series
+           page is that the next episode is one keypress away, which the copy
+           chooser for a single episode never gave you. */
+        let ep;
+        return backToLibrary()
+          .then(function () { return sidebarPick('Continue watching'); })
+          .then(function () { return watchingPick('TV Shows'); })
+          .then(function () {
+            return page.evaluate(function () {
+              const t = document.querySelector('#rows .row.on .tile.on');
+              const it = (t && t._item) || {};
+              return { type: it.type || '', show: it.grandparentTitle || '',
+                       season: it.parentIndex, episode: it.index };
+            });
+          })
+          .then(function (st) {
+            if (st.type !== 'episode') throw new Error('the focused tile is a ' + st.type);
+            ep = st;
+          })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('!document.getElementById("show").classList.contains("hidden") &&' +
+                           ' document.querySelector(".sh-episode.on") !== null',
+                           'the series page for the episode', 20000);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              const chip = document.querySelector('#sh-seasons .chip.cur');
+              const on = document.querySelector('.sh-episode.on');
+              return {
+                title: document.getElementById('sh-title').textContent.trim(),
+                season: chip ? chip.textContent.trim() : '',
+                episode: on.querySelector('.sh-ep-num').textContent.trim(),
+                detail: !document.getElementById('detail').classList.contains('hidden')
+              };
+            });
+          })
+          .then(function (st) {
+            if (st.detail) throw new Error('the episode opened its own page, not the series');
+            if (st.title !== ep.show) {
+              throw new Error('opened "' + st.title + '", not "' + ep.show + '"');
+            }
+            /* The season chip is named by the server ("Season 3"); what has to
+               match is the number the episode says it belongs to. */
+            if (!new RegExp('(^|\\D)' + ep.season + '$').test(st.season)) {
+              throw new Error('opened on "' + st.season + '", not season ' + ep.season);
+            }
+            if (st.episode !== String(ep.episode)) {
+              throw new Error('highlighted episode ' + st.episode + ', not ' + ep.episode);
+            }
+          })
+          .then(function () { return shot('episode-to-series'); })
+          /* And onward: the next episode is right there, with its own copies. */
+          .then(function () { return press('ArrowDown'); })
+          .then(function () { return page.keyboard.press('ArrowRight'); })
+          .then(function () {
+            return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
+                           ' document.querySelectorAll(".dt-source").length > 0',
+                           'the copy chooser for the next episode', 20000);
+          })
+          .then(function () { return page.textContent('#dt-meta'); })
+          .then(function (meta) {
+            const m = meta.match(/S(\d+)E(\d+)/);
+            if (!m) throw new Error('no season/episode in the detail meta: ' + meta);
+            if (Number(m[2]) === ep.episode) {
+              throw new Error('moving down stayed on episode ' + ep.episode);
+            }
+          })
+          .then(backToLibrary)
+          .then(function () {
+            /* The same show a second time is free: the guid lookups that found
+               it on every server are what OK must not pay for twice. */
+            const asks = [];
+            function watch(r) { if (/\/library\/all\?.*guid=/.test(r.url())) asks.push(r.url()); }
+            page.on('request', watch);
+            return page.keyboard.press('Enter')
+              .then(function () {
+                return waitFor('!document.getElementById("show").classList.contains("hidden") &&' +
+                               ' document.querySelector(".sh-episode.on") !== null',
+                               'the series page a second time', 20000);
+              })
+              .then(function () { return page.waitForTimeout(400); })
+              .then(function () {
+                page.off('request', watch);
+                if (asks.length) {
+                  throw new Error('the series was resolved again: ' + asks.join(', '));
+                }
+              }, function (e) { page.off('request', watch); throw e; });
+          })
+          .then(backToLibrary)
+          /* Put the mixed row back for the rest of the run. */
           .then(function () { return sidebarPick('Continue watching'); });
       });
     })

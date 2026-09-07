@@ -23,15 +23,20 @@ var ShowPage = (function () {
   var seasons = [], seasonIdx = 0;
   var episodes = [], epIdx = 0;
   var zone = 'episodes';         // 'seasons' | 'episodes'
+  var wantEp = null;             // options.at.episode, honoured on the first load only
   var opts = {};
   var generation = 0;
   var verdicts = {};             // ratingKey -> verdict, for the rows
   var checkTimer = null;
 
+  /* options.at = { season, episode } opens on a named episode — Plex's own
+     index values, not array positions. Without it the page opens where it
+     always did. */
   function open(entry, options) {
     if (!entry) return;
     show = entry;
     opts = options || {};
+    wantEp = (opts.at && opts.at.episode !== undefined) ? opts.at.episode : null;
     generation++;
     seasons = []; episodes = []; seasonIdx = 0; epIdx = 0; zone = 'episodes';
     verdicts = {};
@@ -45,7 +50,7 @@ var ShowPage = (function () {
     Shows.seasons(entry).then(function (list) {
       if (gen !== generation) return;
       seasons = list;
-      seasonIdx = Shows.openAt(list);
+      seasonIdx = openSeason(list);
       renderSeasons();
       if (!list.length) {
         elEpisodes.innerHTML = '<div class="sh-episode">This server lists no series for ' +
@@ -58,6 +63,14 @@ var ShowPage = (function () {
       UI.debug('seasons: ' + e.message);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the series list.</div>';
     });
+  }
+
+  function openSeason(list) {
+    var want = opts.at && opts.at.season, i;
+    if (want !== undefined && want !== null) {
+      for (i = 0; i < list.length; i++) if (list[i].index === want) return i;
+    }
+    return Shows.openAt(list);
   }
 
   function close() {
@@ -143,17 +156,23 @@ var ShowPage = (function () {
   function loadEpisodes() {
     var gen = generation;
     var season = seasons[seasonIdx];
+    /* The episode we were opened at is for this load only: switching series
+       afterwards goes back to landing on the first unfinished one. */
+    var want = wantEp;
+    wantEp = null;
     episodes = [];
     epIdx = 0;
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
     Shows.episodes(season).then(function (list) {
       if (gen !== generation) return;
       episodes = list;
-      /* Land on the first unfinished episode: what you want is almost always
-         the next one, not the first. */
-      var i;
+      /* Land on the episode we were opened at, or failing that the first
+         unfinished one: what you want is almost always the next one. */
+      var i, hit;
       for (i = 0; i < list.length; i++) {
-        if (list[i].viewOffset || !list[i].viewCount) { epIdx = i; break; }
+        hit = want === null ? (list[i].viewOffset || !list[i].viewCount)
+                            : list[i].index === want;
+        if (hit) { epIdx = i; break; }
       }
       renderEpisodes();
       scheduleCheck();
