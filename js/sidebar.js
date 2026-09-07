@@ -17,10 +17,12 @@ var Sidebar = (function () {
   var offset = 0;       // how far the list is wound up, in px
 
   var secs = [];        // { title, categories: [string], current }
+  var watching = null;  // { current, type } — the Continue watching entry's state
   var rows = [];        // the flattened list the d-pad walks
   var idx = 0;
   var showing = false;
-  var expanded = -1;    // which section's categories are listed, if any
+  var NONE = -2;        // nothing expanded; sections are 0-up and watching is -1
+  var expanded = NONE;  // which entry's children are listed, if any
   var onPick = null;
   var atMode = '';      // the mode showing, so it can be marked as the sections are
 
@@ -39,14 +41,33 @@ var Sidebar = (function () {
     return out;
   }
 
+  /* Continue watching answers "what was I in the middle of" across films and
+     shows at once, so it heads the list rather than hanging under a section,
+     with the two cuts of it as its children. */
+  function watchingRows() {
+    if (!watching) return [];
+    var type = watching.type || null;
+    var out = [{ label: 'Continue watching', kind: 'watching', index: -1, type: null,
+                 opens: true, current: !!watching.current && type === null }];
+    if (expanded !== -1) return out;
+    out.push({ label: 'Movies', kind: 'watching', index: -1, type: 'movie', sub: true,
+               current: !!watching.current && type === 'movie' });
+    out.push({ label: 'TV Shows', kind: 'watching', index: -1, type: 'episode', sub: true,
+               current: !!watching.current && type === 'episode' });
+    return out;
+  }
+
   function build() {
-    var out = [], i, j, cats;
+    var out = watchingRows(), i, j, cats;
     for (i = 0; i < secs.length; i++) {
-      out.push({ label: secs[i].title, kind: 'section', index: i,
-                 current: !!secs[i].current });
-      if (i !== expanded) continue;
       cats = secs[i].categories || [];
+      out.push({ label: secs[i].title, kind: 'section', index: i,
+                 opens: cats.length > 0, current: !!secs[i].current });
+      if (i !== expanded) continue;
       for (j = 0; j < cats.length; j++) {
+        /* Continue watching has its own entry above, and every section builds
+           one — listing them all is the duplication this is rid of. */
+        if (cats[j] === 'Continue watching') continue;
         out.push({ label: cats[j], kind: 'row', index: i, row: j, sub: true });
       }
     }
@@ -93,16 +114,20 @@ var Sidebar = (function () {
   /* sections: what Browse holds — title, the section's row titles, and whether
      it is the one showing. The current section opens expanded, so the thing
      most likely to be wanted is already on screen. mode marks kids or discovery
-     the same way, since neither is a section and both can be what you are in. */
-  function open(sections, pick, mode) {
+     the same way, since neither is a section and both can be what you are in.
+     watching is { current, type }: whether the Continue watching row has the
+     focus, and which cut of it. */
+  function open(sections, pick, mode, watchingState) {
     secs = sections || [];
+    watching = watchingState || null;
     onPick = pick;
     atMode = mode || '';
-    expanded = -1;
+    expanded = NONE;
     var i;
+    if (watching && watching.current) expanded = -1;
     for (i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;
     rows = build();
-    idx = expanded >= 0 ? at('section', expanded) : 0;
+    idx = at('section', expanded);
     offset = 0;
     showing = true;
     el.parentNode.classList.add('open');
@@ -127,14 +152,13 @@ var Sidebar = (function () {
     if (code !== K.RIGHT && code !== K.OK) return true;
     if (!r) return true;
 
-    /* A section we know the categories of opens them in place; pressing again
-       on the open one — or on a section never visited, whose categories nobody
-       has yet — switches to it. */
-    if (r.kind === 'section' && r.index !== expanded &&
-        (secs[r.index].categories || []).length) {
+    /* An entry with children opens them in place; pressing again on the open
+       one — or on a section never visited, whose categories nobody has yet —
+       picks it. */
+    if (r.opens && r.index !== expanded) {
       expanded = r.index;
       rows = build();
-      idx = at('section', r.index);
+      idx = at(r.kind, r.index);
       render();
       return true;
     }

@@ -18,6 +18,8 @@ var Browse = (function () {
   var sections = [], secIdx = 0;
   var rows = [], rowIdx = 0;
   var cats = {};                          // section title -> its row titles, for the sidebar
+  var deckItems = [];                     // Continue watching, before any type filter
+  var watchingType = null;                // the cut applied to it: null, movie or episode
   var wantRow = 0;                        // row to land on once the next section is built
   var mode = 'library';                   // library | kids | discover
   var savedRows = null;                   // rows parked while showing search results
@@ -27,6 +29,12 @@ var Browse = (function () {
   var opts = {};
 
   var RESULTS_PER_ROW = 10;
+  var WATCHING = 'Continue watching';
+
+  /* One section per kind of thing this app can play, whatever the servers call
+     their libraries. Music and photos are neither, so they are left out. */
+  var SECTION_TITLES = { movie: 'Movies', show: 'TV Shows' };
+  var SECTION_ORDER = ['movie', 'show'];
 
   function init(options) {
     opts = options || {};
@@ -70,28 +78,28 @@ var Browse = (function () {
 
   /* ---------- servers and sections ----------
 
-     Each server has its own sections, with their own keys. Two servers both
-     calling a section "Films" means one chip backed by two parts — and a
-     section only one of them has still gets a chip of its own. */
+     Every movie library on every server is one part of Movies, and every show
+     library one part of TV Shows. A server that splits its films across a 4K
+     library and an LQ one contributes two parts; the merge folds them back to
+     one entry per film, the way it already does across servers. */
 
   function setSections(perServer) {
-    var byTitle = {}, order = [], i, j, list, sec, key;
+    var byType = {}, i, j, list, sec, type;
     for (i = 0; i < perServer.length; i++) {
       list = perServer[i].sections || [];
       for (j = 0; j < list.length; j++) {
         sec = list[j];
-        /* Title and type: a "Films" section and a "Films" show section would be
-           two different things, however unlikely that is. */
-        key = sec.title.toLowerCase() + '/' + sec.type;
-        if (!byTitle[key]) {
-          byTitle[key] = { title: sec.title, type: sec.type, parts: [] };
-          order.push(key);
-        }
-        byTitle[key].parts.push({ server: perServer[i].server, key: sec.key,
+        type = sec.type;
+        if (!SECTION_TITLES[type]) continue;
+        if (!byType[type]) byType[type] = { title: SECTION_TITLES[type], type: type, parts: [] };
+        byType[type].parts.push({ server: perServer[i].server, key: sec.key,
                                   updatedAt: sec.updatedAt || 0 });
       }
     }
-    var merged = order.map(function (k) { return byTitle[k]; });
+    var merged = [];
+    for (i = 0; i < SECTION_ORDER.length; i++) {
+      if (byType[SECTION_ORDER[i]]) merged.push(byType[SECTION_ORDER[i]]);
+    }
     var currentTitle = sections[secIdx] && sections[secIdx].title;
     sections = merged;
     var at = 0;
@@ -116,16 +124,51 @@ var Browse = (function () {
      with the d-pad. Left from the first tile of a row lands here. */
 
   function openSidebar() {
+    /* Continue watching is per account rather than per section, so it heads the
+       list on its own rather than once under every section. */
+    var watching = { current: mode === 'library' && rowIdx === watchingRowIdx(),
+                     type: watchingType };
     Sidebar.open(sections.map(function (sec, i) {
       /* Category titles are the row titles of a section we have already built,
          so this fetches nothing. A section never visited simply lists none. */
       return { title: sec.title, categories: cats[sec.title] || [],
                current: mode === 'library' && i === secIdx };
-    }), activate, mode);
+    }), activate, mode, watching);
+  }
+
+  function watchingRowIdx() {
+    var i;
+    for (i = 0; i < rows.length; i++) if (rows[i].title === WATCHING) return i;
+    return -1;
+  }
+
+  /* Continue watching, cut to films or episodes. The unfiltered deck is kept so
+     the cut can be lifted without asking the servers again, and an empty cut
+     leaves the row where it is — a row vanishing on a keypress reads as a
+     crash. */
+  function showWatching(type) {
+    var at = watchingRowIdx();
+    if (at < 0) { UI.toast('Nothing part-watched there'); return; }
+    watchingType = type || null;
+    var items = deckItems;
+    if (watchingType) {
+      items = deckItems.filter(function (m) { return m.type === watchingType; });
+    }
+    rows[at] = Rows.list(WATCHING, items);
+    rowIdx = at;
+    render();
+    if (!items.length) UI.toast('Nothing part-watched there');
   }
 
   function activate(choice) {
     if (choice.kind === 'search') { openSearch(); return; }
+    if (choice.kind === 'watching') {
+      /* Kids and discovery have no Continue watching row, so the library comes
+         back first — it lands on row 0, which is it. */
+      if (mode !== 'library') loadSection(secIdx, true);
+      else showWatching(choice.type);
+      return;
+    }
     if (choice.kind === 'kids') { loadKids(); return; }
     if (choice.kind === 'discover') { loadDiscover(); return; }
     if (choice.kind === 'prefer') {
@@ -174,7 +217,19 @@ var Browse = (function () {
     mode = newMode;
     rows = [];
     rowIdx = 0;
+    watchingType = null;
     render();
+  }
+
+  /* Rows from titled item lists, remembering the part-watched ones so the
+     Continue watching cut has something to filter. */
+  function listRows(built) {
+    var i;
+    deckItems = [];
+    for (i = 0; i < built.length; i++) {
+      if (built[i].title === WATCHING) deckItems = built[i].items;
+    }
+    return built.map(function (r) { return Rows.list(r.title, r.items); });
   }
 
   /* One page of one server's section, for the merge walk. */
@@ -243,7 +298,7 @@ var Browse = (function () {
     Store.get(cacheKey).then(function (cached) {
       if (!isCurrent()) return;
       if (cached && cached.rows && cached.rows.length) {
-        rows = cached.rows.map(function (r) { return Rows.list(r.title, r.items); });
+        rows = listRows(cached.rows);
         rows.push(allRow(sec));
         noteCategories(sec);
         rowIdx = UI.clamp(wantRow, 0, rows.length - 1);
@@ -271,12 +326,12 @@ var Browse = (function () {
            watched first. */
         var deck = Devices.mine(Merge.lists(res[0]));
         deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
-        if (deck.length) built.push({ title: 'Continue watching', items: deck });
+        if (deck.length) built.push({ title: WATCHING, items: deck });
 
         mergeHubs(res[1]).forEach(function (hub) { built.push(hub); });
 
         Store.put(cacheKey, { rows: built });
-        rows = built.map(function (r) { return Rows.list(r.title, r.items); });
+        rows = listRows(built);
         rows.push(allRow(sec));
         noteCategories(sec);
         rowIdx = UI.clamp(rowIdx || wantRow, 0, rows.length - 1);

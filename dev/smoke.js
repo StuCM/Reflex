@@ -100,7 +100,20 @@ function findTitles() {
     return hit;
   }
 
+  /* Every movie library on both servers is one Movies section now, so its All
+     row must land between the biggest single library and the sum of them all. */
+  const movieCounts = [];
+  lib.servers.forEach(function (srv) {
+    srv.sections.forEach(function (s) {
+      if (s.type === 'movie') movieCounts.push(srv.items[s.key].length);
+    });
+  });
+
   return {
+    movies: {
+      biggest: Math.max.apply(null, movieCounts),
+      sum: movieCounts.reduce(function (a, b) { return a + b; }, 0)
+    },
     truehdOnly: only('hevc-truehd'),     // must be refused before any request
     transcodes: only('vc1-avi'),         // server says transcode, we refuse
     directPlays: only('h264-eac3'),      // plays
@@ -323,29 +336,31 @@ function drive(page, titles) {
     });
   }
 
-  /* Walk the sidebar focus to a named row and press OK on it, rather than
-     assuming an index — the list grows as the app does. */
+  /* Move the sidebar focus onto a named row, rather than assuming an index —
+     the list grows as the app does. */
+  function sidebarWalkTo(label) {
+    return page.evaluate(function (want) {
+      const rows = document.querySelectorAll('#sidebar .sb-row');
+      let on = 0, to = -1;
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].classList.contains('on')) on = i;
+        if (to < 0 && rows[i].textContent.trim() === want) to = i;
+      }
+      return [on, to];
+    }, label).then(function (idx) {
+      if (idx[1] < 0) {
+        return sidebarRows().then(function (rows) {
+          throw new Error('no "' + label + '" in the sidebar: ' + rows.join(' | '));
+        });
+      }
+      return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]));
+    });
+  }
+
+  /* Walk to a named row and press OK on it. */
   function sidebarPick(label) {
     return openSidebar()
-      .then(function () {
-        return page.evaluate(function (want) {
-          const rows = document.querySelectorAll('#sidebar .sb-row');
-          let on = 0, to = -1;
-          for (let i = 0; i < rows.length; i++) {
-            if (rows[i].classList.contains('on')) on = i;
-            if (to < 0 && rows[i].textContent.trim() === want) to = i;
-          }
-          return [on, to];
-        }, label);
-      })
-      .then(function (idx) {
-        if (idx[1] < 0) {
-          return sidebarRows().then(function (rows) {
-            throw new Error('no "' + label + '" in the sidebar: ' + rows.join(' | '));
-          });
-        }
-        return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]));
-      })
+      .then(function () { return sidebarWalkTo(label); })
       .then(function () { return page.keyboard.press('Enter'); })
       .then(function () { return page.waitForTimeout(80); })
       /* OK on a section whose categories are known opens them in place; it
@@ -355,6 +370,36 @@ function drive(page, titles) {
         if (!still) return;
         return page.keyboard.press('Enter').then(function () { return page.waitForTimeout(80); });
       });
+  }
+
+  /* The cuts of Continue watching hang under it, so the parent has to be opened
+     first — one press expands it, and sidebarPick's second press would pick it
+     before its children were ever on screen. */
+  function watchingPick(label) {
+    return openSidebar()
+      .then(function () { return sidebarWalkTo('Continue watching'); })
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () { return page.waitForTimeout(80); })
+      .then(sidebarIsOpen)
+      .then(function (still) {
+        if (!still) throw new Error('OK on Continue watching picked it instead of opening it');
+        return sidebarWalkTo(label);
+      })
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () { return page.waitForTimeout(200); });
+  }
+
+  /* What the focused row is showing, by kind: the tiles carry their item. */
+  function focusedRowTypes() {
+    return page.evaluate(function () {
+      const row = document.querySelector('#rows .row.on');
+      if (!row) return null;
+      return {
+        title: row.querySelector('.row-label').textContent.trim(),
+        types: Array.prototype.map.call(row.querySelectorAll('.tile:not(.hidden)'),
+          function (t) { return (t._item && t._item.type) || '?'; })
+      };
+    });
   }
 
   /* The refusal screen has to be *showing*, and it has to be about the film we
@@ -390,7 +435,7 @@ function drive(page, titles) {
   /* Search for an exact title and come to rest on the only result. */
   function searchFor(title) {
     return backToLibrary()
-      .then(function () { return sidebarPick('Films'); })
+      .then(function () { return sidebarPick('Movies'); })
       .then(function () { return press('F1'); })
       .then(function () { return page.waitForSelector('#search-input', { state: 'visible' }); })
       .then(function () { return page.fill('#search-input', title); })
@@ -465,7 +510,7 @@ function drive(page, titles) {
           .then(sidebarRows)
           .then(function (rows) {
             const text = rows.join(' | ');
-            if (text.indexOf('Films') < 0) throw new Error('no Films section: ' + text);
+            if (text.indexOf('Movies') < 0) throw new Error('no Movies section: ' + text);
             if (text.indexOf('TV Shows') < 0) throw new Error('no TV Shows section: ' + text);
           })
           .then(function () { return press('ArrowLeft'); });      // close it again
@@ -611,6 +656,28 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('the All row spans every movie library, deduplicated', function () {
+        /* Main splits its films across two libraries and Backup has a third, so
+           the count proves both halves of the fold: more than any one library
+           holds, and fewer than all three added up. The walk above has already
+           found duplicates, which is what brings it down off the sum. */
+        return page.evaluate(function () {
+          const m = document.querySelector('#rows').textContent.match(/All films\s+\((\d+)\)/);
+          return m ? Number(m[1]) : 0;
+        }).then(function (count) {
+          if (count <= titles.movies.biggest) {
+            throw new Error('All films claims ' + count + ', no more than the biggest library (' +
+                            titles.movies.biggest + '): the libraries were not merged');
+          }
+          if (count >= titles.movies.sum) {
+            throw new Error('All films claims ' + count + ' of ' + titles.movies.sum +
+                            ' copies: nothing was deduplicated');
+          }
+        });
+      });
+    })
+
+    .then(function () {
       return step('kids rows exclude everything above the cutoff', function () {
         return sidebarPick('Kids')
           .then(function () {
@@ -744,22 +811,101 @@ function drive(page, titles) {
             ['Discovery', 'Kids', 'Search'].forEach(function (want) {
               if (rows.indexOf(want) < 0) throw new Error('no ' + want + ' row: ' + text);
             });
-            const current = rows.filter(function (r) { return r.indexOf('* ') === 0; });
+            /* Continue watching carries the mark too when the rail is resting
+               on it, so only the sections are counted here. */
+            const current = rows.filter(function (r) {
+              return r.indexOf('* ') === 0 && r.indexOf('Continue watching') < 0;
+            });
             if (current.length !== 1) throw new Error('sections showing as current: ' + text);
             cats = rows.filter(function (r) { return r.indexOf('- ') === 0; })
                        .map(function (r) { return r.slice(2); });
-            if (cats[0] !== 'Continue watching') {
-              throw new Error('Continue watching is not the first row: ' + cats.join(' | '));
+            if (cats.indexOf('Continue watching') >= 0) {
+              throw new Error('Continue watching is listed under a section as well: ' + text);
             }
           })
           .then(function () { return shot('sidebar'); })
           /* Picking a category is how the sidebar replaces scrolling to a row,
              so it has to actually land the rail on it. */
-          .then(function () { return sidebarPick(cats[1]); })
+          .then(function () { return sidebarPick(cats[0]); })
           .then(function () {
             return waitFor('document.getElementById("mh-row").textContent.trim() === ' +
-                           JSON.stringify(cats[1]), 'the rail to land on ' + cats[1]);
+                           JSON.stringify(cats[0]), 'the rail to land on ' + cats[0]);
           });
+      });
+    })
+
+    .then(function () {
+      return step('the sidebar lists Continue watching, Movies and TV Shows, once each', function () {
+        return backToLibrary()
+          .then(openSidebar)
+          .then(sidebarRows)
+          .then(function (rows) {
+            const text = rows.join(' | ');
+            const top = rows.filter(function (r) { return r.indexOf('- ') < 0; })
+                            .map(function (r) { return r.replace('* ', ''); });
+            ['Continue watching', 'Movies', 'TV Shows', 'Discovery', 'Kids', 'Search']
+              .forEach(function (want) {
+                if (top.indexOf(want) < 0) throw new Error('no ' + want + ' entry: ' + text);
+              });
+            /* The libraries themselves are gone: the mock's are Films, 4K Films
+               and TV Shows, and only the last of those is also a section name. */
+            ['Films', '4K Films'].forEach(function (lib) {
+              if (top.indexOf(lib) >= 0) throw new Error('the library ' + lib +
+                                                         ' is still listed: ' + text);
+            });
+            const watching = rows.filter(function (r) {
+              return r.replace(/^\* /, '').replace(/^- /, '') === 'Continue watching';
+            });
+            if (watching.length !== 1) {
+              throw new Error(watching.length + ' Continue watching entries: ' + text);
+            }
+          })
+          .then(function () { return press('ArrowLeft'); });      // close it again
+      });
+    })
+
+    .then(function () {
+      return step('Continue watching can be cut to films or to episodes', function () {
+        function types(what) {
+          return focusedRowTypes().then(function (st) {
+            if (!st) throw new Error('no focused row after ' + what);
+            if (st.title !== 'Continue watching') {
+              throw new Error('after ' + what + ' the rail is on "' + st.title + '"');
+            }
+            if (!st.types.length) throw new Error('nothing left in the row after ' + what);
+            return st.types;
+          });
+        }
+        return backToLibrary()
+          .then(function () { return sidebarPick('Continue watching'); })
+          .then(function () { return types('Continue watching'); })
+          .then(function (all) {
+            /* onDeck is films and episodes together — if it were not, the cuts
+               below would prove nothing. */
+            if (all.indexOf('movie') < 0 || all.indexOf('episode') < 0) {
+              throw new Error('Continue watching is not mixed: ' + all.join(', '));
+            }
+          })
+          .then(function () { return watchingPick('TV Shows'); })
+          .then(function () { return types('the TV Shows cut'); })
+          .then(function (only) {
+            const stray = only.filter(function (t) { return t !== 'episode'; });
+            if (stray.length) throw new Error('the TV Shows cut kept ' + stray.join(', '));
+          })
+          .then(function () { return watchingPick('Movies'); })
+          .then(function () { return types('the Movies cut'); })
+          .then(function (only) {
+            const stray = only.filter(function (t) { return t !== 'movie'; });
+            if (stray.length) throw new Error('the Movies cut kept ' + stray.join(', '));
+          })
+          /* And the cut lifts again, which is also how the rest of the run gets
+             its mixed row back. */
+          .then(function () { return sidebarPick('Continue watching'); })
+          .then(function () { return types('the cut being lifted'); })
+          .then(function (all) {
+            if (all.indexOf('episode') < 0) throw new Error('the episodes did not come back');
+          })
+          .then(function () { return shot('continue-watching'); });
       });
     })
 
