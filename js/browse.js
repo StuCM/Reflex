@@ -179,6 +179,12 @@ var Browse = (function () {
       loadSection(secIdx, true);
       return;
     }
+    if (choice.kind === 'autoplay') {
+      Player.cycleAutoplay();
+      UI.toast('Autoplay next: ' + Player.autoplayLabel());
+      render();
+      return;
+    }
     if (choice.kind === 'panel') {
       UI.message('What this panel claims it can play', Panel.report());
       return;
