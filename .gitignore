@@ -1,4 +1,5 @@
 *.ipk
+.env
 __pycache__/
 .ares/
 node_modules/
