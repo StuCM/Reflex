@@ -191,7 +191,7 @@
     }).then(function (servers) {
       UI.debug('servers: ' + servers.map(function (sv) { return sv.name; }).join(', '));
       /* Each server's own section list. They may not agree on what exists —
-         Browse merges them by title. */
+         Browse folds them by type into one Movies and one TV Shows. */
       return Promise.all(servers.map(function (sv) {
         return Plex.sections(sv).then(function (secs) {
           return { server: sv, sections: secs };

@@ -13,6 +13,57 @@ Newest first. One entry per decision, appended by the orchestrator at
 
 ---
 
+## 2026-09-07 — A copy is a library on a server, not a server
+
+Six libraries across two servers — `Movies - 4K UHD`, `Movies - LQ`,
+`TV Shows`, `TV Shows 4K`, `TV Shows - Anime` — meant six entries in a menu
+driven by a d-pad, and, because every section builds its own Continue watching
+row, a growing pile of identical `Continue watching` entries beside them. That
+pile was self-inflicted: dropping the per-section type filter earlier the same
+day made those rows identical.
+
+Sections are now grouped by `type` rather than by title and type, so every
+movie library on every server is one Movies section and every show library one
+TV Shows. `artist` and `photo` libraries are dropped outright — this app plays
+neither. Continue watching is promoted above the sections with Movies and TV
+Shows as cuts of it. Almost none of this cost anything: a section was already
+`parts: [{server, key}]` and `Merge.stream` already walked any number of them,
+so folding six libraries into two is a change to how they are *grouped*.
+
+What it did cost was a rule nobody had had to state. `Merge.combine` returned
+early when two copies shared a `_server`, with a comment explaining that a film
+listed twice by one server is two editions in one library and not what
+`_sources` is for. That was true while one section meant one library. It stops
+being true the moment a section spans several: the same film in a 4K library
+and an LQ one is two copies that play differently, and folding them kept
+whichever the walk reached first. On this account that is often the 4K TrueHD
+remux the guard refuses — leaving the playable copy invisible, which is worse
+than the six-section browse this replaced.
+
+So a copy is identified by `_server + '/' + _part`, with `_part` stamped in
+`fetchInto` where the stream already knows which library a page came from, and
+carried through `slim`. The compatibility line is that `Merge.lists` — onDeck,
+the hubs, search — has no parts at all, so those items key as `server/` and
+fold per server exactly as before. The consequence, accepted rather than
+overlooked: **search results and hub rows still show one copy per server**, so a
+film's second same-server copy is reachable only by browsing the All row.
+
+The spec asserted `js/merge.js` needed no change and put it out of scope. It
+was wrong, the worker stopped rather than guessing, and the block was upheld —
+the alternative was relaxing the definition of done and shipping the hidden
+copy. Widening `files:` mid-flight is the orchestrator's call precisely because
+the deciding fact — what this user's libraries actually look like — is one the
+worker cannot see.
+
+A quieter finding matters as much. The mock gave Main's `4K Films` library the
+*same objects* as its `Films` library, same `ratingKey` and all, so no test
+could have told a correct deduplication from a dropped copy. A fixture that
+cannot fail is worse than no fixture, because it reads as coverage. The 4K
+library now holds its own copies, and reverting `copyKey` to `_server` was
+confirmed to turn the suite red.
+
+---
+
 ## 2026-09-07 — The hero stops being the tile blown up, and TMDB is why
 
 The browse screen looked unfinished because the backdrop behind the focused
