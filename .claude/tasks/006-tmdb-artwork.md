@@ -1,7 +1,7 @@
 ---
 id: 006
 slug: tmdb-artwork
-status: approved
+status: review
 branch: crew/006-tmdb-artwork
 model: sonnet
 env: laptop
@@ -250,6 +250,100 @@ this task. Workers must not go digging for more.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `js/config.js` — `tmdbBase` and `tmdbImageBase` beside `tmdbKey`.
+- `js/tmdb.js` — `API` reads `Config.tmdbBase`; new exported `images(tmdbId)`.
+- `js/art.js` (new) — `pick` (pure), `url`, `tile`, `hero`, `warm`, `onReady`.
+  Two caches (memory and `art:<id>` in `Store`), at most four lookups in
+  flight, one per tmdbId however many tiles ask, misses cached too.
+- `js/rail.js` — the tile picture comes from `Art.tile`; `Art.warm` sits below
+  the off-screen guard; an `Art.onReady` handler repaints just the tiles whose
+  art landed. Separately, a row is now identified by its contents as well as
+  its slot — see below.
+- `js/masthead.js` — `paintArt` asks `Art.hero`/`Art.warm`; an `Art.onReady`
+  handler repaints the backdrop when the item that landed is still on screen.
+- `js/plex.js` — `includeGuids: 1` on `hubs` **and** on `onDeck`.
+- `js/merge.js` — `slim` keeps `Guid` and `art`, with the size cost noted.
+- `index.html` — `js/art.js` after `js/tmdb.js`.
+- `dev/mock-tmdb.js` (new) — `/__tmdb` (images, trending, discover,
+  recommendations) and `/__tmdbimg` off the generated library's own ids.
+- `dev/server.js` — creates the TMDB mock and injects its bases and a stub key
+  in mock mode; `--proxy` keeps the real TMDB and `TMDB_KEY`.
+- `dev/smoke.js` — three new steps (lookup accounting, two pictures, the
+  one-backdrop fallback), `searchFor` extracted from `openTitle`, and two
+  existing steps rewritten (below).
+- `test/art.test.js` (new) — `Art.pick` over the five cases in step 10.
+- `test/merge.test.js` — the assertion that `slim` drops `Guid`, inverted.
+
+`npm run verify`: check clean, 6/6 test files, **35/35** smoke (baseline 32/32
+plus the three new steps).
+
+## What the spec got wrong
+
+- **`Plex.onDeck` does not set `includeGuids`.** Graph context says it does
+  (js/plex.js:352); line 352 is `children`. Without it Continue watching — the
+  first row, and the one the definition of done rests on — carries no TMDB id
+  on a real server. Added, one line, same shape as the `hubs` change in step 6.
+- **`test/merge.test.js` is not in `files:` and had to change.** It asserted
+  `out[0].Guid === undefined, 'the Guid array is not kept'`, which step 7
+  directly reverses. The assertion was inverted rather than deleted.
+- **Two existing smoke steps could not survive this task unchanged**, and both
+  are in `dev/smoke.js`, which is in `files:`:
+  - *"the hero art is the focused item, not the one before it"* compared the
+    hero's Plex ratingKey against the focused tile's. The whole point of this
+    task is that those are now two different pictures, and for an episode two
+    different subjects (the show's backdrop over the episode's still). It is
+    now *"the hero art follows focus, and comes back"*: the backdrop must move
+    when focus moves, return unchanged when focus returns, and be the same
+    picture on a second visit after a fast sweep. Same regression, no
+    dependence on hero and tile being one image.
+  - *"discovery says what it needs rather than failing quietly"* passed only
+    because `tmdbKey` was empty. Step 9 says to decide by mocking the discovery
+    endpoints, so it is now *"discovery turns a curated list into rows of what
+    we hold"* — the mock answers trending/discover/recommendations with ids the
+    fake servers really have, so the step drives the whole path instead. The
+    empty-key message is no longer covered by the smoke test; that is the cost
+    the spec accepted.
+- **`Art.onReady` needed more than one listener** (the rail and the masthead),
+  and marking a tile `_idx = -1` alone would leave the Plex fallback on screen
+  until the next keypress. The handler reassigns that one tile's `src` instead,
+  which is the same "no whole-rail repaint" intent and actually repaints.
+- **A latent rail bug blocked the definition of done.** `drawRow` treated a
+  row's slot as its identity, and `runSearch` swaps `rows` in place with
+  `rowIdx` still 0 — so the results page drew the right header over the
+  previous row's tiles. Found because the new step is the first thing to look
+  at a result tile's image. Fixed at the root in `js/rail.js` (in `files:`) as
+  its own commit.
+
+Checked by hand, since the harness now always sets a key: with `tmdbKey`
+empty the app makes **zero** requests to `/__tmdb`, and the hero and every tile
+come from `/photo/:/transcode` exactly as on `main`.
+
 ## Review rounds
 
 ## Graph writes proposed
+
+- **Decision — one picture per surface comes from TMDB, not Plex.** Plex holds
+  exactly two images per item (`art`, `thumb`) and both the tile and the hero
+  reached for `art`, so the hero was the tile blown up. TMDB has many backdrops
+  per title and is already wired in, so `js/art.js` takes the best for the hero
+  and the second best for the tile. Rationale: it is the only source of a
+  second picture, and it moves image load off servers we do not own.
+- **Pattern — a synchronous answer plus a repaint callback.** `Art.tile` and
+  `Art.hero` never wait: they answer from cache or fall back to Plex, and
+  `Art.warm` notifies listeners when the lookup lands so the one tile and the
+  backdrop are reassigned in place. Anything that made the rail await a network
+  answer would stall browsing, which is the whole reason this app exists.
+- **Pattern — cache the misses too.** A title TMDB has no usable backdrop for
+  is stored as `{hero: null, tile: null}`; without that, an obscure film costs
+  a request every time its row is walked past.
+- **Gotcha — a row's slot is not its identity.** `Rail.drawRow` keyed reuse on
+  the row index, and `Browse.runSearch` replaces `rows` in place with `rowIdx`
+  still 0, so the results page kept the previous row's tiles. Any pooled
+  renderer keyed on position has this bug waiting in it.
+- **Gotcha — `test/load.js` runs the app in a `vm` sandbox, so cross-realm
+  checks fail.** `x instanceof Array` is false for an array made in the test's
+  realm (use `Array.isArray`), and `assert.deepStrictEqual` rejects objects
+  returned from the sandbox on prototype identity alone. Both cost a round
+  trip; `test/merge.test.js` already carried a comment about the second.
