@@ -30,6 +30,11 @@ var Player = (function () {
   var osdTracks = document.getElementById('osd-tracks');
   var osdHint = document.getElementById('osd-hint');
   var skipEl = document.getElementById('osd-skip');
+  var nextEl = document.getElementById('upnext');
+  var nextStillEl = document.getElementById('un-still');
+  var nextShowEl = document.getElementById('un-show');
+  var nextTitleEl = document.getElementById('un-title');
+  var nextHintEl = document.getElementById('un-hint');
   var subEl = document.getElementById('subtitle');
   var menuEl = document.getElementById('menu');
   var menuTabsEl = document.getElementById('menu-tabs');
@@ -45,6 +50,7 @@ var Player = (function () {
   var ROWS_SHOWN = 7;
 
   var item = null, server = null, onExit = null, onError = null, onSwitch = null;
+  var onNext = null, onPlayNext = null;
   var currentPart = null, currentAudio = null, currentMedia = null;
   var mediaIndex = 0, maxBitrate = null, transcoding = false, forceStream = false;
   var ticker = null, osdTimer = null, resumeMs = 0;
@@ -373,6 +379,119 @@ var Player = (function () {
     showOsd();
   }
 
+  /* ---------- what comes next ----------
+
+     An episode that ends offers the one after it, and by default waits there
+     for a keypress. These are someone else's servers: a chain that rolls all
+     night is load on hardware we do not own, put there by someone who fell
+     asleep. A season boundary never counts down at all. */
+
+  var AUTOPLAY = [0, 5, 10, 15, 30];        // seconds; 0 is "wait for OK"
+  var autoplay = null;                      // read from storage once, then cached
+  var next = null, nextTimer = null, nextLeft = 0;
+
+  /* How long an ended episode waits before playing the next, in seconds, or 0
+     for not at all. Storage that refuses us falls back to 0, the safe way. */
+  function autoplaySeconds() {
+    if (autoplay !== null) return autoplay;
+    var stored = 0;
+    try { stored = Number(localStorage.getItem('reflex.autoplay')); } catch (e) { stored = 0; }
+    autoplay = AUTOPLAY.indexOf(stored) > 0 ? stored : 0;
+    return autoplay;
+  }
+
+  /* off → 5 → 10 → 15 → 30 → off, persisted. Cycling is the cheapest control a
+     d-pad has, which is why the preference is a sidebar entry and not a screen. */
+  function cycleAutoplay() {
+    autoplay = AUTOPLAY[(AUTOPLAY.indexOf(autoplaySeconds()) + 1) % AUTOPLAY.length];
+    try { localStorage.setItem('reflex.autoplay', String(autoplay)); } catch (e) { /* private mode */ }
+    return autoplay;
+  }
+
+  /* 'off' or '10s' — what the sidebar entry and its toast say. */
+  function autoplayLabel() {
+    var secs = autoplaySeconds();
+    return secs ? secs + 's' : 'off';
+  }
+
+  /* Playback ended on its own. Ask what follows before tearing anything down,
+     because with nothing to offer this is an ordinary stop. */
+  function offerNext() {
+    if (!onNext || !item) { stop('stopped'); return; }
+    var asked = item;
+    onNext(item).then(function (found) {
+      if (item !== asked) return;            // stopped while we were asking
+      if (!found || !found.episode) { stop('stopped'); return; }
+      showNext(found);
+    }, function () { stop('stopped'); });
+  }
+
+  /* "S1 E5 · Sundown" — where it sits in the series, then what it is called. */
+  function nextLabel(ep) {
+    return 'S' + (ep.parentIndex === undefined ? '?' : ep.parentIndex) +
+           ' E' + (ep.index === undefined ? '?' : ep.index) +
+           '   ·   ' + (ep.title || '');
+  }
+
+  function showNext(found) {
+    next = found;
+    dismissSkip();
+    if (menuOn) closeMenu();
+    var ep = found.episode;
+    var still = Plex.posterUrl(ep, 320, 180);
+    nextStillEl.style.backgroundImage = still ? 'url("' + still + '")' : 'none';
+    nextShowEl.textContent = 'Up next   ·   ' + (ep.grandparentTitle || '');
+    nextTitleEl.textContent = nextLabel(ep);
+    /* Crossing into a new season always waits, whatever the setting says: it is
+       exactly where an unattended chain should stop. */
+    nextLeft = found.newSeason ? 0 : autoplaySeconds();
+    paintNext();
+    nextEl.classList.remove('hidden');
+    if (nextLeft > 0) nextTimer = setInterval(tickNext, 1000);
+    UI.debug('up next: ' + nextLabel(ep) +
+             (nextLeft > 0 ? ' in ' + nextLeft + 's' : ' — waiting for OK'));
+  }
+
+  function paintNext() {
+    nextHintEl.textContent = nextLeft > 0
+      ? 'Playing in ' + nextLeft + 's   ·   OK now   ·   BACK to stop'
+      : 'OK to play   ·   BACK to stop';
+  }
+
+  function tickNext() {
+    nextLeft--;
+    paintNext();
+    if (nextLeft <= 0) takeNext();
+  }
+
+  /* Take the panel down and kill the countdown with it. A timer that plays an
+     episode onto a screen nobody is looking at is worse than no feature, so
+     every way out of playback comes through here. */
+  function clearNext() {
+    clearInterval(nextTimer);
+    nextTimer = null;
+    nextLeft = 0;
+    next = null;
+    nextEl.classList.add('hidden');
+  }
+
+  function takeNext() {
+    var ep = next && next.episode, go = onPlayNext;
+    clearNext();
+    if (!ep || !go) { stop('stopped'); return; }
+    /* The finished episode is reported stopped before the next one starts — a
+       session left open on a server we do not own is the rudest thing this app
+       can do. Quietly, or onExit would bounce us out mid-handover. */
+    stop('stopped', true);
+    go(ep);
+  }
+
+  function nextKey(code) {
+    if (code === 13 || code === 415 || code === 19 || code === 179) { takeNext(); return true; }
+    if (UI.isBack(code) || code === 413) { clearNext(); stop('stopped'); return true; }
+    return true;                             // the offer swallows everything else
+  }
+
   /* ---------- subtitles ----------
 
      Fetched as text and drawn over the video. The server does one small GET
@@ -682,7 +801,10 @@ var Player = (function () {
     onExit = opts.onExit;
     onError = opts.onError;
     onSwitch = opts.onSwitch || null;
+    onNext = opts.onNext || null;
+    onPlayNext = opts.onPlayNext || null;
     resumeMs = opts.item.viewOffset || 0;
+    clearNext();
 
     stalls = 0; lowest = 999; startedAt = Date.now();
     var url = opts.url || Plex.streamUrl(server, opts.part);
@@ -734,7 +856,7 @@ var Player = (function () {
       paintSub();
       checkMarker();
     };
-    v.onended = function () { stop('stopped'); };
+    v.onended = function () { offerNext(); };
     v.onerror = function () {
       fail(mediaErrorText(v.error) + laptopNote(currentMedia));
     };
@@ -816,6 +938,7 @@ var Player = (function () {
     clearInterval(ticker); ticker = null;
     clearTimeout(osdTimer);
     clearTimeout(seekTimer);
+    clearNext();
     pending = null;
     subToken++;
     v.pause();
@@ -831,6 +954,7 @@ var Player = (function () {
     menuOn = false; marker = null; cues = [];
     var done = quiet ? null : onExit;
     item = null; server = null; onExit = null; onError = null; onSwitch = null;
+    onNext = null; onPlayNext = null;
     currentPart = null; currentAudio = null; currentMedia = null; currentSub = null;
     if (done) done();
   }
@@ -838,6 +962,9 @@ var Player = (function () {
   function playing() { return !!item; }
 
   function key(code) {
+    /* The offer owns the remote while it is up: the film has ended, so seeking
+       and pausing have nothing left to act on. */
+    if (next) return nextKey(code);
     if (menuOn) return menuKey(code);
 
     /* Digits jump by tenths — the cheapest way past a first act there is. */
@@ -889,5 +1016,7 @@ var Player = (function () {
     return false;
   }
 
-  return { play: play, stop: stop, playing: playing, key: key };
+  return { play: play, stop: stop, playing: playing, key: key,
+           autoplaySeconds: autoplaySeconds, cycleAutoplay: cycleAutoplay,
+           autoplayLabel: autoplayLabel };
 })();

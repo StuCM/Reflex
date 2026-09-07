@@ -588,6 +588,29 @@ html, body {
   font-size: 30px; letter-spacing: 0.02em;
 }
 
+/* ---- what comes next ----
+
+   The offer an ended episode leaves on screen. It takes the skip prompt's slot,
+   which is free by then, and sits clear of the subtitle band below it. */
+#upnext {
+  position: absolute; right: 96px; bottom: 300px; width: 860px;
+  padding: 22px 26px; border-radius: 8px;
+  background: rgba(12, 15, 22, 0.94);
+}
+#un-still {
+  display: inline-block; width: 320px; height: 180px; margin-right: 24px;
+  vertical-align: middle;
+  background: var(--raised) no-repeat center; border-radius: 6px;
+  -webkit-background-size: cover; background-size: cover;
+}
+#un-text { display: inline-block; width: 440px; vertical-align: middle; }
+#un-show { font-size: 23px; color: var(--dim2); }
+#un-title {
+  font-size: 32px; color: var(--fg); margin-top: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#un-hint { font-size: 22px; color: var(--ac); margin-top: 20px; }
+
 /* ---- subtitles ----
 
    Text over the video, never burned into it. A shadow rather than a box, so
