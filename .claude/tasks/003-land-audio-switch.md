@@ -1,7 +1,7 @@
 ---
 id: 003
 slug: land-audio-switch
-status: pending-tv
+status: done
 env: laptop
 branch: crew/003-land-audio-switch
 files:
@@ -250,3 +250,18 @@ have `scope-check` prefer local `main`. Relevant to task 002.
 **Follow-up task worth specing** — `js/guard.js` still has no unit test, and it
 is now the file that decides whether a forced mux is allowed. `test/` was out of
 this spec's `files:`, so it was correctly not added here.
+
+## Closed 2026-09-07
+
+Closed on the user's instruction, with the build carrying it running on the
+panel.
+
+**The pending-tv question is not recorded as answered.** It was: does the B8
+expose `audioTracks`, so that choosing a different audio track is instant, or
+does it not, so the switch has to give up direct play and be muxed by the
+server? Desktop Chrome exposes none at all, so the laptop cannot tell us, and
+nothing in this file records anyone watching it happen.
+
+If it was observed, correct this note with which of the two it was — the answer
+decides whether a 4K file can ever have its audio track changed, and it is the
+oldest open question in `docs/backlog.md`.
