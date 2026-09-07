@@ -13,6 +13,53 @@ Newest first. One entry per decision, appended by the orchestrator at
 
 ---
 
+## 2026-09-07 — The hero stops being the tile blown up, and TMDB is why
+
+The browse screen looked unfinished because the backdrop behind the focused
+tile was the same picture as the tile. That was not a layout mistake: Plex
+holds exactly two images per item, `art` and `thumb`, and both surfaces reached
+for `art` first. There was no second picture to reach for.
+
+TMDB holds many backdrops per title and was already wired into this app for the
+discovery rows, inert only because no key was set. `js/art.js` now takes the
+best backdrop for the hero and the second best for the tile. It also moves
+image load off servers we do not own — every tile used to be a
+`/photo/:/transcode` someone else's box generated on demand.
+
+The shape that matters is not the TMDB call, it is that nothing waits for it.
+`Art.tile` and `Art.hero` answer synchronously, from cache or from the Plex
+fallback, and `Art.warm` notifies when the lookup lands so that one tile and
+the backdrop are reassigned in place. A rail that awaited a network answer
+would stall browsing, which is the one thing this app exists to fix. Misses are
+cached as well as hits, or an obscure film costs a request every time its row
+is walked past. With no key, `Tmdb.enabled()` is false, `Art.warm` returns at
+once and every surface falls back to what `main` drew before — the same
+behaviour by construction, not by a branch.
+
+Episodes never ask TMDB at all. Their Plex `thumb` *is* the still, which also
+closed a backlog item on the way past.
+
+Two things were found rather than planned. `Rail.drawRow` keyed pool reuse on
+the row *index*, and `Browse.runSearch` replaces the rows in place with
+`rowIdx` still 0 — so the results page drew the right header over the previous
+row's tiles. Any pooled renderer keyed on position has that bug waiting in it;
+it is now keyed on the row object as well. And `test/load.js` runs the app in a
+`vm` sandbox, so cross-realm checks fail: `instanceof Array` is false for an
+array made in the test's realm, and `deepStrictEqual` rejects sandbox objects
+on prototype identity alone.
+
+The same task settled where the API key lives. The TV has no environment and no
+build step, so `.env` cannot reach it — whatever `js/config.js` says on disk is
+what the panel gets. `tools/package.sh` now writes the key into the *staged*
+copy from `TMDB_KEY` or a gitignored `.env`, and refuses to package if the
+substitution does not match. The repo stays clean, which is the point: it is
+public.
+
+Not done, deliberately: portrait posters in the rail, and TMDB logo art
+replacing the hero's text title. Both are layout changes, not artwork sources.
+
+---
+
 ## 2026-08-15 — Agents work through a spec-first loop, not a conversation
 
 Several agents run in one evening each rediscovered the codebase, re-solved
