@@ -81,7 +81,7 @@ html, body {
 
    Two states of the same markup. Tall while the focus is on the first row —
    where the rail shows Continue watching whole and nothing after it — and a
-   264px header the moment it leaves, which still carries the picture, the
+   320px header the moment it leaves, which still carries the picture, the
    title, the description and the cast while leaving room for two whole rows and
    a peek at a third. No grid on Chromium 53, so the two columns of the header
    are absolutely positioned inside it; nothing moves in the DOM. */
@@ -124,8 +124,10 @@ html, body {
 /* ---- the hero as a header: the same elements, in two columns. ----
    No background of its own: the backdrop behind it is the point. */
 
+/* The text sits where it sits on the first screen — the title on the same line
+   in both states — so stepping into the rows moves the rail, not the writing. */
 #browse.dense #masthead {
-  top: 0; left: 0; width: 1920px; height: 264px;
+  top: 0; left: 0; width: 1920px; height: 320px;
   border-bottom: 1px solid var(--soft);
   background: none;
 }
@@ -133,24 +135,23 @@ html, body {
 #browse.dense #mh-row { display: none; }
 
 #browse.dense #mh-title {
-  position: absolute; top: 40px; left: 96px; width: 760px;
+  position: absolute; top: 144px; left: 96px; width: 760px;
   margin-top: 0; font-size: 46px; font-weight: 500; letter-spacing: -0.02em;
 }
 #browse.dense #mh-meta {
-  position: absolute; top: 110px; left: 96px; width: 760px;
+  position: absolute; top: 214px; left: 96px; width: 760px;
   margin-top: 0; font-size: 25px; font-weight: 400;
   white-space: nowrap; overflow: hidden;
 }
 /* The second column: to the right of the title rather than under it, so the
    header stays 264px and the rows keep their room. */
 #browse.dense #mh-desc {
-  position: absolute; top: 40px; left: 900px; width: 620px;
+  position: absolute; top: 144px; left: 900px; width: 620px;
   margin-top: 0; max-height: 96px;
 }
 #browse.dense #mh-cast {
-  position: absolute; top: 152px; left: 900px; width: 620px; margin-top: 0;
+  position: absolute; top: 256px; left: 900px; width: 620px; margin-top: 0;
 }
-#browse.dense #top-right { top: 41px; right: 96px; }
 
 /* ---- the search button ----
    An affordance, not a target: the red key reaches search in one press from
@@ -428,7 +429,7 @@ html, body {
 }
 
 #dt-summary {
-  position: absolute; top: 40px; left: 900px; width: 620px;
+  position: absolute; top: 144px; left: 900px; width: 620px;
   font-size: 22px; line-height: 1.45; color: var(--dim);
   max-height: 96px; overflow: hidden;
 }
