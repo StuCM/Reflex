@@ -1,14 +1,17 @@
 ---
 id: 007
 slug: one-movies-section
-status: blocked
+status: building
 branch: crew/007-one-movies-section
 model: sonnet
 env: laptop
 files:
   - js/browse.js
   - js/sidebar.js
+  - js/merge.js
+  - dev/library.js
   - dev/smoke.js
+  - test/merge.test.js
 ---
 
 # One Movies, one TV Shows, and Continue watching above them
@@ -206,6 +209,79 @@ Workers must not go digging for more.
 
 Gate: `npm run verify` 38/38, `scope-check … main` in scope. (`scope-check`
 defaults to `origin/main`, which is stale in this checkout — pass `main`.)
+
+## Amendment 1 — the same-server fold, settled by the orchestrator
+
+The worker was right to stop, and the block is upheld: `Merge.combine` returns
+early on `primary._server === item._server`, so two libraries on one server
+collapse to a single copy with no second `_source`. On this user's actual
+servers that means a film held in both `Movies - 4K UHD` and `Movies - LQ`
+shows one copy chosen by walk order — and if that is the 4K TrueHD remux, the
+guard refuses it while the playable LQ copy is invisible. CLAUDE.md's whole
+reason for `_sources` is that copies differ and only one may direct play, so
+relaxing the Definition of done would ship a worse browse than the six-section
+one it replaces. Not a trade worth making.
+
+The Graph context bullet claiming `js/merge.js` needs no change was wrong. It
+did not survive contact with the code; that is a spec bug, not a worker error.
+
+`files:` is widened to `js/merge.js`, `dev/library.js` and `test/merge.test.js`.
+Everything already built stands — carry on from the three commits on the branch.
+
+**A copy is a server *and* a library, not a server.**
+
+1. **`js/merge.js` — stamp the part.** In `fetchInto`, tag each item with the
+   library it came from before it is buffered: `got[i]._part = s.part.key`. The
+   stream already holds `s.part`, so nothing new has to be threaded through.
+
+2. **`js/merge.js` — keep it through `slim`.** Add `_part: item._part` beside
+   `_server`. It is one short string on each entry; the Guid array already
+   costs more.
+
+3. **`js/merge.js` — `combine` compares both.** Replace the two `_server`
+   equality checks with one small helper:
+   ```js
+   /* A copy is a library on a server, not a server: one section now spans
+      several libraries, and the same film in a 4K library and an LQ one is two
+      copies that play differently. */
+   function copyKey(item) { return item._server + '/' + (item._part || ''); }
+   ```
+   and compare `copyKey(primary) === copyKey(item)`, and the same against each
+   entry in `extras`.
+
+   **This must stay backward compatible.** `Merge.lists` — which folds
+   `Plex.onDeck` and `Plex.hubs` — has no parts, so those items carry no
+   `_part`, their key is `server/`, and same-server items fold exactly as they
+   do today. Only the merged All row, where `_part` is set, tells two libraries
+   apart. Do not add `_part` to the onDeck or hubs paths.
+
+4. **`dev/library.js` — make the fixture able to fail.** `items['2'] = uhd`
+   hands Main's `4K Films` the *same objects* as its `Films` library, same
+   `ratingKey` and all, so the mock cannot tell a correct deduplication from a
+   dropped copy. Give `4K Films` its own copies of those films: a distinct
+   `ratingKey`, and `Media[0]` differing from the `Films` one in a way the
+   detail page shows — the 4K library's copy being `4k`/`truehd` where `Films`
+   has `1080`/`eac3` is the real-world case and the one the guard cares about.
+   Keep the identifying guids identical, or they will not merge at all.
+
+5. **`test/merge.test.js`** — cover the rule directly, since the smoke test can
+   only see the result: two items with the same identity, the same `_server`
+   and *different* `_part` become one entry with two `sources()`; the same
+   `_server` and the same `_part` stay one copy with no extras; and items with
+   no `_part` at all (the onDeck shape) still fold as they do now.
+
+6. **`dev/smoke.js`** — extend the existing detail-page step: a film held by
+   both of Main's movie libraries lists **two** copies on its detail page, from
+   the same server, with different media, and the count matches what
+   `Merge.sources` reports.
+
+Definition of done gains:
+
+- [ ] A film in two libraries on one server is one entry with both copies on
+      its detail page, and the copies differ in the way the guard cares about.
+- [ ] A film in one library on one server still has exactly one copy — no
+      phantom duplicate.
+- [ ] `Plex.onDeck` and `Plex.hubs` results still fold per server, unchanged.
 
 ## Review rounds
 
