@@ -6,8 +6,10 @@
      node dev/server.js --latency 140      pretend the server is far away
      node dev/server.js --proxy            talk to the real plex.tv instead
 
-   Then open http://localhost:8080. Nothing in dev/ is loaded by the packaged
-   app: index.html is rewritten in memory on the way out, never on disk. */
+   Then open http://localhost:8080, or whatever $PORT says — the harness that
+   opens a preview pane assigns a free one rather than fighting whatever else
+   is listening. Nothing in dev/ is loaded by the packaged app: index.html is
+   rewritten in memory on the way out, never on disk. */
 'use strict';
 
 const http = require('http');
@@ -31,7 +33,8 @@ function fixture() {
 }
 
 function parseArgs(argv) {
-  const out = { port: 8080, films: 2000, latency: 0, pinPolls: 2,
+  const out = { port: Number(process.env.PORT) || 8080,
+                films: 2000, latency: 0, pinPolls: 2,
                 proxy: false, quiet: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
