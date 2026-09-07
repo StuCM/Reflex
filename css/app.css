@@ -77,11 +77,13 @@ html, body {
 
 /* ---- masthead ----
 
-   Two states of the same markup. Tall while the focus is on the first row, a
-   132px band the moment it leaves — which is what gives the rows room for
-   three of themselves instead of one and a half. */
+   Two states of the same markup. Tall while the focus is on the first row —
+   where the rail shows Continue watching whole and nothing after it — and a
+   132px band the moment it leaves, which is what gives the rows below room for
+   two of themselves instead of one and a half. Flex `order` does the
+   rearranging, so nothing moves in the DOM. */
 
-#masthead { position: absolute; top: 96px; left: 96px; width: 1080px; height: 444px; }
+#masthead { position: absolute; top: 96px; left: 96px; width: 1080px; height: 300px; }
 
 #mh-row {
   font-size: 22px; letter-spacing: 0.24em; text-transform: uppercase;
@@ -97,49 +99,15 @@ html, body {
 
 #mh-meta { margin-top: 12px; font-size: 26px; color: var(--dim); }
 
-#mh-actions { margin-top: 26px; height: 66px; }
-
 .pill {
   display: inline-block; vertical-align: top;
   margin-right: 16px; padding: 17px 36px;
   border-radius: 999px; font-size: 26px;
   background: var(--soft); color: var(--fg);
 }
-.pill.primary { padding: 17px 44px; background: var(--ac); color: var(--bg); }
 .pill-icon { display: inline-block; vertical-align: -3px; margin-right: 12px; }
 
-/* Round buttons beside the pills — heart in the tall hero, info in the band. */
-.circle {
-  display: inline-block; vertical-align: top;
-  width: 66px; height: 66px; border-radius: 50%;
-  background: var(--soft); color: var(--dim);
-  text-align: center; line-height: 66px;
-}
-#mh-info { display: none; }
-
-#mh-badges { margin-top: 20px; height: 40px; }
-
-.badge {
-  display: inline-block; vertical-align: top;
-  margin-right: 10px; padding: 6px 14px;
-  border-radius: 4px; font-size: 20px; letter-spacing: 0.04em;
-  background: var(--surface); color: var(--dim);
-}
-.badge.good { background: #17402a; color: #7fe0a8; }
-.badge.warn { background: #4a3410; color: #f0c070; }
-.badge.bad  { background: #4a1414; color: #ff8f8f; }
-
-#mh-summary {
-  margin-top: 18px; font-size: 22px; line-height: 1.45; color: var(--dim);
-  max-height: 68px; overflow: hidden; width: 900px;
-}
-
-/* ---- the hero as a band ----
-
-   Same elements, laid out across instead of down. Flex `order` does the
-   rearranging, so nothing moves in the DOM. The badges stay: CLAUDE.md is
-   explicit that the audio verdict has to be readable before OK is pressed, and
-   that is true whichever row you are on. */
+/* ---- the hero as a band: the same elements, laid out across. ---- */
 
 #browse.dense #masthead {
   top: 0; left: 0; width: 1920px; height: 132px;
@@ -150,10 +118,7 @@ html, body {
   background: var(--bg);
 }
 
-#browse.dense #mh-row,
-#browse.dense #mh-summary,
-#browse.dense #mh-more,
-#browse.dense #mh-heart { display: none; }
+#browse.dense #mh-row { display: none; }
 
 #browse.dense #mh-title {
   -webkit-order: 1; order: 1;
@@ -164,31 +129,7 @@ html, body {
   -webkit-order: 2; order: 2;
   margin-top: 0; font-size: 25px; font-weight: 400; white-space: nowrap;
 }
-#browse.dense #mh-badges {
-  -webkit-order: 3; order: 3;
-  margin-top: 0; margin-left: 26px; height: auto; white-space: nowrap;
-}
-#browse.dense #mh-actions {
-  -webkit-order: 4; order: 4;
-  margin-top: 0; margin-left: auto; height: 58px; white-space: nowrap;
-}
-#browse.dense .pill { margin-right: 0; padding: 14px 34px; font-size: 24px; }
-#browse.dense #mh-info {
-  display: inline-block;
-  width: 58px; height: 58px; line-height: 58px; margin-left: 14px;
-}
-
-/* Vertically centred in the band rather than sitting above it. */
 #browse.dense #top-right { top: 41px; right: 96px; }
-
-/* What the keys do here, which is not the same in the two states. */
-#browse-hint {
-  position: absolute; left: 96px; bottom: 32px;
-  font-size: 20px; color: var(--dim2); letter-spacing: 0.04em;
-}
-/* A CSS escape swallows one following space, so each of these carries two. */
-#browse-hint::after { content: "\25C0  \25B6  browse  \00B7   \25BC  into the rows  \00B7   OK opens"; }
-#browse.dense #browse-hint::after { content: "\25B2  back up to the hero  \00B7   OK opens the title"; }
 
 /* ---- the search button ----
    An affordance, not a target: the red key reaches search in one press from
@@ -315,6 +256,18 @@ html, body {
   background: var(--ac2);
   z-index: 2;
 }
+
+/* Verdicts, on the detail and show pages: will this copy play, and at what cost
+   to a server we do not own. */
+.badge {
+  display: inline-block; vertical-align: top;
+  margin-right: 10px; padding: 6px 14px;
+  border-radius: 4px; font-size: 20px; letter-spacing: 0.04em;
+  background: var(--surface); color: var(--dim);
+}
+.badge.good { background: #17402a; color: #7fe0a8; }
+.badge.warn { background: #4a3410; color: #f0c070; }
+.badge.bad  { background: #4a1414; color: #ff8f8f; }
 
 /* ---- show ----
    Series across the top, episodes down the left. Same flat-gradient treatment

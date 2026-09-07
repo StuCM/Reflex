@@ -384,12 +384,6 @@ function drive(page, titles) {
         return waitFor('document.querySelector("#mh-title").textContent.trim() === ' +
                        JSON.stringify(title), 'the search result for ' + title);
       })
-      .then(function () {
-        /* And the audio badge has to have resolved before OK means anything —
-           that is the whole promise of the masthead. */
-        return waitFor('/AUDIO |NO PASSABLE/.test(document.querySelector("#mh-badges").textContent)',
-                       'the audio badge');
-      })
       .then(function () { return page.keyboard.press('Enter'); })
       .then(function () {
         return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
@@ -452,10 +446,6 @@ function drive(page, titles) {
           .then(function () { return page.textContent('#mh-title'); })
           .then(function (t) {
             if (t === first) throw new Error('title did not change after three rights');
-          })
-          .then(function () {
-            return waitFor('/AUDIO |NO PASSABLE/.test(document.querySelector("#mh-badges").textContent)',
-                           'the audio badge to resolve');
           })
           .then(function () { return shot('browse'); });
       });

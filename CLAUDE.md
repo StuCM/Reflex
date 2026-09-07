@@ -134,7 +134,10 @@ file is refused and the message lists what was actually on offer.
 **So audio track selection is required, not optional.** Prefer, in order:
 E-AC3 → AC3 → AAC stereo. Never select TrueHD or DTS-HD MA. Pass the chosen
 track as `audioStreamID` on the decision call, and surface the selected track
-in the masthead badges so the user can see it before pressing OK.
+where the copy is chosen — the detail page, which lists every copy with its
+verdict. It used to be badged in the masthead as well; that came out, because
+working it out means a metadata fetch for every tile you rest on, against a
+server we do not own, to answer a question you cannot act on until OK.
 
 ## Layout
 
@@ -175,7 +178,7 @@ Screen:
 - `js/meta.js` — full metadata for a copy, debounced and cached per server.
 - `js/guard.js` — will this copy play, and at what cost to someone else's
   server. Everything that reaches Player goes through it first.
-- `js/masthead.js` — title, badges, and the audio track we would pick.
+- `js/masthead.js` — the backdrop, the title, and one line under it.
 - `js/shows.js` — seasons and episodes of a show, merged across servers.
 - `js/detail.js` — the page OK opens on a film or an episode: cast, ratings,
   extras, and every copy with its verdict, which is where playback is actually
