@@ -50,7 +50,8 @@ var Rail = (function () {
       strip.className = 'strip';
       rowEl.appendChild(label);
       rowEl.appendChild(strip);
-      rowEl._label = label; rowEl._strip = strip; rowEl._row = -1; rowEl._tiles = [];
+      rowEl._label = label; rowEl._strip = strip; rowEl._row = -1;
+      rowEl._rowRef = null; rowEl._tiles = [];
 
       for (i = 0; i < TILE_POOL; i++) {
         tile = document.createElement('div');
@@ -94,7 +95,10 @@ var Rail = (function () {
   }
 
   function drawRow(rowEl, rows, r, rowIdx, onScreen) {
-    var row = rows[r], reused = rowEl._row !== r;
+    /* Position alone does not identify a row: search results replace the rows
+       in place and keep rowIdx 0, so a pool element holding row 0 went on
+       showing the library's row 0 — right title over the wrong tiles. */
+    var row = rows[r], reused = rowEl._row !== r || rowEl._rowRef !== row;
     var i, idx, tile, item, url, firstVisible, start;
 
     rowEl.classList.remove('hidden');
@@ -103,6 +107,7 @@ var Rail = (function () {
 
     if (reused) {
       rowEl._row = r;
+      rowEl._rowRef = row;
       rowEl._label.textContent = row.title;
       for (i = 0; i < TILE_POOL; i++) { rowEl._tiles[i]._idx = -1; rowEl._tiles[i]._filled = false; }
     }
