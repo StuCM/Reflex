@@ -1,7 +1,7 @@
 ---
 id: 008
 slug: header-carries-the-film
-status: approved
+status: done
 branch: crew/008-header-carries-the-film
 model: sonnet
 env: laptop
@@ -238,4 +238,88 @@ Workers must not go digging for more.
 
 ## Review rounds
 
+**Round 1 — PASS.** `crew-reviewer` against `c3909dd`, with the gate re-run
+independently: 40/40 smoke, 7/7 unit files, `npm run check` clean, scope-check
+in scope against local `main`. No blocking findings. Two observations it chose
+not to raise as findings, recorded here because they are real:
+
+- `js/detail.js` neither warms nor listens on `Art.onReady`, so a title whose
+  TMDB payload is still in flight when OK is pressed keeps the Plex fallback
+  for that visit. The rail warms every tile it draws before OK can be pressed,
+  and the spec's step 8 asks only for `Art.factsFor`, so this is what was
+  specified rather than a deviation.
+- `Art` still asks the `/movie` endpoint for a *show*'s tmdbId — visible in
+  `dev/screenshots/11-dense.png`, where a series carries a film's facts. That
+  is pre-existing from task 006 and TV facts are out of scope here.
+
+## What changed
+
+- `js/tmdb.js` — `images(id)` becomes `details(id)`: one
+  `GET /movie/{id}?append_to_response=images,credits&include_image_language=en,null`.
+- `js/art.js` — `pick` reads both the bare and the appended payload shapes; new
+  pure `facts(payload)` and cached-only `factsFor(item)`; the cache entry is
+  `{hero, tile, facts}` and a stored entry with no `facts` is re-fetched once.
+- `js/masthead.js` — draws the description and the key actors, from Plex's
+  summary first and TMDB's when it lands, through the existing `Art.onReady`.
+- `js/detail.js` — title/meta/tagline/summary moved into `#dt-header` and a
+  `#dt-names` line added; the summary now prefers TMDB's overview so the two
+  screens describe the film the same way, and the names fall back to Plex's
+  `Role` list, which is what the photograph strip below uses.
+- `js/rail.js` — `VIEWPORT_H = 816`; `ROWS_FIT`, `ROWS_VISIBLE` and `BIG_DROP`
+  all derived from it.
+- `index.html` — `#mh-desc`, `#mh-cast`, `#dt-header`, `#dt-names`.
+- `css/app.css` — the dense masthead is a 264px two-column header with the
+  backdrop and both scrims at `.5`; `#viewport` is `top: 264px; height: 816px`;
+  `#dt-header` repeats the shape. Both headers lay their columns out with
+  absolute positioning — no grid on Chromium 53.
+- `dev/mock-tmdb.js` — `/movie/<id>` answers the widened payload; every seventh
+  film has no `credits` block at all.
+- `dev/smoke.js` — one new step for the description and the cast on both
+  screens; the dense step now also checks the backdrop survives, the
+  description survives, and two whole rows sit under the header with a third
+  peeking. `manyShots`/`oneShot` now avoid the creditless films. 39 → 40 steps.
+- `test/art.test.js` — `Art.facts` in billing order, short casts, no credits,
+  an empty cast and a malformed payload; `Art.pick` on both payload shapes.
+
+## What the spec got wrong
+
+Nothing that blocked. Two things it did not mention:
+
+- `dev/smoke.js` counts artwork lookups with a regex on
+  `/__tmdb/movie/<id>/images`, which the new endpoint no longer matches. It had
+  to change with the endpoint or the "looked up once per title" step would have
+  passed on zero lookups.
+- The detail page's `loadDetails` overwrote `#dt-summary` with Plex's summary
+  once metadata landed, which would have made the detail page contradict the
+  header it was supposed to echo. `description(md)` now prefers TMDB's.
+
+Also: `node .claude/crew/bin/scope-check.js` defaults to `origin/main`, which in
+this checkout predates task 007 and reports twenty files of someone else's work
+as out of scope. Pass local `main` as the base ref.
+
 ## Graph writes proposed
+
+- **Pattern — one TMDB request per title, widened rather than repeated.**
+  `append_to_response=images,credits` puts the backdrops, the overview, the run
+  time and the billing on the request `js/art.js` was already making, so the
+  header's description and cast cost nothing. `include_image_language=en,null`
+  is required: without it the appended `images` block is filtered to the request
+  language and most backdrops disappear. The alternative — asking Plex per tile
+  — is the per-item metadata fetch `42f5ef9` removed.
+- **Pattern — a widened cache entry needs a miss test, not a version.** Entries
+  written by task 006 are `{hero, tile}` with no `facts`. `if (hit && hit.facts)`
+  treats those as a miss and re-fetches once, which is one line and no schema
+  version. `Art.pick` accepting both the bare and the appended payload shape is
+  the same move on the other side.
+- **Decision — the browse header and the detail page are one shape.** Both are
+  264px with the same two columns (title and meta left, description and key
+  actors right) over the same backdrop at `.5`. Chromium 53 has no grid, so both
+  position their columns absolutely inside a positioned parent rather than
+  reaching for flex `order`, which is what the 132px band used and what stopped
+  it holding four things.
+- **Decision — the backdrop follows the focus into the rows.** `opacity: 0` on
+  `#hero-art` in the dense state made browsing a title and some tiles. It is
+  `.5` now, with both scrims, so what the header describes stays on screen.
+- **Gotcha — `scope-check.js` defaults to `origin/main`.** In a worktree whose
+  local `main` is ahead of the remote, the default base reports every landed
+  task since the last push as scope creep. Pass local `main` explicitly.
