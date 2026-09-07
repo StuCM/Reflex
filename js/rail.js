@@ -11,7 +11,7 @@ var Rail = (function () {
   'use strict';
 
   var TILE_W = 372, TILE_H = 209, GAP = 44, STRIDE = TILE_W + GAP;
-  var ROW_H = 335;               // 44 header + 209 art + 48 title + 34 below
+  var ROW_H = 361;               // 44 header + 209 art + 74 two lines + 34 below
   var TILE_POOL = 12;            // tiles per row element
   var ROW_POOL = 4;              // row elements in the DOM, ever
   var TILES_VISIBLE = 4;         // tiles across at 1920 wide
@@ -40,7 +40,7 @@ var Rail = (function () {
   }
 
   function build() {
-    var r, i, rowEl, label, strip, tile, inner, img, name, prog;
+    var r, i, rowEl, label, strip, tile, inner, img, name, sub, prog;
     for (r = 0; r < ROW_POOL; r++) {
       rowEl = document.createElement('div');
       rowEl.className = 'row hidden';
@@ -68,11 +68,14 @@ var Rail = (function () {
            often the title card already, and text on top of it is unreadable. */
         name = document.createElement('div');
         name.className = 'tile-title';
+        sub = document.createElement('div');
+        sub.className = 'tile-sub';
         inner.appendChild(img);
         inner.appendChild(prog);
         tile.appendChild(inner);
         tile.appendChild(name);
-        tile._img = img; tile._name = name; tile._prog = prog;
+        tile.appendChild(sub);
+        tile._img = img; tile._name = name; tile._sub = sub; tile._prog = prog;
         tile._idx = -1; tile._filled = false; tile._item = null;
         strip.appendChild(tile);
         rowEl._tiles.push(tile);
@@ -153,11 +156,13 @@ var Rail = (function () {
       tile._item = item;
       if (!item) {
         tile._name.textContent = '';
+        tile._sub.textContent = '';
         tile._prog.style.width = '0';
         tile._img.removeAttribute('src');
         continue;
       }
-      tile._name.textContent = item.title || '';
+      tile._name.textContent = Media.railTitle(item);
+      tile._sub.textContent = Media.railSub(item);
       tile._prog.style.width = (item.viewOffset && item.duration)
         ? Math.round(100 * item.viewOffset / item.duration) + '%' : '0';
       /* Rows below the fold get their titles but not their posters. On a first

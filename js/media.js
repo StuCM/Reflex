@@ -452,6 +452,34 @@ var Media = (function () {
            'E' + (e === undefined ? '?' : (e < 10 ? '0' + e : e));
   }
 
+  /* The name of the thing, for the rail tile and the hero over it. An episode
+     is named by its show: its own title says nothing on its own, and a rail of
+     them all read as unrelated films. */
+  function railTitle(item) {
+    if (!item) return '';
+    if (item.type === 'episode') return item.grandparentTitle || item.title || '';
+    return item.title || '';
+  }
+
+  /* The line under it: where you are in a show, how long a film runs, how much
+     of a series there is. Never more than one fact — this is a rail, not a
+     detail page. */
+  function railSub(item) {
+    if (!item) return '';
+    if (item.type === 'episode') {
+      var s = item.parentIndex, e = item.index, at = '';
+      if (s !== undefined) at = 'S' + s;
+      if (e !== undefined) at += (at ? ' ' : '') + 'E' + e;
+      if (!at) return item.title || '';
+      return item.title ? at + '  ·  ' + item.title : at;
+    }
+    if (item.type === 'show') {
+      if (item.childCount) return item.childCount + ' series';
+      return item.year ? String(item.year) : '';
+    }
+    return item.duration ? Math.round(item.duration / 60000) + ' min' : '';
+  }
+
   /* One stable key, for caching and for saying "this film" in a log line. */
   function identity(item) { return identities(item)[0]; }
 
@@ -466,7 +494,8 @@ var Media = (function () {
     markerAt: markerAt, markerLabel: markerLabel, chapters: chapters,
     versionLabel: versionLabel, qualities: qualities, bitrateLabel: bitrateLabel,
     ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
-    identities: identities, identity: identity, episodeLabel: episodeLabel
+    identities: identities, identity: identity, episodeLabel: episodeLabel,
+    railTitle: railTitle, railSub: railSub
   };
 })();
 

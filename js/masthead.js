@@ -45,15 +45,10 @@ var Masthead = (function () {
       return;
     }
 
-    elTitle.textContent = item.title || '';
-
-    /* One line, and only the line you need to decide: where you are in a show,
-       how long a film runs. Everything else this used to carry — the year, the
-       certificate, how far through you are, which of thirty thousand this is —
-       is on the detail page OK opens. */
-    if (item.type === 'episode') elMeta.textContent = Media.episodeLabel(item);
-    else if (item.type === 'show') elMeta.textContent = Shows.summary(item) || '';
-    else elMeta.textContent = item.duration ? Math.round(item.duration / 60000) + ' min' : '';
+    /* The same two rules the tile under it uses, so the hero names the show and
+       the line beneath says which episode — not the other way round. */
+    elTitle.textContent = Media.railTitle(item);
+    elMeta.textContent = Media.railSub(item);
   }
 
   return { render: render, art: art };
