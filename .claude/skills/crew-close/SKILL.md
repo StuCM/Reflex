@@ -35,8 +35,9 @@ node .claude/crew/bin/board.js
 ```
 
 Verify on `main` after merging, not just in the worktree — two tasks that each
-passed alone can still fail together. The baseline is 28/28; anything less
-means the merge broke something.
+passed alone can still fail together. The baseline is whatever `main` scored
+before the merge — the count climbs as tasks add steps, so a drop means the
+merge broke something.
 
 ## 4. Record what was learnt — the step that pays for itself
 

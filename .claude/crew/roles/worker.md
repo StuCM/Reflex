@@ -86,7 +86,10 @@ node .claude/crew/bin/scope-check.js .claude/tasks/<id>-<slug>.md
 npm run verify
 ```
 
-Both must pass. The baseline is **28/28 green**.
+Both must pass. The baseline is **whatever `main` scores** — the smoke count
+climbs as tasks add steps, so a number written here goes stale the week it is
+written. Run it on `main` first if you need to know, and treat any *drop* as
+a regression you caused.
 
 Run `npm run fixture` *first*. Without it the five player steps skip and the
 "no console errors" step fails on a 404 for the converted stream — that is the

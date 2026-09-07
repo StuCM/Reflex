@@ -33,7 +33,14 @@ var changed = sh('git diff --name-only ' + base + '...HEAD')
   .concat(sh('git ls-files --others --exclude-standard'))
   .filter(unique);
 
+/* The worker's own bookkeeping is never scope creep: the role requires writing
+   status and notes into the task file and re-rendering the board, and neither
+   is ever in files:. Without this the gate can only pass if it is run before
+   the worker does what it was told to do. */
+var bookkeeping = [taskFile.replace(/^\.\//, ''), '.claude/tasks/BOARD.md'];
+
 var stray = changed.filter(function (f) {
+  if (bookkeeping.indexOf(f) !== -1) return false;
   return !declared.some(function (d) { return match(f, d); });
 });
 
