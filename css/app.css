@@ -208,7 +208,10 @@ html, body {
 
 /* Fixed in both hero states: it is #rows that moves, by BIG_DROP, so the
    collapse is one transform and nothing animates a height. */
-#viewport { position: absolute; top: 264px; left: 0; width: 1920px; height: 816px; overflow: hidden; }
+/* The rail sits well below the header, and is only tall enough for one row
+   plus the top of the next: enough of the following row to say it is there,
+   not so much that it reads as a second row competing for attention. */
+#viewport { position: absolute; top: 500px; left: 0; width: 1920px; height: 580px; overflow: hidden; }
 
 #rows {
   position: absolute; top: 0; left: 0; width: 100%;

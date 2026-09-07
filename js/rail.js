@@ -13,7 +13,7 @@ var Rail = (function () {
   /* 2:3, so seven fit across at 1920: 96 left margin + 7×209 + 6×44 = 1823. */
   var TILE_W = 209, TILE_H = 314, GAP = 44, STRIDE = TILE_W + GAP;
   var ROW_H = 466;               // 44 header + 314 art + 74 two lines + 34 below
-  var VIEWPORT_H = 816;          // css #viewport, under the 264px header
+  var VIEWPORT_H = 580;          // css #viewport, well below the 264px header
   var TILE_POOL = 12;            // tiles per row element
   var ROW_POOL = 4;              // row elements in the DOM, ever
   var TILES_VISIBLE = 7;         // tiles across at 1920 wide
