@@ -103,6 +103,46 @@ function findTitles() {
     return hit;
   }
 
+  /* A show to watch a run of. One server holds it, so every verdict on the page
+     is the only one on offer; its episodes direct play, except the third, which
+     the library deliberately encodes differently and the guard has to refuse;
+     and it has a second series to cross into. */
+  function runOfEpisodes() {
+    const holders = {};
+    lib.servers.forEach(function (srv) {
+      srv.items['3'].forEach(function (m) {
+        (holders[m._show] = holders[m._show] || []).push(srv);
+      });
+    });
+
+    function usable(m) {
+      if (holders[m._show].length !== 1) return false;
+      if (m._profile !== 'h264-eac3' || (m.childCount || 0) < 2) return false;
+      /* Shows are searched for by title like films are, so one that another
+         title contains is not safe to assert a single result on. */
+      const named = lib.shows.filter(function (sh) { return sh.title.indexOf(m.title) >= 0; });
+      if (named.length !== 1) return false;
+      if (lib.films.filter(function (f) { return f.title.indexOf(m.title) >= 0; }).length) return false;
+      const third = episodesOf(m, 1).filter(function (e) { return e.index === 3; })[0];
+      return !!third && (third._profile === 'hevc-truehd' || third._profile === 'vc1-avi');
+    }
+
+    function episodesOf(m, season) {
+      return holders[m._show][0].episodesByShow[m.ratingKey].filter(function (e) {
+        return e.parentIndex === season;
+      });
+    }
+
+    const hit = main.items['3'].concat(backup.items['3']).filter(usable)[0];
+    if (!hit) throw new Error('no single-server show that direct plays with an awkward third episode');
+    return {
+      title: hit.title,
+      seasons: hit.childCount,
+      lastOfFirst: episodesOf(hit, 1).length,
+      lastOfLast: episodesOf(hit, hit.childCount).length
+    };
+  }
+
   /* Every movie library on both servers is one Movies section now, so its All
      row must land between the biggest single library and the sum of them all. */
   const movieCounts = [];
@@ -122,7 +162,8 @@ function findTitles() {
     directPlays: only('h264-eac3'),      // plays
     shared: shared,                      // on both servers, only one copy playable
     manyShots: withBackdrops(false),     // posters and backdrops both
-    oneShot: withBackdrops(true)         // no posters, so the tile falls back
+    oneShot: withBackdrops(true),        // no posters, so the tile falls back
+    run: runOfEpisodes()                 // a series to play one episode after another
   };
 }
 
@@ -200,9 +241,14 @@ function drive(page, titles) {
   /* One lookup per title on screen and never a second: the whole point of the
      cache, and the difference between this and crawling the library. */
   const artLookups = [];
+  /* Progress reports, in the order they were sent — which is how a step can
+     tell that the finished episode was closed out before the next one opened
+     anything on the server. */
+  const timelines = [];
   page.on('request', function (r) {
     const u = r.url();
     if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
+    if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
     if (u.indexOf('http://localhost:' + PORT) !== 0 &&
@@ -499,6 +545,109 @@ function drive(page, titles) {
                        'return s && !/checking/.test(s.textContent);})()',
                        'a verdict on the selected copy', 15000);
       });
+  }
+
+  /* ---- a run of episodes ----
+
+     Search finds shows as well as films, so a show with an unambiguous title is
+     reached exactly the way a film is; OK on it opens the series page. */
+
+  function openShowPage(title) {
+    return searchFor(title)
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () {
+        return waitFor('!document.getElementById("show").classList.contains("hidden") &&' +
+                       ' document.querySelectorAll(".sh-episode").length > 1',
+                       'the series page for ' + title, 20000);
+      });
+  }
+
+  function focusedEpisode() {
+    return page.evaluate(function () {
+      const on = document.querySelector('.sh-episode.on');
+      return on ? Number(on.querySelector('.sh-ep-num').textContent.trim()) : null;
+    });
+  }
+
+  /* Walk the series chips and the episode list to a numbered episode and press
+     OK. The numbers are read off the page rather than counted from an assumed
+     start, because where the page lands is its own decision. */
+  function playEpisode(seasonN, episodeN) {
+    return press('ArrowUp', 30)                  // out of the episodes, onto the chips
+      .then(function () {
+        return waitFor('document.querySelector("#sh-seasons .chip.on") !== null',
+                       'the series chips');
+      })
+      .then(function () {
+        return page.evaluate(function (want) {
+          const chips = document.querySelectorAll('#sh-seasons .chip');
+          let on = 0, to = -1;
+          for (let i = 0; i < chips.length; i++) {
+            if (chips[i].classList.contains('on')) on = i;
+            if (chips[i].textContent.trim() === 'Season ' + want) to = i;
+          }
+          return [on, to];
+        }, seasonN);
+      })
+      .then(function (idx) {
+        if (idx[1] < 0) throw new Error('no Season ' + seasonN + ' chip on the page');
+        return press(idx[1] > idx[0] ? 'ArrowRight' : 'ArrowLeft', Math.abs(idx[1] - idx[0]));
+      })
+      .then(function () {
+        return waitFor('document.querySelectorAll(".sh-episode").length > 1',
+                       'the episodes of series ' + seasonN, 15000);
+      })
+      .then(function () { return press('ArrowDown'); })     // into the episode list
+      .then(focusedEpisode)
+      .then(function (at) {
+        if (at === null) throw new Error('no focused episode row');
+        if (at === episodeN) return;
+        return press(episodeN > at ? 'ArrowDown' : 'ArrowUp', Math.abs(episodeN - at))
+          .then(focusedEpisode)
+          .then(function (now) {
+            if (now !== episodeN) throw new Error('landed on episode ' + now + ', wanted ' + episodeN);
+          });
+      })
+      .then(function () {
+        /* OK on an episode with no verdict yet opens the copy chooser rather
+           than playing, so wait for the check to land first. */
+        return waitFor('(function(){var e=document.querySelector(".sh-episode.on");' +
+                       'return e && e.querySelector(".sh-verdict") !== null;})()',
+                       'a verdict on S' + seasonN + 'E' + episodeN, 20000);
+      })
+      .then(function () { return page.keyboard.press('Enter'); });
+  }
+
+  /* Run the file out rather than sitting through it: the offer is made on the
+     element's own `ended`, which is the event we want to see fire. */
+  function playToEnd() {
+    return waitFor('(function(){var v=document.getElementById("video");' +
+                   'return !v.classList.contains("hidden") && v.duration > 0 &&' +
+                   ' v.currentTime > 0 && !v.error;})()',
+                   'playback to get going', 25000)
+      .then(function () {
+        return page.evaluate(function () {
+          const v = document.getElementById('video');
+          v.currentTime = Math.max(0, v.duration - 0.15);
+        });
+      });
+  }
+
+  function upNext() {
+    return page.evaluate(function () {
+      return {
+        showing: !document.getElementById('upnext').classList.contains('hidden'),
+        show: document.getElementById('un-show').textContent.trim(),
+        title: document.getElementById('un-title').textContent.trim(),
+        hint: document.getElementById('un-hint').textContent.trim(),
+        video: !document.getElementById('video').classList.contains('hidden')
+      };
+    });
+  }
+
+  function waitForOffer() {
+    return waitFor('!document.getElementById("upnext").classList.contains("hidden")',
+                   'the up-next offer', 25000).then(upNext);
   }
 
   return page.goto('http://localhost:' + PORT + '/')
@@ -2066,6 +2215,243 @@ function drive(page, titles) {
           })
           .then(function () {
             if (!(at > 0)) throw new Error('playback never advanced');
+          });
+      });
+    })
+
+    /* ---- what comes next ----
+
+       The whole point of the feature is that it does NOT roll on by itself
+       unless it was asked to, so half of these steps are about nothing
+       happening. */
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('an episode ending offers the next one, and waits', function () {
+        return backToLibrary()
+          .then(function () { return openShowPage(titles.run.title); })
+          .then(function () { return playEpisode(1, 1); })
+          .then(playToEnd)
+          .then(waitForOffer)
+          .then(function (st) {
+            if (st.title.indexOf('S1 E2') !== 0) {
+              throw new Error('the offer does not name S1 E2: ' + st.title);
+            }
+            if (st.show.indexOf(titles.run.title) < 0) {
+              throw new Error('the offer does not name the series: ' + st.show);
+            }
+            if (/Playing in/.test(st.hint)) {
+              throw new Error('a countdown ran with the setting off: ' + st.hint);
+            }
+          })
+          .then(function () { return shot('up-next'); })
+          /* And then nothing. The offer is still there and no episode has
+             started itself, which is the default this feature ships with. */
+          .then(function () { return page.waitForTimeout(3000); })
+          .then(upNext)
+          .then(function (st) {
+            if (!st.showing) throw new Error('the offer went away on its own');
+            if (!/S1 E2/.test(st.title)) throw new Error('the offer changed to ' + st.title);
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('OK on the offer plays the next one, the last one closed first', function () {
+        const mark = timelines.length;
+        return page.keyboard.press('Enter')
+          .then(function () {
+            return waitFor('(function(){var v=document.getElementById("video");' +
+                           'return document.getElementById("upnext").classList.contains("hidden") &&' +
+                           ' !v.classList.contains("hidden") && v.currentTime > 0.2 && !v.error;})()',
+                           'the next episode to start', 25000);
+          })
+          .then(function () {
+            /* A session left open on someone else's server is the rudest thing
+               this app can do, so the finished episode is reported stopped
+               before the next one asks for anything. */
+            const after = timelines.slice(mark);
+            const stopped = after.findIndex(function (u) { return /state=stopped/.test(u); });
+            const playing = after.findIndex(function (u) { return /state=playing/.test(u); });
+            if (stopped < 0) throw new Error('the finished episode was never reported stopped');
+            if (playing >= 0 && playing < stopped) {
+              throw new Error('the next episode started before the last one was closed');
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('a next episode the guard refuses toasts instead of playing', function () {
+        const mark = timelines.length;
+        return playToEnd()
+          .then(waitForOffer)
+          .then(function (st) {
+            if (st.title.indexOf('S1 E3') !== 0) {
+              throw new Error('the offer does not name S1 E3: ' + st.title);
+            }
+          })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('(function(){var t=document.getElementById("toast");' +
+                           'return !t.classList.contains("hidden") && /Not playing/.test(t.textContent) &&' +
+                           ' document.getElementById("video").classList.contains("hidden") &&' +
+                           ' !document.getElementById("show").classList.contains("hidden");})()',
+                           'the refusal, back on the series page', 25000);
+          })
+          .then(function () {
+            /* Refused before anything opened: the decision call carries
+               hasMDE=1 and nothing was ever reported playing. */
+            const started = timelines.slice(mark).filter(function (u) {
+              return /state=playing/.test(u);
+            });
+            if (started.length) throw new Error('a session was opened for a refused episode');
+          });
+      });
+    })
+
+    .then(function () {
+      return step('the sidebar carries the autoplay setting and cycles it', function () {
+        return backToLibrary()
+          .then(openSidebar)
+          .then(sidebarRows)
+          .then(function (rows) {
+            if (rows.indexOf('Autoplay next: off') < 0) {
+              throw new Error('no autoplay setting in the sidebar: ' + rows.join(' | '));
+            }
+          })
+          .then(function () { return sidebarPick('Autoplay next: off'); })
+          .then(function () {
+            return waitFor('/Autoplay next: 5s/.test(document.getElementById("toast").textContent)',
+                           'the setting to say what it moved to');
+          })
+          .then(function () {
+            /* Persisted, so it is still 5s after the app is next launched. */
+            return page.evaluate(function () { return localStorage.getItem('reflex.autoplay'); });
+          })
+          .then(function (stored) {
+            if (stored !== '5') throw new Error('the setting stored "' + stored + '"');
+          })
+          .then(openSidebar)
+          .then(sidebarRows)
+          .then(function (rows) {
+            if (rows.indexOf('Autoplay next: 5s') < 0) {
+              throw new Error('the sidebar still says: ' + rows.join(' | '));
+            }
+          })
+          .then(function () { return press('ArrowLeft'); });        // close the sidebar
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('the countdown runs, and BACK before zero cancels it', function () {
+        return backToLibrary()
+          .then(function () { return openShowPage(titles.run.title); })
+          .then(function () { return playEpisode(1, 1); })
+          .then(playToEnd)
+          .then(function () {
+            return waitFor('/Playing in/.test(document.getElementById("un-hint").textContent)',
+                           'the countdown', 25000);
+          })
+          .then(function () { return press('Backspace'); })
+          .then(function () {
+            return waitFor('document.getElementById("upnext").classList.contains("hidden") &&' +
+                           ' document.getElementById("video").classList.contains("hidden")',
+                           'the offer and playback to go away');
+          })
+          /* Longer than the countdown it was cancelling. Nothing may start
+             behind a screen nobody is looking at any more. */
+          .then(function () { return page.waitForTimeout(6000); })
+          .then(function () {
+            return page.evaluate(function () {
+              return document.getElementById('video').classList.contains('hidden');
+            });
+          })
+          .then(function (gone) {
+            if (!gone) throw new Error('a cancelled countdown started an episode anyway');
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('the countdown reaching zero plays the next episode', function () {
+        return backToLibrary()
+          .then(function () { return openShowPage(titles.run.title); })
+          .then(function () { return playEpisode(1, 1); })
+          .then(playToEnd)
+          .then(function () {
+            return waitFor('/Playing in/.test(document.getElementById("un-hint").textContent)',
+                           'the countdown', 25000);
+          })
+          .then(function () { return shot('up-next-countdown'); })
+          /* Not a key from here on: the point is that it plays itself. */
+          .then(function () {
+            return waitFor('(function(){var v=document.getElementById("video");' +
+                           'return document.getElementById("upnext").classList.contains("hidden") &&' +
+                           ' !v.classList.contains("hidden") && v.currentTime > 0.2 && !v.error;})()',
+                           'the next episode to start itself', 25000);
+          })
+          .then(function () { return press('Backspace'); });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('a new series is offered but never counted down', function () {
+        return backToLibrary()
+          .then(function () { return openShowPage(titles.run.title); })
+          .then(function () { return playEpisode(1, titles.run.lastOfFirst); })
+          .then(playToEnd)
+          .then(waitForOffer)
+          .then(function (st) {
+            if (st.title.indexOf('S2 E1') !== 0) {
+              throw new Error('the offer does not name S2 E1: ' + st.title);
+            }
+            if (/Playing in/.test(st.hint)) {
+              throw new Error('a series boundary counted down: ' + st.hint);
+            }
+          })
+          .then(function () { return page.waitForTimeout(6000); })
+          .then(upNext)
+          .then(function (st) {
+            if (!st.showing) throw new Error('the offer fired at a series boundary');
+          })
+          .then(function () { return press('Backspace'); });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('the last episode of the last series offers nothing', function () {
+        return backToLibrary()
+          .then(function () { return openShowPage(titles.run.title); })
+          .then(function () { return playEpisode(titles.run.seasons, titles.run.lastOfLast); })
+          .then(playToEnd)
+          .then(function () {
+            return waitFor('document.getElementById("video").classList.contains("hidden") &&' +
+                           ' document.getElementById("upnext").classList.contains("hidden") &&' +
+                           ' !document.getElementById("show").classList.contains("hidden")',
+                           'playback to end with nothing offered', 25000);
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('a film that ends offers nothing', function () {
+        return backToLibrary()
+          .then(function () { return openTitle(titles.directPlays.title); })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(playToEnd)
+          .then(function () {
+            return waitFor('document.getElementById("video").classList.contains("hidden") &&' +
+                           ' document.getElementById("upnext").classList.contains("hidden") &&' +
+                           ' !document.getElementById("detail").classList.contains("hidden")',
+                           'the film to end and the page to come back', 25000);
           });
       });
     })

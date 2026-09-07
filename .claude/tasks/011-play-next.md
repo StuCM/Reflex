@@ -1,7 +1,7 @@
 ---
 id: 011
 slug: play-next
-status: building
+status: done
 branch: crew/011-play-next
 model: sonnet
 env: laptop
@@ -226,4 +226,70 @@ produced this task. Workers must not go digging for more.
 
 ## Review rounds
 
+**Round 1 — PASS.** Reviewer re-ran the gate independently: check clean, 8/8
+unit test files, smoke 52/52 against a 43 baseline on `main`. Traced the guard
+path, the timer teardown, the season-boundary suppression and the merged-episode
+key matching; no findings.
+
+## What changed
+
+- `js/shows.js` — `nextInList` (pure) and `nextAfter`, plus a private
+  `isCopyOf`; one season's children at most, and only when an episode ends.
+- `js/player.js` — the `#upnext` offer, the countdown, and the persisted
+  `reflex.autoplay` setting (`autoplaySeconds` / `cycleAutoplay` /
+  `autoplayLabel`). `v.onended` now offers rather than stopping.
+- `js/app.js` — `onNext` / `onPlayNext` passed for episodes only, and
+  `playNext`, which runs `Guard.check` before anything plays.
+- `js/sidebar.js` — one more mode entry, `Autoplay next: <value>`.
+- `js/browse.js` — `kind: 'autoplay'` cycles it and toasts the new value.
+- `index.html` / `css/app.css` — the `#upnext` block, in the skip prompt's slot
+  and clear of the subtitle band. No new file in `js/`, so the script list is
+  unchanged.
+- `test/shows.test.js` (new) — `nextInList`, including the cross-server case.
+- `dev/smoke.js` — a show picked deterministically for the run, plus nine steps.
+  43 → 52.
+
+## What the spec got wrong
+
+- **One callback was not enough.** The spec named only `onNext`, which resolves
+  `{ episode, newSeason }`. Playing what it offered needs a second hook, because
+  `Guard.check` lives in `js/app.js` — added as `onPlayNext(episode)`. The spec
+  implies it ("when the panel asks to play"); it just never named it.
+- **Matching on `ratingKey` alone does not hold** (spec step 7 asked). A merged
+  episode entry leads with one server's copy and carries the other in
+  `_sources`, and the episode actually playing is whichever copy was chosen on
+  the detail page. `nextInList` therefore matches the playing key against every
+  copy of each entry, through `Merge.sources`. Both directions are asserted.
+- **`prefer` closes the sidebar on every press** (spec step 6 asked which it
+  is): `Sidebar.key` calls `close()` before `onPick` for every entry, so
+  `autoplay` closes too. Cycling to 30s is five trips into the menu. It is
+  consistent, which is what the spec asked for; a settings entry that stayed
+  open would be a change to `Sidebar.key` affecting every other entry with it.
+
 ## Graph writes proposed
+
+- **Decision — autoplay waits by default, and always waits across a season
+  boundary.** These are someone else's servers, and an unattended chain is load
+  put there by someone who fell asleep. A season boundary is where a run of
+  episodes stops being one sitting, so it never counts down even when the
+  setting is on. Setting: `reflex.autoplay`, seconds, 0 = wait for OK.
+
+- **Decision — the next episode goes through `Guard.check` like anything else.**
+  `js/player.js` asks for the next episode through a callback and never plays
+  it itself; `js/app.js` guards it and calls the existing `playChecked`. The
+  next episode is routinely a different encode from the one just watched — the
+  dev library models this deliberately — so an unguarded chain would open a 4K
+  transcode on someone else's server without anybody pressing anything.
+
+- **Pattern — a merged entry is matched by its copies, not by its key.** Any
+  "is this the item I have?" check over a list from `js/merge.js` has to compare
+  against `Merge.sources(entry)`, because the entry leads with the preferred
+  server's copy while the item in hand may be the other one. `Shows.nextInList`
+  is the second place this bites; the first was `showpage`'s `verdictKey`.
+
+- **Pattern — ending a 30 s fixture in the smoke test.** Playback steps that
+  need `ended` set `video.currentTime = v.duration - 0.15` from
+  `page.evaluate` rather than waiting the file out. The event still fires for
+  real, and a run of five episodes costs seconds rather than three minutes.
+  Resume never interferes: the player refuses to resume within 30 s of the end,
+  and the fixture is 30 s long.

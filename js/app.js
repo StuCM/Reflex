@@ -87,6 +87,10 @@
     if (!verdict || !verdict.ok) return;
     var md = verdict.md;
     var server = Servers.of(md);
+    /* Only an episode has a next. A film does not, and a trailer or an extra is
+       not the thing you sat down to watch. */
+    var hasNext = !isExtra && md.type === 'episode';
+    var goBack = back || function () { openDetail(item, toBrowse); };
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0
       : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
@@ -136,8 +140,29 @@
                               forceStream: verdict.forceStream })
         : null,
       transcode: !!verdict.transcode,
-      onExit: back || function () { openDetail(item, toBrowse); },
+      /* What the player offers when this one ends, and what it does when the
+         offer is taken. Kept apart because finding the next episode costs a
+         request or two and playing it has to go through the guard. */
+      onNext: hasNext ? Shows.nextAfter : null,
+      onPlayNext: hasNext ? function (episode) { playNext(episode, goBack); } : null,
+      onExit: goBack,
       onError: function (msg) { UI.message('Playback failed', msg); }
+    });
+  }
+
+  /* The next episode is not a special case: it may be a 4K remux the server
+     would refuse, and finding that out by starting a session is exactly what
+     the guard exists to prevent. A refusal says why and goes back to the
+     series rather than leaving a black screen. */
+  function playNext(episode, back) {
+    Guard.check(episode).then(function (v) {
+      if (!v.ok) {
+        UI.toast('Not playing ' + (episode.title || 'the next one') + ' — ' + Guard.label(v));
+        UI.debug('next refused: ' + Guard.refusal(episode, v)[1]);
+        back();
+        return;
+      }
+      playChecked(episode, v, false, 0, back);
     });
   }
 

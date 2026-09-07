@@ -67,6 +67,54 @@ var Shows = (function () {
     }).catch(function () { return null; });
   }
 
+  /* Is this merged entry a copy of that episode? Matched by rating key across
+     every copy, because the episode playing is one server's and the merged
+     entry may lead with the other's. */
+  function isCopyOf(entry, episode) {
+    var copies = Merge.sources(entry), i;
+    for (i = 0; i < copies.length; i++) {
+      if (String(copies[i].ratingKey) === String(episode.ratingKey)) return true;
+    }
+    return false;
+  }
+
+  /* The episode after `current` in a season's list, or null at the end of it or
+     when `current` is not in the list at all. Pure, so it is unit tested. */
+  function nextInList(episodes, current) {
+    if (!episodes || !current) return null;
+    var i;
+    for (i = 0; i < episodes.length; i++) {
+      if (isCopyOf(episodes[i], current)) return episodes[i + 1] || null;
+    }
+    return null;
+  }
+
+  /* What follows an episode: the next in its season, else the first of the next
+     season, or null once the series is over. newSeason is what stops an
+     unattended chain rolling across a season boundary. */
+  function nextAfter(episode) {
+    if (!episode) return Promise.resolve(null);
+    return entryFor(episode).then(function (entry) {
+      if (!entry) return null;
+      return seasons(entry).then(function (list) {
+        var at = -1, i;
+        for (i = 0; i < list.length; i++) {
+          if (list[i].index === episode.parentIndex) { at = i; break; }
+        }
+        if (at < 0) return null;
+        return episodes(list[at]).then(function (eps) {
+          var next = nextInList(eps, episode);
+          if (next) return { episode: next, newSeason: false };
+          /* seasons() is sorted by index, so the one after is simply the next. */
+          if (at + 1 >= list.length) return null;
+          return episodes(list[at + 1]).then(function (more) {
+            return more.length ? { episode: more[0], newSeason: true } : null;
+          });
+        });
+      });
+    }).catch(function () { return null; });
+  }
+
   /* "4 series · 38 episodes", or as much of it as the server told us. */
   function summary(entry) {
     var bits = [];
@@ -94,5 +142,6 @@ var Shows = (function () {
   }
 
   return { seasons: seasons, episodes: episodes, entryFor: entryFor,
+           nextInList: nextInList, nextAfter: nextAfter,
            summary: summary, openAt: openAt };
 })();

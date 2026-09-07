@@ -38,6 +38,7 @@ var Sidebar = (function () {
     }
     out.push({ label: 'Devices', kind: 'devices' });
     out.push({ label: 'Panel', kind: 'panel' });
+    out.push({ label: 'Autoplay next: ' + Player.autoplayLabel(), kind: 'autoplay' });
     return out;
   }
 
