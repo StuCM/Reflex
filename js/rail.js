@@ -12,6 +12,7 @@ var Rail = (function () {
 
   var TILE_W = 372, TILE_H = 209, GAP = 44, STRIDE = TILE_W + GAP;
   var ROW_H = 361;               // 44 header + 209 art + 74 two lines + 34 below
+  var VIEWPORT_H = 816;          // css #viewport, under the 264px header
   var TILE_POOL = 12;            // tiles per row element
   var ROW_POOL = 4;              // row elements in the DOM, ever
   var TILES_VISIBLE = 4;         // tiles across at 1920 wide
@@ -22,13 +23,13 @@ var Rail = (function () {
      wrong and the final row is pinned half below the fold, title and all.
      ROWS_VISIBLE is how many are on screen at all, including the one peeking
      at the bottom, and is only about which posters are worth fetching. */
-  var ROWS_FIT = 2;              // 335 + 301 fits in 862; a third would not
-  var ROWS_VISIBLE = 3;          // the third peeks, so its posters still load
-  /* The tall hero and the band differ by this much, and the rows carry the
+  var ROWS_FIT = Math.floor(VIEWPORT_H / ROW_H);
+  var ROWS_VISIBLE = ROWS_FIT + 1;   // the last one peeks, so its posters load
+  /* The tall hero and the header differ by this much, and the rows carry the
      whole move on one transform rather than anything animating a height. The
      figure is the viewport less one row, so the first screen shows Continue
      watching whole and nothing of the row after it. */
-  var BIG_DROP = 862 - ROW_H;
+  var BIG_DROP = VIEWPORT_H - ROW_H;
 
   var elRows = document.getElementById('rows');
   var rowEls = [];
