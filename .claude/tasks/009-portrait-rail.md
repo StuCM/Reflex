@@ -1,7 +1,7 @@
 ---
 id: 009
 slug: portrait-rail
-status: draft
+status: approved
 branch: crew/009-portrait-rail
 model: sonnet
 env: laptop
@@ -181,10 +181,19 @@ produced this task. Workers must not go digging for more.
   recorded in `docs/decisions.md`.
 - Growing the tile or row pools.
 
+## What this deliberately supersedes
+Task 008's Definition of done says "Two whole rows sit under the dense header
+and a third is partly visible". **This task replaces that with one whole row
+and a large peek**, because a 2:3 poster is taller than a 16:9 tile and the
+user weighed that trade explicitly when choosing portrait. A reviewer must not
+read the change from two rows to one as a regression — it is the point. Every
+other line of 008's Definition of done still holds and must keep holding.
+
 ## Definition of done
 - [ ] Rail tiles are 209×314 posters, seven across, and the row arithmetic is
       derived from those numbers rather than typed in.
-- [ ] One whole row sits under the dense header with the next partly visible.
+- [ ] One whole row sits under the dense header with the next partly visible,
+      superseding 008's two-row expectation — see above.
 - [ ] A film's tile is its poster and the hero behind it is a backdrop — never
       the same image, with no fallback ladder needed to guarantee it.
 - [ ] An episode's tile is its show's poster, taken from `grandparentThumb`
