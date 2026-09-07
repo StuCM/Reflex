@@ -1,7 +1,7 @@
 ---
 id: 006
 slug: tmdb-artwork
-status: review
+status: done
 branch: crew/006-tmdb-artwork
 model: sonnet
 env: laptop
@@ -321,6 +321,26 @@ empty the app makes **zero** requests to `/__tmdb`, and the hero and every tile
 come from `/photo/:/transcode` exactly as on `main`.
 
 ## Review rounds
+
+### Round 1 — PASS
+
+`crew-reviewer`, on `cdca876..HEAD`. No blocking findings.
+
+- Traced all four disclosed departures (onDeck `includeGuids`, the inverted
+  `test/merge.test.js` assertion, the two rewritten smoke steps, the rail
+  row-identity fix) and judged each narrowly scoped and correctly justified.
+- Re-ran `npm run verify` independently: check clean (25 scripts), 6/6 test
+  files, 35/35 smoke.
+- Confirmed `js/art.js` is ES5-only and sits in the right place in
+  `index.html`'s script list.
+- Read the two definition-of-done items the smoke test cannot reach rather than
+  taking the worker's word for them: `idOf` returns null for
+  `type === 'episode'`, so an episode never triggers a lookup; and with
+  `tmdbKey` empty `Tmdb.enabled()` is false, so `Art.warm` returns at once and
+  every surface falls back to `Plex.artUrl(...) || Plex.posterUrl(...)` — the
+  same behaviour as `main` by construction.
+- Confirmed nothing outside `files:` was touched but the disclosed
+  `test/merge.test.js`, and that every commit follows the convention.
 
 ## Graph writes proposed
 
