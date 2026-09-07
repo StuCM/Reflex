@@ -337,17 +337,22 @@ function drive(page, titles) {
   }
 
   /* Move the sidebar focus onto a named row, rather than assuming an index —
-     the list grows as the app does. */
-  function sidebarWalkTo(label) {
+     the list grows as the app does. Movies and TV Shows name both a section and
+     a cut of Continue watching, so a top-level entry wins unless the nested one
+     was asked for; a category, which only ever exists nested, is found either
+     way. */
+  function sidebarWalkTo(label, sub) {
     return page.evaluate(function (want) {
       const rows = document.querySelectorAll('#sidebar .sb-row');
-      let on = 0, to = -1;
+      let on = 0, top = -1, nested = -1;
       for (let i = 0; i < rows.length; i++) {
         if (rows[i].classList.contains('on')) on = i;
-        if (to < 0 && rows[i].textContent.trim() === want) to = i;
+        if (rows[i].textContent.trim() !== want.label) continue;
+        if (rows[i].classList.contains('sub')) { if (nested < 0) nested = i; }
+        else if (top < 0) top = i;
       }
-      return [on, to];
-    }, label).then(function (idx) {
+      return [on, want.sub ? nested : (top >= 0 ? top : nested)];
+    }, { label: label, sub: !!sub }).then(function (idx) {
       if (idx[1] < 0) {
         return sidebarRows().then(function (rows) {
           throw new Error('no "' + label + '" in the sidebar: ' + rows.join(' | '));
@@ -377,14 +382,21 @@ function drive(page, titles) {
      before its children were ever on screen. */
   function watchingPick(label) {
     return openSidebar()
-      .then(function () { return sidebarWalkTo('Continue watching'); })
-      .then(function () { return page.keyboard.press('Enter'); })
-      .then(function () { return page.waitForTimeout(80); })
-      .then(sidebarIsOpen)
-      .then(function (still) {
-        if (!still) throw new Error('OK on Continue watching picked it instead of opening it');
-        return sidebarWalkTo(label);
+      .then(sidebarRows)
+      .then(function (rows) {
+        /* Already open when the rail is resting on the row, and pressing OK on
+           the parent then would pick it rather than open it. */
+        const open = rows.indexOf('- ' + label) >= 0 || rows.indexOf('* - ' + label) >= 0;
+        if (open) return;
+        return sidebarWalkTo('Continue watching')
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () { return page.waitForTimeout(80); })
+          .then(sidebarIsOpen)
+          .then(function (still) {
+            if (!still) throw new Error('OK on Continue watching picked it instead of opening it');
+          });
       })
+      .then(function () { return sidebarWalkTo(label, true); })
       .then(function () { return page.keyboard.press('Enter'); })
       .then(function () { return page.waitForTimeout(200); });
   }
@@ -886,6 +898,30 @@ function drive(page, titles) {
               throw new Error('Continue watching is not mixed: ' + all.join(', '));
             }
           })
+          /* Opening the sidebar from that row must land on it with its cuts
+             showing, rather than a level up on the section — which is also
+             current, and used to win. */
+          .then(openSidebar)
+          .then(function () {
+            return page.evaluate(function () {
+              const on = document.querySelector('#sidebar .sb-row.on');
+              return {
+                on: on ? on.textContent.trim() : '',
+                subs: Array.prototype.map.call(
+                  document.querySelectorAll('#sidebar .sb-row.sub'),
+                  function (r) { return r.textContent.trim(); })
+              };
+            });
+          })
+          .then(function (st) {
+            if (st.on !== 'Continue watching') {
+              throw new Error('the sidebar opened on "' + st.on + '", not the row we were on');
+            }
+            if (st.subs.indexOf('Movies') < 0 || st.subs.indexOf('TV Shows') < 0) {
+              throw new Error('Continue watching did not open its cuts: ' + st.subs.join(' | '));
+            }
+          })
+          .then(function () { return press('ArrowLeft'); })
           .then(function () { return watchingPick('TV Shows'); })
           .then(function () { return types('the TV Shows cut'); })
           .then(function (only) {

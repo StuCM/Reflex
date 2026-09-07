@@ -124,10 +124,12 @@ var Sidebar = (function () {
     atMode = mode || '';
     expanded = NONE;
     var i;
-    if (watching && watching.current) expanded = -1;
     for (i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;
+    /* The section is current too whenever Continue watching is, so this comes
+       second: the list opens on where the focus actually is, not a level up. */
+    if (watching && watching.current) expanded = -1;
     rows = build();
-    idx = at('section', expanded);
+    idx = at(expanded === -1 ? 'watching' : 'section', expanded);
     offset = 0;
     showing = true;
     el.parentNode.classList.add('open');
