@@ -1,7 +1,7 @@
 ---
 id: 006
 slug: tmdb-artwork
-status: draft
+status: approved
 branch: crew/006-tmdb-artwork
 model: sonnet
 env: laptop
