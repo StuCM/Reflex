@@ -48,8 +48,16 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 3. The pages that lead into playback
 
-- Episode stills. The show page is a wall of text; episodes carry a landscape
-  `thumb` we never draw.
+- **Rebuild the film and series pages to the design language the rail now
+  uses** — portrait posters, the 264px header, ink & citron. The flow they have
+  to serve is: search a title, land on its page, switch between servers and
+  copies there. That flow already *works* — `Detail.addOtherVersions` asks every
+  server `/library/all?guid=` on open, which is global across sections and so
+  finds the 4K-library copy the row never knew about — but the page looks
+  nothing like the rest of the app. Blocked behind 008 (which reshapes
+  `js/detail.js`) and 009 (`js/showpage.js`, `css/app.css`).
+- ~~Episode stills~~ — task 009. The show page is a wall of text; episodes
+  carry a landscape `thumb` we never draw.
 - Cast and crew on the show page, as the film page has.
 - "Play next unwatched" at the top of a show, so a series you are part way
   through is one press, not two and a scroll.
