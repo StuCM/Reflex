@@ -61,15 +61,20 @@ console.log('\nin scope');
 
 // ---------------------------------------------------------------------
 
-// A stale local main makes every commit since the fork look like scope creep,
-// so prefer the remote and fall back only when there isn't one.
+// The branch point, not a branch tip. Either tip can be the stale one — workers
+// never push, so origin/main is routinely behind local main here, and preferring
+// it made every landed commit since the last push read as scope creep. A merge
+// base is right whichever way round they are.
 function defaultBase() {
   var branch = (cfg.baseBranch || 'main');
-  var remote = 'origin/' + branch;
-  try {
-    execSync('git rev-parse --verify --quiet ' + remote, { cwd: root, stdio: 'ignore' });
-    return remote;
-  } catch (e) { return branch; }
+  var refs = [branch, 'origin/' + branch];
+  for (var i = 0; i < refs.length; i++) {
+    try {
+      return execSync('git merge-base HEAD ' + refs[i],
+                      { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch (e) { /* no such ref in this checkout; try the next */ }
+  }
+  return branch;
 }
 
 function parseFiles(text) {

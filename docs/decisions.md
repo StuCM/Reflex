@@ -13,6 +13,43 @@ Newest first. One entry per decision, appended by the orchestrator at
 
 ---
 
+## 2026-09-07 — The header keeps the picture, and one request carries the film
+
+Stepping off the top row used to throw the screen away: the hero collapsed to a
+132px band and the backdrop was set to `opacity: 0` outright, so the moment you
+started browsing you had a title and some tiles. It is now a 264px header that
+keeps the backdrop at half opacity, with the title and the run time or episode
+on the left and a description and the key actors on the right. The detail page
+wears the same shape, so OK reads as one screen deepening rather than a second
+design.
+
+The description, the run time and the cast cost **nothing**. `js/art.js` was
+already making one TMDB request per title for its backdrops;
+`append_to_response=images,credits` carries the overview and the billing on that
+same request. The alternative — Plex's own metadata — is a fetch against servers
+we do not own for every tile the focus rests on, which is exactly what had been
+removed earlier the same day. `include_image_language=en,null` is not optional:
+without it the appended images block is filtered to the request language and
+most backdrops vanish.
+
+Two couplings the spec missed and the worker found. `dev/smoke.js` counted
+artwork lookups by matching `/__tmdb/movie/<id>/images`, a path the new endpoint
+no longer visits — so the "looked up once per title" step would have gone on
+passing against zero lookups. And `js/detail.js` overwrote the summary with
+Plex's once metadata landed, which would have had the detail page describe a
+film differently from the header it is meant to echo. Both are the same shape of
+bug: an assertion or a fallback that keeps working after the thing underneath it
+has moved.
+
+`crew/bin/scope-check.js` defaulted its base to `origin/main` on the reasoning
+that a stale local main makes every commit since the fork look like scope creep.
+In this repo the assumption is inverted — workers never push, so `origin/main`
+is the stale one, and the gate reported twenty files of already-landed work.
+It now uses the merge base of HEAD and the base branch, which is right whichever
+tip is ahead.
+
+---
+
 ## 2026-09-07 — A copy is a library on a server, not a server
 
 Six libraries across two servers — `Movies - 4K UHD`, `Movies - LQ`,
