@@ -1,7 +1,7 @@
 ---
 id: 011
 slug: play-next
-status: approved
+status: building
 branch: crew/011-play-next
 model: sonnet
 env: laptop
