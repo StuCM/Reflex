@@ -25,8 +25,10 @@ var Rail = (function () {
   var ROWS_FIT = 2;              // 335 + 301 fits in 862; a third would not
   var ROWS_VISIBLE = 3;          // the third peeks, so its posters still load
   /* The tall hero and the band differ by this much, and the rows carry the
-     whole move on one transform rather than anything animating a height. */
-  var BIG_DROP = 408;
+     whole move on one transform rather than anything animating a height. The
+     figure is the viewport less one row, so the first screen shows Continue
+     watching whole and nothing of the row after it. */
+  var BIG_DROP = 862 - ROW_H;
 
   var elRows = document.getElementById('rows');
   var rowEls = [];
