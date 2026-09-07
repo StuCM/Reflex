@@ -73,12 +73,28 @@ var Rail = (function () {
         tile.appendChild(inner);
         tile.appendChild(name);
         tile._img = img; tile._name = name; tile._prog = prog;
-        tile._idx = -1; tile._filled = false;
+        tile._idx = -1; tile._filled = false; tile._item = null;
         strip.appendChild(tile);
         rowEl._tiles.push(tile);
       }
       elRows.appendChild(rowEl);
       rowEls.push(rowEl);
+    }
+    Art.onReady(repaint);
+  }
+
+  /* Backdrops arrive after the tile was drawn, so the one tile that was waiting
+     for them is reassigned in place. A whole-rail render per image would be far
+     more work than one picture is worth. */
+  function repaint(tmdbId) {
+    var r, i, t, url;
+    for (r = 0; r < ROW_POOL; r++) {
+      for (i = 0; i < TILE_POOL; i++) {
+        t = rowEls[r]._tiles[i];
+        if (!t._item || t._deferred || Plex.tmdbId(t._item) !== tmdbId) continue;
+        url = Art.tile(t._item, TILE_W, TILE_H);
+        if (url) t._img.src = url;
+      }
     }
   }
 
@@ -124,7 +140,7 @@ var Rail = (function () {
     for (i = 0; i < TILE_POOL; i++) {
       tile = rowEl._tiles[i];
       idx = start + i;
-      if (idx >= row.total) { tile.classList.add('hidden'); tile._idx = -1; continue; }
+      if (idx >= row.total) { tile.classList.add('hidden'); tile._idx = -1; tile._item = null; continue; }
       tile.classList.remove('hidden');
       translate(tile, idx * STRIDE, 0);
       tile.classList.toggle('on', r === rowIdx && idx === row.focus);
@@ -134,6 +150,7 @@ var Rail = (function () {
       tile._idx = idx;
       item = Rows.itemAt(row, idx);
       tile._filled = !!item;
+      tile._item = item;
       if (!item) {
         tile._name.textContent = '';
         tile._prog.style.width = '0';
@@ -153,9 +170,10 @@ var Rail = (function () {
         continue;
       }
       tile._deferred = false;
-      /* Landscape art, with the poster as a stand-in: plenty of a library has
-         no art at all, and half a rail of empty boxes is worse than a crop. */
-      url = Plex.artUrl(item, TILE_W, TILE_H) || Plex.posterUrl(item, TILE_W, TILE_H);
+      /* Art decides between TMDB and Plex; only a tile that is actually on
+         screen is worth a lookup, which is why this sits below the guard. */
+      Art.warm(item);
+      url = Art.tile(item, TILE_W, TILE_H);
       if (url) tile._img.src = url; else tile._img.removeAttribute('src');
     }
   }
