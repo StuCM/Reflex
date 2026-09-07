@@ -29,6 +29,12 @@ var Merge = (function () {
     return ((a && a.year) || 0) < ((b && b.year) || 0);
   }
 
+  /* A copy is a library on a server, not a server: one section now spans
+     several libraries, and the same film in a 4K library and an LQ one is two
+     copies that play differently. Items folded by lists() — onDeck and the hubs
+     — carry no part, so they still fold per server, as they always did. */
+  function copyKey(item) { return item._server + '/' + (item._part || ''); }
+
   /* Fold a second copy of the same film into the entry, and decide which copy
      the entry should be *shown* as: the preferred server's, when it has one.
      That is what makes the preference visible — the badges in the masthead
@@ -39,13 +45,13 @@ var Merge = (function () {
      make the row a cycle, and these get written to IndexedDB. Read it through
      sources(), which puts the shown copy back at the front. */
   function combine(primary, item) {
-    var extras = primary._sources || [], i;
-    /* One copy per server. A film listed twice by the same server (two
-       editions in one library) is not what this is for — versions within one
-       item are, and those live in Media[], not here. */
-    if (primary._server === item._server) return primary;
+    var extras = primary._sources || [], i, key = copyKey(item);
+    /* One copy per library. A film listed twice by the same library (two
+       editions in one) is not what this is for — versions within one item are,
+       and those live in Media[], not here. */
+    if (copyKey(primary) === key) return primary;
     for (i = 0; i < extras.length; i++) {
-      if (extras[i]._server === item._server) return primary;
+      if (copyKey(extras[i]) === key) return primary;
     }
 
     /* Plex syncs the position between servers, but if they disagree, the
@@ -128,6 +134,7 @@ var Merge = (function () {
     var out = {
       ratingKey: item.ratingKey,
       _server: item._server,
+      _part: item._part,
       title: item.title,
       titleSort: item.titleSort,
       year: item.year,
@@ -182,7 +189,12 @@ var Merge = (function () {
       var got = (res && res.items) || [], i;
       if (res && res.total) s.total = res.total;
       s.offset += got.length;
-      for (i = 0; i < got.length; i++) s.buffer.push(got[i]);
+      for (i = 0; i < got.length; i++) {
+        /* Which library it came from: one section now spans several, and two
+           of them can hold the same film in different shapes. */
+        got[i]._part = s.part.key;
+        s.buffer.push(got[i]);
+      }
       if (!got.length || (s.total && s.offset >= s.total)) s.done = true;
       return s;
     }, function () {

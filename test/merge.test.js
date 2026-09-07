@@ -97,6 +97,51 @@ var resumed = Merge.lists([
 assert.strictEqual(resumed[0].viewOffset, 900000,
                    'the furthest-watched position wins, whichever server holds it');
 
+/* ---- a copy is a library, not a server ---- */
+
+/* One Movies section spans every movie library on every server, so the same
+   film in a 4K library and an LQ one on ONE server is two copies that play
+   differently — and the detail page has to be able to offer both. */
+function inPart(server, part, opts) {
+  var m = film(server, opts);
+  m._part = part;
+  return m;
+}
+
+var twoLibraries = Merge.lists([
+  [inPart(MAIN, '1', { key: '10', title: 'Amber Anchor', year: 1999, imdb: 'tt001' }),
+   inPart(MAIN, '2', { key: '11', title: 'Amber Anchor', year: 1999, imdb: 'tt001' })]
+]);
+assert.strictEqual(twoLibraries.length, 1, 'one film, however many libraries hold it');
+assert.strictEqual(Merge.sources(twoLibraries[0]).length, 2,
+                   'both of one server\'s copies are kept');
+assert.strictEqual(Merge.sources(twoLibraries[0])[1].ratingKey, '11');
+
+// The same library twice is the same copy, not a second one.
+var sameLibrary = Merge.lists([
+  [inPart(MAIN, '1', { key: '10', title: 'Amber Anchor', year: 1999, imdb: 'tt001' }),
+   inPart(MAIN, '1', { key: '12', title: 'Amber Anchor', year: 1999, imdb: 'tt001' })]
+]);
+assert.strictEqual(Merge.sources(sameLibrary[0]).length, 1,
+                   'two editions in one library are not two copies');
+
+// One library, one copy: no phantom duplicate.
+var oneLibrary = Merge.lists([
+  [inPart(MAIN, '1', { key: '10', title: 'Amber Anchor', year: 1999, imdb: 'tt001' })]
+]);
+assert.strictEqual(Merge.sources(oneLibrary[0]).length, 1);
+
+/* onDeck and the hubs have no libraries to name, so their items carry no part
+   and must go on folding per server exactly as they did. */
+var noParts = Merge.lists([
+  [film(MAIN, { key: '10', title: 'Amber Anchor', year: 1999, imdb: 'tt001' }),
+   film(MAIN, { key: '11', title: 'Amber Anchor', year: 1999, imdb: 'tt001' })],
+  [film(BACKUP, { key: '900', title: 'Amber Anchor', year: 1999, imdb: 'tt001' })]
+]);
+assert.strictEqual(noParts.length, 1);
+assert.strictEqual(Merge.sources(noParts[0]).length, 2,
+                   'partless items still fold to one copy per server');
+
 /* ---- the streaming merge ---- */
 
 /* Two servers, each with its own sorted slice of the same library, handed out
@@ -112,14 +157,18 @@ function pageServer(server, titles) {
 }
 
 var mainPages = pageServer(MAIN, ['Anchor', 'Bridge', 'Ferry', 'Garden', 'Harbour']);
+/* Main's second movie library, holding 4K remuxes of two films it also has at
+   1080 — the same server twice, which the walk has to keep apart. */
+var mainUhdPages = pageServer(MAIN, ['Bridge', 'Garden']);
 var backupPages = pageServer(BACKUP, ['Bridge', 'Ferry', 'Ladder', 'Motel']);
 var requests = 0;
 
 var state = Merge.stream(
-  [{ server: MAIN, key: '1' }, { server: BACKUP, key: '1' }],
+  [{ server: MAIN, key: '1' }, { server: MAIN, key: '2' }, { server: BACKUP, key: '1' }],
   function (part, offset) {
     requests++;
-    var pages = part.server === MAIN ? mainPages : backupPages;
+    var pages = part.server === BACKUP ? backupPages
+              : (part.key === '2' ? mainUhdPages : mainPages);
     return Promise.resolve(pages(offset, 2));      // deliberately small pages
   }
 );
@@ -136,22 +185,30 @@ Merge.advance(state, 0).then(function () {
   assert.strictEqual(titles, 'Anchor,Bridge,Ferry,Garden,Harbour,Ladder,Motel',
     'every film once, in order, from both servers');
 
-  // The two both servers hold carry both copies; the rest carry one.
-  assert.strictEqual(Merge.sources(out[1]).length, 2, 'Bridge is on both');
-  assert.strictEqual(Merge.sources(out[2]).length, 2, 'Ferry is on both');
-  assert.strictEqual(Merge.sources(out[0]).length, 1, 'Anchor is only on Main');
+  // Every library holding a film is a copy of it, the same server's included.
+  function copiesOf(entry) {
+    return Merge.sources(entry).map(function (c) { return c._server + '/' + c._part; })
+                               .sort().join(' ');
+  }
+  assert.strictEqual(copiesOf(out[1]), 'srv-backup/1 srv-main/1 srv-main/2',
+                     'Bridge is in both of Main\'s libraries and on Backup');
+  assert.strictEqual(copiesOf(out[3]), 'srv-main/1 srv-main/2',
+                     'Garden is in both of Main\'s libraries and nowhere else');
+  assert.strictEqual(Merge.sources(out[2]).length, 2, 'Ferry is on both servers');
+  assert.strictEqual(copiesOf(out[0]), 'srv-main/1', 'Anchor is in one library only');
 
-  // 9 copies, 7 films: the estimate has corrected itself as duplicates appeared.
+  // 11 copies, 7 films: the estimate has corrected itself as duplicates appeared.
   assert.strictEqual(Merge.estimate(state), 7);
 
-  // Nothing was crawled: pages of 2 over 9 items, and not one request more.
-  assert.ok(requests <= 7, 'walked in pages, not in one crawl (' + requests + ' requests)');
+  // Nothing was crawled: pages of 2 over 11 items, and not one request more.
+  assert.ok(requests <= 10, 'walked in pages, not in one crawl (' + requests + ' requests)');
 
   /* Slimmed entries keep what the rail and masthead draw, and drop the rest —
      a 30k walk holds 30k of these. Guid is the one costly field that stays:
      without it a film walked into this row has no TMDB id, so it gets neither
      a backdrop of its own nor a place in the merge by identity. */
   assert.ok(out[0].title && out[0].ratingKey && out[0]._server);
+  assert.strictEqual(out[0]._part, '1', 'the library a copy came from survives slim()');
   assert.strictEqual(out[0].Guid[0].id, 'imdb://tt-anchor', 'the Guid array is kept');
   assert.strictEqual(out[0].Media, undefined, 'a film with no Media gains none');
 
