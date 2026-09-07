@@ -1,7 +1,7 @@
 ---
 id: 007
 slug: one-movies-section
-status: building
+status: done
 branch: crew/007-one-movies-section
 model: sonnet
 env: laptop
@@ -202,12 +202,19 @@ Workers must not go digging for more.
 - `js/sidebar.js` — a `Continue watching` entry above the sections with `Movies`
   and `TV Shows` under it, expanding on the same `expanded` machinery at index
   `-1`; the per-section `Continue watching` category is no longer listed.
-- `dev/smoke.js` — `Films` → `Movies` at the call sites; three new steps (the
-  sidebar's shape, the All row spanning every movie library, the two cuts);
-  `sidebarWalkTo` split out and taught to disambiguate a nested entry from a
-  top-level one of the same name.
+- `dev/smoke.js` — `Films` → `Movies` at the call sites; four new steps (the
+  sidebar's shape, the All row spanning every movie library, the two cuts, and
+  a film in two of one server's libraries keeping both copies); `sidebarWalkTo`
+  split out and taught to disambiguate a nested entry from a top-level one of
+  the same name.
+- `js/merge.js` — `copyKey` is the server *and* the library part; `fetchInto`
+  stamps `_part` and `slim` keeps it. Amendment 1.
+- `dev/library.js` — Main's `4K Films` holds its own `makeRemux` copies rather
+  than the same objects as `Films`, so the fixture can fail. Amendment 1.
+- `test/merge.test.js` — the same-server rule directly, and the streaming merge
+  now walks three parts, two of them Main's. Amendment 1.
 
-Gate: `npm run verify` 38/38, `scope-check … main` in scope. (`scope-check`
+Gate: `npm run verify` 39/39, `scope-check … main` in scope. (`scope-check`
 defaults to `origin/main`, which is stale in this checkout — pass `main`.)
 
 ## Amendment 1 — the same-server fold, settled by the orchestrator
@@ -321,9 +328,27 @@ Definition of done gains:
 Everything else in the spec is implemented and green. The work is on
 `crew/007-one-movies-section` in two commits; nothing is pushed.
 
+### Round 2 — PASS
+
+Amendment 1 implemented as written: `copyKey` in `js/merge.js`, the `_part`
+stamp in `fetchInto`, `_part` through `slim`, distinct remux copies in the
+fixture, the three unit cases, and the detail-page smoke step. The reviewer
+independently reverted `copyKey` to `_server` and confirmed the new smoke step
+fails without it — which was round 1's complaint about the old fixture. 39/39.
+
+One thing the amendment did not anticipate, resolved without widening scope:
+**the new smoke step cannot reach its film by searching.** `Plex.search` folds
+through `Merge.lists`, which has no parts by design, and the mock's
+`/hubs/search` only covers `items['1']` anyway. The step walks the All row until
+it finds an entry with two copies from one server instead. Worth knowing: search
+results and hub rows still show one copy per server, and only the All row can
+show two. That is the amendment's own backward-compatibility rule working as
+intended, not a defect — but it does mean a film's second same-server copy is
+reachable only by browsing.
+
 ## Notes on the spec
 
-- **Graph context, bullet 2 is wrong.** "The same film in a 4K library and an LQ
+- **Graph context, bullet 2 is wrong** (settled by Amendment 1). "The same film in a 4K library and an LQ
   library is one entry with two `_sources`, exactly as the same film on two
   servers already is" — it is not, per the blocker above. Everything else in that
   section held.
@@ -343,10 +368,23 @@ Everything else in the spec is implemented and green. The work is on
   once, above the sections, with `Movies`/`TV Shows` cuts under it. `onDeck`
   returns both kinds for the whole account, so one entry per section was the same
   row listed twice.
-- **Pattern — `Merge.combine` deduplicates by *server*, not by copy.** Two parts
-  from one server (two libraries) collapse to one copy with no `_source`, by
-  design and with a comment saying so. Anything that widens what a section spans
-  has to check that assumption first: this task walked into it.
+- **Decision — a copy is a library on a server, not a server.** `Merge.combine`
+  compares `_server + '/' + _part`, stamped in `fetchInto` and kept through
+  `slim`. Rationale: one section now spans several libraries, and the same film
+  as a 4K remux and a 1080 file is two copies that play differently — folding
+  them would hide the playable one behind the refused one. Items with no part
+  (`Merge.lists`: onDeck, hubs, search) still fold per server, so a hub row is
+  unchanged.
+- **Pattern — widening what a merge spans changes what "duplicate" means.**
+  `combine`'s per-server rule was correct while a section was one library per
+  server and wrong the moment it was not. The comment above it said what it did
+  but not what it assumed; only the code told you. Anything that widens a
+  grouping has to re-read the dedup rule underneath it first.
+- **Pattern — a fixture that cannot fail proves nothing.** `dev/library.js`
+  handed the 4K library the *same objects* as the film library, so the smoke
+  suite passed whether copies were deduplicated or thrown away. The check that
+  settles it is to break the rule on purpose and watch the test go red; do that
+  before trusting a green run on new behaviour.
 - **Pattern — a "current" flag on two entries at once needs an order, not both.**
   The sidebar marks the section current whenever the Continue watching row is
   current, so whichever assignment ran last decided where the menu opened. The
