@@ -106,10 +106,15 @@ var Tmdb = (function () {
     });
   }
 
-  /* Every image TMDB holds for a film. js/art.js picks from the payload; there
-     is nothing else on it worth asking for, so no append_to_response. */
-  function images(tmdbId) {
-    return get('/movie/' + tmdbId + '/images');
+  /* Everything js/art.js keeps about a film in one request: the backdrops, the
+     overview, the run time and the billing order. `include_image_language`
+     matters — without it the appended images are filtered to the request
+     language and most backdrops disappear. */
+  function details(tmdbId) {
+    return get('/movie/' + tmdbId, {
+      append_to_response: 'images,credits',
+      include_image_language: 'en,null'
+    });
   }
 
   /* One at a time, on purpose — this is a courtesy API and the rows are small. */
@@ -128,6 +133,6 @@ var Tmdb = (function () {
     trending: trending,
     onProvider: onProvider,
     recommendedFrom: recommendedFrom,
-    images: images
+    details: details
   };
 })();

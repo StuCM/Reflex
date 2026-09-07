@@ -5,7 +5,7 @@
      /__tmdbimg/...   stands in for https://image.tmdb.org/t/p/   (Config.tmdbImageBase)
 
    The ids it deals in are the generated library's own, so "trending" is a
-   handful of films the mock servers really hold and every /images lookup the
+   handful of films the mock servers really hold and every title lookup the
    app makes answers for a title on screen. */
 'use strict';
 
@@ -15,6 +15,10 @@
    tile there, and that only means anything while both come from TMDB. */
 function oneBackdrop(index) { return index % 5 === 4; }
 
+/* And every seventh has no credits block at all, so the "no cast line rather
+   than an empty label" path is walked by something. */
+function noCredits(index) { return index % 7 === 3; }
+
 /* A row's worth. Small on purpose: each id costs the app a guid lookup per
    server, and forty of them make the smoke test crawl for no more coverage. */
 const ROW = 12;
@@ -22,7 +26,11 @@ const ROW = 12;
 function create(opts) {
   const films = opts.films || [];
   const lonely = {};
-  films.forEach(function (f, i) { if (oneBackdrop(i)) lonely[String(f.tmdb)] = true; });
+  const creditless = {};
+  films.forEach(function (f, i) {
+    if (oneBackdrop(i)) lonely[String(f.tmdb)] = true;
+    if (noCredits(i)) creditless[String(f.tmdb)] = true;
+  });
 
   function json(res, body) {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
@@ -55,11 +63,35 @@ function create(opts) {
     return { id: Number(id), backdrops: backdrops, posters: [], logos: [] };
   }
 
+  /* One request now carries the pictures, the description and the billing —
+     append_to_response, as the real API does it. The overview names TMDB so a
+     test can tell it apart from the Plex mock's summary, and so can an eye. */
+  function detailsFor(id) {
+    const body = {
+      id: Number(id),
+      overview: 'TMDB overview for ' + id + '. What this one is actually about, ' +
+                'in the words of a database rather than a file name.',
+      runtime: 90 + (Number(id) % 60),
+      images: imagesFor(id)
+    };
+    if (!creditless[id]) body.credits = { cast: castFor(id) };
+    return body;
+  }
+
+  /* In billing order, so taking the first four is taking the top of the bill. */
+  function castFor(id) {
+    const out = [];
+    for (let k = 0; k < 5; k++) {
+      out.push({ order: k, name: 'Actor ' + id + '-' + k, character: 'Someone ' + k });
+    }
+    return out;
+  }
+
   function api(res, p, query) {
-    let m = p.match(/^\/movie\/(\d+)\/images$/);
-    if (m) { json(res, imagesFor(m[1])); return true; }
-    m = p.match(/^\/movie\/(\d+)\/recommendations$/);
+    let m = p.match(/^\/movie\/(\d+)\/recommendations$/);
     if (m) { json(res, results(Number(m[1]) % Math.max(1, films.length))); return true; }
+    m = p.match(/^\/movie\/(\d+)$/);
+    if (m) { json(res, detailsFor(m[1])); return true; }
     if (p === '/trending/movie/week') { json(res, results(0)); return true; }
     if (p === '/discover/movie') {
       json(res, results(Number(query.with_watch_providers || 0)));
@@ -101,4 +133,4 @@ function create(opts) {
   };
 }
 
-module.exports = { create: create, oneBackdrop: oneBackdrop };
+module.exports = { create: create, oneBackdrop: oneBackdrop, noCredits: noCredits };

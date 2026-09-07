@@ -21,7 +21,9 @@ const path = require('path');
 const fs = require('fs');
 const { start } = require('./server');
 const buildLibrary = require('./library').build;
-const oneBackdrop = require('./mock-tmdb').oneBackdrop;
+const mockTmdb = require('./mock-tmdb');
+const oneBackdrop = mockTmdb.oneBackdrop;
+const noCredits = mockTmdb.noCredits;
 
 const PORT = 8123;
 const FILMS = 400;
@@ -90,10 +92,11 @@ function findTitles() {
 
   /* Two films the TMDB mock treats differently: one with backdrops to spare, so
      the tile and the hero can be two pictures, and one with a single backdrop,
-     where the tile has nothing left to take and falls back to what Plex has. */
+     where the tile has nothing left to take and falls back to what Plex has.
+     Both must have credits, or the header's cast line has nothing to say. */
   function withBackdrops(want) {
     const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
-      return oneBackdrop(m._film) === want && unambiguous(m);
+      return oneBackdrop(m._film) === want && !noCredits(m._film) && unambiguous(m);
     })[0];
     if (!hit) throw new Error('no unambiguous film with ' + (want ? 'one' : 'several') +
                               ' TMDB backdrops');
@@ -199,7 +202,7 @@ function drive(page, titles) {
   const artLookups = [];
   page.on('request', function (r) {
     const u = r.url();
-    if (/\/__tmdb\/movie\/\d+\/images/.test(u)) artLookups.push(u);
+    if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
     if (u.indexOf('http://localhost:' + PORT) !== 0 &&
@@ -624,6 +627,53 @@ function drive(page, titles) {
             if (t === first) throw new Error('title did not change after three rights');
           })
           .then(function () { return shot('browse'); });
+      });
+    })
+
+    .then(function () {
+      return step('the header carries the description and the cast, on both screens', function () {
+        /* The one TMDB request that fetched the backdrops carries the overview
+           and the billing too, so the header can say what the film is without
+           a Plex metadata fetch per tile. The mock's overview names itself, and
+           its actors are named after the title, so neither can be confused with
+           the Plex summary that stands in until TMDB answers. */
+        let head;
+        return searchFor(titles.manyShots.title)
+          .then(function () { return page.waitForTimeout(1200); })
+          .then(function () {
+            return page.evaluate(function () {
+              return { desc: document.getElementById('mh-desc').textContent.trim(),
+                       cast: document.getElementById('mh-cast').textContent.trim() };
+            });
+          })
+          .then(function (st) {
+            if (!/^TMDB overview/.test(st.desc)) {
+              throw new Error('the header description is not TMDB\'s: "' + st.desc + '"');
+            }
+            if (!/^Actor /.test(st.cast)) {
+              throw new Error('the key actors did not come from TMDB: "' + st.cast + '"');
+            }
+            head = st;
+          })
+          /* And OK opens a page that says the same things, not a second
+             description of the same film. */
+          .then(function () { return openTitle(titles.manyShots.title); })
+          .then(function () {
+            return page.evaluate(function () {
+              return { desc: document.getElementById('dt-summary').textContent.trim(),
+                       cast: document.getElementById('dt-names').textContent.trim() };
+            });
+          })
+          .then(function (st) {
+            if (st.desc !== head.desc) {
+              throw new Error('the detail page describes it differently: "' + st.desc + '"');
+            }
+            if (st.cast !== head.cast) {
+              throw new Error('the detail page bills it differently: "' + st.cast + '"');
+            }
+          })
+          .then(function () { return shot('header'); })
+          .then(backToLibrary);
       });
     })
 
@@ -1133,10 +1183,12 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('stepping down collapses the hero and keeps the row on screen', function () {
+      return step('stepping down keeps the film on screen, over two rows and a peek', function () {
         /* The tall hero leaves room for one row. If it does not collapse when
            the focus moves off row 0, the row you just moved to is drawn below
-           the fold and moving down looks like nothing happening. */
+           the fold and moving down looks like nothing happening — and if it
+           collapses to a bare band, browsing throws the picture away, which is
+           the other half of what this step is for. */
         return backToLibrary()
           .then(function () { return press('ArrowUp', 8); })
           .then(function () { return page.waitForTimeout(500); })
@@ -1156,11 +1208,25 @@ function drive(page, titles) {
               var tile = row && row.querySelector('.tile.on');
               var vp = document.getElementById('viewport').getBoundingClientRect();
               var t = tile && tile.getBoundingClientRect();
+              /* Every row the pool has drawn, in the order they sit, with how
+                 much of each one the viewport actually shows. */
+              var rows = Array.prototype.map.call(
+                document.querySelectorAll('#rows .row:not(.hidden)'), function (r) {
+                  var b = r.getBoundingClientRect();
+                  return { height: Math.round(b.height),
+                           top: Math.round(b.top),
+                           shown: Math.round(Math.min(b.bottom, vp.bottom) -
+                                             Math.max(b.top, vp.top)) };
+                }).sort(function (a, b) { return a.top - b.top; });
               return {
                 dense: document.getElementById('browse').classList.contains('dense'),
                 label: row ? row.querySelector('.row-label').textContent.trim() : '',
                 top: t ? Math.round(t.top) : null, bottom: t ? Math.round(t.bottom) : null,
-                vpTop: Math.round(vp.top), vpBottom: Math.round(vp.bottom)
+                vpTop: Math.round(vp.top), vpBottom: Math.round(vp.bottom),
+                rows: rows,
+                heroOpacity: Number(getComputedStyle(document.getElementById('hero-art')).opacity),
+                desc: document.getElementById('mh-desc').textContent.trim(),
+                cast: document.getElementById('mh-cast').textContent.trim()
               };
             });
           })
@@ -1170,6 +1236,25 @@ function drive(page, titles) {
             if (st.top < st.vpTop - 1 || st.bottom > st.vpBottom + 1) {
               throw new Error('"' + st.label + '" is focused but drawn at ' + st.top + '–' +
                               st.bottom + ', outside the viewport ' + st.vpTop + '–' + st.vpBottom);
+            }
+            /* The header still carries the film: the picture behind it, what it
+               is about, and who is in it. */
+            if (!(st.heroOpacity > 0)) {
+              throw new Error('the backdrop was thrown away off the first row');
+            }
+            if (!st.desc) throw new Error('the description vanished off the first row');
+            if (!st.cast) throw new Error('the key actors vanished off the first row');
+            /* Two whole rows under the header and a third peeking, which is the
+               only thing saying there is more below. */
+            var whole = st.rows.filter(function (r) { return r.shown >= r.height - 1; });
+            var peek = st.rows.filter(function (r) {
+              return r.shown > 0 && r.shown < r.height - 1;
+            });
+            if (whole.length < 2) {
+              throw new Error('only ' + whole.length + ' whole rows fit under the header');
+            }
+            if (!peek.length) {
+              throw new Error('no row peeks below the fold, so nothing says there is more');
             }
           })
           .then(function () { return shot('dense'); })

@@ -5,17 +5,22 @@
    hero ends up a blown-up copy of the tile. TMDB holds many backdrops per title,
    which is the second picture this needs.
 
-   Nothing here ever waits: tile() and hero() answer synchronously from cache or
-   fall back to what Plex has, and warm() tells its listeners when a title's
-   backdrops land so the one tile and the backdrop can be repainted. One lookup
-   per title actually on screen, cached both ways — never a crawl. */
+   The same request carries the overview, the run time and the billing order, so
+   the header's description and key actors cost nothing beyond the backdrops.
+
+   Nothing here ever waits: tile(), hero() and factsFor() answer synchronously
+   from cache or fall back to what Plex has, and warm() tells its listeners when
+   a title's payload lands so the tile, the backdrop and the header can be
+   repainted. One lookup per title actually on screen, cached both ways — never
+   a crawl. */
 var Art = (function () {
   'use strict';
 
   var TILE_SIZE = 'w500', HERO_SIZE = 'w1280';
   var MAX_IN_FLIGHT = 4;
+  var CAST = 4;          // names in the header's key actors line
 
-  var cache = {};        // tmdbId -> { hero: path|null, tile: path|null }
+  var cache = {};        // tmdbId -> { hero: path|null, tile: path|null, facts: {} }
   var pending = {};      // tmdbId -> true while a lookup is queued or running
   var queue = [];
   var active = 0;
@@ -24,8 +29,11 @@ var Art = (function () {
   /* The best backdrop for the hero and the next best for the tile, so the two
      surfaces never show the same picture. Pure, and never throws: a payload
      with nothing usable in it gives two nulls. */
-  function pick(images) {
-    var list = (images && images.backdrops) || [], usable = [], i;
+  function pick(payload) {
+    /* The backdrops used to be the whole payload and are now appended to it,
+       so both shapes are read — the old cache entries are still the old one. */
+    var images = (payload && payload.images) || payload || {};
+    var list = images.backdrops || [], usable = [], i;
     if (!Array.isArray(list)) list = [];
     for (i = 0; i < list.length; i++) {
       if (list[i] && list[i].file_path) usable.push(list[i]);
@@ -37,6 +45,22 @@ var Art = (function () {
     return {
       hero: usable.length ? usable[0].file_path : null,
       tile: usable.length > 1 ? usable[1].file_path : null
+    };
+  }
+
+  /* What the header says about a title, out of the same payload the backdrops
+     came from. Pure, and never throws: anything missing gives empty. */
+  function facts(payload) {
+    var credits = (payload && payload.credits) || {};
+    var billing = Array.isArray(credits.cast) ? credits.cast : [];
+    var cast = [], i;
+    for (i = 0; i < billing.length && cast.length < CAST; i++) {
+      if (billing[i] && billing[i].name) cast.push(billing[i].name);
+    }
+    return {
+      overview: (payload && typeof payload.overview === 'string') ? payload.overview : '',
+      runtime: (payload && typeof payload.runtime === 'number') ? payload.runtime : null,
+      cast: cast
     };
   }
 
@@ -70,6 +94,13 @@ var Art = (function () {
     return Plex.artUrl(item, 1920, 1080) || Plex.posterUrl(item, 1920, 1080);
   }
 
+  /* The description, run time and key actors for a title, or null if TMDB has
+     not answered for it yet. Synchronous, like tile() and hero(). */
+  function factsFor(item) {
+    var got = picked(item);
+    return (got && got.facts) || null;
+  }
+
   /* Look this title's backdrops up once, then tell the listeners so they can
      repaint. Cheap to call on every draw: a hit, a miss and a request already in
      flight all return without doing anything. */
@@ -93,9 +124,12 @@ var Art = (function () {
 
   function fetchOne(id) {
     Store.get('art:' + id).then(function (hit) {
-      if (hit) return hit;
-      return Tmdb.images(id).then(function (payload) {
+      /* An entry cached before the facts existed is a miss for them, or an old
+         cache would leave a title with no description for ever. */
+      if (hit && hit.facts) return hit;
+      return Tmdb.details(id).then(function (payload) {
         var got = pick(payload);
+        got.facts = facts(payload);
         Store.put('art:' + id, got);
         return got;
       });
@@ -114,5 +148,6 @@ var Art = (function () {
     for (i = 0; i < listeners.length; i++) listeners[i](id);
   }
 
-  return { pick: pick, url: url, tile: tile, hero: hero, warm: warm, onReady: onReady };
+  return { pick: pick, facts: facts, url: url, tile: tile, hero: hero,
+           factsFor: factsFor, warm: warm, onReady: onReady };
 })();

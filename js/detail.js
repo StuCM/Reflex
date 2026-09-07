@@ -22,6 +22,7 @@ var Detail = (function () {
   var elMeta = document.getElementById('dt-meta');
   var elTagline = document.getElementById('dt-tagline');
   var elSummary = document.getElementById('dt-summary');
+  var elNames = document.getElementById('dt-names');
   var elCrew = document.getElementById('dt-crew');
   var elSources = document.getElementById('dt-sources');
   var elExtras = document.getElementById('dt-extras');
@@ -231,13 +232,32 @@ var Detail = (function () {
   function paintSkeleton() {
     elTitle.textContent = item.title || '';
     elTagline.textContent = '';
-    elSummary.textContent = item.summary || '';
+    elSummary.textContent = description(null);
+    elNames.textContent = namesLine(null);
     elCrew.innerHTML = '';
     elCast.innerHTML = '';
     elMeta.textContent = metaLine(item, null);
 
     var art = Plex.artUrl(item, 960, 540);
     elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
+  }
+
+  /* The header says what the rail's header said, which means TMDB's overview
+     when the rail already fetched one and Plex's summary otherwise — the two
+     screens must not describe the same film differently. */
+  function description(md) {
+    var got = Art.factsFor(item);
+    if (got && got.overview) return got.overview;
+    return (md && md.summary) || item.summary || '';
+  }
+
+  /* Key actors, names only. Same source as the header above, so the strip of
+     photographs further down never contradicts it. */
+  function namesLine(md) {
+    var got = Art.factsFor(item);
+    var names = (got && got.cast.length) ? got.cast
+      : (md && md.Role ? md.Role.slice(0, 4).map(function (r) { return r.tag; }) : []);
+    return names.join('  \u00b7  ');
   }
 
   function metaLine(entry, md) {
@@ -273,7 +293,8 @@ var Detail = (function () {
         filled = true;
         elMeta.textContent = metaLine(item, md);
         elTagline.textContent = md.tagline || '';
-        if (md.summary) elSummary.textContent = md.summary;
+        elSummary.textContent = description(md);
+        elNames.textContent = namesLine(md);
         elCrew.innerHTML = crewHtml(md);
         elCast.innerHTML = castHtml(md);
         addExtras(md);

@@ -66,26 +66,27 @@ html, body {
   background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 37%, rgba(12, 15, 22, 0) 66%);
 }
 
-/* The backdrop belongs to the tall hero. In the band there is nothing left for
-   it to sit behind, and a full-screen image under three rows of tiles is only
-   noise. Opacity, so the swap costs no layout. */
+/* The backdrop follows the focus into the rows rather than being thrown away
+   there — it is what says which film the header is describing. Dimmed under
+   the tiles, and on opacity so the swap costs no layout. */
 #hero-art, #hero-scrim-x, #hero-scrim-y {
   -webkit-transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
   transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
 }
 #browse.dense #hero-art,
 #browse.dense #hero-scrim-x,
-#browse.dense #hero-scrim-y { opacity: 0; }
+#browse.dense #hero-scrim-y { opacity: .5; }
 
 /* ---- masthead ----
 
    Two states of the same markup. Tall while the focus is on the first row —
    where the rail shows Continue watching whole and nothing after it — and a
-   132px band the moment it leaves, which is what gives the rows below room for
-   two of themselves instead of one and a half. Flex `order` does the
-   rearranging, so nothing moves in the DOM. */
+   264px header the moment it leaves, which still carries the picture, the
+   title, the description and the cast while leaving room for two whole rows and
+   a peek at a third. No grid on Chromium 53, so the two columns of the header
+   are absolutely positioned inside it; nothing moves in the DOM. */
 
-#masthead { position: absolute; top: 96px; left: 96px; width: 1080px; height: 300px; }
+#masthead { position: absolute; top: 96px; left: 96px; width: 1080px; height: 340px; }
 
 #mh-row {
   font-size: 22px; letter-spacing: 0.24em; text-transform: uppercase;
@@ -101,6 +102,17 @@ html, body {
 
 #mh-meta { margin-top: 12px; font-size: 26px; color: var(--dim); }
 
+/* Two lines at 22/1.45, clipped rather than ellipsised: -webkit-line-clamp
+   needs a -webkit-box, and a box is a layout mode this file does not want. */
+#mh-desc {
+  margin-top: 18px; max-height: 68px; overflow: hidden;
+  font-size: 22px; line-height: 1.45; color: var(--dim);
+}
+#mh-cast {
+  margin-top: 12px; font-size: 20px; color: var(--dim2);
+  white-space: nowrap; overflow: hidden;
+}
+
 .pill {
   display: inline-block; vertical-align: top;
   margin-right: 16px; padding: 17px 36px;
@@ -109,27 +121,34 @@ html, body {
 }
 .pill-icon { display: inline-block; vertical-align: -3px; margin-right: 12px; }
 
-/* ---- the hero as a band: the same elements, laid out across. ---- */
+/* ---- the hero as a header: the same elements, in two columns. ----
+   No background of its own: the backdrop behind it is the point. */
 
 #browse.dense #masthead {
-  top: 0; left: 0; width: 1920px; height: 132px;
-  padding: 0 300px 0 96px;      /* room on the right for the search pill */
-  display: -webkit-flex; display: flex;
-  -webkit-align-items: center; align-items: center;
+  top: 0; left: 0; width: 1920px; height: 264px;
   border-bottom: 1px solid var(--soft);
-  background: var(--bg);
+  background: none;
 }
 
 #browse.dense #mh-row { display: none; }
 
 #browse.dense #mh-title {
-  -webkit-order: 1; order: 1;
-  margin-top: 0; margin-right: 32px; max-width: 660px;
-  font-size: 46px; font-weight: 500; letter-spacing: -0.02em;
+  position: absolute; top: 40px; left: 96px; width: 760px;
+  margin-top: 0; font-size: 46px; font-weight: 500; letter-spacing: -0.02em;
 }
 #browse.dense #mh-meta {
-  -webkit-order: 2; order: 2;
-  margin-top: 0; font-size: 25px; font-weight: 400; white-space: nowrap;
+  position: absolute; top: 110px; left: 96px; width: 760px;
+  margin-top: 0; font-size: 25px; font-weight: 400;
+  white-space: nowrap; overflow: hidden;
+}
+/* The second column: to the right of the title rather than under it, so the
+   header stays 264px and the rows keep their room. */
+#browse.dense #mh-desc {
+  position: absolute; top: 40px; left: 900px; width: 620px;
+  margin-top: 0; max-height: 96px;
+}
+#browse.dense #mh-cast {
+  position: absolute; top: 152px; left: 900px; width: 620px; margin-top: 0;
 }
 #browse.dense #top-right { top: 41px; right: 96px; }
 
@@ -189,7 +208,7 @@ html, body {
 
 /* Fixed in both hero states: it is #rows that moves, by BIG_DROP, so the
    collapse is one transform and nothing animates a height. */
-#viewport { position: absolute; top: 154px; left: 0; width: 1920px; height: 862px; overflow: hidden; }
+#viewport { position: absolute; top: 264px; left: 0; width: 1920px; height: 816px; overflow: hidden; }
 
 #rows {
   position: absolute; top: 0; left: 0; width: 100%;
@@ -364,19 +383,36 @@ html, body {
   background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 42%, rgba(12, 15, 22, 0) 100%);
 }
 
-#dt-body { position: absolute; top: 64px; left: 64px; width: 1000px; }
+/* The rail's dense header, repeated: same 264px, same two columns, same art
+   behind it, so pressing OK reads as one screen deepening. */
+#dt-header { position: absolute; top: 0; left: 0; width: 1920px; height: 264px; }
+
+#dt-body { position: absolute; top: 288px; left: 64px; width: 1000px; }
 
 #dt-title {
-  font-size: 58px; font-weight: 300; line-height: 1.1;
+  position: absolute; top: 40px; left: 64px; width: 780px;
+  font-size: 46px; font-weight: 500; line-height: 1.1; letter-spacing: -0.02em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-#dt-meta { margin-top: 10px; font-size: 24px; color: var(--dim); }
-#dt-tagline { margin-top: 10px; font-size: 24px; color: var(--ac2); font-style: italic; }
+#dt-meta {
+  position: absolute; top: 110px; left: 64px; width: 780px;
+  font-size: 24px; color: var(--dim); white-space: nowrap; overflow: hidden;
+}
+#dt-tagline {
+  position: absolute; top: 152px; left: 64px; width: 780px;
+  font-size: 24px; color: var(--ac2); font-style: italic;
+  white-space: nowrap; overflow: hidden;
+}
 
 #dt-summary {
-  margin-top: 14px; font-size: 22px; line-height: 1.45; color: var(--dim);
+  position: absolute; top: 40px; left: 900px; width: 620px;
+  font-size: 22px; line-height: 1.45; color: var(--dim);
   max-height: 96px; overflow: hidden;
+}
+#dt-names {
+  position: absolute; top: 152px; left: 900px; width: 620px;
+  font-size: 20px; color: var(--dim2); white-space: nowrap; overflow: hidden;
 }
 
 #dt-crew { margin-top: 14px; font-size: 20px; color: var(--dim); }
