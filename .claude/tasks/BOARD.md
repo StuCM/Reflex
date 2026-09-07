@@ -6,6 +6,7 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 003 | Land the audio-switch fix stranded on claude/player-features | `pending-tv` | laptop | crew/003-land-audio-switch *(gone)* |
+| 009 | An episode's tile is the show, and the still moves to the series page | `draft` | laptop | crew/009-episodes-get-the-show *(gone)* |
 | 008 | The header carries the film, on both screens | `building` | laptop | crew/008-header-carries-the-film |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
@@ -17,6 +18,7 @@ Task files are the source of truth; this is the glance view.
 ## Waiting on you
 
 - **003 Land the audio-switch fix stranded on claude/player-features** — code-complete; only the panel can prove it
+- **009 An episode's tile is the show, and the still moves to the series page** — spec needs your approval before anyone starts
 
 ## In flight
 
