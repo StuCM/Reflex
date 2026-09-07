@@ -202,6 +202,24 @@ function makeCopy(film, serverIndex) {
   return item;
 }
 
+/* The same film again as a 4K TrueHD remux, which is what a separate 4K library
+   holds: the guids are identical so it merges, but the rating key and the media
+   are its own, so it is a second copy rather than the same one listed twice.
+   The pair is the case the detail page exists for — the 1080 copy direct plays
+   and this one cannot. */
+function makeRemux(copy) {
+  const profile = PROFILES[4];                  // hevc-truehd
+  const ratingKey = String(Number(copy.ratingKey) + 500000);
+  const remux = JSON.parse(JSON.stringify(copy));
+  remux.ratingKey = ratingKey;
+  remux.key = '/library/metadata/' + ratingKey;
+  remux.thumb = '/library/metadata/' + ratingKey + '/thumb/1600000000';
+  remux.art = '/library/metadata/' + ratingKey + '/art/1600000000';
+  remux.Media = [mediaFor(profile, ratingKey, copy.duration)];
+  remux._profile = profile.id;
+  return remux;
+}
+
 /* Extras hang off a film's metadata carrying their own media but, like a real
    server, no streams — those come from fetching the extra's own metadata.
    Rating key is the film's with '00' and the index appended, so the mock can
@@ -543,7 +561,6 @@ function build(counts) {
   const servers = SERVERS.map(function (spec, n) {
     const allFilms = filmsHeld[n].map(function (i) { return makeCopy(films[i], spec.index); });
     allFilms.sort(byTitle);
-    const uhd = allFilms.filter(function (m) { return m.Media[0].videoResolution === '4k'; });
 
     /* Shows, and everything hanging off them. `children` is what
        /library/metadata/<key>/children answers with. */
@@ -568,14 +585,20 @@ function build(counts) {
       { key: '3', title: 'TV Shows', type: 'show', updatedAt: 1700000200 + n }
     ];
     const items = { '1': allFilms, '3': allShows };
-    /* Only Main separates its 4K films into their own section. */
+    /* Only Main keeps a second movie library, of 4K remuxes of films it also
+       holds at 1080 — one film, two copies, one server, which is what folding
+       the libraries into one Movies section has to survive. */
     if (n === 0) {
       sections.splice(1, 0, { key: '2', title: '4K Films', type: 'movie', updatedAt: 1700000100 });
-      items['2'] = uhd;
+      items['2'] = allFilms.filter(function (m) { return m._profile === 'h264-eac3'; })
+                           .slice(0, 60).map(makeRemux);
     }
 
     const byKey = {};
     allFilms.forEach(function (m) { byKey[m.ratingKey] = m; });
+    /* The remuxes are copies in their own right, so metadata has to resolve
+       them too — the detail page fetches every copy it lists. */
+    (items['2'] || []).forEach(function (m) { byKey[m.ratingKey] = m; });
     allShows.forEach(function (m) { byKey[m.ratingKey] = m; });
     Object.keys(children).forEach(function (k) {
       children[k].forEach(function (child) { byKey[child.ratingKey] = child; });

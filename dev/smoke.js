@@ -690,6 +690,75 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('a film in two of one server\'s libraries keeps both copies', function () {
+        /* Main holds 4K remuxes of films it also has at 1080, in a library of
+           their own. Folded into one Movies section they are one entry — but
+           two copies, and only one of them plays. Reached by walking the All
+           row rather than by searching: search folds per server, which is
+           right for a hub and would hide the second copy here. */
+        function findTwin(left) {
+          return page.evaluate(function () {
+            const tile = document.querySelector('#rows .row.on .tile.on');
+            const item = tile && tile._item;
+            if (!item) return null;
+            const copies = Merge.sources(item);
+            const here = copies.filter(function (c) { return c._server === item._server; });
+            return { title: item.title, copies: copies.length, sameServer: here.length };
+          }).then(function (st) {
+            if (st && st.sameServer > 1) return st;
+            if (left <= 0) throw new Error('no film with two copies on one server in the All row');
+            return press('ArrowRight').then(function () { return findTwin(left - 1); });
+          });
+        }
+        let entry;
+        return findTwin(60)
+          .then(function (st) { entry = st; return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('(function(){var s=document.querySelectorAll("#dt-sources .dt-source");' +
+                           'if (!s.length) return false;' +
+                           'for (var i=0;i<s.length;i++) if (/checking/.test(s[i].textContent)) return false;' +
+                           'return true;})()', 'every copy of ' + entry.title + ' checked', 20000);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return Array.prototype.map.call(
+                document.querySelectorAll('#dt-sources .dt-source'),
+                function (s) {
+                  return { name: s.querySelector('.dt-source-name').textContent.trim(),
+                           media: s.querySelector('.dt-source-media').textContent.trim(),
+                           verdict: s.querySelector('.dt-source-verdict').textContent.trim() };
+                });
+            });
+          })
+          .then(function (src) {
+            /* The page lists exactly what the merge holds — a copy dropped in
+               the fold would show up as one row fewer. */
+            if (src.length !== entry.copies) {
+              throw new Error(src.length + ' copies listed for ' + entry.title +
+                              ' but the merge holds ' + entry.copies);
+            }
+            const names = {};
+            src.forEach(function (s) { names[s.name] = (names[s.name] || 0) + 1; });
+            const twice = Object.keys(names).filter(function (n) { return names[n] > 1; });
+            if (!twice.length) throw new Error('no server listed twice: ' +
+                                               src.map(function (s) { return s.name; }).join(' | '));
+            const media = src.filter(function (s) { return s.name === twice[0]; })
+                             .map(function (s) { return s.media; });
+            if (media[0] === media[1]) {
+              throw new Error('the same server\'s two copies read alike: ' + media[0]);
+            }
+            /* And they differ where it counts: one plays, one is refused. */
+            const text = src.map(function (s) { return s.verdict; }).join(' | ');
+            if (!/direct play/.test(text) || !/4K/.test(text)) {
+              throw new Error('expected a playable copy and a refused 4K one: ' + text);
+            }
+          })
+          .then(function () { return shot('detail-two-libraries'); })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
       return step('kids rows exclude everything above the cutoff', function () {
         return sidebarPick('Kids')
           .then(function () {
