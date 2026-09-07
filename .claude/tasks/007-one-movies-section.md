@@ -1,7 +1,7 @@
 ---
 id: 007
 slug: one-movies-section
-status: approved
+status: building
 branch: crew/007-one-movies-section
 model: sonnet
 env: laptop
