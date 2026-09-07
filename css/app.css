@@ -54,14 +54,16 @@ html, body {
 
 #hero-scrim-x {
   position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
-  background-image: -webkit-linear-gradient(left, var(--bg) 0%, rgba(12, 15, 22, .82) 44%, rgba(12, 15, 22, 0) 100%);
-  background-image: linear-gradient(to right, var(--bg) 0%, rgba(12, 15, 22, .82) 44%, rgba(12, 15, 22, 0) 100%);
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, rgba(12, 15, 22, .74) 30%, rgba(12, 15, 22, 0) 72%);
+  background-image: linear-gradient(to right, var(--bg) 0%, rgba(12, 15, 22, .74) 30%, rgba(12, 15, 22, 0) 72%);
 }
 
 #hero-scrim-y {
   position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
-  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 50%, rgba(12, 15, 22, 0) 86%);
-  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 50%, rgba(12, 15, 22, 0) 86%);
+  /* Solid only as far up as the rail reaches — the row label sits at y=681,
+     which is 37% of the way up. Above that the picture is the point. */
+  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 37%, rgba(12, 15, 22, 0) 66%);
+  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 37%, rgba(12, 15, 22, 0) 66%);
 }
 
 /* The backdrop belongs to the tall hero. In the band there is nothing left for
