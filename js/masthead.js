@@ -15,8 +15,7 @@ var Masthead = (function () {
   var artTimer = null, artWant = null, lastArt = '';
 
   /* The backdrop, debounced: only the last item asked for is drawn, so sweeping
-     a row costs one full-screen transcode on a server we do not own rather than
-     one per key. The art is on the list item, so nothing is fetched to know it. */
+     a row costs one full-screen image rather than one per key. */
   function art(item) {
     artWant = item;
     clearTimeout(artTimer);
@@ -24,13 +23,18 @@ var Masthead = (function () {
   }
 
   function paintArt() {
-    /* Plenty of a library has no art. Its poster, cropped, is still this film
-       rather than the last one — which is the whole complaint. */
-    var url = Plex.artUrl(artWant, 1920, 1080) || Plex.posterUrl(artWant, 1920, 1080);
+    Art.warm(artWant);
+    var url = Art.hero(artWant);
     if (!url || url === lastArt) return;
     lastArt = url;
     elArt.style.backgroundImage = 'url("' + url + '")';
   }
+
+  /* A backdrop that lands after the debounce fired belongs on screen only if
+     the item it belongs to is still the one being rested on. */
+  Art.onReady(function (tmdbId) {
+    if (artWant && Plex.tmdbId(artWant) === tmdbId) paintArt();
+  });
 
   function render(row, item, hasRows) {
     elRow.textContent = (row && row.title) || '';

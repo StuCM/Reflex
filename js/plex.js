@@ -336,7 +336,7 @@ var Plex = (function () {
   /* Films and episodes both turn up here, and an episode is the more common
      case on a real server. */
   function onDeck(server) {
-    return ask(server, '/library/onDeck').then(function (res) {
+    return ask(server, '/library/onDeck?' + qs({ includeGuids: 1 })).then(function (res) {
       var md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
       return Servers.stamp(md.filter(function (m) {
         return m.type === 'movie' || m.type === 'episode';
@@ -359,7 +359,8 @@ var Plex = (function () {
      One request returns every hub with its items, which is how the stock app
      shows a huge library without listing it. */
   function hubs(server, sectionKey) {
-    return ask(server, '/hubs/sections/' + sectionKey + '?' + qs({ count: HUB_COUNT }),
+    return ask(server, '/hubs/sections/' + sectionKey + '?' +
+               qs({ count: HUB_COUNT, includeGuids: 1 }),
                { timeout: 20000 }).then(function (res) {
       var list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, h;
       for (i = 0; i < list.length; i++) {

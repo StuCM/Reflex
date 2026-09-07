@@ -148,9 +148,12 @@ Merge.advance(state, 0).then(function () {
   assert.ok(requests <= 7, 'walked in pages, not in one crawl (' + requests + ' requests)');
 
   /* Slimmed entries keep what the rail and masthead draw, and drop the rest —
-     a 30k walk holds 30k of these. */
+     a 30k walk holds 30k of these. Guid is the one costly field that stays:
+     without it a film walked into this row has no TMDB id, so it gets neither
+     a backdrop of its own nor a place in the merge by identity. */
   assert.ok(out[0].title && out[0].ratingKey && out[0]._server);
-  assert.strictEqual(out[0].Guid, undefined, 'the Guid array is not kept');
+  assert.strictEqual(out[0].Guid[0].id, 'imdb://tt-anchor', 'the Guid array is kept');
+  assert.strictEqual(out[0].Media, undefined, 'a film with no Media gains none');
 
   console.log('merge across servers: all assertions passed');
 }).catch(function (e) {

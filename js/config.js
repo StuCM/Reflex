@@ -10,9 +10,13 @@ var Config = (function () {
     /* plex.tv itself, unless something is standing in for it. */
     plexTvBase: 'https://plex.tv',
 
-    /* Free TMDB v3 API key. Empty means the discovery rows don't appear;
-       nothing else is affected. */
+    /* Free TMDB v3 API key. Empty means the discovery rows don't appear and
+       the artwork stays whatever Plex has; nothing else is affected. */
     tmdbKey: '',
+
+    /* TMDB's API and its image CDN, unless something is standing in for them. */
+    tmdbBase: 'https://api.themoviedb.org/3',
+    tmdbImageBase: 'https://image.tmdb.org/t/p/',
 
     /* Bring-up only: WAM doesn't forward console.log anywhere readable on this
        set, so the app can POST its debug line to a listener on the dev machine.

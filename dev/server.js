@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const mock = require('./mock-plex');
+const mockTmdb = require('./mock-tmdb');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -66,6 +67,10 @@ function start(opts) {
   /* In proxy mode there is no fake library at all — see the /__plex handler. */
   const api = opts.proxy ? null
     : mock.create({ films: opts.films, pinPolls: opts.pinPolls, log: log });
+  /* TMDB is mocked alongside Plex, and off the same generated library, so the
+     artwork path runs without a request leaving the machine. In --proxy mode
+     there is no library to derive it from and the real TMDB is used instead. */
+  const tmdb = api ? mockTmdb.create({ films: api.library.films }) : null;
 
   const server = http.createServer(function (req, res) {
     const parsed = url.parse(req.url, true);
@@ -96,6 +101,16 @@ function start(opts) {
     if (opts.proxy && pathname.indexOf('/__plex') === 0) {
       res.writeHead(404, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
       res.end('proxy mode: no mock server here');
+      return;
+    }
+
+    if (tmdb && pathname.indexOf('/__tmdb') === 0) {
+      if (!tmdb.handle(req, res, pathname, parsed.query)) {
+        console.log('  UNHANDLED ' + req.method + ' ' + pathname +
+                    '  <- the app is calling a TMDB path the mock does not know');
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('mock: no route for ' + pathname);
+      }
       return;
     }
 
@@ -181,6 +196,13 @@ function sendIndex(res, file, opts) {
       dev: true,
       tmdbKey: process.env.TMDB_KEY || ''
     };
+    /* Against the mock, TMDB is mocked too and the key is only a switch — the
+       real one is for --proxy, where the real TMDB is the only one there is. */
+    if (!opts.proxy) {
+      config.tmdbKey = 'mock-tmdb-key';
+      config.tmdbBase = '/__tmdb';
+      config.tmdbImageBase = '/__tmdbimg/';
+    }
     const out = html
       .replace('</head>',
         '<script>window.REFLEX_CONFIG = ' + JSON.stringify(config) + ';</script>\n</head>')
