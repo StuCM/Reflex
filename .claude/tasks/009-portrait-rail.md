@@ -1,7 +1,7 @@
 ---
 id: 009
 slug: portrait-rail
-status: approved
+status: building
 branch: crew/009-portrait-rail
 model: sonnet
 env: laptop
