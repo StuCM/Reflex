@@ -16,7 +16,8 @@ var ShowPage = (function () {
   var elArt = document.getElementById('sh-art');
   var elHint = document.getElementById('sh-hint');
 
-  var EPISODE_POOL = 9;          // episode rows on screen at once
+  var EPISODE_POOL = 6;          // episode rows on screen at once, at 111px each
+  var EPISODE_LEAD = 3;          // rows kept above the focused one
 
   var show = null;
   var seasons = [], seasonIdx = 0;
@@ -109,15 +110,20 @@ var ShowPage = (function () {
     }
     /* A window, not the lot: a 24-episode series is common and drawing all of
        them costs more than it is worth. */
-    var first = UI.clamp(epIdx - 4, 0, Math.max(0, episodes.length - EPISODE_POOL));
-    var html = '', i, ep, on, watched;
+    var first = UI.clamp(epIdx - EPISODE_LEAD, 0, Math.max(0, episodes.length - EPISODE_POOL));
+    var html = '', i, ep, on, watched, still;
     for (i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
       ep = episodes[i];
       on = (i === epIdx && zone === 'episodes');
       watched = ep.viewOffset && ep.duration
         ? Math.round(100 * ep.viewOffset / ep.duration) + '%'
         : (ep.viewCount ? 'watched' : '');
+      /* An episode's thumb *is* its still, so the picture is already paid for. */
+      still = Plex.posterUrl(ep, 160, 90);
       html += '<div class="sh-episode' + (on ? ' on' : '') + '">' +
+              '<span class="sh-ep-still"' +
+              (still ? ' style="background-image:url(' + UI.escapeHtml(still) + ')"' : '') +
+              '></span>' +
               '<span class="sh-ep-num">' + (ep.index === undefined ? '·' : ep.index) + '</span>' +
               '<span class="sh-ep-title">' + UI.escapeHtml(ep.title || '') + '</span>' +
               '<span class="sh-ep-mins">' +

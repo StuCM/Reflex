@@ -9,10 +9,11 @@
    app makes answers for a title on screen. */
 'use strict';
 
-/* Every fifth film gets a single backdrop, so the "only one, so the tile falls
-   back to Plex" path is covered. Continue watching takes every eightieth film,
-   so nothing in it is lonely — the smoke test compares the hero against the
-   tile there, and that only means anything while both come from TMDB. */
+/* Every fifth film is sparse: one backdrop and no posters at all, so the "TMDB
+   has nothing for the tile, fall back to Plex" path is covered. Continue
+   watching takes every eightieth film, so nothing in it is sparse — the smoke
+   test compares the hero against the tile there, and that only means anything
+   while both come from TMDB. */
 function oneBackdrop(index) { return index % 5 === 4; }
 
 /* And every seventh has no credits block at all, so the "no cast line rather
@@ -48,19 +49,29 @@ function create(opts) {
     return { results: out };
   }
 
-  function imagesFor(id) {
-    const n = lonely[id] ? 1 : 2 + (Number(id) % 3);
-    const backdrops = [];
+  /* Descending, so the pick is the payload's own order only by accident —
+     js/art.js sorts, and the test for that has to have something to sort. */
+  function shots(kind, id, n) {
+    const out = [];
     for (let k = 0; k < n; k++) {
-      backdrops.push({
-        file_path: '/backdrop/' + id + '/' + k + '.svg',
-        /* Descending, so the pick is the payload's own order only by accident —
-           js/art.js sorts, and the test for that has to have something to sort. */
+      out.push({
+        file_path: '/' + kind + '/' + id + '/' + k + '.svg',
         vote_average: 8 - k,
         vote_count: 400 - k * 10
       });
     }
-    return { id: Number(id), backdrops: backdrops, posters: [], logos: [] };
+    return out;
+  }
+
+  function imagesFor(id) {
+    const n = lonely[id] ? 1 : 2 + (Number(id) % 3);
+    return {
+      id: Number(id),
+      backdrops: shots('backdrop', id, n),
+      /* A sparse title has none, so the tile has to fall back to Plex. */
+      posters: lonely[id] ? [] : shots('poster', id, n),
+      logos: []
+    };
   }
 
   /* One request now carries the pictures, the description and the billing —
@@ -101,21 +112,24 @@ function create(opts) {
   }
 
   /* One flat gradient with a corner bar and its own caption, so a TMDB picture
-     is obvious next to the Plex mock's in a screenshot — and so hero and tile
-     can be told apart at a glance. */
+     is obvious next to the Plex mock's in a screenshot — and so a poster and a
+     backdrop of the same title can be told apart at a glance, by shape as well
+     as by caption. */
   function image(res, p) {
-    const m = p.match(/^\/(\w+)\/backdrop\/(\d+)\/(\d+)\.svg$/);
+    const m = p.match(/^\/(\w+)\/(backdrop|poster)\/(\d+)\/(\d+)\.svg$/);
     if (!m) return false;
-    const size = m[1], id = m[2], k = Number(m[3]);
-    const hue = (Number(id) * 13 + k * 60) % 360;
+    const size = m[1], kind = m[2], id = m[3], k = Number(m[4]);
+    const hue = (Number(id) * 13 + k * 60 + (kind === 'poster' ? 180 : 0)) % 360;
+    const w = kind === 'poster' ? 200 : 320, h = kind === 'poster' ? 300 : 180;
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
-    res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">' +
-      '<rect width="320" height="180" fill="hsl(' + hue + ',44%,' + (18 + k * 8) + '%)"/>' +
-      '<rect x="0" y="0" width="320" height="10" fill="hsl(' + hue + ',70%,60%)"/>' +
-      '<text x="16" y="102" font-family="Helvetica,Arial" font-size="26" ' +
+    res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '">' +
+      '<rect width="' + w + '" height="' + h + '" fill="hsl(' + hue + ',44%,' +
+      (18 + k * 8) + '%)"/>' +
+      '<rect x="0" y="0" width="' + w + '" height="10" fill="hsl(' + hue + ',70%,60%)"/>' +
+      '<text x="16" y="' + (h * 0.57) + '" font-family="Helvetica,Arial" font-size="26" ' +
       'fill="rgba(255,255,255,0.85)">TMDB ' + id + ' #' + k + '</text>' +
-      '<text x="16" y="134" font-family="Helvetica,Arial" font-size="18" ' +
-      'fill="rgba(255,255,255,0.5)">' + size + '</text></svg>');
+      '<text x="16" y="' + (h * 0.74) + '" font-family="Helvetica,Arial" font-size="18" ' +
+      'fill="rgba(255,255,255,0.5)">' + kind + ' ' + size + '</text></svg>');
     return true;
   }
 

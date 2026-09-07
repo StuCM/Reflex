@@ -1,7 +1,7 @@
 ---
 id: 009
 slug: portrait-rail
-status: building
+status: done
 branch: crew/009-portrait-rail
 model: sonnet
 env: laptop
@@ -207,26 +207,108 @@ read the change from two rows to one as a regression — it is the point. Every
 other line of 008's Definition of done still holds and must keep holding.
 
 ## Definition of done
-- [ ] Rail tiles are 209×314 posters, seven across, and the row arithmetic is
+- [x] Rail tiles are 209×314 posters, seven across, and the row arithmetic is
       derived from those numbers rather than typed in.
-- [ ] One whole row sits under the dense header with the next partly visible,
+- [x] One whole row sits under the dense header with the next partly visible,
       superseding 008's two-row expectation — see above.
-- [ ] A film's tile is its poster and the hero behind it is a backdrop — never
+- [x] A film's tile is its poster and the hero behind it is a backdrop — never
       the same image, with no fallback ladder needed to guarantee it.
-- [ ] An episode's tile is its show's poster, taken from `grandparentThumb`
+- [x] An episode's tile is its show's poster, taken from `grandparentThumb`
       with no extra request, and every episode of a show shows the same tile.
-- [ ] A title TMDB has no poster for falls back to a Plex image and never draws
+- [x] A title TMDB has no poster for falls back to a Plex image and never draws
       a 16:9 picture in the 2:3 box.
-- [ ] No new network request per tile: posters come from the payload already
+- [x] No new network request per tile: posters come from the payload already
       cached or from URLs Plex already supplied.
-- [ ] The series page lists each episode with its still, and an episode with no
+- [x] The series page lists each episode with its still, and an episode with no
       `thumb` renders a row of the same height rather than a broken image.
-- [ ] `Art.pick` is pure, returns `{hero, poster}`, and `test/art.test.js`
+- [x] `Art.pick` is pure, returns `{hero, poster}`, and `test/art.test.js`
       covers the cases in step 8.
-- [ ] `npm run verify` passes.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] `npm run verify` passes.
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Review rounds
 
+### Round 1 — PASS
+
+`crew-reviewer`, against commit `6fe158f`. Every Definition of done item met,
+the row arithmetic genuinely derived, no backdrop-fallback path left on the
+tile, tests behavioural rather than tautological, scope exactly the seven
+declared files, `npm run verify` re-run independently at 42/42.
+
+## What changed
+
+- `js/rail.js` — `TILE_W/TILE_H/GAP/ROW_H/TILES_VISIBLE` are the portrait
+  numbers and `ROWS_FIT`, `ROWS_VISIBLE` and `BIG_DROP` fall out of them; the
+  rows of context above the focused row became `ROWS_FIT - 1` rather than a
+  typed 1.
+- `js/art.js` — `pick` returns `{hero, poster}` out of a shared `bestOf`, the
+  poster comes from `images.posters` at `w342`, and `tile()` is the TMDB
+  poster, else an episode's `grandparentThumb`, else the item's own thumb —
+  never a backdrop.
+- `js/showpage.js` — each `.sh-episode` carries a 160×90 still from
+  `Plex.posterUrl(ep, 160, 90)`; `EPISODE_POOL` 9 → 6 and the look-behind 4 → 3.
+- `css/app.css` — 209×314 tile with a 16px radius, row 440px, strip 362px;
+  `.sh-episode` 106px with a `.sh-ep-still` box and everything beside it
+  vertically centred.
+- `dev/mock-tmdb.js` — the payload carries `posters` as well as `backdrops`,
+  generated portrait and hue-shifted so a screenshot tells them apart; a sparse
+  title has one backdrop and no posters at all.
+- `dev/smoke.js` — the artwork steps assert kind rather than index, the
+  geometry step asserts 209×314 and seven across and one whole row, and two
+  steps are new: an episode's tile is its show's poster, and every episode row
+  carries its still at a constant height. 40 → 42 steps.
+- `test/art.test.js` — rewritten for `{hero, poster}`: a payload with backdrops
+  but no posters gives `poster: null` (a second backdrop is explicitly not a
+  poster), one with posters but no backdrops gives `hero: null`, malformed
+  input never throws, and the order is the votes rather than the payload.
+
+## What the spec got wrong, or did not say
+
+- **`render()`'s context row had to be derived too.** The spec named
+  `BIG_DROP`, `ROWS_FIT` and `ROWS_VISIBLE` but not the `rowIdx - 1` in
+  `render()`. With `ROWS_FIT` at 1 that constant drew the row you had just
+  moved to half below the fold — exactly the failure the spec's own graph note
+  warns about. It is now `rowIdx - (ROWS_FIT - 1)`.
+- **The episode pool had to shrink.** A 106px `.sh-episode` nine deep runs
+  ~260px past the bottom of the 1080 screen and under `#sh-hint`. Six fits,
+  with the look-behind moved to 3 so the focus is not pinned to the last row.
+- **The no-`thumb` episode cannot come from the mock.** `dev/library.js` gives
+  every episode a thumb and is not in `files:`, so the smoke step blanks one
+  row's still in the DOM and re-measures. That is the whole difference between
+  a thumb and none, so it proves the same thing.
+- **One episode per show in Continue watching.** `dev/mock-plex.js` builds the
+  deck from four different shows, so "every episode of a show shows the same
+  tile" is asserted by the URL carrying `grandparentThumb` and not the
+  episode's own `thumb`; the grouping check is there but vacuous on this data.
+- **The mock's episode still is poster-shaped.** `dev/mock-plex.js` serves a
+  2:3 SVG for any `thumb`, so a 160×90 request comes back letterboxed. A real
+  server's episode thumb is a 16:9 still and fills the box. Harness artefact,
+  not a layout bug, and `dev/mock-plex.js` is out of scope.
+- **A cache entry written before this task has no `poster`.** `fetchOne` now
+  treats one as a miss, the same way it already did for the facts, or every
+  title cached on the TV would fall back to Plex for ever.
+
 ## Graph writes proposed
+
+- **Decision — the tile is a poster and the hero is a backdrop.** Two different
+  kinds of picture cannot be the same image, so the "never repeat the hero"
+  rule needs no fallback ladder and no second-backdrop lookup. TMDB carries
+  both in the payload `js/art.js` already caches, and Plex hands an episode its
+  show's poster as `grandparentThumb`, so neither costs a request. Supersedes
+  the `{hero, tile}` pick from `bff3d6e`.
+- **Decision — the rail is 209×314, seven across, one row and a 350px peek.**
+  Chosen over two landscape rows: a 2:3 poster is taller, and the user weighed
+  that trade. `ROW_H` 466 under an 816px viewport gives `ROWS_FIT` 1.
+  Supersedes 008's "two whole rows and a third peeking".
+- **Pattern — derive every rail number from the tile, including the context
+  row.** `bff3d6e` established that `BIG_DROP`/`ROWS_FIT`/`ROWS_VISIBLE` fall
+  out of `ROW_H` and `VIEWPORT_H`. This task found one more that had to:
+  `render()`'s `rowIdx - 1`. Any constant that counts rows is a constant that
+  breaks when the tile changes shape — it must be written in terms of
+  `ROWS_FIT`.
+- **Pattern — a row that grows caps the pool that draws it.** Changing
+  `.sh-episode` from 62px to 106px silently pushed three of nine rows off the
+  bottom of the screen: the focused row stayed visible, so nothing failed, and
+  only the arithmetic says it is wrong. Whenever a list row's height changes,
+  re-derive how many of them fit.
