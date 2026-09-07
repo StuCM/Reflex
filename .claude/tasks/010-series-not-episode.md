@@ -1,7 +1,7 @@
 ---
 id: 010
 slug: series-not-episode
-status: approved
+status: done
 branch: crew/010-series-not-episode
 model: sonnet
 env: laptop
@@ -151,23 +151,90 @@ Workers must not go digging for more.
 - **Marking watched, resume behaviour, or the guard.**
 
 ## Definition of done
-- [ ] OK on an episode in Continue watching opens the series page, with the
+- [x] OK on an episode in Continue watching opens the series page, with the
       correct season selected and that episode highlighted.
-- [ ] The same is true for an episode reached from a search result or a hub row.
-- [ ] From the series page the next episode is reachable and playable — there
+- [x] The same is true for an episode reached from a search result or a hub row.
+- [x] From the series page the next episode is reachable and playable — there
       is no dead end.
-- [ ] An episode's copy chooser is still reachable, listing every copy, through
+- [x] An episode's copy chooser is still reachable, listing every copy, through
       the series page.
-- [ ] OK on a film still opens the detail page directly, unchanged.
-- [ ] OK on an episode is acknowledged immediately, and if the series cannot be
+- [x] OK on a film still opens the detail page directly, unchanged.
+- [x] OK on an episode is acknowledged immediately, and if the series cannot be
       resolved it falls back to the episode's own page rather than doing
       nothing.
-- [ ] Pressing OK on three episodes of one show resolves the show once, not
+- [x] Pressing OK on three episodes of one show resolves the show once, not
       three times.
-- [ ] `npm run verify` passes.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] `npm run verify` passes.
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Review rounds
 
+**Round 1 — PASS.** Every Definition of done item met; `npm run verify`
+reproduced independently (25 scripts ES5-clean, 7/7 unit files, 43/43 smoke).
+The `Plex.allVersions` deviation judged sound — same id fallback order, an
+existing precedent in `js/detail.js`, and `Merge.lists([[md]].concat(...))[0]`
+folds in the spec's single-payload fallback correctly. No findings.
+
+## What changed
+
+- `js/shows.js` — `entryFor(episode)`: the episode's show from `Meta.load`, then
+  every server's copy by that show's ids, folded into one merged entry; cached
+  per `<server>:<showKey>` as a promise, `null` included.
+- `js/showpage.js` — `open` accepts `options.at = { season, episode }` (Plex
+  `index` values). `openSeason` overrides `Shows.openAt`; `wantEp` overrides the
+  first-unfinished landing on the first episode load only.
+- `js/app.js` — `openItem` routes `type === 'episode'` to a new `openEpisode`:
+  toast, resolve, open the series at that episode, falling back to
+  `openDetail` with a `UI.debug` line on null or rejection. The show branch
+  became `openShow(entry, at)`, shared by both.
+- `dev/smoke.js` — new step "OK on an episode opens its series, at that
+  episode": season chip and highlighted row match the tile's `parentIndex` /
+  `index`, the detail page did *not* open, moving down reaches a different
+  episode's copy chooser, and a second OK on the same episode fires zero
+  `/library/all?guid=` requests. Verified non-vacuous both ways (assert
+  inverted, and cache disabled). The step at line 966 was retitled "an
+  episode's copy chooser is reached through the series page".
+
+## What the spec got wrong
+
+- **Step 1's guid picking is a second implementation of `Plex.allVersions`.**
+  Used that instead: same id fallback order, already exported, returns every
+  copy on a server rather than the first. Leading the fold with the episode's
+  own server's show payload (`Merge.lists([[md]].concat(perServer))[0]`) makes
+  the spec's separate "fold came back empty" fallback unnecessary. It also
+  matters in the harness: the mock's `/library/all?guid=` index holds only
+  `tmdb://` ids, so the spec's plex://-first lookup would never fold anything
+  across servers there.
+- **Step 4's claim about the existing step is not true.** "an episode opens the
+  same copy chooser a film does" already reached the chooser *through* the
+  series page (ArrowRight on an episode row). Nothing about it asserted the old
+  routing, so only its title changed.
+- **The role doc's "baseline is 28/28 green" is stale.** It was 42/43 before
+  this task, 43/43 after.
+- `scope-check.js` counts the task file itself as out of scope once its
+  `status:` line is edited. The gate was run clean before that edit.
+
 ## Graph writes proposed
+
+- **Decision — an episode is never a terminal screen.** OK on an episode
+  anywhere resolves upward to its show and opens the series page at that
+  season and episode. Rationale: the copy chooser for a single episode has no
+  route to the next one, which is the main thing wanted part way through a
+  show. The chooser is not lost — the series page's `onChoose` still reaches it,
+  one step later. Supersedes nothing; extends the `openItem` routing.
+- **Pattern — resolve upward, then merge outward.** Episodes rarely carry ids of
+  their own, so cross-server identity for an episode is the *show's* ids plus
+  season and episode number. Anything that needs an episode's counterpart on
+  another server should go to the show first (`Meta.load` on
+  `grandparentRatingKey`), fold the show across servers, and drill back down —
+  never try to match the episode directly.
+- **Pattern — lead a cross-server fold with the payload you already hold.**
+  `Merge.lists([[known]].concat(perServer))[0]` makes "nothing else has it" a
+  one-source entry for free, removing the empty-result branch entirely. Relies
+  on `Merge.combine` deduplicating by `copyKey` and on first-seen ordering.
+- **Gotcha — the dev mock indexes only `tmdb://` guids.** `dev/library.js`
+  builds `srv.byGuid` from `tmdb://` ids alone, so `/library/all?guid=plex://…`
+  always misses in the harness while working on real servers. Code that looks up
+  by guid should try ids in order (as `Plex.allVersions` does) or its
+  cross-server behaviour is untestable on the laptop.
