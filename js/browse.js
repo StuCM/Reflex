@@ -66,10 +66,6 @@ var Browse = (function () {
        would leave the last film's art under the new one's title. */
     Masthead.art(focusedItem());
     scheduleWalk();
-    Meta.schedule(focusedItem(), function (ratingKey) {
-      var here = focusedItem();
-      if (here && here.ratingKey === ratingKey) Masthead.render(focusedRow(), here, true);
-    });
   }
 
   /* ---------- servers and sections ----------
@@ -269,13 +265,11 @@ var Browse = (function () {
         if (!isCurrent()) return;
         var built = [];
 
-        /* onDeck is per server, not per section: it hands back films and
-           episodes together. A show section should carry on with episodes and a
-           film section with films. */
-        var want = sec.type === 'show' ? 'episode' : 'movie';
-        var deck = Devices.mine(Merge.lists(res[0])).filter(function (m) {
-          return m.type === want;
-        });
+        /* onDeck is per server, not per section, and hands back films and
+           episodes together — which is what you want to carry on with, so it is
+           kept whole rather than cut to the section's own type. Most recently
+           watched first. */
+        var deck = Devices.mine(Merge.lists(res[0]));
         deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
         if (deck.length) built.push({ title: 'Continue watching', items: deck });
 
