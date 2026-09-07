@@ -11,7 +11,7 @@ var Tmdb = (function () {
   'use strict';
 
   var KEY = Config.tmdbKey;                      // see js/config.js
-  var API = 'https://api.themoviedb.org/3';
+  var API = Config.tmdbBase;                     // see js/config.js
   var REGION = 'GB';
 
   /* JustWatch provider ids as TMDB exposes them. */
@@ -106,6 +106,12 @@ var Tmdb = (function () {
     });
   }
 
+  /* Every image TMDB holds for a film. js/art.js picks from the payload; there
+     is nothing else on it worth asking for, so no append_to_response. */
+  function images(tmdbId) {
+    return get('/movie/' + tmdbId + '/images');
+  }
+
   /* One at a time, on purpose — this is a courtesy API and the rows are small. */
   function serial(list, fn) {
     var i = 0;
@@ -121,6 +127,7 @@ var Tmdb = (function () {
     providers: PROVIDERS,
     trending: trending,
     onProvider: onProvider,
-    recommendedFrom: recommendedFrom
+    recommendedFrom: recommendedFrom,
+    images: images
   };
 })();
