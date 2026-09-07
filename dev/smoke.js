@@ -21,6 +21,7 @@ const path = require('path');
 const fs = require('fs');
 const { start } = require('./server');
 const buildLibrary = require('./library').build;
+const oneBackdrop = require('./mock-tmdb').oneBackdrop;
 
 const PORT = 8123;
 const FILMS = 400;
@@ -87,11 +88,25 @@ function findTitles() {
   })[0];
   if (!shared) throw new Error('no shared film with one playable and one unplayable copy');
 
+  /* Two films the TMDB mock treats differently: one with backdrops to spare, so
+     the tile and the hero can be two pictures, and one with a single backdrop,
+     where the tile has nothing left to take and falls back to what Plex has. */
+  function withBackdrops(want) {
+    const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
+      return oneBackdrop(m._film) === want && unambiguous(m);
+    })[0];
+    if (!hit) throw new Error('no unambiguous film with ' + (want ? 'one' : 'several') +
+                              ' TMDB backdrops');
+    return hit;
+  }
+
   return {
     truehdOnly: only('hevc-truehd'),     // must be refused before any request
     transcodes: only('vc1-avi'),         // server says transcode, we refuse
     directPlays: only('h264-eac3'),      // plays
-    shared: shared                       // on both servers, only one copy playable
+    shared: shared,                      // on both servers, only one copy playable
+    manyShots: withBackdrops(false),     // enough TMDB art for a tile and a hero
+    oneShot: withBackdrops(true)         // one backdrop, so the tile falls back
   };
 }
 
@@ -166,8 +181,12 @@ function drive(page, titles) {
   function tracedThat(re) { return trace.some(function (l) { return re.test(l); }); }
   /* Nothing may leave this machine in mock mode. The whole point of the mock is
      that developing the app never touches the server we do not own. */
+  /* One lookup per title on screen and never a second: the whole point of the
+     cache, and the difference between this and crawling the library. */
+  const artLookups = [];
   page.on('request', function (r) {
     const u = r.url();
+    if (/\/__tmdb\/movie\/\d+\/images/.test(u)) artLookups.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
     if (u.indexOf('http://localhost:' + PORT) !== 0 &&
@@ -368,10 +387,8 @@ function drive(page, titles) {
     return attempt(5);
   }
 
-  /* Search for an exact title, focus the only result, and open its page. OK on
-     the rail no longer plays — it opens the detail page, and playing is a
-     decision made there against a named copy. */
-  function openTitle(title) {
+  /* Search for an exact title and come to rest on the only result. */
+  function searchFor(title) {
     return backToLibrary()
       .then(function () { return sidebarPick('Films'); })
       .then(function () { return press('F1'); })
@@ -383,7 +400,32 @@ function drive(page, titles) {
            film's title is still on screen and would satisfy a looser check. */
         return waitFor('document.querySelector("#mh-title").textContent.trim() === ' +
                        JSON.stringify(title), 'the search result for ' + title);
-      })
+      });
+  }
+
+  /* What the focused tile and the backdrop are showing. A picture from the TMDB
+     mock names its title and which of that title's backdrops it is; one from
+     Plex does not, which is how the fallback is told apart. */
+  function pictures() {
+    return page.evaluate(function () {
+      function shotOf(u) {
+        var m = String(u).match(/backdrop\/(\d+)\/(\d+)\.svg/);
+        return m ? { title: m[1], n: m[2] } : null;
+      }
+      var img = document.querySelector('#rows .row.on .tile.on img');
+      var hero = document.getElementById('hero-art').style.backgroundImage;
+      return {
+        tile: { url: (img && img.src) || '', shot: shotOf(img && img.src),
+                painted: !!(img && img.naturalWidth > 0) },
+        hero: { url: hero, shot: shotOf(hero) }
+      };
+    });
+  }
+
+  /* OK on the rail no longer plays — it opens the detail page, and playing is a
+     decision made there against a named copy. */
+  function openTitle(title) {
+    return searchFor(title)
       .then(function () { return page.keyboard.press('Enter'); })
       .then(function () {
         return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
@@ -435,6 +477,83 @@ function drive(page, titles) {
         return waitFor('(function(){var i=document.querySelectorAll("#rows img");' +
                        'for(var n=0;n<i.length;n++) if(i[n].naturalWidth>0) return true;' +
                        'return false;})()', 'a loaded poster');
+      });
+    })
+
+    .then(function () {
+      return step('artwork is looked up once per title, and only for what is on screen', function () {
+        let first;
+        return backToLibrary()
+          .then(function () { return press('ArrowUp', 8); })
+          .then(function () { return page.waitForTimeout(1200); })
+          .then(function () {
+            if (!artLookups.length) throw new Error('no artwork was looked up at all');
+            /* Four rows of twelve tiles is the whole pool; anything near the
+               library's size would mean the deferred rows were fetched too. */
+            if (artLookups.length > 60) {
+              throw new Error(artLookups.length + ' lookups for one screen of tiles');
+            }
+          })
+          /* Walk the row to its end once, so every tile in it has been drawn,
+             then walk it again: the second pass must cost nothing. */
+          .then(function () { return press('ArrowRight', 8); })
+          .then(function () { return page.waitForTimeout(1200); })
+          .then(function () { first = artLookups.length; })
+          .then(function () { return press('ArrowLeft', 8); })
+          .then(function () { return page.waitForTimeout(600); })
+          .then(function () { return press('ArrowRight', 8); })
+          .then(function () { return page.waitForTimeout(1200); })
+          .then(function () {
+            if (artLookups.length !== first) {
+              throw new Error('walking the row again cost ' + (artLookups.length - first) +
+                              ' more lookups');
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('the tile and the hero are two different pictures', function () {
+        /* The whole point of the feature: Plex has one wide image per item, so
+           the hero used to be the tile blown up. Both come from TMDB now, and
+           they have to be the same title and a different backdrop. */
+        return searchFor(titles.manyShots.title)
+          .then(function () { return page.waitForTimeout(900); })
+          .then(pictures)
+          .then(function (st) {
+            if (!st.tile.shot) throw new Error('the tile is not a TMDB picture: ' + st.tile.url);
+            if (!st.hero.shot) throw new Error('the hero is not a TMDB picture: ' + st.hero.url);
+            if (st.tile.shot.title !== st.hero.shot.title) {
+              throw new Error('the hero is title ' + st.hero.shot.title +
+                              ' while the tile is ' + st.tile.shot.title);
+            }
+            if (st.tile.shot.n === st.hero.shot.n) {
+              throw new Error('the hero and the tile are the same backdrop');
+            }
+            if (!st.tile.painted) throw new Error('the tile drew nothing');
+          })
+          .then(function () { return shot('artwork'); })
+          .then(function () { return press('Backspace'); });
+      });
+    })
+
+    .then(function () {
+      return step('one backdrop still fills both the tile and the hero', function () {
+        /* TMDB has only the one picture for this title, so there is no second
+           backdrop for the tile — it must fall back to Plex rather than go blank
+           or borrow the hero's. */
+        return searchFor(titles.oneShot.title)
+          .then(function () { return page.waitForTimeout(900); })
+          .then(pictures)
+          .then(function (st) {
+            if (!st.hero.shot) throw new Error('the hero is not a TMDB picture: ' + st.hero.url);
+            if (st.tile.shot) throw new Error('the tile took TMDB art there was none of');
+            if (st.tile.url.indexOf('/photo/:/transcode') < 0) {
+              throw new Error('the tile did not fall back to Plex: ' + st.tile.url);
+            }
+            if (!st.tile.painted) throw new Error('the tile drew nothing');
+          })
+          .then(function () { return press('Backspace'); });
       });
     })
 
@@ -692,50 +811,72 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('the hero art is the focused item, not the one before it', function () {
+      return step('the hero art follows focus, and comes back', function () {
         /* Resting on a title, moving on, and coming back used to leave the
            previous backdrop on screen: the art was painted from Meta's
-           callback, and Meta skips an item whose payload it already holds. */
-        function keys() {
+           callback, and Meta skips an item whose payload it already holds.
+
+           The hero and the focused tile are deliberately different pictures now
+           — the two steps above are what check that — so what is checked here is
+           that the backdrop belongs to whatever is under focus: it moves when
+           focus moves, and comes back unchanged when focus comes back. */
+        function state() {
           return page.evaluate(function () {
-            function key(u) {
-              var m = String(u).match(/metadata%2F(\d+)%2F(art|thumb)/);
-              return m ? m[1] : '?';
-            }
-            var tile = document.querySelector('#rows .row.on .tile.on img');
-            return { hero: key(document.getElementById('hero-art').style.backgroundImage),
-                     focused: key(tile && tile.src),
+            return { hero: document.getElementById('hero-art').style.backgroundImage,
                      title: document.getElementById('mh-title').textContent.trim() };
           });
         }
         function settle() { return page.waitForTimeout(900); }
+        var atA;
         return backToLibrary()
           .then(function () { return press('ArrowUp', 8); })      // to the first row
           .then(settle)
           .then(function () { return press('ArrowRight'); })       // rest on A
           .then(settle)
+          .then(state)
+          .then(function (st) {
+            if (!st.hero) throw new Error('no backdrop on "' + st.title + '"');
+            atA = st;
+          })
           .then(function () { return press('ArrowRight'); })       // rest on B
           .then(settle)
+          .then(state)
+          .then(function (st) {
+            if (st.hero === atA.hero) {
+              throw new Error('the backdrop did not move from "' + atA.title +
+                              '" to "' + st.title + '"');
+            }
+          })
           .then(function () { return press('ArrowLeft'); })        // back to A, now cached
           .then(settle)
-          .then(keys)
+          .then(state)
           .then(function (st) {
-            if (st.focused === '?') throw new Error('no artwork on the focused tile to compare');
-            if (st.hero !== st.focused) {
-              throw new Error('hero shows ' + st.hero + ' while "' + st.title +
-                              '" (' + st.focused + ') is focused');
+            if (st.hero !== atA.hero) {
+              throw new Error('back on "' + st.title + '" the backdrop is not the one it had');
             }
           })
           /* And it must survive a fast sweep, where every item but the last is
              passed over before its request could have finished. */
           .then(function () { return press('ArrowRight', 12); })
           .then(settle)
-          .then(keys)
-          .then(function (st) {
-            if (st.hero !== st.focused) {
-              throw new Error('after a fast sweep the hero shows ' + st.hero +
-                              ' while ' + st.focused + ' is focused');
+          .then(state)
+          .then(function (swept) {
+            if (swept.hero === atA.hero) {
+              throw new Error('after a fast sweep the backdrop is still the one from "' +
+                              atA.title + '"');
             }
+            /* Stepping off and back on has to land on the same picture, which is
+               what says the backdrop belongs to the item and not to the sweep. */
+            return press('ArrowLeft')
+              .then(settle)
+              .then(function () { return press('ArrowRight'); })
+              .then(settle)
+              .then(state)
+              .then(function (st) {
+                if (st.hero !== swept.hero) {
+                  throw new Error('"' + st.title + '" has a different backdrop the second time');
+                }
+              });
           });
       });
     })
@@ -813,17 +954,20 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('discovery says what it needs rather than failing quietly', function () {
-        /* No TMDB key in the harness, so this is the path a first run takes.
-           It has to name the setting, not just refuse. */
+      return step('discovery turns a curated list into rows of what we hold', function () {
+        /* The mock answers TMDB's list endpoints with ids the fake servers
+           really have, so this walks the whole path: a small external list, a
+           guid lookup per title, and a row of the ones that came back. */
         return backToLibrary()
           .then(function () { return sidebarPick('Discovery'); })
           .then(function () {
-            return waitFor('!document.getElementById("message").classList.contains("hidden") &&' +
-                           ' /TMDB/.test(document.getElementById("message-title").textContent) &&' +
-                           ' /config\\.js/.test(document.getElementById("message-body").textContent)',
-                           'the TMDB key message');
+            return waitFor('(function(){var r=document.querySelectorAll("#rows .row:not(.hidden)");' +
+                           'for(var i=0;i<r.length;i++){' +
+                           'if(/Trending this week/.test(r[i].textContent) &&' +
+                           ' r[i].querySelectorAll(".tile:not(.hidden)").length) return true;}' +
+                           'return false;})()', 'a trending row with something in it', 20000);
           })
+          .then(function () { return shot('discovery'); })
           .then(function () { return press('Backspace'); });
       });
     })
