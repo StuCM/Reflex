@@ -136,11 +136,11 @@ html, body {
 
 #browse.dense #mh-title {
   position: absolute; top: 144px; left: 96px; width: 760px;
-  margin-top: 0; font-size: 46px; font-weight: 500; letter-spacing: -0.02em;
+  margin-top: 0;
 }
 #browse.dense #mh-meta {
-  position: absolute; top: 214px; left: 96px; width: 760px;
-  margin-top: 0; font-size: 25px; font-weight: 400;
+  position: absolute; top: 258px; left: 96px; width: 760px;
+  margin-top: 0;
   white-space: nowrap; overflow: hidden;
 }
 /* The second column: to the right of the title rather than under it, so the
