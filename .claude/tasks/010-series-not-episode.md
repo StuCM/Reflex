@@ -1,7 +1,7 @@
 ---
 id: 010
 slug: series-not-episode
-status: approved
+status: building
 branch: crew/010-series-not-episode
 model: sonnet
 env: laptop
