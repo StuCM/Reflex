@@ -1,7 +1,7 @@
 ---
 id: 007
 slug: one-movies-section
-status: approved
+status: blocked
 branch: crew/007-one-movies-section
 model: sonnet
 env: laptop
@@ -191,6 +191,90 @@ Workers must not go digging for more.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `js/browse.js` — libraries group by `sec.type` into `Movies` then `TV Shows`,
+  other types dropped; a `Continue watching` cut (`watchingType`, `showWatching`)
+  filtering a kept copy of the unfiltered deck; `openSidebar` passes that state.
+- `js/sidebar.js` — a `Continue watching` entry above the sections with `Movies`
+  and `TV Shows` under it, expanding on the same `expanded` machinery at index
+  `-1`; the per-section `Continue watching` category is no longer listed.
+- `dev/smoke.js` — `Films` → `Movies` at the call sites; three new steps (the
+  sidebar's shape, the All row spanning every movie library, the two cuts);
+  `sidebarWalkTo` split out and taught to disambiguate a nested entry from a
+  top-level one of the same name.
+
+Gate: `npm run verify` 38/38, `scope-check … main` in scope. (`scope-check`
+defaults to `origin/main`, which is stale in this checkout — pass `main`.)
+
 ## Review rounds
 
+### Round 1 — BLOCKED
+
+1. *(fixed here)* Opening the sidebar while resting on the Continue watching row
+   opened the **section** instead: `secs[i].current` is true at the same time and
+   was applied second. The watching entry now wins, and a smoke step covers it.
+   Fixing it exposed a second thing worth knowing: `Movies` and `TV Shows` now
+   name both a section and a cut, so the smoke helper had to be taught which one
+   it meant. A user has the indent to tell them apart; a `querySelector` did not.
+2. *(the blocker — needs a human)* **`js/merge.js` drops a second copy from the
+   same server, so the Goal's "both copies on its detail page" cannot hold for
+   two libraries on one server.** `Merge.combine` returns early on
+   `primary._server === item._server`, by design: until now a server contributed
+   one part per section, so that only ever fired on an accidental duplicate. With
+   every movie library folded into one section, a film held in both
+   `Movies - 4K UHD` and `Movies - LQ` on the *same* server now loses one copy
+   outright rather than gaining a `_source` — and which copy survives is
+   whichever the walk saw first. That is the case the app exists for: the survivor
+   may be the 4K TrueHD remux the guard then refuses, with the playable LQ copy
+   invisible. The spec puts `js/merge.js` out of scope and says to stop and say
+   so, so this stops here.
+
+   The fix is small and belongs in `js/merge.js`: make a copy's identity in
+   `combine` the server **and** the library part it came from (its section key, or
+   just its `ratingKey`) rather than the server alone. `test/merge.test.js` would
+   need the case, and `dev/library.js` would need Main's `4K Films` to hold
+   distinct copies rather than the same objects as `Films` — as it stands the
+   mock cannot tell "deduplicated" from "thrown away", which is why the smoke
+   suite is green either way.
+
+   Two ways forward, both a human's call: fold `js/merge.js`, `test/merge.test.js`
+   and `dev/library.js` into this task's `files:`, or accept one copy per server
+   per film for now and relax that clause of the Definition of done.
+
+Everything else in the spec is implemented and green. The work is on
+`crew/007-one-movies-section` in two commits; nothing is pushed.
+
+## Notes on the spec
+
+- **Graph context, bullet 2 is wrong.** "The same film in a 4K library and an LQ
+  library is one entry with two `_sources`, exactly as the same film on two
+  servers already is" — it is not, per the blocker above. Everything else in that
+  section held.
+- `js/app.js:193` still says "Browse merges them by title". It merges them by
+  type now. The file is not in `files:`, so the comment is left stale.
+
 ## Graph writes proposed
+
+- **Decision — a section is a *kind of thing*, not a library.** `Browse.setSections`
+  groups by `sec.type`, titles the groups `Movies` and `TV Shows`, and drops
+  `artist` and `photo` outright. What a server calls a library never reaches the
+  screen. Rationale: the merge already takes N parts, so folding six libraries
+  into two sections costs nothing at the paging layer, and the menu was the thing
+  actually suffering.
+- **Decision — Continue watching is per account, so it is a top-level entry.**
+  It is still row 0 of whichever section is showing, but the sidebar lists it
+  once, above the sections, with `Movies`/`TV Shows` cuts under it. `onDeck`
+  returns both kinds for the whole account, so one entry per section was the same
+  row listed twice.
+- **Pattern — `Merge.combine` deduplicates by *server*, not by copy.** Two parts
+  from one server (two libraries) collapse to one copy with no `_source`, by
+  design and with a comment saying so. Anything that widens what a section spans
+  has to check that assumption first: this task walked into it.
+- **Pattern — a "current" flag on two entries at once needs an order, not both.**
+  The sidebar marks the section current whenever the Continue watching row is
+  current, so whichever assignment ran last decided where the menu opened. The
+  more specific one has to run second.
+- **Gotcha — `scope-check.js` defaults to `origin/main`.** In a fresh worktree
+  that ref can be many commits behind local `main`, and every file touched since
+  is reported as scope creep. Pass `main` explicitly.
