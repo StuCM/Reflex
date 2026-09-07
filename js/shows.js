@@ -9,6 +9,8 @@
 var Shows = (function () {
   'use strict';
 
+  var entries = {};              // '<server>:<showKey>' -> Promise<entry|null>
+
   /* Seasons of a merged show entry, in order.
      Each returned season carries its own per-server copies, which is what the
      episode fetch then walks. */
@@ -39,6 +41,32 @@ var Shows = (function () {
     });
   }
 
+  /* The series an episode belongs to, merged across every server that has it,
+     or null if it cannot be resolved. Cached per show, because pressing OK on
+     three episodes of one show must cost one resolution. */
+  function entryFor(episode) {
+    if (!episode || !episode.grandparentRatingKey) return Promise.resolve(null);
+    var key = episode._server + ':' + episode.grandparentRatingKey;
+    if (!entries[key]) entries[key] = resolve(episode);
+    return entries[key];
+  }
+
+  function resolve(episode) {
+    return Meta.load({ ratingKey: episode.grandparentRatingKey,
+                       _server: episode._server }).then(function (md) {
+      if (!md) return null;
+      /* Up to the show and out from there: episodes rarely carry ids of their
+         own, but the show does, so its ids are what the other servers are asked
+         for. Its own server's copy leads the fold, so a show only one server
+         has is simply a one-source entry and the page is happy with that. */
+      return Promise.all(Servers.all().map(function (sv) {
+        return Plex.allVersions(sv, md);
+      })).then(function (perServer) {
+        return Merge.lists([[md]].concat(perServer))[0];
+      });
+    }).catch(function () { return null; });
+  }
+
   /* "4 series · 38 episodes", or as much of it as the server told us. */
   function summary(entry) {
     var bits = [];
@@ -65,5 +93,6 @@ var Shows = (function () {
     return 0;
   }
 
-  return { seasons: seasons, episodes: episodes, summary: summary, openAt: openAt };
+  return { seasons: seasons, episodes: episodes, entryFor: entryFor,
+           summary: summary, openAt: openAt };
 })();

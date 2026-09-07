@@ -17,21 +17,43 @@
   function toBrowse() { UI.show('browse'); Browse.render(); }
   function toShow() { UI.show('show'); }
 
-  /* A film opens its detail page; a show opens its series and episodes, and an
-     episode chosen there opens the same detail page a film would. */
+  /* A film opens its detail page; a show and an episode both open the series
+     page, and an episode chosen there opens the same detail page a film would. */
   function openItem(item) {
     if (!item) return;
-    if (item.type === 'show') {
-      ShowPage.open(item, {
-        onExit: toBrowse,
-        onPlay: function (episode, verdict) {
-          playChecked(episode, verdict, false, undefined, toShow);
-        },
-        onChoose: function (episode) { openDetail(episode, toShow); }
-      });
-      return;
-    }
+    if (item.type === 'show') { openShow(item); return; }
+    if (item.type === 'episode') { openEpisode(item); return; }
     openDetail(item, toBrowse);
+  }
+
+  function openShow(entry, at) {
+    ShowPage.open(entry, {
+      at: at,
+      onExit: toBrowse,
+      onPlay: function (episode, verdict) {
+        playChecked(episode, verdict, false, undefined, toShow);
+      },
+      onChoose: function (episode) { openDetail(episode, toShow); }
+    });
+  }
+
+  /* An episode is never a dead end: it opens its series at that episode, so the
+     next one is one keypress away. Resolving the series takes a request or two,
+     hence the toast — and if it cannot be resolved, its own page is better than
+     nothing happening. */
+  function openEpisode(item) {
+    UI.toast('Opening ' + (item.grandparentTitle || 'series') + '…');
+    Shows.entryFor(item).then(function (entry) {
+      if (!entry) {
+        UI.debug('no series for ' + (item.grandparentTitle || item.ratingKey));
+        openDetail(item, toBrowse);
+        return;
+      }
+      openShow(entry, { season: item.parentIndex, episode: item.index });
+    }, function (e) {
+      UI.debug('series: ' + e.message);
+      openDetail(item, toBrowse);
+    });
   }
 
   function openDetail(item, back) {
