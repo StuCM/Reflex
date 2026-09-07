@@ -118,7 +118,11 @@ var Merge = (function () {
   /* Only the fields the rail and the masthead actually draw. A merged All row
      keeps everything you have scrolled past, so a 30,000 film walk holds
      30,000 of these — whole Plex items would be several times the size. The
-     detail page re-fetches anyway. */
+     detail page re-fetches anyway.
+
+     Guid is the one costly field: a short array of { id } on every entry. It
+     stays because without it a film walked into the All row has no TMDB id, so
+     it gets neither a backdrop of its own nor a place in the merge by identity. */
   function slim(item) {
     var media = (item.Media && item.Media[0]) || null;
     var out = {
@@ -130,8 +134,10 @@ var Merge = (function () {
       duration: item.duration,
       contentRating: item.contentRating,
       thumb: item.thumb,
+      art: item.art,
       summary: item.summary,
       guid: item.guid,
+      Guid: item.Guid,
       viewOffset: item.viewOffset,
       lastViewedAt: item.lastViewedAt
     };
