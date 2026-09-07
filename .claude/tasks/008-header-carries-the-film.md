@@ -1,7 +1,7 @@
 ---
 id: 008
 slug: header-carries-the-film
-status: draft
+status: approved
 branch: crew/008-header-carries-the-film
 model: sonnet
 env: laptop
@@ -46,11 +46,14 @@ we do not own — which is exactly what `42f5ef9` removed.
 because task 007 has not committed yet — it asks git, and an empty branch
 carries nothing to find.
 
-**The board says otherwise, and the board wins here.** Task 007 is in flight
-and claims `js/browse.js` and `dev/smoke.js`, both of which this task also
-needs. **008 must not be dispatched until 007 is merged and its branch is
-gone.** Re-run the collision check then, against 007's landed commits, before
-handing this over.
+**Cleared.** Task 007 merged as `f08f0c8`, its branch is deleted, no worktrees
+remain, and the collision check was re-run against its landed commits and
+printed nothing. `js/browse.js` and `dev/smoke.js` are free.
+
+007 changed both of them, so read them as they now are: `setSections` groups by
+`type`, `js/browse.js` carries a `watchingType` cut of the Continue watching
+row, and `dev/smoke.js` is at 39 steps. `js/merge.js` also gained `copyKey` and
+a `_part` stamp — do not disturb either.
 
 Already on `main` and not to be redone here: the two lines under a tile and
 `Media.railTitle`/`railSub` (`a206671`), the tile radius (`10a1e89`), and the
@@ -95,10 +98,9 @@ Workers must not go digging for more.
 ## Constraints that bite here
 - **No CSS Grid, no `position: sticky`, no object spread, no `Object.entries`,
   no `async`/`await`.** `npm run check` scans for these.
-- **`js/browse.js` is shared with task 007**, which is in flight and may merge
-  first. Touch only `render()`'s `dense` toggle in that file. If a merge
-  conflict looks likely anywhere else in it, stop and say so rather than
-  reshaping the file.
+- **`js/browse.js` is freshly rewritten by task 007.** Touch only `render()`'s
+  `dense` toggle. Its section grouping and the `watchingType` cut of the
+  Continue watching row are days-old and load-bearing; leave them alone.
 - **Comments**: one concise line on an exported function.
 - **Commits**: `type(scope): summary`, lowercase, imperative, ≤72 chars, no
   full stop, no attribution footers. The hook enforces it.
