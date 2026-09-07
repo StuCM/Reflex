@@ -37,11 +37,28 @@ poster is never a backdrop, and Plex hands an episode its show's poster as
 `grandparentThumb` for free, with no lookup of any kind.
 
 ## Existing work
-<!-- filled in by preflight before dispatch. NOTE: task 008 was in flight when
-     this spec was written and reshapes js/art.js, js/rail.js, css/app.css and
-     dev/smoke.js. Re-run the collision check after 008 merges, and read those
-     four files as 008 leaves them — the Approach names functions and
-     constants, not line numbers, for exactly that reason. -->
+**Cleared.** Task 008 merged as `4a244f0`, its branch and worktree are gone, no
+other task is in flight, and the collision check was re-run against its landed
+commits and printed nothing.
+
+This spec was written while 008 was still building, so read these four files as
+008 actually left them rather than as this spec imagines them:
+
+- `js/rail.js` now has `VIEWPORT_H = 816` with `ROWS_FIT`, `ROWS_VISIBLE` and
+  `BIG_DROP` already derived from it. Change `TILE_W`, `TILE_H` and `ROW_H` and
+  the rest recomputes — that is the whole point, do not re-derive by hand.
+- `js/art.js` caches `{hero, tile, facts}` per tmdbId from a single
+  `/movie/{id}?append_to_response=images,credits` call. The `images` block in
+  that cached payload already contains `posters`; this task reads them.
+- `css/app.css` has the 264px two-column header and `#viewport` at
+  `top: 264px; height: 816px`.
+- `dev/smoke.js` is at 40 steps, and its artwork-lookup counter now matches
+  `/__tmdb/movie/<id>?` — 008 had to fix it when the endpoint moved, so check
+  it still matches if you touch the mock's routes.
+
+Also landed since: `crew/bin/scope-check.js` now bases on the merge base rather
+than `origin/main`, so `node .claude/crew/bin/scope-check.js <task>` needs no
+base argument.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
