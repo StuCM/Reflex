@@ -10,7 +10,12 @@
 <div id="browse" class="view">
   <!-- The backdrop of whatever is focused, and two flat scrims over it so the
        title reads on the left and the tiles read along the bottom. -->
-  <div id="hero-art"></div>
+  <!-- Two layers, so a new backdrop fades over the old one rather than cutting.
+       The wrapper carries the dense dimming; the layers carry the fade. -->
+  <div id="hero-art">
+    <div id="hero-art-a" class="hero-layer"></div>
+    <div id="hero-art-b" class="hero-layer"></div>
+  </div>
   <div id="hero-scrim-x"></div>
   <div id="hero-scrim-y"></div>
   <div id="masthead">

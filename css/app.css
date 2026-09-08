@@ -1,20 +1,27 @@
 /* Chromium 53. Flexbox / inline-block only, no grid, no sticky, no gap.
    Transitions on transform and opacity only.
 
-   Palette 5a, ink & citron. Every colour in this file comes from here; the
-   gradients spell --bg out as rgba() because a gradient stop needs a real
-   colour with an alpha channel, and color-mix() is Chrome 111. */
+   Mantis: violet on a bluer ground, with amber second. Every colour in this
+   file comes from here; the gradients and the translucent panels spell --bg out
+   as rgba() because a stop needs a real colour with an alpha channel, and
+   color-mix() is Chrome 111.
+
+   One set of timings, so a row change and a strip slide read as one motion. */
 
 :root {
-  --bg:      #0c0f16;
-  --surface: #141a26;
-  --raised:  #171b24;
-  --ac:      #cfe06a;
-  --ac2:     #d8794f;
+  --bg:      #161826;
+  --surface: #1f2233;
+  --raised:  #252839;
+  --ac:      #a79ce3;
+  --ac2:     #e5a06d;
   --fg:      #eef0f2;
   --dim:     rgba(238, 240, 242, .44);
   --dim2:    rgba(238, 240, 242, .26);
   --soft:    rgba(238, 240, 242, .07);
+
+  --t-quick: 180ms;   /* a tile lifting, a strip sliding */
+  --t-move:  340ms;   /* a row change, the hero collapsing */
+  --ease:    cubic-bezier(.2, .7, .2, 1);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -46,32 +53,43 @@ html, body {
    the tiles do. Gradients, never a blur — blurring a full-screen image on a
    2018 SoC costs a frame we do not have. */
 
+/* Two stacked layers, so a new backdrop crossfades in rather than cutting. The
+   wrapper carries the dense opacity and the layers carry the fade, so the two
+   never fight over the one property. */
 #hero-art {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+}
+
+.hero-layer {
   position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
   background-position: center top; background-size: cover;
   background-repeat: no-repeat;
+  opacity: 0;
+  -webkit-transition: opacity var(--t-move) var(--ease);
+  transition: opacity var(--t-move) var(--ease);
 }
+.hero-layer.on { opacity: 1; }
 
 #hero-scrim-x {
   position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
-  background-image: -webkit-linear-gradient(left, var(--bg) 0%, rgba(12, 15, 22, .74) 30%, rgba(12, 15, 22, 0) 72%);
-  background-image: linear-gradient(to right, var(--bg) 0%, rgba(12, 15, 22, .74) 30%, rgba(12, 15, 22, 0) 72%);
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, rgba(22, 24, 38, .74) 30%, rgba(22, 24, 38, 0) 72%);
+  background-image: linear-gradient(to right, var(--bg) 0%, rgba(22, 24, 38, .74) 30%, rgba(22, 24, 38, 0) 72%);
 }
 
 #hero-scrim-y {
   position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
   /* Solid only as far up as the rail reaches — the row label sits at y=681,
      which is 37% of the way up. Above that the picture is the point. */
-  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 37%, rgba(12, 15, 22, 0) 66%);
-  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 37%, rgba(12, 15, 22, 0) 66%);
+  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 37%, rgba(22, 24, 38, 0) 66%);
+  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 37%, rgba(22, 24, 38, 0) 66%);
 }
 
 /* The backdrop follows the focus into the rows rather than being thrown away
    there — it is what says which film the header is describing. Dimmed under
    the tiles, and on opacity so the swap costs no layout. */
 #hero-art, #hero-scrim-x, #hero-scrim-y {
-  -webkit-transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
-  transition: opacity 340ms cubic-bezier(.2, .7, .2, 1);
+  -webkit-transition: opacity var(--t-move) var(--ease);
+  transition: opacity var(--t-move) var(--ease);
 }
 #browse.dense #hero-art,
 #browse.dense #hero-scrim-x,
@@ -177,16 +195,16 @@ html, body {
      cannot reach. */
   overflow: hidden;
   -webkit-transform: translateX(-520px); transform: translateX(-520px);
-  -webkit-transition: -webkit-transform 180ms ease-out;
-  transition: transform 180ms ease-out;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
   will-change: transform;
 }
 #sidebar.open { -webkit-transform: translateX(0); transform: translateX(0); }
 
 #sidebar-list {
   position: relative;           /* the offset parent reveal() measures against */
-  -webkit-transition: -webkit-transform 180ms ease-out;
-  transition: transform 180ms ease-out;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
   will-change: transform;
 }
 
@@ -216,8 +234,8 @@ html, body {
 
 #rows {
   position: absolute; top: 0; left: 0; width: 100%;
-  -webkit-transition: -webkit-transform 340ms cubic-bezier(.2, .7, .2, 1);
-  transition: transform 340ms cubic-bezier(.2, .7, .2, 1);
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease);
   will-change: transform;
 }
 
@@ -230,10 +248,13 @@ html, body {
 }
 .row.on .row-label { color: var(--ac); }
 
+/* --t-move, not --t-quick: winding a strip is the same gesture as changing row,
+   and the two used to disagree, which is what read as jarring when they
+   happened at once. */
 .strip {
   position: absolute; top: 44px; left: 96px; width: 100%; height: 362px;
-  -webkit-transition: -webkit-transform 180ms ease-out;
-  transition: transform 180ms ease-out;
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease);
   will-change: transform;
 }
 
@@ -252,8 +273,8 @@ html, body {
   border-radius: 16px;
   overflow: hidden;
   -webkit-transform-origin: 50% 50%; transform-origin: 50% 50%;
-  -webkit-transition: -webkit-transform 180ms ease-out;
-  transition: transform 180ms ease-out;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
 }
 /* Focus is a citron ring and a lift. A border colour swap costs a repaint of
    the border box; a box-shadow transition would repaint the lot. */
@@ -303,9 +324,11 @@ html, body {
   border-radius: 4px; font-size: 20px; letter-spacing: 0.04em;
   background: var(--surface); color: var(--dim);
 }
-.badge.good { background: #17402a; color: #7fe0a8; }
-.badge.warn { background: #4a3410; color: #f0c070; }
-.badge.bad  { background: #4a1414; color: #ff8f8f; }
+/* The only literals outside :root and the gradients: re-picked against the
+   lighter, bluer ground so good / caution / refused still read apart. */
+.badge.good { background: #1d4432; color: #86e2b0; }
+.badge.warn { background: #4d3721; color: #f0c081; }
+.badge.bad  { background: #4d2029; color: #ff9aa5; }
 
 /* ---- show ----
    Series across the top, episodes down the left. Same flat-gradient treatment
@@ -319,8 +342,8 @@ html, body {
 
 #sh-shade {
   position: absolute; top: 0; left: 0; width: 1920px; height: 560px;
-  background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 44%, rgba(12, 15, 22, 0) 100%);
-  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 44%, rgba(12, 15, 22, 0) 100%);
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 44%, rgba(22, 24, 38, 0) 100%);
+  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 44%, rgba(22, 24, 38, 0) 100%);
 }
 
 #sh-head { position: absolute; top: 56px; left: 64px; width: 1000px; }
@@ -328,8 +351,8 @@ html, body {
 /* The page scrolls up as one to make room for the recaps strip below — see the
    recaps block further down. Transform only; nothing here changes height. */
 #sh-head, #sh-seasons, #sh-episodes {
-  -webkit-transition: -webkit-transform 180ms ease-out;
-  transition: transform 180ms ease-out;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
 }
 #sh-head.lifted, #sh-seasons.lifted, #sh-episodes.lifted {
   -webkit-transform: translateY(-240px); transform: translateY(-240px);
@@ -397,7 +420,7 @@ html, body {
   position: absolute; top: 786px; left: 64px; width: 1792px; height: 222px;
   white-space: nowrap; overflow: hidden;
   opacity: 0;
-  -webkit-transition: opacity 180ms linear; transition: opacity 180ms linear;
+  -webkit-transition: opacity var(--t-quick) var(--ease); transition: opacity var(--t-quick) var(--ease);
 }
 #sh-recaps.open { opacity: 1; }
 
@@ -411,8 +434,8 @@ html, body {
   white-space: normal;
   font-size: 20px; color: var(--dim);
   -webkit-transform-origin: 50% 50%; transform-origin: 50% 50%;
-  -webkit-transition: -webkit-transform 180ms ease-out;
-  transition: transform 180ms ease-out;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
 }
 .sh-recap.on {
   border-color: var(--ac); color: var(--fg);
@@ -471,8 +494,8 @@ html, body {
    costs a frame we do not have. */
 #dt-shade {
   position: absolute; top: 0; left: 0; width: 1920px; height: 620px;
-  background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 42%, rgba(12, 15, 22, 0) 100%);
-  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 42%, rgba(12, 15, 22, 0) 100%);
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 42%, rgba(22, 24, 38, 0) 100%);
+  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 42%, rgba(22, 24, 38, 0) 100%);
 }
 
 /* The rail's dense header, repeated: same 264px, same two columns, same art
@@ -600,7 +623,7 @@ html, body {
 
 #osd {
   position: absolute; left: 64px; bottom: 72px; width: 1792px;
-  -webkit-transition: opacity 180ms linear; transition: opacity 180ms linear;
+  -webkit-transition: opacity var(--t-quick) var(--ease); transition: opacity var(--t-quick) var(--ease);
 }
 #osd-title { font-size: 40px; font-weight: 300; }
 
@@ -664,7 +687,7 @@ html, body {
 #upnext {
   position: absolute; right: 96px; bottom: 300px; width: 860px;
   padding: 22px 26px; border-radius: 8px;
-  background: rgba(12, 15, 22, 0.94);
+  background: rgba(22, 24, 38, 0.94);
 }
 #un-still {
   display: inline-block; width: 320px; height: 180px; margin-right: 24px;
@@ -697,7 +720,7 @@ html, body {
 #menu {
   position: absolute; left: 64px; bottom: 288px; width: 1180px;
   padding: 22px 26px 18px; border-radius: 8px;
-  background: rgba(12, 15, 22, 0.94);
+  background: rgba(22, 24, 38, 0.94);
 }
 
 .menu-tab {
@@ -710,8 +733,8 @@ html, body {
 
 #menu-list { height: 392px; overflow: hidden; margin-top: 18px; }
 #menu-inner {
-  -webkit-transition: -webkit-transform 140ms ease-out;
-  transition: transform 140ms ease-out;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
 }
 
 .menu-row {

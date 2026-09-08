@@ -13,7 +13,11 @@ var Masthead = (function () {
   var elMeta = document.getElementById('mh-meta');
   var elDesc = document.getElementById('mh-desc');
   var elCast = document.getElementById('mh-cast');
-  var elArt = document.getElementById('hero-art');
+  /* The backdrop is two stacked layers; the one carrying .on is the one you see,
+     and a new picture is written into the other and faded up over it. */
+  var artLayers = [document.getElementById('hero-art-a'),
+                   document.getElementById('hero-art-b')];
+  var shown = 0;
   var HOLD = 280;                // ms of stillness before asking for a backdrop
   var artTimer = null, artWant = null, lastArt = '';
 
@@ -30,7 +34,20 @@ var Masthead = (function () {
     var url = Art.hero(artWant);
     if (!url || url === lastArt) return;
     lastArt = url;
-    elArt.style.backgroundImage = 'url("' + url + '")';
+
+    /* Swap only once the picture is decoded, or the fade reveals an empty box.
+       A broken URL swaps anyway, so it cannot leave the old one up for ever;
+       a swap the next backdrop has already overtaken is dropped. */
+    var next = artLayers[shown ? 0 : 1];
+    var pre = new Image();
+    pre.onload = pre.onerror = function () {
+      if (lastArt !== url) return;
+      next.style.backgroundImage = 'url("' + url + '")';
+      artLayers[shown].classList.remove('on');
+      next.classList.add('on');
+      shown = shown ? 0 : 1;
+    };
+    pre.src = url;
   }
 
   /* A backdrop that lands after the debounce fired belongs on screen only if

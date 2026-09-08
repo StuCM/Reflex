@@ -545,7 +545,8 @@ function drive(page, titles) {
         return m ? { kind: m[1], title: m[2], n: m[3] } : null;
       }
       var img = document.querySelector('#rows .row.on .tile.on img');
-      var hero = document.getElementById('hero-art').style.backgroundImage;
+      var lit = document.querySelector('#hero-art .hero-layer.on');
+      var hero = lit ? lit.style.backgroundImage : '';
       return {
         tile: { url: (img && img.src) || '', shot: shotOf(img && img.src),
                 painted: !!(img && img.naturalWidth > 0) },
@@ -1727,6 +1728,23 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('the Mantis palette is what the stylesheet is serving', function () {
+        /* Cheap, and it catches a half-applied swap: the accent is the one
+           colour every focused thing on every screen is drawn in. */
+        return page.evaluate(function () {
+          var css = getComputedStyle(document.documentElement);
+          return { ac: css.getPropertyValue('--ac').trim(),
+                   bg: css.getPropertyValue('--bg').trim(),
+                   move: css.getPropertyValue('--t-move').trim() };
+        }).then(function (st) {
+          if (st.ac !== '#a79ce3') throw new Error('--ac is ' + st.ac + ', not the violet');
+          if (st.bg !== '#161826') throw new Error('--bg is ' + st.bg + ', not the Mantis ground');
+          if (st.move !== '340ms') throw new Error('--t-move is ' + st.move);
+        });
+      });
+    })
+
+    .then(function () {
       return step('the hero art follows focus, and comes back', function () {
         /* Resting on a title, moving on, and coming back used to leave the
            previous backdrop on screen: the art was painted from Meta's
@@ -1738,7 +1756,9 @@ function drive(page, titles) {
            focus moves, and comes back unchanged when focus comes back. */
         function state() {
           return page.evaluate(function () {
-            return { hero: document.getElementById('hero-art').style.backgroundImage,
+            var lit = document.querySelector('#hero-art .hero-layer.on');
+            return { hero: lit ? lit.style.backgroundImage : '',
+                     layers: document.querySelectorAll('#hero-art .hero-layer').length,
                      title: document.getElementById('mh-title').textContent.trim() };
           });
         }
@@ -1751,6 +1771,11 @@ function drive(page, titles) {
           .then(settle)
           .then(state)
           .then(function (st) {
+            /* Two layers, one lit: a crossfade needs both, and a stack of them
+               would mean every backdrop stayed in memory. */
+            if (st.layers !== 2) {
+              throw new Error(st.layers + ' hero layers, not 2');
+            }
             if (!st.hero) throw new Error('no backdrop on "' + st.title + '"');
             atA = st;
           })
