@@ -163,7 +163,7 @@ var Rail = (function () {
        in place and keep rowIdx 0, so a pool element holding row 0 went on
        showing the library's row 0 — right title over the wrong tiles. */
     var row = rows[r], reused = rowEl._row !== r || rowEl._rowRef !== row;
-    var i, idx, tile, item, focused, firstVisible, start;
+    var i, idx, tile, item, held, focused, firstVisible, start;
 
     rowEl._onScreen = onScreen;
     rowEl.classList.remove('hidden');
@@ -204,6 +204,10 @@ var Rail = (function () {
       }
       tile._idx = idx;
       item = Rows.itemAt(row, idx);
+      /* A slot in the pool is not an identity. Sweeping hands this element the
+         item its neighbour was showing, and keeping the picture then draws one
+         film's poster over another film's title until the settle catches up. */
+      held = !!item && item === tile._item;
       tile._filled = !!item;
       tile._item = item;
       if (!item) {
@@ -229,11 +233,13 @@ var Rail = (function () {
       }
       tile._deferred = false;
       /* The focused tile is the one being looked at and the one the hero is
-         about to draw, so it pays immediately. The rest keep whatever picture
-         they are holding until the movement settles — blanking a tile for
-         160ms looks far worse than showing the last one a moment too long. */
+         about to draw, so it pays immediately. The rest wait for the movement
+         to settle: one still holding the same item keeps its picture, and one
+         that has been handed a different film shows the surface colour rather
+         than the film it used to be. */
       tile._wait = !focused;
       if (focused) paint(tile);
+      else if (!held) tile._img.removeAttribute('src');
     }
   }
 

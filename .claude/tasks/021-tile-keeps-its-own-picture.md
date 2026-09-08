@@ -1,7 +1,7 @@
 ---
 id: 021
 slug: tile-keeps-its-own-picture
-status: building
+status: pending-tv
 branch: crew/021-tile-keeps-its-own-picture
 model: sonnet
 env: laptop
@@ -116,20 +116,77 @@ Workers must not go digging for more.
 - **The hero backdrop**, which has its own crossfade and is unaffected.
 
 ## Definition of done
-- [ ] Sweeping a row never shows a tile carrying a picture that belongs to a
+- [x] Sweeping a row never shows a tile carrying a picture that belongs to a
       different film from the title beneath it.
-- [ ] A tile that is only moving — same item — keeps its picture without a
+- [x] A tile that is only moving — same item — keeps its picture without a
       flicker or a reload.
-- [ ] A tile awaiting its picture shows the surface colour, not a blank gap or a
+- [x] A tile awaiting its picture shows the surface colour, not a blank gap or a
       broken image, and its title and second line are never deferred.
-- [ ] After the movement settles, every on-screen tile shows its own poster.
-- [ ] The sweep still makes far fewer requests than tiles passed — 015's step
+- [x] After the movement settles, every on-screen tile shows its own poster.
+- [x] The sweep still makes far fewer requests than tiles passed — 015's step
       still passes unchanged.
-- [ ] The new step fails on `main`, and the task file says so.
-- [ ] `npm run verify` passes.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] The new step fails on `main`, and the task file says so.
+- [x] `npm run verify` passes — 76/76, one more than main's 75.
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Review rounds
 
+**Round 1 — PASS.** The reviewer reverted `js/rail.js` to main itself and saw
+16/18 with both mid-move assertions failing, then 18/18 with the fix, and
+76/76 on `npm run verify`. No changes asked for.
+
+## What changed
+
+- `js/rail.js` — `drawRow` compares the item a tile is being handed with the
+  one it already holds; a tile handed a different film clears its `src` at once
+  instead of carrying the old poster until the settle.
+- `dev/smoke/browse.js` — `tileArt` hoisted out of the 015 step and installed in
+  the page, plus `sweepReadings`, which records a reading on every keypress; the
+  015 step's mid-move assertions inverted to the new behaviour; one new step,
+  "a tile carries no picture but its own while the row sweeps".
+
+## What the spec got wrong
+
+- **"015's step still passes unchanged" could not hold.** That step asserted
+  `stale >= 5` and *no* blanks mid-move — the two assertions that encode exactly
+  the behaviour this task removes. They were inverted (a waiting tile is now
+  blank, and stale is never allowed); the request-economy assertion it exists
+  for is untouched and still passes.
+- **The suite could not see mid-move at all.** A Playwright round trip is
+  slower than the 160ms settle, so 015's read landed after the rail had stopped:
+  on `main`, a step reading that way saw every tile fresh and would have passed
+  on the bug. Readings are now taken inside a keydown listener in the page,
+  registered after the app's so it runs after the render. Rects are no use
+  there either — the strip is mid-transition — so a tile's own transform says
+  where the app has just put it.
+- **The row matters.** Continue watching is short enough that the strip stops
+  winding (`start` clamps at `total - TILE_POOL`), and a strip that does not
+  wind never reassigns a tile. A sweep step that stays on row 0 passes on the
+  bug.
+
+## Left for the panel
+
+The laptop proves no tile shows another film's poster and that everything fills
+in when the rail stops. What only the B8 can say is how the sweep now *reads*:
+a horizontal sweep reassigns every tile in the strip, so most of the row is
+surface colour until 160ms after the last press.
+
 ## Graph writes proposed
+
+- **Pattern — a pooled renderer's slot is not an identity, third instance.**
+  After `rowEl._rowRef` and `_deferred`/`_wait`, the picture itself. The shape of
+  the fix is the same each time: compare what the element now holds against what
+  it held, never against where it sits. In `js/rail.js` that is one `held` flag
+  computed before `tile._item` is overwritten.
+- **Decision — a swept tile clears rather than keeps.** 015 chose the opposite
+  and it was right only while the tile still held the same film; across a
+  reassignment "keep the picture" means drawing film A over film B's title and
+  swapping 160ms later. Reference equality on the item is the whole test: a
+  filled tile whose `_idx` has not moved is never re-read, so the merge swapping
+  `idx.out[at]` for a preferred server's copy cannot cause a spurious clear.
+- **Gotcha — a smoke assertion about anything under the 160ms settle cannot be
+  read over a round trip.** Take it in the page, from a keydown listener
+  registered after the app's, and derive on-screen from the committed transforms
+  rather than from a rect the CSS transition has not caught up with. The version
+  that read over a round trip passed against the bug it was written for.
