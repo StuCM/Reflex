@@ -1,7 +1,7 @@
 ---
 id: 013
 slug: palette-and-motion
-status: approved
+status: building
 branch: crew/013-palette-and-motion
 model: sonnet
 env: laptop
