@@ -60,9 +60,12 @@ var Art = (function () {
     for (i = 0; i < billing.length && cast.length < CAST; i++) {
       if (billing[i] && billing[i].name) cast.push(billing[i].name);
     }
+    var score = (payload && typeof payload.vote_average === 'number') ? payload.vote_average : 0;
     return {
       overview: (payload && typeof payload.overview === 'string') ? payload.overview : '',
       runtime: (payload && typeof payload.runtime === 'number') ? payload.runtime : null,
+      /* Out of ten, one decimal. Zero is TMDB's "nobody has voted", not a score. */
+      rating: score ? Math.round(score * 10) / 10 : null,
       cast: cast
     };
   }

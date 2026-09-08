@@ -574,6 +574,37 @@ function drive(page, titles) {
       });
   }
 
+  /* The kicker, the chips and the ratings, read off whatever page is open.
+     Everything here is already fetched — what is tested is what the page says
+     and how it is labelled. */
+  function detailFace() {
+    return page.evaluate(function () {
+      function texts(sel) {
+        return Array.prototype.map.call(document.querySelectorAll(sel), function (e) {
+          return e.textContent.replace(/\s+/g, ' ').trim();
+        });
+      }
+      return {
+        kicker: document.getElementById('dt-kicker').textContent.trim(),
+        chips: texts('#dt-chips .dt-chip'),
+        ratings: texts('#dt-ratings .dt-rating'),
+        glyphs: document.querySelectorAll('#dt-ratings .dt-rating svg').length,
+        page: document.getElementById('detail').textContent
+      };
+    });
+  }
+
+  /* A part missing from the kicker takes its separator with it, so a blank
+     between two dots is a bug rather than a shorter kicker. */
+  function kickerParts(kicker) {
+    if (!kicker) return [];
+    const parts = kicker.split('·');
+    parts.forEach(function (p) {
+      if (!p.trim()) throw new Error('an empty part in the kicker: "' + kicker + '"');
+    });
+    return parts.map(function (p) { return p.trim(); });
+  }
+
   /* ---- a run of episodes ----
 
      Search finds shows as well as films, so a show with an unambiguous title is
@@ -910,6 +941,117 @@ function drive(page, titles) {
     })
 
     .then(function () {
+      return step('a film says what it is, in chips and a kicker with no gaps', function () {
+        return openTitle(titles.directPlays.title)
+          .then(function () {
+            /* The kicker's genre and director only exist once metadata lands. */
+            return waitFor('document.getElementById("dt-kicker").textContent.indexOf("·") > 0',
+                           'the kicker to fill in', 15000);
+          })
+          .then(detailFace)
+          .then(function (st) {
+            const parts = kickerParts(st.kicker);
+            if (parts[0] !== 'movie') {
+              throw new Error('the kicker does not lead with what it is: "' + st.kicker + '"');
+            }
+            if (parts.length !== 3) {
+              throw new Error('expected type, genre and director: "' + st.kicker + '"');
+            }
+            /* Certificate, year, run time and the quality of the copy that
+               would play — each present only if we have it. */
+            const chips = st.chips.join(' | ');
+            if (!st.chips.some(function (c) { return /^\d{4}$/.test(c); })) {
+              throw new Error('no year among the chips: ' + chips);
+            }
+            if (!st.chips.some(function (c) { return /^(\d+h )?\d+m$/.test(c); })) {
+              throw new Error('no runtime among the chips: ' + chips);
+            }
+            if (!st.chips.some(function (c) { return /^(4K|\d+p|SD)( HDR)?$/.test(c); })) {
+              throw new Error('no quality among the chips: ' + chips);
+            }
+            if (st.chips.some(function (c) { return !c; })) {
+              throw new Error('an empty chip: ' + chips);
+            }
+          })
+          .then(function () { return shot('detail-face'); })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('every score is labelled with the source it came from', function () {
+        return openTitle(titles.directPlays.title)
+          .then(function () {
+            return waitFor('document.querySelectorAll("#dt-ratings .dt-rating").length > 0',
+                           'the ratings row', 15000);
+          })
+          .then(detailFace)
+          .then(function (st) {
+            /* Plex gives critics and audience; TMDB gives its own. We have no
+               IMDb, so nothing may claim to be one. */
+            st.ratings.forEach(function (r) {
+              if (!/^\d+% Critics$|^\d+% Audience$|^[\d.]+ TMDB$/.test(r)) {
+                throw new Error('a score with no honest label: "' + r + '"');
+              }
+            });
+            if (st.glyphs !== st.ratings.length) {
+              throw new Error(st.glyphs + ' glyphs for ' + st.ratings.length + ' scores');
+            }
+            if (/IMDb/i.test(st.page)) {
+              throw new Error('a score labelled IMDb, which we never fetched');
+            }
+          })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('a cast member with no photograph shows initials', function () {
+        /* Every mock actor has a picture, so the fallback is only reached by
+           taking the pictures away — Plex.photoUrl is what castHtml asks. */
+        return page.evaluate(function () {
+          Plex._photoUrl = Plex.photoUrl;
+          Plex.photoUrl = function () { return ''; };
+        })
+          .then(function () { return openTitle(titles.directPlays.title); })
+          .then(function () {
+            return waitFor('document.querySelectorAll("#dt-cast .dt-actor").length > 0',
+                           'the cast row', 15000);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return {
+                blanks: Array.prototype.map.call(
+                  document.querySelectorAll('#dt-cast .dt-actor-blank'),
+                  function (b) { return b.textContent.trim(); }),
+                names: Array.prototype.map.call(
+                  document.querySelectorAll('#dt-cast .dt-actor-name'),
+                  function (n) { return n.textContent.trim(); }),
+                broken: document.querySelectorAll('#dt-cast img').length
+              };
+            });
+          })
+          .then(function (st) {
+            if (st.broken) throw new Error('an img with no picture behind it');
+            if (st.blanks.length !== st.names.length) {
+              throw new Error(st.blanks.length + ' discs for ' + st.names.length + ' actors');
+            }
+            st.blanks.forEach(function (letters, i) {
+              const want = st.names[i].split(/\s+/).slice(0, 2)
+                .map(function (w) { return w.charAt(0).toUpperCase(); }).join('');
+              if (letters !== want) {
+                throw new Error('"' + st.names[i] + '" is shown as "' + letters + '"');
+              }
+            });
+          })
+          .then(backToLibrary)
+          .then(function () {
+            return page.evaluate(function () { Plex.photoUrl = Plex._photoUrl; });
+          });
+      });
+    })
+
+    .then(function () {
       return step('the All row knows its size without crawling it', function () {
         return press('ArrowDown', 5)
           .then(function () {
@@ -1195,13 +1337,20 @@ function drive(page, titles) {
                            ' document.querySelectorAll(".dt-source").length > 0',
                            'the copy chooser for an episode', 20000);
           })
-          .then(function () {
-            return page.textContent('#dt-meta');
-          })
-          .then(function (meta) {
-            /* An episode has to say which show and which number it is. */
-            if (!/S\d+E\d+/.test(meta)) {
-              throw new Error('no season/episode in the detail meta: ' + meta);
+          .then(detailFace)
+          .then(function (st) {
+            /* An episode has to say which show and which number it is: the show
+               is the kicker, the number is a chip. */
+            const parts = kickerParts(st.kicker);
+            if (!parts.length) throw new Error('an episode with no kicker at all');
+            if (!st.chips.some(function (c) { return /^S\d+E\d+$/.test(c); })) {
+              throw new Error('no season/episode among the chips: ' + st.chips.join(' | '));
+            }
+            /* The mock's episodes carry no scores and TMDB is never asked about
+               one, so this is the "nothing to show" case: an empty row, not an
+               unlabelled glyph or a stray separator. */
+            if (st.ratings.length || st.glyphs) {
+              throw new Error('an episode with scores from nowhere: ' + st.ratings.join(' | '));
             }
           })
           .then(function () { return shot('episode-copies'); })
@@ -1645,10 +1794,11 @@ function drive(page, titles) {
                            ' document.querySelectorAll(".dt-source").length > 0',
                            'the copy chooser for the next episode', 20000);
           })
-          .then(function () { return page.textContent('#dt-meta'); })
-          .then(function (meta) {
-            const m = meta.match(/S(\d+)E(\d+)/);
-            if (!m) throw new Error('no season/episode in the detail meta: ' + meta);
+          .then(detailFace)
+          .then(function (st) {
+            const chips = st.chips.join(' | ');
+            const m = chips.match(/S(\d+)E(\d+)/);
+            if (!m) throw new Error('no season/episode among the chips: ' + chips);
             if (Number(m[2]) === ep.episode) {
               throw new Error('moving down stayed on episode ' + ep.episode);
             }
@@ -2155,10 +2305,11 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('extras are listed and are guarded like anything else', function () {
+      return step('extras are cards with a length, and are guarded like anything else',
+        function () {
         return openTitle(titles.directPlays.title)
           .then(function () {
-            return waitFor('(function(){var e=document.querySelectorAll("#dt-extras .dt-source");' +
+            return waitFor('(function(){var e=document.querySelectorAll("#dt-extras .dt-extra");' +
                            'if (!e.length) return false;' +
                            'return !/checking/.test(e[0].textContent);})()',
                            'an extra with a verdict', 15000);
@@ -2166,18 +2317,24 @@ function drive(page, titles) {
           .then(function () {
             return page.evaluate(function () {
               return Array.prototype.map.call(
-                document.querySelectorAll('#dt-extras .dt-source'),
-                function (e) { return e.textContent.replace(/\s+/g, ' '); });
+                document.querySelectorAll('#dt-extras .dt-extra'),
+                function (e) {
+                  const len = e.querySelector('.dt-extra-len');
+                  return { text: e.textContent.replace(/\s+/g, ' '),
+                           len: len ? len.textContent.trim() : '' };
+                });
             });
           })
-          .then(function (rows) {
-            if (!/Trailer/i.test(rows.join(' '))) {
-              throw new Error('no trailer listed: ' + rows.join(' | '));
-            }
+          .then(function (cards) {
+            const all = cards.map(function (c) { return c.text; }).join(' | ');
+            if (!/Trailer/i.test(all)) throw new Error('no trailer listed: ' + all);
             /* A clip is an ordinary part on the same server, so it goes through
                the same guard — it must carry a verdict, not be assumed safe. */
-            if (!/direct play|transcode|no passable/.test(rows[0])) {
-              throw new Error('extra has no verdict: ' + rows[0]);
+            if (!/direct play|transcode|no passable/.test(cards[0].text)) {
+              throw new Error('extra has no verdict: ' + cards[0].text);
+            }
+            if (!/^\d+ min$/.test(cards[0].len)) {
+              throw new Error('no length on the card: "' + cards[0].len + '"');
             }
           })
           .then(function () {
@@ -2188,8 +2345,7 @@ function drive(page, titles) {
           })
           .then(function (copies) { return press('ArrowDown', copies); })
           .then(function () {
-            return waitFor('(function(){var on=document.querySelector(".dt-source.on");' +
-                           'return on && on.parentNode.id === "dt-extras";})()',
+            return waitFor('!!document.querySelector("#dt-extras .dt-extra.on")',
                            'focus to reach the extras');
           })
           .then(function () { return page.keyboard.press('Enter'); })
