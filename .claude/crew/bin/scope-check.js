@@ -98,8 +98,13 @@ function parseFiles(text) {
 }
 
 // Declared entries may be exact paths or a trailing-* prefix.
+/* A declared path is one file, a prefix ending in `*`, or a directory ending in
+   `/` — which means everything under it. Without the last form a spec that says
+   `css/` or `dev/smoke/` matches nothing, and every file the task creates there
+   reads as scope creep. */
 function match(file, decl) {
   if (decl.slice(-1) === '*') return file.indexOf(decl.slice(0, -1)) === 0;
+  if (decl.slice(-1) === '/') return file.indexOf(decl) === 0;
   return file === decl;
 }
 
