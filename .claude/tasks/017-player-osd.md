@@ -11,7 +11,16 @@ files:
   - index.html
   - css/app.css
   - dev/smoke.js
+  - test/subs.test.js
+  - dev/library.js
 ---
+
+<!-- files: amended by the worker. Approach 4 asks for a unit test for a chapter
+     without a thumb and the tests for Media.chapters live in test/subs.test.js;
+     Approach 7 asks the rail to be checked both with a thumbnail and without,
+     and the mock generated chapters with neither. Nothing else in either file
+     was touched. -->
+
 
 # The player's controls, to the design
 

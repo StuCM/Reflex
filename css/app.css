@@ -588,13 +588,17 @@ html, body {
 }
 .dt-act.primary { width: 280px; }
 
-.dt-act-btn {
+/* The player's control row wears the same button, so the rules are written
+   once here and the two screens differ only in what marks them: the film page
+   has one focus, where the player separates the button you are on from the
+   panel that is open. */
+.dt-act-btn, .osd-btn {
   width: 88px; height: 88px; margin: 0 auto; border-radius: 44px;
   background: var(--surface); border: 3px solid transparent; color: var(--dim);
   -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
   transition: transform var(--t-quick) var(--ease);
 }
-.dt-act-btn svg { display: block; margin: 19px auto 0; }
+.dt-act-btn svg, .osd-btn svg { display: block; margin: 19px auto 0; }
 
 .dt-act.primary .dt-act-btn {
   width: 280px; background: var(--ac); color: var(--bg);
@@ -602,17 +606,20 @@ html, body {
   text-transform: uppercase;
 }
 
-.dt-act.on .dt-act-btn {
-  border-color: var(--ac); color: var(--fg);
+/* The violet ring. On the film page it follows the focus; in the player it is
+   reserved for whichever panel is open. */
+.dt-act.on .dt-act-btn, .osd-ctl.on .osd-btn { border-color: var(--ac); }
+.dt-act.on .dt-act-btn, .osd-ctl.foc .osd-btn {
+  color: var(--fg);
   -webkit-transform: scale(1.06); transform: scale(1.06);
 }
 .dt-act.primary.on .dt-act-btn { border-color: var(--fg); color: var(--bg); }
 
-.dt-act-cap {
+.dt-act-cap, .osd-cap {
   margin-top: 12px; height: 48px; overflow: hidden;
   font-size: 19px; line-height: 1.25; color: var(--dim2);
 }
-.dt-act.on .dt-act-cap { color: var(--fg); }
+.dt-act.on .dt-act-cap, .osd-ctl.foc .osd-cap { color: var(--fg); }
 
 /* The chooser, anchored under the button that opened it. Same .menu-* shell as
    the player's, so both screens read as one control. */
@@ -731,12 +738,17 @@ html, body {
   position: absolute; left: 64px; bottom: 72px; width: 1792px;
   -webkit-transition: opacity var(--t-quick) var(--ease); transition: opacity var(--t-quick) var(--ease);
 }
-#osd-title { font-size: 40px; font-weight: 300; }
+#osd-title { font-size: 40px; font-weight: 300; line-height: 48px; }
+/* BACK stops playback, and nothing else on this screen says so. */
+.osd-back { display: inline-block; width: 40px; color: var(--dim); }
 
-/* Position at a glance. Seeking blind is what made the player feel like it had
-   no controls at all. */
+/* Position at a glance, with the elapsed and the total either side of it.
+   Seeking blind is what made the player feel like it had no controls at all. */
+#osd-track { display: -webkit-flex; display: flex;
+             -webkit-align-items: center; align-items: center;
+             height: 40px; margin-top: 18px; }
 #osd-bar {
-  position: relative; height: 10px; margin-top: 18px; width: 1792px;
+  position: relative; height: 10px; width: 1300px;
   background: var(--raised); border-radius: 5px;
 }
 #osd-buffered {
@@ -751,7 +763,7 @@ html, body {
 /* Chapters as ticks, intro and credits as bands — where you can jump to, and
    what is worth jumping over. Drawn once when the duration is known. */
 #osd-ticks {
-  position: absolute; top: 0; left: 0; height: 10px; width: 1792px;
+  position: absolute; top: 0; left: 0; height: 10px; width: 1300px;
   /* A file whose chapters run past what the element reports as its duration
      would otherwise scatter ticks across the picture. */
   overflow: hidden;
@@ -771,16 +783,71 @@ html, body {
   background: #fff; border-radius: 3px;
 }
 
-#osd-time { font-size: 28px; color: var(--dim); margin-top: 10px; }
-#osd-tracks { font-size: 22px; color: var(--dim2); margin-top: 6px; }
-#osd-hint { font-size: 20px; color: var(--dim2); margin-top: 8px; }
+/* Wide enough for a three-part clock and the SEEKING marker beside it: the
+   elapsed wrapping onto a second line pushes the bar off centre. */
+#osd-time { width: 260px; font-size: 28px; color: var(--dim); white-space: nowrap; }
+#osd-total {
+  width: 232px; font-size: 28px; color: var(--dim);
+  text-align: right; white-space: nowrap;
+}
+
+/* Transport left, choices right. Nothing here moves on a timeupdate — the row
+   is redrawn when something about it changes, never per frame. */
+#osd-controls {
+  display: -webkit-flex; display: flex;
+  -webkit-justify-content: space-between; justify-content: space-between;
+  height: 148px; margin-top: 22px;
+}
+#osd-left, #osd-right { white-space: nowrap; }
+.osd-ctl {
+  display: inline-block; vertical-align: top; width: 152px;
+  text-align: center; white-space: normal;
+}
+
+#osd-hint { font-size: 20px; color: var(--dim2); margin-top: 10px; }
+
+/* ---- the chapter rail ----
+
+   Cards in the rail's own language — the same 16px corner and violet ring — so
+   a chapter reads as somewhere to go rather than another list. A chapter Plex
+   indexed no image for keeps the card and loses only the picture. */
+#osd-chapters {
+  position: absolute; left: 64px; bottom: 390px; width: 1792px; height: 170px;
+  overflow: hidden;
+}
+#osd-chapters-inner {
+  white-space: nowrap;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+.osd-chap {
+  display: inline-block; vertical-align: top; width: 240px; margin-right: 20px;
+  white-space: normal;
+}
+.osd-chap-shot {
+  position: relative; width: 240px; height: 135px; border-radius: 16px;
+  background: var(--surface) no-repeat center; border: 3px solid transparent;
+  -webkit-background-size: cover; background-size: cover;
+}
+.osd-chap.on .osd-chap-shot { border-color: var(--ac); }
+.osd-chap-time {
+  position: absolute; right: 8px; bottom: 8px;
+  padding: 2px 8px; border-radius: 6px;
+  background: rgba(22, 24, 38, .78);
+  font-size: 16px; line-height: 22px; color: var(--fg);
+}
+.osd-chap-title {
+  margin-top: 6px; font-size: 18px; line-height: 1.2; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.osd-chap.on .osd-chap-title { color: var(--fg); }
 
 /* ---- skip intro ----
 
    The server already knows where the intro is; this is the offer, and OK is
    the whole interaction. */
 #osd-skip {
-  position: absolute; right: 96px; bottom: 300px;
+  position: absolute; right: 96px; bottom: 420px;
   padding: 18px 34px; border-radius: 6px;
   background: var(--ac); color: var(--bg);
   font-size: 30px; letter-spacing: 0.02em;
@@ -791,7 +858,7 @@ html, body {
    The offer an ended episode leaves on screen. It takes the skip prompt's slot,
    which is free by then, and sits clear of the subtitle band below it. */
 #upnext {
-  position: absolute; right: 96px; bottom: 300px; width: 860px;
+  position: absolute; right: 96px; bottom: 420px; width: 860px;
   padding: 22px 26px; border-radius: 8px;
   background: rgba(22, 24, 38, 0.94);
 }
@@ -819,15 +886,21 @@ html, body {
   font-size: 42px; line-height: 1.3; color: #fff;
   text-shadow: 0 2px 6px #000, 0 0 14px #000;
 }
-#subtitle.lifted { bottom: 320px; }
+/* Clear of the control row, which is the tallest thing the OSD has ever been.
+   A line of dialogue behind a button is the one thing this screen must not do. */
+#subtitle.lifted { bottom: 400px; }
 
 /* ---- the in-player menu ---- */
 
+/* One section at a time, over the button that opened it — left is set by
+   js/player.js, as it is on the film page. Both this and the chapter rail sit
+   on the same shelf, clear of the trackbar and the title below them. */
 #menu {
-  position: absolute; left: 64px; bottom: 288px; width: 1180px;
+  position: absolute; left: 64px; bottom: 330px; width: 860px;
   padding: 22px 26px 18px; border-radius: 8px;
   background: rgba(22, 24, 38, 0.94);
 }
+#menu .menu-list { height: auto; max-height: 392px; }
 
 .menu-tab {
   display: inline-block; margin-right: 40px; padding-bottom: 6px;

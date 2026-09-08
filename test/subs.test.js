@@ -148,7 +148,8 @@ var film = {
   duration: 7200000,
   Marker: [{ type: 'intro', startTimeOffset: 30000, endTimeOffset: 90000 },
            { type: 'credits', startTimeOffset: 7000000, endTimeOffset: 7200000 }],
-  Chapter: [{ index: 2, tag: 'Two', startTimeOffset: 600000, endTimeOffset: 1200000 },
+  Chapter: [{ index: 2, tag: 'Two', startTimeOffset: 600000, endTimeOffset: 1200000,
+              thumb: '/library/metadata/1/chapterImages/2' },
             { index: 1, tag: 'One', startTimeOffset: 0, endTimeOffset: 600000 }]
 };
 
@@ -163,6 +164,10 @@ assert.strictEqual(chapters.length, 2);
 assert.strictEqual(chapters[0].title, 'One', 'in time order, whatever order they arrived in');
 assert.strictEqual(chapters[0].start, 0);
 assert.strictEqual(chapters[1].start, 600);
+/* A card is drawn for every chapter, so one without a thumbnail has to say so
+   rather than leaving the field undefined and a broken image behind it. */
+assert.strictEqual(chapters[0].thumb, null, 'a chapter Plex indexed no image for');
+assert.strictEqual(chapters[1].thumb, '/library/metadata/1/chapterImages/2');
 assert.strictEqual(Media.chapters(null).length, 0);
 
 /* ---------- quality ----------

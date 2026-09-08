@@ -377,15 +377,63 @@ function drive(page, titles) {
     });
   }
 
-  /* The menu opens on Audio; the tabs are reached with left and right, which is
-     all the remote is guaranteed to have. */
-  function openMenu(tabIndex) {
-    return press('ArrowUp')
+  /* ---- the player's control row ----
+
+     Four round buttons on the right, each captioned with what is chosen now.
+     Up takes the focus into the row, left and right walk it, up again opens the
+     panel belonging to the button underneath. */
+
+  /* Every control in order: its id (empty on the three transport buttons), its
+     caption, which one has the focus and which one's panel is open. */
+  function controlRow() {
+    return page.evaluate(function () {
+      const ids = [], caps = [];
+      let foc = -1, open = null;
+      Array.prototype.forEach.call(
+        document.querySelectorAll('#osd-controls .osd-ctl'),
+        function (c, i) {
+          ids.push(c.id);
+          caps.push(c.querySelector('.osd-cap').textContent.trim());
+          if (c.classList.contains('foc')) foc = i;
+          if (c.classList.contains('on')) open = c.id;
+        });
+      return { ids: ids, caps: caps, foc: foc, open: open };
+    });
+  }
+
+  /* Walk the focus onto a named button from wherever the row happens to be, so
+     a step never has to know what the one before it left focused. */
+  function focusControl(id) {
+    return controlRow()
+      /* A panel that is up owns the d-pad, so it has to go before the row can
+         be walked at all. */
+      .then(function (row) { return row.open ? press('Backspace').then(controlRow) : row; })
+      .then(function (row) { return row.foc >= 0 ? row : press('ArrowUp').then(controlRow); })
+      .then(function (row) {
+        const want = row.ids.indexOf('osd-ctl-' + id);
+        if (want < 0) throw new Error('no control called ' + id + ': ' + row.ids.join(', '));
+        const by = want - row.foc;
+        return press(by > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(by));
+      });
+  }
+
+  function openMenu(id) {
+    return focusControl(id)
+      .then(function () { return press('ArrowUp'); })
       .then(function () {
         return waitFor('!document.getElementById("menu").classList.contains("hidden")',
-                       'the player menu');
-      })
-      .then(function () { return press('ArrowRight', tabIndex || 0); });
+                       'the ' + id + ' panel');
+      });
+  }
+
+  /* Chapters is the one that is a rail rather than a list. */
+  function openChapters() {
+    return focusControl('chapters')
+      .then(function () { return press('ArrowUp'); })
+      .then(function () {
+        return waitFor('!document.getElementById("osd-chapters").classList.contains("hidden")',
+                       'the chapter rail');
+      });
   }
 
   /* ---- the sidebar ----
@@ -2646,12 +2694,26 @@ function drive(page, titles) {
 
     .then(function () {
       if (!hasFixture()) return;
-      return step('the menu offers audio, subtitles, quality and chapters', function () {
-        return openMenu(0)
-          .then(menuTabs)
-          .then(function (tabs) {
-            if (tabs.join(',') !== 'Audio*,Subtitles,Quality,Chapters') {
-              throw new Error('tabs are: ' + tabs.join(', '));
+      return step('four captioned buttons, each opening its own panel', function () {
+        return press('ArrowUp')                                    // into the row
+          .then(controlRow)
+          .then(function (row) {
+            const named = row.ids.filter(Boolean).join(',');
+            if (named !== 'osd-ctl-audio,osd-ctl-subs,osd-ctl-quality,osd-ctl-chapters') {
+              throw new Error('the control row is: ' + row.ids.join(', '));
+            }
+            /* A caption names what is chosen now, so none of the four may be
+               blank — that is the whole reason the tabs went. */
+            const blank = row.caps.slice(row.caps.length - 4)
+              .filter(function (c) { return c === ''; });
+            if (blank.length) throw new Error('captions: ' + row.caps.join(' | '));
+          })
+          .then(function () { return openMenu('audio'); })
+          .then(controlRow)
+          .then(function (row) {
+            /* The violet ring means "this is the panel that is open". */
+            if (row.open !== 'osd-ctl-audio') {
+              throw new Error('the open button is not ringed: ' + row.open);
             }
           })
           .then(menuLabels)
@@ -2664,7 +2726,7 @@ function drive(page, titles) {
               throw new Error('audio rows: ' + labels.join(' | '));
             }
           })
-          .then(function () { return press('ArrowRight'); })          // subtitles
+          .then(function () { return openMenu('subs'); })
           .then(menuLabels)
           .then(function (labels) {
             if (!/Off/.test(labels[0])) throw new Error('subtitle rows: ' + labels.join(' | '));
@@ -2673,22 +2735,94 @@ function drive(page, titles) {
             const image = labels.filter(function (l) { return /image/.test(l); });
             if (!image.length) throw new Error('the PGS track is not named as an image track');
           })
-          .then(function () { return press('ArrowRight'); })          // quality
+          .then(function () { return openMenu('quality'); })
           .then(menuLabels)
           .then(function (labels) {
             if (!/Original/.test(labels[0])) throw new Error('quality rows: ' + labels.join(' | '));
             if (labels.length < 2) throw new Error('no bitrate caps offered');
-          })
-          .then(function () { return press('ArrowRight'); })          // chapters
-          .then(menuLabels)
-          .then(function (labels) {
-            if (labels.length < 9) throw new Error('chapter rows: ' + labels.join(' | '));
+            /* There is no adaptive ladder behind any of these: Original is the
+               file as it stands and a cap is a fixed ceiling. A row claiming to
+               follow the connection would be a lie the user cannot check. */
+            if (/auto|follows the connection/i.test(labels.join(' '))) {
+              throw new Error('a quality row claims to follow the connection: ' +
+                              labels.join(' | '));
+            }
+            /* And each one says what it costs before OK is pressed. */
+            if (!/\[direct play\]/.test(labels[0]) ||
+                !/\[transcode · /.test(labels[1])) {
+              throw new Error('quality rows do not say what they cost: ' + labels.join(' | '));
+            }
           })
           .then(function () { return shot('player-menu'); })
-          .then(function () { return press('Backspace'); })           // close the menu
+          .then(function () { return press('Backspace'); })           // close the panel
           .then(function () {
             return waitFor('document.getElementById("menu").classList.contains("hidden")',
-                           'the menu to close');
+                           'the panel to close');
+          });
+      });
+    })
+
+    /* Chapters is a rail of cards rather than a list: where a chapter has a
+       still it is on the card, and where it has not the card is the same size
+       with nothing broken in it. */
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('chapters open as a rail, and OK on a card seeks there', function () {
+        var was;
+        return openChapters()
+          .then(function () {
+            return page.evaluate(function () {
+              return Array.prototype.map.call(
+                document.querySelectorAll('#osd-chapters .osd-chap'),
+                function (c) {
+                  const shot = c.querySelector('.osd-chap-shot');
+                  return { h: shot.offsetHeight, w: shot.offsetWidth,
+                           art: shot.style.backgroundImage !== '',
+                           imgs: c.querySelectorAll('img').length,
+                           time: c.querySelector('.osd-chap-time').textContent.trim(),
+                           title: c.querySelector('.osd-chap-title').textContent.trim(),
+                           on: c.classList.contains('on') };
+                });
+            });
+          })
+          .then(function (cards) {
+            if (cards.length < 8) throw new Error('only ' + cards.length + ' chapter cards');
+            const sizes = cards.filter(function (c) { return c.h !== cards[0].h || c.w !== cards[0].w; });
+            if (sizes.length) throw new Error('the cards are not all one size');
+            /* No <img> anywhere: a card with no thumbnail must not leave a
+               broken one behind, and a background is how that is guaranteed. */
+            if (cards.filter(function (c) { return c.imgs; }).length) {
+              throw new Error('a chapter card uses an img, which breaks without a thumb');
+            }
+            if (!cards.filter(function (c) { return c.art; }).length) {
+              throw new Error('no chapter card drew the thumbnail the mock supplies');
+            }
+            if (!cards.filter(function (c) { return !c.art; }).length) {
+              throw new Error('no chapter without a thumbnail to check');
+            }
+            if (!cards[0].time || !cards[0].title) throw new Error('a card is missing its text');
+            if (cards.filter(function (c) { return c.on; }).length !== 1) {
+              throw new Error('the chapter holding the playhead is not the ringed one');
+            }
+            return shot('player-chapters');
+          })
+          .then(function () {
+            return page.evaluate(function () { return document.getElementById('video').currentTime; });
+          })
+          /* Two along, then OK: the seek is aimed at that chapter's start. */
+          .then(function (t) { was = t; return press('ArrowRight', 2); })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('/SEEKING/.test(document.getElementById("osd-time").textContent)',
+                           'the OSD to show the chapter jump aiming');
+          })
+          .then(function () {
+            return waitFor('document.getElementById("osd-chapters").classList.contains("hidden")',
+                           'the rail to close once a chapter is taken');
+          })
+          .then(function () {
+            if (!(was >= 0)) throw new Error('playback had no position to seek from');
           });
       });
     })
@@ -2696,11 +2830,28 @@ function drive(page, titles) {
     .then(function () {
       if (!hasFixture()) return;
       return step('subtitles are fetched as text and drawn over the video', function () {
-        return openMenu(1)
+        return openMenu('subs')
           .then(function () { return menuChoose(/French/); })
           .then(function () {
             return waitFor('/français/.test(document.getElementById("subtitle").textContent)',
                            'the French subtitle track to be drawn over the video', 15000);
+          })
+          /* And clear of the controls: a line of dialogue behind a button is
+             the one thing this screen must not do. */
+          .then(function () {
+            return page.evaluate(function () {
+              const sub = document.getElementById('subtitle').getBoundingClientRect();
+              const osd = document.getElementById('osd').getBoundingClientRect();
+              return [sub.bottom, osd.top,
+                      document.getElementById('subtitle').classList.contains('lifted')];
+            });
+          })
+          .then(function (at) {
+            if (!at[2]) throw new Error('the subtitle was not lifted while the OSD was up');
+            if (at[0] > at[1]) {
+              throw new Error('the subtitle runs into the controls: bottom ' + at[0] +
+                              ' against an OSD starting at ' + at[1]);
+            }
           })
           .then(function () { return shot('subtitles'); });
       });
@@ -2734,7 +2885,7 @@ function drive(page, titles) {
         })
           .then(function () {
             const before = trace.length;
-            return openMenu(0)
+            return openMenu('audio')
               .then(menuLabels)
               .then(function (labels) {
                 /* No row may warn about a restart now — the panel owns them. */
@@ -2745,8 +2896,9 @@ function drive(page, titles) {
               })
               .then(function () { return menuChoose(/French · AAC/); })
               .then(function () {
-                return waitFor('/French/.test(document.getElementById("osd-tracks").textContent)',
-                               'the OSD to name the new track', 10000);
+                return waitFor('/French/.test(document.querySelector(' +
+                               '"#osd-ctl-audio .osd-cap").textContent)',
+                               'the audio button to name the new track', 10000);
               })
               .then(function () {
                 return page.evaluate(function () {
@@ -2794,7 +2946,7 @@ function drive(page, titles) {
            is asserted is everything up to the bytes — the verdict changed, and
            the converted URL is what was played. */
         const before = trace.length;
-        return openMenu(0)
+        return openMenu('audio')
           .then(menuLabels)
           .then(function (labels) {
             /* With no panel list, the menu has to warn that this one restarts. */
@@ -2886,6 +3038,21 @@ function drive(page, titles) {
           if (n[0] < 7) throw new Error('only ' + n[0] + ' chapter ticks on the bar');
           if (n[1] < 2) throw new Error('the intro and credits are not marked on the bar');
         })
+        /* The elapsed and the total sit either side of the bar, not under it. */
+        .then(function () {
+          return page.evaluate(function () {
+            function box(id) { return document.getElementById(id).getBoundingClientRect(); }
+            return [box('osd-time').right, box('osd-bar').left, box('osd-bar').right,
+                    box('osd-total').left,
+                    document.getElementById('osd-total').textContent.trim()];
+          });
+        })
+        .then(function (at) {
+          if (!(at[0] <= at[1] && at[2] <= at[3])) {
+            throw new Error('the times are not either side of the bar: ' + at.join(', '));
+          }
+          if (!/^\d+:\d\d/.test(at[4])) throw new Error('no total run time: ' + at[4]);
+        })
         /* 0 is the safe digit to prove the jump with: the fixture is thirty
            seconds and the film says two hours, so anything else aims past the
            end of what the harness can serve. */
@@ -2902,7 +3069,7 @@ function drive(page, titles) {
       if (!hasFixture()) return;
       return step('the OSD follows playback, and Back stops it', function () {
         var at;
-        return waitFor('document.getElementById("osd-time").textContent.indexOf("0:00 /") !== 0',
+        return waitFor('document.getElementById("osd-time").textContent.trim().indexOf("0:00") !== 0',
                        'the OSD clock to move off zero', 15000)
           .then(function () { return page.evaluate(function () { return document.getElementById('video').currentTime; }); })
           .then(function (t) {

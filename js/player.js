@@ -21,14 +21,18 @@ var Player = (function () {
 
   var v = document.getElementById('video');
   var osd = document.getElementById('osd');
-  var osdTitle = document.getElementById('osd-title');
+  var osdTitle = document.getElementById('osd-name');
   var osdTime = document.getElementById('osd-time');
+  var osdTotal = document.getElementById('osd-total');
   var osdFill = document.getElementById('osd-fill');
   var osdBuffered = document.getElementById('osd-buffered');
   var osdTicks = document.getElementById('osd-ticks');
   var osdKnob = document.getElementById('osd-knob');
-  var osdTracks = document.getElementById('osd-tracks');
+  var osdLeft = document.getElementById('osd-left');
+  var osdRight = document.getElementById('osd-right');
   var osdHint = document.getElementById('osd-hint');
+  var chapEl = document.getElementById('osd-chapters');
+  var chapInner = document.getElementById('osd-chapters-inner');
   var skipEl = document.getElementById('osd-skip');
   var nextEl = document.getElementById('upnext');
   var nextStillEl = document.getElementById('un-still');
@@ -38,7 +42,9 @@ var Player = (function () {
   var subEl = document.getElementById('subtitle');
   var menuEl = document.getElementById('menu');
 
-  var BAR_W = 1792;                // #osd-bar, in CSS pixels
+  var BAR_W = 1300;                // #osd-bar, in CSS pixels
+  var CARD_W = 260;                // .osd-chap plus its margin
+  var CARDS_SHOWN = 6;
   var SEEK_SETTLE = 400;           // ms of stillness before a seek is applied
   var NUDGE = 30;                  // left / right, seconds
   var JUMP = 300;                  // rewind / fast forward, seconds
@@ -67,6 +73,11 @@ var Player = (function () {
 
   /* The skip prompt. The menu is js/menu.js and keeps its own state. */
   var marker = null;
+
+  /* The control row: which button has the focus (-1 for none, which is when the
+     arrows still mean seeking), which panel is open under it, and where the
+     chapter rail is. */
+  var ctl = -1, openPanel = null, chapSel = 0;
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -99,9 +110,9 @@ var Player = (function () {
     var at = target(), dur = duration();
     var left = dur ? Math.max(0, dur - at) : 0;
 
-    osdTime.textContent = fmt(at) + ' / ' + fmt(dur) +
-      (dur ? '   ·   ' + fmt(left) + ' left' : '') +
+    osdTime.textContent = fmt(at) +
       (pending !== null ? '   SEEKING' : (v.paused ? '   PAUSED' : ''));
+    osdTotal.textContent = fmt(dur) + (dur ? '   ·   ' + fmt(left) + ' left' : '');
 
     var x = dur ? Math.round(BAR_W * Math.min(at, dur) / dur) : 0;
     osdFill.style.width = x + 'px';
@@ -150,7 +161,7 @@ var Player = (function () {
        so it stays until the seek lands. The menu keeps it up too — it sits
        above the bar and reads as one panel. */
     osdTimer = setTimeout(function () {
-      if (pending !== null || Menu.isOpen()) { showOsd(); return; }
+      if (pending !== null || Menu.isOpen() || openPanel || ctl >= 0) { showOsd(); return; }
       osd.style.opacity = '0';
       subEl.classList.remove('lifted');
     }, 4000);
@@ -159,9 +170,16 @@ var Player = (function () {
   function osdShowing() { return osd.style.opacity !== '0' && !osd.classList.contains('hidden'); }
 
   function hint() {
-    osdHint.textContent = Menu.isOpen()
-      ? '◀ ▶ section · ▲ ▼ choose · OK select · BACK close'
-      : '◀ ▶ ' + NUDGE + 's · ▲ ▼ menu · 0–9 jump · CH± chapter · OK pause';
+    if (openPanel === 'chapters') {
+      osdHint.textContent = '◀ ▶ chapter · OK jump there · BACK close';
+    } else if (Menu.isOpen()) {
+      osdHint.textContent = '▲ ▼ choose · OK select · BACK close';
+    } else if (ctl >= 0) {
+      osdHint.textContent = '◀ ▶ control · ▲ or OK open it · ▼ back to playback';
+    } else {
+      osdHint.textContent = '◀ ▶ ' + NUDGE + 's · ▲ ▼ controls · 0–9 jump · ' +
+                            'CH± chapter · OK pause';
+    }
   }
 
   /* ---------- choosing the audio track ----------
@@ -232,13 +250,13 @@ var Player = (function () {
   function applyChosenTrack() {
     if (!currentAudio || transcoding) return;
     var n = panelIndexOf(currentAudio);
-    if (n < 0) { paintTracks(); return; }
+    if (n < 0) { paintControls(); return; }
     var list = panelTracks();
     if (list[n] && list[n].enabled) return;          // already right, say nothing
     if (selectPanelTrack(n)) {
       UI.debug('audio set on the panel (track ' + n + '): ' + Media.audioLabel(currentAudio));
     }
-    paintTracks();
+    paintControls();
   }
 
   function chooseAudio(st) {
@@ -249,27 +267,104 @@ var Player = (function () {
          was not asked for anything. */
       currentAudio = st;
       UI.debug('audio switched on the panel (track ' + n + '): ' + Media.audioLabel(st));
-      paintTracks();
+      paintControls();
       showOsd();
       return;
     }
     switchTo({ audioId: st.id, forceStream: true }, Media.audioMenuLabel(st));
   }
 
-  /* Which audio the panel is actually carrying, and what else is on, named on
-     screen — the file usually has several tracks and until now nothing said
-     which one you had. */
-  function paintTracks() {
-    var bits = [];
-    var tracks = Media.audioTracks(currentPart);
-    bits.push('Audio: ' + Media.audioMenuLabel(currentAudio) +
-              (tracks.length > 1 ? ' (' + tracks.length + ')' : '') +
-              (audioIsOurs() ? '' : ' — panel’s choice'));
-    bits.push('Subtitles: ' + (currentSub ? Media.subLabel(currentSub) : 'off') +
-              (subNote ? ' — ' + subNote : ''));
-    bits.push('Quality: ' + (maxBitrate ? Media.bitrateLabel(maxBitrate) + ' converted'
-                                        : Media.versionLabel(currentMedia)));
-    osdTracks.textContent = bits.join('   ·   ');
+  /* ---------- the control row ----------
+
+     Transport on the left, the four things that can be changed on the right.
+     Each right-hand button is captioned with what is chosen NOW rather than
+     what is highlighted, because the caption is what you read before deciding
+     to open anything; the violet ring says which panel is open. */
+
+  /* Inlined, as everywhere else here: the app runs from file:// on the TV, so
+     there is no icon font to fetch. */
+  function glyph(inner) {
+    return '<svg width="46" height="46" viewBox="0 0 256 256" fill="none" ' +
+           'stroke="currentColor" stroke-width="16" stroke-linecap="round" ' +
+           'stroke-linejoin="round">' + inner + '</svg>';
+  }
+  var GLYPHS = {
+    rewind: glyph('<polygon points="124,64 124,192 40,128"/>' +
+                  '<polygon points="216,64 216,192 132,128"/>'),
+    forward: glyph('<polygon points="132,64 132,192 216,128"/>' +
+                   '<polygon points="40,64 40,192 124,128"/>'),
+    play: glyph('<polygon points="76,52 76,204 204,128"/>'),
+    pause: glyph('<line x1="96" y1="60" x2="96" y2="196"/>' +
+                 '<line x1="160" y1="60" x2="160" y2="196"/>'),
+    audio: glyph('<polygon points="36,100 92,100 148,48 148,208 92,156 36,156"/>' +
+                 '<path d="M188 92a52 52 0 0 1 0 72"/>'),
+    subs: glyph('<rect x="28" y="52" width="200" height="152" rx="18"/>' +
+                '<line x1="64" y1="124" x2="140" y2="124"/>' +
+                '<line x1="64" y1="164" x2="192" y2="164"/>'),
+    quality: glyph('<line x1="56" y1="196" x2="56" y2="140"/>' +
+                   '<line x1="128" y1="196" x2="128" y2="96"/>' +
+                   '<line x1="200" y1="196" x2="200" y2="52"/>'),
+    chapters: glyph('<rect x="28" y="60" width="200" height="136" rx="18"/>' +
+                    '<line x1="96" y1="60" x2="96" y2="196"/>' +
+                    '<line x1="160" y1="60" x2="160" y2="196"/>')
+  };
+
+  function audioCaption() {
+    return Media.audioMenuLabel(currentAudio) +
+           (audioIsOurs() ? '' : ' — panel’s choice');
+  }
+
+  function subCaption() {
+    return (currentSub ? Media.subLabel(currentSub) : 'off') +
+           (subNote ? ' — ' + subNote : '');
+  }
+
+  function qualityCaption() {
+    return maxBitrate ? Media.bitrateLabel(maxBitrate) + ' converted'
+                      : Media.versionLabel(currentMedia);
+  }
+
+  function chapterCaption() {
+    var here = chapterAt(Media.chapters(item), target());
+    return here ? here.title : 'none';
+  }
+
+  /* The three transport buttons, then the four choices. The order is the order
+     on screen, and the index into it is what the arrows move. */
+  function controls() {
+    return [
+      { glyph: GLYPHS.rewind, run: function () { seekBy(-JUMP); } },
+      { glyph: v.paused ? GLYPHS.play : GLYPHS.pause, run: togglePlay },
+      { glyph: GLYPHS.forward, run: function () { seekBy(JUMP); } },
+      { id: 'audio', glyph: GLYPHS.audio, caption: audioCaption() },
+      { id: 'subs', glyph: GLYPHS.subs, caption: subCaption() },
+      { id: 'quality', glyph: GLYPHS.quality, caption: qualityCaption() },
+      { id: 'chapters', glyph: GLYPHS.chapters, caption: chapterCaption() }
+    ];
+  }
+
+  function paintControls() {
+    var list = controls(), lh = '', rh = '', i, c, html;
+    for (i = 0; i < list.length; i++) {
+      c = list[i];
+      html = '<div class="osd-ctl' + (i === ctl ? ' foc' : '') +
+             (c.id && c.id === openPanel ? ' on' : '') + '"' +
+             (c.id ? ' id="osd-ctl-' + c.id + '"' : '') + '>' +
+             '<div class="osd-btn">' + c.glyph + '</div>' +
+             '<div class="osd-cap">' + UI.escapeHtml(c.caption || '') + '</div>' +
+             '</div>';
+      if (c.id) rh += html; else lh += html;
+    }
+    osdLeft.innerHTML = lh;
+    osdRight.innerHTML = rh;
+    hint();
+  }
+
+  function togglePlay() {
+    if (v.paused) v.play(); else v.pause();
+    report(v.paused ? 'paused' : 'playing');
+    paintControls();
+    showOsd();
   }
 
   /* ---------- seeking ---------- */
@@ -502,7 +597,7 @@ var Player = (function () {
     subEl.classList.add('hidden');
     currentSub = stream || null;
     wantedLang = stream ? String(stream.languageCode || '') : null;
-    if (!stream) { paintTracks(); return; }
+    if (!stream) { paintControls(); return; }
 
     if (!Media.isTextSub(stream)) {
       /* A picture of words can only reach the screen by being painted into the
@@ -511,24 +606,24 @@ var Player = (function () {
       currentSub = null;
       subNote = String(stream.codec || '').toUpperCase() +
                 ' is an image track — it would need the server to burn it in';
-      paintTracks();
+      paintControls();
       return;
     }
 
     subNote = 'loading…';
-    paintTracks();
+    paintControls();
     Plex.subtitles(server, stream).then(function (text) {
       if (token !== subToken) return;
       cues = Subs.parse(text);
       subNote = cues.length ? '' : 'the track came back empty';
       UI.debug('subtitles: ' + Media.subLabel(stream) + ' · ' + cues.length + ' cues');
-      paintTracks();
+      paintControls();
       paintSub();
     }, function (e) {
       if (token !== subToken) return;
       currentSub = null;
       subNote = 'could not be fetched (' + e.message.split(' -> ').pop() + ')';
-      paintTracks();
+      paintControls();
     });
   }
 
@@ -541,11 +636,11 @@ var Player = (function () {
     subEl.classList.toggle('hidden', text === '');
   }
 
-  /* ---------- the menu ----------
+  /* ---------- the panels ----------
 
-     Everything the stock app makes you leave playback for. Four sections, one
-     list, driven with four arrows and OK — which is all the remote reliably
-     has. */
+     Everything the stock app makes you leave playback for. One section per
+     button rather than one block of tabs, so what is on screen is what the
+     button you pressed is about. */
 
   function audioRows() {
     var tracks = Media.audioTracks(currentPart), out = [], i;
@@ -609,11 +704,22 @@ var Player = (function () {
     };
   }
 
+  /* What a row costs, said before OK rather than found out after it. There is
+     no "Auto" here on purpose: nothing in this app follows the connection —
+     Original is the file as it stands and every cap is a fixed ceiling the
+     server re-encodes to. */
+  function qualityNote(q) {
+    if (!q.bitrate) return forceStream ? 'the server muxes this one' : 'direct play';
+    if (Media.isUHD(currentMedia)) {
+      return 'a 4K transcode is what gets the stream killed — this will be refused';
+    }
+    return 'transcode · ' + Media.bitrateLabel(q.bitrate);
+  }
+
   function qualityRow(q) {
     return {
       label: q.label,
-      note: q.bitrate && Media.isUHD(currentMedia)
-        ? 'a 4K transcode is what gets the stream killed — this will be refused' : '',
+      note: qualityNote(q),
       on: (q.bitrate || null) === maxBitrate,
       value: function () {
         if ((q.bitrate || null) === maxBitrate) return;
@@ -622,46 +728,103 @@ var Player = (function () {
     };
   }
 
-  function chapterRows() {
-    var list = Media.chapters(item), i;
-    var out = [{ label: 'Play from the beginning', value: function () { seekTo(0); } }];
-    for (i = 0; i < list.length; i++) out.push(chapterRow(list[i]));
-    return out;
+  /* The chapter the playhead is in, or null. The rail rings it and the caption
+     names it, so both have to agree. */
+  function chapterAt(list, at) {
+    var i;
+    /* Backwards: a chapter Plex gave no end offset for would otherwise swallow
+       the whole film from its start onwards. */
+    for (i = list.length - 1; i >= 0; i--) {
+      if (at >= list[i].start && (!list[i].end || at < list[i].end)) return list[i];
+    }
+    return null;
   }
 
-  function chapterRow(c) {
-    return {
-      label: c.title, note: fmt(c.start),
-      on: target() >= c.start && (!c.end || target() < c.end),
-      value: function () { seekTo(c.start); }
-    };
-  }
+  /* Three of the four buttons open a list. A row's value is what choosing it
+     does — js/menu.js draws and walks, and knows nothing about any of it. The
+     builders are handed over rather than called, so the list is made when the
+     panel opens and reflects where playback has got to. */
+  var PANELS = {
+    audio: { label: 'Audio', rows: audioRows },
+    subs: { label: 'Subtitles', rows: subRows,
+            note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.' },
+    quality: { label: 'Quality', rows: qualityRows,
+               note: 'Anything but Original asks the server to re-encode.' }
+  };
 
-  /* The four sections. A row's value is what choosing it does — js/menu.js
-     draws and walks, and knows nothing about any of it. The builders are handed
-     over rather than called, so each list is made when its tab is reached and
-     the chapter you are in is the one marked. */
-  function menuTabs() {
-    return [
-      { label: 'Audio', rows: audioRows },
-      { label: 'Subtitles', rows: subRows,
-        note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.' },
-      { label: 'Quality', rows: qualityRows,
-        note: 'Anything but Original asks the server to re-encode.' },
-      { label: 'Chapters', rows: chapterRows }
-    ];
-  }
-
-  function openMenu(which) {
+  /* Open the panel belonging to one of the four right-hand buttons, anchored
+     over it and clamped so the last button does not push it off the screen. */
+  function openPanelFor(id) {
+    if (id === 'chapters') { openChapters(); return; }
+    openPanel = id;
+    paintControls();
+    var btn = document.getElementById('osd-ctl-' + id);
+    menuEl.style.left =
+      UI.clamp(64 + osdRight.offsetLeft + (btn ? btn.offsetLeft : 0), 64, 960) + 'px';
     Menu.open({
       host: menuEl,
-      tab: which || 0,
-      tabs: menuTabs(),
+      tabs: [PANELS[id]],
       onChoose: function (act) { act(); },
-      onClose: function () { hint(); showOsd(); }
+      onClose: function () { openPanel = null; paintControls(); showOsd(); }
     });
-    hint();
     showOsd();
+  }
+
+  /* ---------- the chapter rail ----------
+
+     Cards rather than a list, because a still and a timecode say more about
+     where you are going than "Chapter 7" does. Plex carries a thumbnail for
+     some chapters and not others, so the picture is the only thing a card can
+     lose — never its size. */
+
+  function openChapters() {
+    var list = Media.chapters(item);
+    if (!list.length) { UI.toast('This file has no chapters'); return; }
+    openPanel = 'chapters';
+    chapSel = Math.max(0, list.indexOf(chapterAt(list, target())));
+    paintChapters();
+    chapEl.classList.remove('hidden');
+    paintControls();
+    showOsd();
+  }
+
+  function closeChapters() {
+    openPanel = null;
+    chapEl.classList.add('hidden');
+    paintControls();
+    showOsd();
+  }
+
+  function paintChapters() {
+    var list = Media.chapters(item), html = '', i, c, shot;
+    for (i = 0; i < list.length; i++) {
+      c = list[i];
+      shot = c.thumb ? Plex.photoUrl(server, c.thumb, 240, 135) : '';
+      html += '<div class="osd-chap' + (i === chapSel ? ' on' : '') + '">' +
+              '<div class="osd-chap-shot"' +
+              (shot ? ' style="background-image: url(\'' + shot + '\')"' : '') + '>' +
+              '<div class="osd-chap-time">' + UI.escapeHtml(fmt(c.start)) + '</div>' +
+              '</div>' +
+              '<div class="osd-chap-title">' + UI.escapeHtml(c.title) + '</div>' +
+              '</div>';
+    }
+    chapInner.innerHTML = html;
+    var first = UI.clamp(chapSel - 2, 0, Math.max(0, list.length - CARDS_SHOWN));
+    chapInner.style.webkitTransform = chapInner.style.transform =
+      'translateX(' + (-first * CARD_W) + 'px)';
+  }
+
+  function chapterKey(code) {
+    var list = Media.chapters(item);
+    if (code === 37) { chapSel = (chapSel + list.length - 1) % list.length; paintChapters(); return true; }
+    if (code === 39) { chapSel = (chapSel + 1) % list.length; paintChapters(); return true; }
+    if (code === 13 || code === 415 || code === 19) {
+      seekTo(list[chapSel].start);
+      closeChapters();
+      return true;
+    }
+    if (code === 40 || UI.isBack(code) || code === 413) { closeChapters(); return true; }
+    return true;                       // the rail swallows everything else
   }
 
   /* Another version, a quality cap, and an audio track the panel will not
@@ -678,7 +841,9 @@ var Player = (function () {
     /* Carried so a later switch does not silently drop back to a direct play
        and lose the track the user chose. */
     if (change.forceStream === undefined) change.forceStream = forceStream;
-    osdTracks.textContent = 'Switching to ' + what + '…';
+    /* On the hint line rather than in a caption: a caption names what IS
+       chosen, and this has not happened yet. play() writes the hint back. */
+    osdHint.textContent = 'Switching to ' + what + '…';
     showOsd();
     onSwitch(change);
   }
@@ -756,11 +921,13 @@ var Player = (function () {
     marker = null; skipDismissed = null;
     skipEl.classList.add('hidden');
     Menu.close();
+    ctl = -1; openPanel = null;
+    chapEl.classList.add('hidden');
     cues = []; currentSub = null; subNote = '';
     subEl.classList.add('hidden'); subEl.textContent = '';
     subEl.setAttribute('data-cue', '');
     wantedLang = opts.subLang === undefined ? null : opts.subLang;
-    paintTracks();
+    paintControls();
     hint();
     v.classList.remove('hidden');
 
@@ -869,6 +1036,8 @@ var Player = (function () {
   function stop(state, quiet) {
     if (!item) return;
     Menu.close();
+    ctl = -1; openPanel = null;
+    chapEl.classList.add('hidden');
     UI.debug(summary());
     report(state || 'stopped');
     clearInterval(ticker); ticker = null;
@@ -896,14 +1065,51 @@ var Player = (function () {
 
   function playing() { return !!item; }
 
+  function indexOfCtl(id) {
+    var list = controls(), i;
+    for (i = 0; i < list.length; i++) if (list[i].id === id) return i;
+    return 0;
+  }
+
+  /* Move the focus onto a button and open it — what a colour key does, so the
+     shortcut and the row never disagree about what is on screen. */
+  function focusPanel(id) {
+    ctl = indexOfCtl(id);
+    openPanelFor(id);
+  }
+
+  /* The control row has the four arrows once it has the focus; everything else
+     on the remote goes on meaning what it means during playback. */
+  function controlKey(code) {
+    var n = controls().length;
+    if (code === 37) { ctl = (ctl + n - 1) % n; paintControls(); showOsd(); return true; }
+    if (code === 39) { ctl = (ctl + 1) % n; paintControls(); showOsd(); return true; }
+    if (code === 38 || code === 13) {
+      if (code === 13 && marker) { takeSkip(); return true; }
+      var c = controls()[ctl];
+      if (c.id) openPanelFor(c.id); else c.run();
+      return true;
+    }
+    if (code === 40) { ctl = -1; paintControls(); showOsd(); return true; }
+    if (UI.isBack(code) || code === 413) {
+      if (marker) { dismissSkip(); return true; }
+      ctl = -1; paintControls(); showOsd();
+      return true;
+    }
+    return false;                      // anything else is still playback's
+  }
+
   function key(code) {
     /* The offer owns the remote while it is up: the film has ended, so seeking
        and pausing have nothing left to act on. */
     if (next) return nextKey(code);
+    if (openPanel === 'chapters') return chapterKey(code);
     if (Menu.isOpen()) return Menu.key(code);
 
     /* Digits jump by tenths — the cheapest way past a first act there is. */
     if (code >= 48 && code <= 57) { jumpToTenth(code - 48); return true; }
+
+    if (ctl >= 0 && controlKey(code)) return true;
 
     switch (code) {
       case 13: case 415: case 19: case 179:      // OK / play / pause
@@ -911,9 +1117,7 @@ var Player = (function () {
            button means something other than pause, and it is the moment you
            are reaching for it. */
         if (marker) { takeSkip(); return true; }
-        if (v.paused) v.play(); else v.pause();
-        report(v.paused ? 'paused' : 'playing');
-        showOsd();
+        togglePlay();
         return true;
       case 37:                                    // left
         seekBy(-NUDGE);
@@ -927,11 +1131,10 @@ var Player = (function () {
       case 417:                                   // fast forward
         seekBy(JUMP);
         return true;
-      case 38:                                    // up — the menu
-        openMenu(0);
-        return true;
-      case 40:                                    // down — the menu
-        openMenu(0);
+      case 38: case 40:                           // up / down — the control row
+        ctl = indexOfCtl('audio');                // where the menu used to open
+        paintControls();
+        showOsd();
         return true;
       case 33:                                    // channel up — next chapter
         chapterStep(1);
@@ -939,10 +1142,10 @@ var Player = (function () {
       case 34:                                    // channel down — previous chapter
         chapterStep(-1);
         return true;
-      case 403: openMenu(0); return true;         // red — audio
-      case 404: openMenu(1); return true;         // green — subtitles
-      case 405: openMenu(2); return true;         // yellow — quality
-      case 406: openMenu(3); return true;         // blue — chapters
+      case 403: focusPanel('audio'); return true;     // red
+      case 404: focusPanel('subs'); return true;      // green
+      case 405: focusPanel('quality'); return true;   // yellow
+      case 406: focusPanel('chapters'); return true;  // blue
       case 461: case 27: case 8: case 413:        // back / stop
         if (marker) { dismissSkip(); return true; }
         stop('stopped');

@@ -347,7 +347,11 @@ function fullMetadata(item, film) {
       copy.Chapter.push({
         id: base + 70 + c, index: c + 1, tag: 'Chapter ' + (c + 1),
         startTimeOffset: Math.round(runtime * c / 8),
-        endTimeOffset: Math.round(runtime * (c + 1) / 8)
+        endTimeOffset: Math.round(runtime * (c + 1) / 8),
+        /* Plex only carries a still where it indexed one, so half of these
+           have none — the card has to look the same either way. */
+        thumb: c % 2 ? '/library/metadata/' + copy.ratingKey + '/chapterImages/' + (c + 1)
+                     : undefined
       });
     }
   }
