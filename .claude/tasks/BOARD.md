@@ -5,7 +5,6 @@ Task files are the source of truth; this is the glance view.
 
 | id | task | status | env | branch |
 |---|---|---|---|---|
-| 020 | One stylesheet per screen, and the tokens they share | `blocked` | laptop | crew/020-split-the-stylesheet |
 | 012 | Season recaps on a show, but only when asked for | `pending-tv` | laptop | crew/012-recaps-rail *(gone)* |
 | 015 | Scrolling fast costs nothing until you stop | `pending-tv` | laptop | crew/015-cheap-fast-scrolling *(gone)* |
 | 019 | One suite, many files, and a free port | `approved` | laptop | crew/019-split-the-smoke-suite |
@@ -25,10 +24,10 @@ Task files are the source of truth; this is the glance view.
 | 016 | Choose the copy, the audio and the subtitles before pressing Play | `done` | laptop | crew/016-detail-choosers *(gone)* |
 | 017 | The player's controls, to the design | `done` | laptop | crew/017-player-osd *(gone)* |
 | 018 | Getting things out of Continue watching | `done` | laptop | crew/018-clear-continue-watching *(gone)* |
+| 020 | One stylesheet per screen, and the tokens they share | `done` | laptop | crew/020-split-the-stylesheet |
 
 ## Waiting on you
 
-- **020 One stylesheet per screen, and the tokens they share** — two review rounds disagreed — needs your call
 - **012 Season recaps on a show, but only when asked for** — code-complete; only the panel can prove it
 - **015 Scrolling fast costs nothing until you stop** — code-complete; only the panel can prove it
 
