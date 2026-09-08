@@ -229,13 +229,13 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### Housekeeping
 
-- **A flaky smoke step.** `main` scored 74/75 immediately after 018 merged and
-  75/75 on an identical re-run, so one step is intermittent rather than broken.
-  The likeliest culprit is the removal confirmation: 018's worker had already
-  committed `test(dev): give the removal confirmation longer to appear`, so it
-  hit the same timing there and evidently did not extend it far enough. The
-  failing step could not be named because the first run's output was truncated —
-  capture the whole log, not a tail, when hunting it.
+- ~~A flaky smoke step~~ — found and fixed by task 019, and it was **not** a
+  timing margin as this entry guessed. `pressButton` counted keypresses against
+  a row that grew a trailer button as the extras loaded, so the focus landed on
+  Subtitles instead of Remove. Fixed in the harness by walking, re-reading and
+  repeating; no assertion changed. **`menuChoose`, `sidebarWalkTo` and
+  `focusDeck` count once the same way** and have the same latent race — worth
+  the same treatment before one of them bites.
 
 - **`css/app.css` is what serialises the crew loop.** Every UI task declares it,
   so no two can run at once even when they share nothing else. It is 944 lines

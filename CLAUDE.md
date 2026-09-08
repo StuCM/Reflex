@@ -334,6 +334,13 @@ The three checks, and what each is for:
   steps need a fixture and skip without one. Keep it green; add a step when you
   add a screen.
 
+  `npm run smoke` runs every area; `npm run smoke -- <area>` runs one, which is
+  what iterating wants — the areas are `link`, `browse`, `show`, `recaps`,
+  `sections`, `discovery`, `search`, `devices`, `detail`, `player`, `deck`, and
+  an unknown name lists them. The steps live in `dev/smoke/<area>.js`, one file
+  per area, and `dev/smoke.js` is the harness they are given. The mock takes
+  whatever port the OS hands out, so two suites can run at once.
+
   **An assertion that can pass on nothing is worse than no assertion**, and this
   suite has produced three in one day. Each was a check that something was
   *absent* or that indexed into markup: a lookup counter matching

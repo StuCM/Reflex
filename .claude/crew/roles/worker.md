@@ -21,6 +21,14 @@ that section looks empty or wrong, say so in the task file.
 ## Boundaries
 
 - Touch only the paths in `files:`.
+- Declare `dev/smoke/<area>.js`, not `dev/smoke.js`, so two tasks touching
+  different areas can run at once. A task adding a whole screen adds an area
+  file and declares `dev/smoke.js` too, for the `AREAS` list. Iterate with
+  `npm run smoke -- <area>`; run `npm run verify` before asking for review.
+- Declare the screen's own stylesheet — `css/browse.css`, `css/detail.css` and
+  so on — not `css/`. `css/base.css` holds the tokens and the shared rules, and
+  a task that needs to change those is changing every screen, which is worth
+  saying out loud in the spec.
 - Never push, never merge, never deploy. Deployment needs a TV no agent can
   reach; `node .claude/crew/bin/preflight.js tv` will tell you so. If a
   sideload or an `ares-*` command fails, that is the bench, not a bug — do not
