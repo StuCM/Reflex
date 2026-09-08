@@ -1,7 +1,7 @@
 ---
 id: 023
 slug: tmdb-first-discovery
-status: draft
+status: approved
 model: opus
 env: laptop
 branch: crew/023-tmdb-first-discovery
@@ -48,7 +48,26 @@ to be drawn, and TMDB has both. Everything Plex-shaped — ratingKey, media, the
 guard verdict — is needed only when acting on a title, not when showing it.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing. Nothing else is
+in flight; main verifies at 81/81.
+
+Read these as they now are:
+
+- `dev/smoke.js` is the harness only; the steps live in `dev/smoke/<area>.js`,
+  eleven of them, and `discovery.js` is the one this task owns. Iterate with
+  `npm run smoke -- discovery` (about 4s) rather than the full 2m37s suite. A
+  new area file must also be added to the `AREAS` list in `dev/smoke.js` — which
+  this task does not own, so if you need one, say so rather than reaching.
+- `css/app.css` no longer exists: `css/base.css` plus one file per screen. This
+  task should need none of them — Discovery draws with the rail, which is
+  already styled.
+- `js/rail.js` now clears a tile's picture when the pool hands it a different
+  item (task 021). A TMDB-only entry must therefore be a **stable object** for
+  as long as it is in the row, or every render will look like a new film and
+  clear the picture. Build the entries once when the row is built; do not
+  rebuild them on each paint.
+- `js/browse.js` gained `Theme music` and `Autoplay next` settings in `modes()`
+  handling; leave both alone.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
