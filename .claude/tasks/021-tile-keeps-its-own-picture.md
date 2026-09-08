@@ -1,7 +1,7 @@
 ---
 id: 021
 slug: tile-keeps-its-own-picture
-status: approved
+status: building
 branch: crew/021-tile-keeps-its-own-picture
 model: sonnet
 env: laptop
