@@ -1,7 +1,7 @@
 ---
 id: 015
 slug: cheap-fast-scrolling
-status: draft
+status: approved
 branch: crew/015-cheap-fast-scrolling
 model: sonnet
 env: laptop
@@ -36,7 +36,22 @@ waits 150ms before walking the merge. The most expensive thing on the screen is
 the one that never got the treatment.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing — no branch
+carries commits touching `js/rail.js`, `js/masthead.js`, `css/app.css` or
+`dev/smoke.js`. No worktrees are in flight; 014 merged as `a82a730`.
+
+Read these as they now are:
+
+- `js/rail.js` gained `place(el, x, animate)` in `8625a76`, which suppresses the
+  strip transition when a pool element is recycled onto a different row. Leave
+  it alone and do not let the deferral reintroduce the slide it fixed.
+- `css/app.css` — 014 grew `#dt-header` from 264px to 300px and added the
+  kicker, chip and ratings rows. The browse header is unchanged. `--t-fade`
+  goes beside `--t-quick`, `--t-move` and `--ease`.
+- `dev/smoke.js` is at 63 steps.
+- 014 also fixed a real latent bug in `js/detail.js`: `close()` never moved the
+  generation counter on, so a `Meta.load` landing after BACK still redrew. Not
+  this task's file — noted so it is not rediscovered.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
