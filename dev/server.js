@@ -19,6 +19,7 @@ const path = require('path');
 const url = require('url');
 const mock = require('./mock-plex');
 const mockTmdb = require('./mock-tmdb');
+const mockYoutube = require('./mock-youtube');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -117,6 +118,18 @@ function start(opts) {
       return;
     }
 
+    /* The recaps channel, stood in for the same way TMDB is. In --proxy mode
+       the real YouTube is the only one there is, so nothing is answered here. */
+    if (!opts.proxy && pathname.indexOf('/__yt') === 0) {
+      if (!mockYoutube.handle(req, res, pathname, parsed.query)) {
+        console.log('  UNHANDLED ' + req.method + ' ' + pathname +
+                    '  <- the app is calling a YouTube path the mock does not know');
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('mock: no route for ' + pathname);
+      }
+      return;
+    }
+
     if (pathname.indexOf('/__plex') === 0) {
       const run = function () {
         if (!api.handle(req, res, pathname, parsed.query, origin)) {
@@ -197,14 +210,19 @@ function sendIndex(res, file, opts) {
     const config = {
       plexTvBase: '/__plextv',
       dev: true,
-      tmdbKey: process.env.TMDB_KEY || ''
+      tmdbKey: process.env.TMDB_KEY || '',
+      youtubeKey: process.env.YOUTUBE_KEY || ''
     };
-    /* Against the mock, TMDB is mocked too and the key is only a switch — the
-       real one is for --proxy, where the real TMDB is the only one there is. */
+    /* Against the mock, TMDB and YouTube are mocked too and the keys are only
+       switches — the real ones are for --proxy, where the real services are the
+       only ones there are. */
     if (!opts.proxy) {
       config.tmdbKey = 'mock-tmdb-key';
       config.tmdbBase = '/__tmdb';
       config.tmdbImageBase = '/__tmdbimg/';
+      config.youtubeKey = 'mock-youtube-key';
+      config.youtubeBase = '/__yt';
+      config.youtubeEmbedBase = '/__ytembed/';
     }
     const out = html
       .replace('</head>',

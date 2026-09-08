@@ -22,6 +22,7 @@ const fs = require('fs');
 const { start } = require('./server');
 const buildLibrary = require('./library').build;
 const mockTmdb = require('./mock-tmdb');
+const mockYoutube = require('./mock-youtube');
 const oneBackdrop = mockTmdb.oneBackdrop;
 const noCredits = mockTmdb.noCredits;
 
@@ -143,6 +144,19 @@ function findTitles() {
     };
   }
 
+  /* A show the recaps mock answers for, and one it does not — both reached by
+     search like everything else here, so both titles have to be unambiguous. */
+  function showWithRecaps(want) {
+    const hit = lib.shows.filter(function (sh) {
+      if (mockYoutube.hasRecaps(sh.title) !== want) return false;
+      const named = lib.shows.filter(function (o) { return o.title.indexOf(sh.title) >= 0; });
+      if (named.length !== 1) return false;
+      return !lib.films.filter(function (f) { return f.title.indexOf(sh.title) >= 0; }).length;
+    })[0];
+    if (!hit) throw new Error('no unambiguous show ' + (want ? 'with' : 'without') + ' recaps');
+    return hit.title;
+  }
+
   /* Every movie library on both servers is one Movies section now, so its All
      row must land between the biggest single library and the sum of them all. */
   const movieCounts = [];
@@ -163,7 +177,9 @@ function findTitles() {
     shared: shared,                      // on both servers, only one copy playable
     manyShots: withBackdrops(false),     // posters and backdrops both
     oneShot: withBackdrops(true),        // no posters, so the tile falls back
-    run: runOfEpisodes()                 // a series to play one episode after another
+    run: runOfEpisodes(),                // a series to play one episode after another
+    recapShow: showWithRecaps(true),     // the channel has this one's seasons
+    noRecapShow: showWithRecaps(false)   // and nothing at all for this one
   };
 }
 
@@ -232,6 +248,9 @@ function drive(page, titles) {
         expected404++;
         return;
       }
+      /* One recap embed never answers on purpose, so that the app's fallback
+         has something to fall back from; closing the overlay aborts it. */
+      if (where.indexOf('/__ytembed/') >= 0) return;
       errors.push('console: ' + text + ' ' + where);
     }
   });
@@ -245,8 +264,15 @@ function drive(page, titles) {
      tell that the finished episode was closed out before the next one opened
      anything on the server. */
   const timelines = [];
+  /* What was asked of YouTube, and when. A search is 100 units of a day's
+     10,000, so "none until the button is pressed, one per press" is the feature
+     rather than a detail of it. */
+  const ytCalls = [];
+  const ytSearches = [];
   page.on('request', function (r) {
     const u = r.url();
+    if (/\/__yt\/(channels|search|videos)\?/.test(u)) ytCalls.push(u);
+    if (u.indexOf('/__yt/search?') >= 0) ytSearches.push(u);
     if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
     if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
@@ -560,6 +586,51 @@ function drive(page, titles) {
                        ' document.querySelectorAll(".sh-episode").length > 1',
                        'the series page for ' + title, 20000);
       });
+  }
+
+  /* Leave the show page and come straight back to it, which is how "the second
+     visit costs nothing" is asked. Back from a show lands on the result that
+     opened it, still focused. */
+  function reopenShowPage(title) {
+    return press('Backspace')
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () {
+        return waitFor('!document.getElementById("show").classList.contains("hidden") &&' +
+                       ' document.querySelectorAll(".sh-episode").length > 1',
+                       'the series page for ' + title + ' again', 20000);
+      });
+  }
+
+  /* Everything the recaps strip is saying: whether it is open, what it holds,
+     and whether the episode list moved out of its way. */
+  function recapStrip() {
+    return page.evaluate(function () {
+      const strip = document.getElementById('sh-recaps');
+      const on = strip.querySelector('.sh-recap.on');
+      return {
+        open: strip.classList.contains('open'),
+        lifted: document.getElementById('sh-episodes').classList.contains('lifted'),
+        html: strip.innerHTML.trim(),
+        focused: on ? on.textContent.trim() : '',
+        episode: !!document.querySelector('.sh-episode.on'),
+        cards: Array.prototype.map.call(strip.querySelectorAll('.sh-recap'), function (c) {
+          const thumb = c.querySelector('.sh-recap-thumb');
+          const len = c.querySelector('.sh-recap-len');
+          const title = c.querySelector('.sh-recap-title');
+          return {
+            title: (title || c).textContent.trim(),
+            art: thumb ? getComputedStyle(thumb).backgroundImage : 'none',
+            length: len ? len.textContent.trim() : ''
+          };
+        })
+      };
+    });
+  }
+
+  /* Down out of the episode list, however far into it the page landed — no
+     series here runs to twenty episodes. */
+  function intoRecaps() {
+    return press('ArrowDown', 20).then(recapStrip);
   }
 
   function focusedEpisode() {
@@ -1134,6 +1205,201 @@ function drive(page, titles) {
           })
           .then(function () { return shot('episode-copies'); })
           .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('no recaps strip at all without a YouTube key', function () {
+        /* Youtube.enabled() is the whole gate, and the key is read once at load,
+           so switching the gate off is how a keyless build is seen from here.
+           The harness always sets a key; a shipped app usually will not. */
+        return openShowPage(titles.recapShow)
+          .then(function () {
+            return page.evaluate(function () {
+              Youtube._enabled = Youtube.enabled;
+              Youtube.enabled = function () { return false; };
+            });
+          })
+          .then(function () { return reopenShowPage(titles.recapShow); })
+          .then(intoRecaps)
+          .then(function (st) {
+            if (st.html) throw new Error('a recaps strip with no key: ' + st.html);
+            if (!st.episode) throw new Error('down past the last episode left the list');
+            if (ytCalls.length) throw new Error('asked YouTube anyway: ' + ytCalls.join(', '));
+          })
+          .then(function () {
+            return page.evaluate(function () { Youtube.enabled = Youtube._enabled; });
+          });
+      });
+    })
+
+    .then(function () {
+      return step('down from the last episode reaches Find recaps, having asked nothing',
+        function () {
+          return reopenShowPage(titles.recapShow)
+            .then(intoRecaps)
+            .then(function (st) {
+              if (!st.open) throw new Error('the recaps strip did not open');
+              if (!st.lifted) throw new Error('the episode list did not move out of the way');
+              if (st.focused !== 'Find recaps') {
+                throw new Error('the action reads "' + st.focused + '"');
+              }
+              /* The whole point: a search costs 100 units of the day's 10,000,
+                 so browsing to the strip must cost nothing at all. */
+              if (ytCalls.length) {
+                throw new Error('YouTube was asked before OK: ' + ytCalls.join(', '));
+              }
+            })
+            .then(function () { return shot('recaps-action'); });
+        });
+    })
+
+    .then(function () {
+      return step('OK searches once and draws the season recaps in order', function () {
+        return page.keyboard.press('Enter')
+          .then(function () {
+            return waitFor('document.querySelectorAll("#sh-recaps .sh-recap-thumb").length > 0',
+                           'the recaps rail', 15000);
+          })
+          .then(recapStrip)
+          .then(function (st) {
+            const names = st.cards.map(function (c) { return c.title; });
+            if (names.length !== 4) throw new Error('4 recaps expected, got: ' + names.join(' | '));
+            /* Season order, with the one that names no season last. */
+            if (!/Season 1/.test(names[0]) || !/Season 2/.test(names[1]) ||
+                !/ S3 /.test(names[2] + ' ') || !/^Everything/.test(names[3])) {
+              throw new Error('out of season order: ' + names.join(' | '));
+            }
+            /* The channel's other content came back with them and must not be
+               on screen — that is what pickForShow is for. */
+            if (names.join(' | ').indexOf('Zzyzx') >= 0) {
+              throw new Error('a different show is in the rail: ' + names.join(' | '));
+            }
+            st.cards.forEach(function (c, i) {
+              if (c.art === 'none') throw new Error('recap ' + i + ' drew no thumbnail');
+              if (!/^\d+:\d\d$/.test(c.length)) {
+                throw new Error('recap ' + i + ' has no length: "' + c.length + '"');
+              }
+            });
+            if (ytSearches.length !== 1) {
+              throw new Error(ytSearches.length + ' searches for one press');
+            }
+          })
+          .then(function () { return shot('recaps'); });
+      });
+    })
+
+    .then(function () {
+      return step('the same show a second time is answered from the cache', function () {
+        const before = ytSearches.length;
+        return reopenShowPage(titles.recapShow)
+          .then(intoRecaps)
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('document.querySelectorAll("#sh-recaps .sh-recap-thumb").length > 0',
+                           'the recaps rail from cache', 15000);
+          })
+          .then(function () { return page.waitForTimeout(300); })
+          .then(function () {
+            if (ytSearches.length !== before) {
+              throw new Error('searched again: ' + ytSearches.slice(before).join(', '));
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('OK on a recap plays it in an overlay, and BACK closes it', function () {
+        const reported = timelines.length;
+        return page.keyboard.press('Enter')
+          .then(function () {
+            return waitFor('!document.getElementById("recap").classList.contains("hidden")',
+                           'the recap overlay', 10000);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return {
+                src: document.getElementById('recap-frame').getAttribute('src'),
+                video: !document.getElementById('video').classList.contains('hidden')
+              };
+            });
+          })
+          .then(function (st) {
+            if (!/\/__ytembed\/.+-s1\?autoplay=1$/.test(st.src)) {
+              throw new Error('the overlay is showing "' + st.src + '"');
+            }
+            /* A recap is not library content: nothing about it may reach the
+               player, the guard or a Plex session. */
+            if (st.video) throw new Error('a recap started the video element');
+            if (timelines.length !== reported) {
+              throw new Error('a recap reported to Plex: ' + timelines.slice(-1)[0]);
+            }
+          })
+          .then(function () { return shot('recap-playing'); })
+          .then(function () { return press('Backspace'); })
+          .then(function () {
+            return waitFor('document.getElementById("recap").classList.contains("hidden")',
+                           'the overlay to close');
+          })
+          .then(recapStrip)
+          .then(function (st) {
+            if (!st.focused) throw new Error('the rail lost its focus behind the overlay');
+          });
+      });
+    })
+
+    .then(function () {
+      return step('an embed that never loads offers the YouTube app instead of hanging',
+        function () {
+          /* The third card is the one the mock never answers for. Chromium 53 is
+             nine years old and YouTube drops old browsers over time, so this is
+             an outcome to expect rather than a fault to debug. */
+          return press('ArrowRight', 2)
+            .then(function () { return page.keyboard.press('Enter'); })
+            .then(function () {
+              return waitFor('!document.getElementById("message").classList.contains("hidden")',
+                             'the offer of the YouTube app', 20000);
+            })
+            .then(function () {
+              return page.evaluate(function () {
+                return {
+                  title: document.getElementById('message-title').textContent,
+                  body: document.getElementById('message-body').textContent,
+                  overlay: !document.getElementById('recap').classList.contains('hidden')
+                };
+              });
+            })
+            .then(function (st) {
+              if (st.overlay) throw new Error('the overlay is still up over the offer');
+              if (!/YouTube app/.test(st.body)) {
+                throw new Error('the offer does not mention the app: ' + st.title + ' / ' + st.body);
+              }
+            })
+            .then(function () { return press('Backspace'); })
+            .then(function () {
+              return waitFor('!document.getElementById("show").classList.contains("hidden")',
+                             'the show page behind the offer');
+            });
+        });
+    })
+
+    .then(function () {
+      return step('a show the channel has nothing for says so', function () {
+        return openShowPage(titles.noRecapShow)
+          .then(intoRecaps)
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('/No recaps found/.test(' +
+                           'document.getElementById("sh-recaps").textContent)',
+                           'the empty answer', 15000);
+          })
+          .then(backToLibrary)
+          /* Searching for these shows left the rail in Movies; the steps after
+             this one expect what the show steps left — the shows section, one
+             row down from Continue watching. */
+          .then(function () { return sidebarPick('TV Shows'); })
+          .then(function () { return page.waitForTimeout(600); })
+          .then(function () { return press('ArrowDown'); });
       });
     })
 

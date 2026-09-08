@@ -15,14 +15,21 @@ var ShowPage = (function () {
   var elEpisodes = document.getElementById('sh-episodes');
   var elArt = document.getElementById('sh-art');
   var elHint = document.getElementById('sh-hint');
+  var elRecaps = document.getElementById('sh-recaps');
+  var elHead = document.getElementById('sh-head');
 
   var EPISODE_POOL = 6;          // episode rows on screen at once, at 111px each
   var EPISODE_LEAD = 3;          // rows kept above the focused one
+  var RECAP_POOL = 7;            // recap cards on screen at once, at 222px each
+  var RECAP_LEAD = 2;
 
   var show = null;
   var seasons = [], seasonIdx = 0;
   var episodes = [], epIdx = 0;
-  var zone = 'episodes';         // 'seasons' | 'episodes'
+  var zone = 'episodes';         // 'seasons' | 'episodes' | 'recaps'
+  var recaps = null;             // null until searched, then the list, empty or not
+  var recapIdx = 0;
+  var searching = false;
   var wantEp = null;             // options.at.episode, honoured on the first load only
   var opts = {};
   var generation = 0;
@@ -40,9 +47,11 @@ var ShowPage = (function () {
     generation++;
     seasons = []; episodes = []; seasonIdx = 0; epIdx = 0; zone = 'episodes';
     verdicts = {};
+    recaps = null; recapIdx = 0; searching = false;
 
     UI.show('show');
     paintHeader();
+    renderRecaps();
     elSeasons.innerHTML = '';
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
 
@@ -146,9 +155,82 @@ var ShowPage = (function () {
               '</div>';
     }
     elEpisodes.innerHTML = html;
-    elHint.textContent = zone === 'seasons'
-      ? '← → choose a series · ↓ to the episodes · BACK to the rail'
-      : '↑ ↓ choose an episode · OK to play · → other copies · BACK to the rail';
+    elHint.textContent = hint();
+  }
+
+  function hint() {
+    if (zone === 'seasons') return '← → choose a series · ↓ to the episodes · BACK to the rail';
+    if (zone === 'recaps') {
+      return recaps && recaps.length
+        ? '← → choose a recap · OK to play it · ↑ back to the episodes'
+        : 'OK to look for season recaps · ↑ back to the episodes';
+    }
+    return '↑ ↓ choose an episode · OK to play · → other copies · BACK to the rail';
+  }
+
+  /* The recaps strip, which costs nothing to draw: one action until it is
+     pressed, then the rail it turned into. Entering the zone lifts the episode
+     list to make room — a transform, not a height. */
+  function renderRecaps() {
+    if (!Youtube.enabled()) { elRecaps.innerHTML = ''; return; }
+    var on = zone === 'recaps';
+    elHint.textContent = hint();
+    elRecaps.classList.toggle('open', on);
+    /* The whole column moves, or the episode rows would slide over the title. */
+    elHead.classList.toggle('lifted', on);
+    elSeasons.classList.toggle('lifted', on);
+    elEpisodes.classList.toggle('lifted', on);
+    if (!recaps || !recaps.length) {
+      elRecaps.innerHTML = '<div class="sh-recap sh-recap-action' + (on ? ' on' : '') + '">' +
+        (searching ? 'Searching…' : (recaps ? 'No recaps found' : 'Find recaps')) + '</div>';
+      return;
+    }
+    var first = UI.clamp(recapIdx - RECAP_LEAD, 0, Math.max(0, recaps.length - RECAP_POOL));
+    var html = '', i, r;
+    for (i = first; i < Math.min(first + RECAP_POOL, recaps.length); i++) {
+      r = recaps[i];
+      html += '<div class="sh-recap' + (on && i === recapIdx ? ' on' : '') + '">' +
+              '<span class="sh-recap-thumb"' +
+              (r.thumb ? ' style="background-image:url(' + UI.escapeHtml(r.thumb) + ')"' : '') +
+              '></span>' +
+              '<span class="sh-recap-title">' + UI.escapeHtml(r.title) + '</span>' +
+              '<span class="sh-recap-len">' + UI.escapeHtml(r.length) + '</span>' +
+              '</div>';
+    }
+    elRecaps.innerHTML = html;
+  }
+
+  /* A search is 100 units of the day's 10,000, so it happens on a press and
+     never on a page opening — and a show already searched is read back from the
+     cache, empty answer included. */
+  function findRecaps() {
+    if (searching || recaps) return;
+    searching = true;
+    renderRecaps();
+    var gen = generation, title = show.title || '';
+    var key = 'recaps:' + Media.identity(show);
+    Store.get(key).then(function (cached) {
+      if (cached) return cached;
+      return Youtube.recaps(title).then(function (items) {
+        var list = Youtube.pickForShow(Youtube.parse(items), title);
+        Store.put(key, list);
+        return list;
+      });
+    }).then(function (list) {
+      if (gen !== generation) return;
+      searching = false;
+      recaps = list;
+      recapIdx = 0;
+      renderRecaps();
+    }, function (e) {
+      if (gen !== generation) return;
+      UI.debug('recaps: ' + e.message);
+      /* Nothing was learnt, so the action goes back to being untried rather
+         than claiming this show has no recaps. */
+      searching = false;
+      renderRecaps();
+      UI.toast('Could not search for recaps');
+    });
   }
 
   /* ---------- loading ---------- */
@@ -217,6 +299,13 @@ var ShowPage = (function () {
     if (ep && opts.onChoose) opts.onChoose(ep);
   }
 
+  /* OK in the recaps zone is either the search or one of its results. */
+  function chooseRecap() {
+    if (!recaps) { findRecaps(); return; }
+    var video = recaps[recapIdx];
+    if (video && opts.onRecap) opts.onRecap(video);
+  }
+
   function key(code) {
     var K = UI.KEY;
 
@@ -232,13 +321,26 @@ var ShowPage = (function () {
       return true;
     }
 
+    if (zone === 'recaps') {
+      if (code === K.UP) { zone = 'episodes'; renderEpisodes(); renderRecaps(); return true; }
+      if (code === K.LEFT && recapIdx > 0) { recapIdx--; renderRecaps(); return true; }
+      if (code === K.RIGHT && recaps && recapIdx < recaps.length - 1) {
+        recapIdx++; renderRecaps(); return true;
+      }
+      if (code === K.OK) { chooseRecap(); return true; }
+      if (UI.isBack(code)) { close(); return true; }
+      return true;
+    }
+
     if (code === K.UP) {
       if (epIdx > 0) { epIdx--; renderEpisodes(); scheduleCheck(); }
       else { zone = 'seasons'; renderSeasons(); renderEpisodes(); }
       return true;
     }
-    if (code === K.DOWN && epIdx < episodes.length - 1) {
-      epIdx++; renderEpisodes(); scheduleCheck();
+    if (code === K.DOWN) {
+      if (epIdx < episodes.length - 1) { epIdx++; renderEpisodes(); scheduleCheck(); return true; }
+      /* Past the last episode is the recaps strip, when there is a key for it. */
+      if (Youtube.enabled()) { zone = 'recaps'; renderEpisodes(); renderRecaps(); }
       return true;
     }
     if (code === K.RIGHT) { openCopies(); return true; }

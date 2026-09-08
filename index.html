@@ -41,6 +41,9 @@
   </div>
   <div id="sh-seasons"></div>
   <div id="sh-episodes"></div>
+  <!-- Season recaps, below the episodes and empty until asked for: a search
+       costs 100 units of a day's 10,000, so it waits for a keypress. -->
+  <div id="sh-recaps"></div>
   <div class="msg-hint" id="sh-hint"></div>
 </div>
 
@@ -142,6 +145,13 @@
   <div id="osd-hint"></div>
 </div>
 
+<!-- A season recap, played where it was chosen. It is not library content: it
+     never reaches the guard, the player or a Plex session. -->
+<div id="recap" class="hidden">
+  <iframe id="recap-frame" frameborder="0" allow="autoplay" allowfullscreen></iframe>
+  <div class="msg-hint" id="recap-hint">BACK closes it</div>
+</div>
+
 <div id="toast" class="hidden"></div>
 <div id="debug"></div>
 
@@ -157,6 +167,7 @@
 <script src="js/merge.js"></script>
 <script src="js/plex.js"></script>
 <script src="js/tmdb.js"></script>
+<script src="js/youtube.js"></script>
 <script src="js/art.js"></script>
 
 <script src="js/ui.js"></script>

@@ -30,24 +30,32 @@ if grep -q "__dev/" "$STAGE/index.html"; then
 fi
 
 # The TV has no environment and no build step: whatever js/config.js says on
-# disk is what the panel gets. So the TMDB key is read from the environment or
-# from a gitignored .env and written into the *staged* copy — the repo's stays
-# empty, which is what keeps it out of a public history.
-if [ -z "$TMDB_KEY" ] && [ -f "$ROOT/.env" ]; then
-  TMDB_KEY="$(sed -n 's/^TMDB_KEY=//p' "$ROOT/.env" | tail -1)"
-fi
-if [ -n "$TMDB_KEY" ]; then
-  sed -i "s|tmdbKey: '',|tmdbKey: '$TMDB_KEY',|" "$STAGE/js/config.js"
-  # A silent miss ships an app with no artwork and no explanation, which is the
-  # exact failure this file exists to make impossible.
-  if ! grep -q "tmdbKey: '$TMDB_KEY'," "$STAGE/js/config.js"; then
-    echo "  refusing to package: TMDB_KEY set but js/config.js has no tmdbKey: '' to replace" >&2
+# disk is what the panel gets. So each key is read from the environment or from
+# a gitignored .env and written into the *staged* copy — the repo's stays empty,
+# which is what keeps it out of a public history.
+#
+#   bake <env var> <js/config.js field> <what is lost without it>
+bake() {
+  eval "value=\$$1"
+  if [ -z "$value" ] && [ -f "$ROOT/.env" ]; then
+    value="$(sed -n "s/^$1=//p" "$ROOT/.env" | tail -1)"
+  fi
+  if [ -z "$value" ]; then
+    echo "  no $1: $3"
+    return
+  fi
+  sed -i "s|$2: '',|$2: '$value',|" "$STAGE/js/config.js"
+  # A silent miss ships an app with a dead feature and no explanation, which is
+  # the exact failure this file exists to make impossible.
+  if ! grep -q "$2: '$value'," "$STAGE/js/config.js"; then
+    echo "  refusing to package: $1 set but js/config.js has no $2: '' to replace" >&2
     exit 1
   fi
-  echo "  tmdb key baked in (...${TMDB_KEY#"${TMDB_KEY%????}"})"
-else
-  echo "  no TMDB_KEY: artwork falls back to plex, discovery rows stay hidden"
-fi
+  echo "  $2 baked in (...${value#"${value%????}"})"
+}
+
+bake TMDB_KEY tmdbKey "artwork falls back to plex, discovery rows stay hidden"
+bake YOUTUBE_KEY youtubeKey "no season recaps on a show page"
 
 rm -f "$ROOT"/*.ipk
 ares-package "$STAGE" -o "$ROOT" >/dev/null

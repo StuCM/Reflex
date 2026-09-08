@@ -18,6 +18,14 @@ var Config = (function () {
     tmdbBase: 'https://api.themoviedb.org/3',
     tmdbImageBase: 'https://image.tmdb.org/t/p/',
 
+    /* Free YouTube Data API v3 key, for the season recaps on a show page. Empty
+       means the Find recaps action does not appear; nothing else is affected. */
+    youtubeKey: '',
+
+    /* YouTube's API and its embed player, unless something is standing in. */
+    youtubeBase: 'https://www.googleapis.com/youtube/v3',
+    youtubeEmbedBase: 'https://www.youtube.com/embed/',
+
     /* Bring-up only: WAM doesn't forward console.log anywhere readable on this
        set, so the app can POST its debug line to a listener on the dev machine.
        Empty switches it off. Set it to e.g. 'http://192.168.1.92:8099/' while

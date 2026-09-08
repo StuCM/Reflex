@@ -1,7 +1,7 @@
 ---
 id: 012
 slug: recaps-rail
-status: building
+status: pending-tv
 branch: crew/012-recaps-rail
 model: sonnet
 env: laptop
@@ -223,28 +223,90 @@ Workers must not go digging for more.
 - **Search quota accounting or a usage display.** The button is the budget.
 
 ## Definition of done
-- [ ] With no `youtubeKey`, the show page is exactly as it is today — no zone,
+- [x] With no `youtubeKey`, the show page is exactly as it is today — no zone,
       no button, no requests.
-- [ ] With a key, down from the last episode reaches `Find recaps`, and nothing
+- [x] With a key, down from the last episode reaches `Find recaps`, and nothing
       has been requested from YouTube until OK is pressed on it.
-- [ ] OK searches once, and draws a rail of that show's season recaps in season
+- [x] OK searches once, and draws a rail of that show's season recaps in season
       order with thumbnails, titles and lengths.
-- [ ] A video from a different show is rejected by `pickForShow`.
-- [ ] A show with no recaps says so rather than looking untried.
-- [ ] Coming back to a show already searched makes no second request.
-- [ ] OK on a recap plays it in an overlay without leaving the app; BACK closes
+- [x] A video from a different show is rejected by `pickForShow`.
+- [x] A show with no recaps says so rather than looking untried.
+- [x] Coming back to a show already searched makes no second request.
+- [x] OK on a recap plays it in an overlay without leaving the app; BACK closes
       it and the rail is still focused.
-- [ ] An embed that does not load within 8 seconds offers the YouTube app
+- [x] An embed that does not load within 8 seconds offers the YouTube app
       instead of hanging.
-- [ ] No recap playback path touches `Guard`, `Player` or Plex timeline
+- [x] No recap playback path touches `Guard`, `Player` or Plex timeline
       reporting.
-- [ ] `parse` and `pickForShow` are pure and covered by `test/youtube.test.js`.
-- [ ] `npm run verify` passes, including "nothing left this machine".
-- [ ] `tools/package.sh` bakes both keys and still refuses on a missed
+- [x] `parse` and `pickForShow` are pure and covered by `test/youtube.test.js`.
+- [x] `npm run verify` passes, including "nothing left this machine".
+- [x] `tools/package.sh` bakes both keys and still refuses on a missed
       substitution.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Review rounds
 
+**Round 1 — PASS.** Reviewer re-ran `npm run verify` itself (check clean, 9/9 test
+files, smoke 59/59), traced every DoD item to code and to a test that would fail
+without it, and accepted both deviations below. No findings.
+
+## What changed, per file
+
+- `js/config.js` — `youtubeKey`, `youtubeBase`, `youtubeEmbedBase` beside the TMDB ones.
+- `js/youtube.js` (new) — the client: `enabled`, `channelId` (by handle, cached in
+  `Store` for good), `recaps`, and the pure `parse` / `pickForShow`. One request
+  in flight at a time; a 403 answers with an empty list and a debug line.
+- `js/showpage.js` — a third zone, `recaps`: down from the last episode reaches
+  `Find recaps`, OK searches once and turns it into a rail, cached per show under
+  `recaps:<Media.identity>`. Nothing is fetched to draw it.
+- `js/app.js` — `onRecap` opens the `#recap` overlay, an 8-second load timeout or
+  an `error` falls back to an offer of the YouTube app, BACK closes it. No Guard,
+  no Player, no timeline.
+- `index.html` — `#sh-recaps`, the `#recap` overlay, and `js/youtube.js` after
+  `js/tmdb.js`.
+- `css/app.css` — the strip, its cards, and the lift that makes room for it.
+- `tools/package.sh` — one `bake <env var> <field> <what is lost>` function, called
+  for `TMDB_KEY` and `YOUTUBE_KEY`; still refuses on a missed substitution.
+- `dev/mock-youtube.js` (new) — channels, search, videos, thumbnails and a stand-in
+  embed page, all off the query. One id never answers, so the fallback is testable.
+- `dev/server.js` — routes `/__yt` and `/__ytembed`, injects the three settings.
+- `dev/smoke.js` — 7 steps, 52 → 59.
+- `test/youtube.test.js` (new) — `parse` and `pickForShow`.
+
+## Where the spec was wrong
+
+- **`parse` had no `length`, but the Goal and the DoD ask for one.** YouTube's
+  search endpoint carries no duration at all, so `recaps` follows the search with
+  `/videos?part=contentDetails` — one unit against the search's hundred — and
+  `parse` reads it. A failure there keeps the items and drops the caption.
+- **Lifting only `#sh-episodes` by 240px puts the episode rows over the show
+  title.** `#sh-head` and `#sh-seasons` take the same lift, so the column moves as
+  one page. Still transform-only.
+- **The rail's tiles are 16px radius, not the 28px the spec's parenthetical
+  claims** (`.tile-inner` says so, and says why). The cards match the tiles.
+- `dev/smoke.js` was at 52 steps as the spec said, but the steps after these ones
+  assume the rail is resting one row into the TV Shows section — searching for the
+  two shows leaves it in Movies, so the last recaps step puts it back.
+
 ## Graph writes proposed
+
+- **Pattern — an external service is a keyed client plus a mock behind a config
+  base URL.** `js/tmdb.js` and `js/youtube.js` are now the same shape: the key
+  from `js/config.js`, a plain `XMLHttpRequest`, inert without the key, baked in
+  at package time by `tools/package.sh`, and stood in for by a `dev/mock-*.js`
+  behind a `Config.*Base` the dev server overrides. A third service should copy
+  this rather than invent anything.
+- **Decision — the recaps search is spent on a keypress, never on a page.**
+  YouTube search costs 100 units of 10,000 a day, so a rail that populated itself
+  on every show page would burn the budget in a hundred page views. The Find
+  recaps action is the budget, and the per-show `Store` cache makes the second
+  press free.
+- **Gotcha — Chromium 53's `Array.prototype.sort` is not stable** (V8 made it
+  stable in Chrome 70). Anything that has to preserve an incoming order within a
+  sort key must sort the *positions* and read the list back through them, as
+  `Youtube.parse` does for videos of the same season.
+- **Gotcha — a `Youtube.enabled` stub is how a keyless build is tested from the
+  smoke suite.** The key is read once at load and the harness always sets one, so
+  the only honest way to see a keyless show page without a second page load is to
+  switch the gate off and reopen the page.
