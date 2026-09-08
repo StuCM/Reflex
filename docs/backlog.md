@@ -33,6 +33,15 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 2. The player on screen
 
+- **A theme on a real server may only be on `/library/metadata/<key>`.** Task
+  022 found `theme` already present on the show entry the rail holds in the
+  mock, so the show page makes no request at all — but whether a *real* Plex
+  server puts it in a listing, rather than only on the full metadata payload,
+  is unverified and the laptop cannot prove it. If it is absent there, no theme
+  plays, which is the already-defined silent path; the fix is one `Meta.load`
+  on the show page. Check this on the panel before concluding the feature is
+  broken.
+
 - **The Magic Remote's pointer.** The app is entirely d-pad driven and sets
   `cursor: none`. On an LG Magic Remote the pointer is the primary control for
   most people, and webOS raises ordinary mouse events for it plus a
