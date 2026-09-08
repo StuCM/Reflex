@@ -80,6 +80,19 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 4. The rail
 
+- **The motion is jarring.** With one row fitting under the header, every press
+  of down scrolls a whole 466px row, and the tall-to-dense change moves the
+  header, the rail and the backdrop at once. `#rows` already eases over 340ms
+  and `.strip` over 180ms, so the fix is consistency and timing, not adding
+  transitions.
+- **The hero backdrop hard-swaps.** `Masthead.paintArt` assigns
+  `background-image` outright, so the picture cuts rather than fades. Two
+  stacked layers alternating `opacity` gives a crossfade for the price of a
+  composited layer, which is inside what the SoC allows — unlike a filter or a
+  blur.
+- **The browse screen needs redesigning** to the Mantis look, once the palette
+  lands. It works; it does not match.
+
 - **Jump to a letter.** 30,000 films is not d-pad-able, and this is the
   biggest single gap left in browsing.
 - Filters beyond the kids cut: year, unwatched, resolution, genre — all
