@@ -57,8 +57,15 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   seen two. Plex has `PUT /actions/removeFromContinueWatching?ratingKey=` on
   newer servers, which hides the item without touching watch state — exactly the
   intent — so the task should use that where the server has it and fall back to
-  `PUT /:/scrobble` only where it does not. Neither has been tried against these
-  servers; that is the first thing the task must find out.
+  `PUT /:/scrobble` only where it does not.
+
+  Resolved while waiting on 013: **do not sniff the server version for this.**
+  Discovery already has `productVersion` from plex.tv's `/api/v2/resources`,
+  but a version number lies — forks, Plex Pass differences, and a fallback has
+  to exist regardless. Try `removeFromContinueWatching` and fall back to
+  `scrobble` on a 404. Capability detection by trying beats version sniffing,
+  and it needs no probe script and no write to a server we do not own just to
+  find out what it supports.
 
 - **Rebuild the film and series pages to the design language the rail now
   uses** — portrait posters, the 264px header, ink & citron. The flow they have
