@@ -1,13 +1,13 @@
 ---
 id: 019
 slug: split-the-smoke-suite
-status: building
+status: done
 branch: crew/019-split-the-smoke-suite
 model: sonnet
 env: laptop
 files:
   - dev/smoke.js
-  - dev/smoke/
+  - dev/smoke/*
   - package.json
 ---
 
@@ -127,23 +127,178 @@ Workers must not go digging for more.
   app ships.
 
 ## Definition of done
-- [ ] `npm run smoke` runs every area and reports the **same step count** as
+- [x] `npm run smoke` runs every area and reports the **same step count** as
       before the split.
-- [ ] `npm run smoke -- player` (or any area) runs just that area, and an
+- [x] `npm run smoke -- player` (or any area) runs just that area, and an
       unknown name lists the areas.
-- [ ] Two suites run concurrently without a port clash — demonstrated, not
+- [x] Two suites run concurrently without a port clash — demonstrated, not
       asserted.
-- [ ] The offsite check still fails the suite on a request that leaves the
+- [x] The offsite check still fails the suite on a request that leaves the
       machine.
-- [ ] No assertion was deleted or weakened; anything that looked wrong while
+- [x] No assertion was deleted or weakened; anything that looked wrong while
       being moved is recorded in the task file.
-- [ ] `npm run verify` passes and is unchanged in what it covers.
-- [ ] The task file states what CLAUDE.md and the worker role must be changed
+- [x] `npm run verify` passes and is unchanged in what it covers.
+- [x] The task file states what CLAUDE.md and the worker role must be changed
       to say, for the orchestrator to apply.
-- [ ] The task file records the before and after step counts and both timings.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] The task file records the before and after step counts and both timings.
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
+
+## What changed
+
+- `dev/smoke.js` — 3,867 lines to 1,107. Keeps everything that is not a step:
+  the browser launch, the console and network collectors, the offsite check,
+  `step`/`press`/`waitFor`/`shot`, the fixture detection and every shared
+  helper. It hands them to an area file as one object `h`, walks the areas in
+  order, and runs the session-wide "no console errors" step itself, last,
+  whatever ran. The mock is started on port 0 and the port it was given is read
+  back off `server.address()`.
+- `dev/smoke/{link,browse,show,recaps,sections,discovery,search,devices,detail,player,deck}.js`
+  — the 74 steps, sliced out of the chain verbatim, in the order they ran in.
+  Each is `module.exports = function (h)`, destructures what it uses, and
+  begins `h.ready()` — linked, rail painted, back at the library rows — so it
+  can be run on its own.
+- `.claude/tasks/019-split-the-smoke-suite.md` — `files:` amended from
+  `dev/smoke/` to `dev/smoke/*`: `scope-check.js` matches an exact path or a
+  trailing `*` and nothing else, so the declared directory matched no file and
+  the gate called all eleven of them scope creep.
+- `package.json` — **unchanged, and did not need to be**. `npm run smoke --
+  player` already reaches `process.argv`, and `verify` still runs the whole
+  thing.
+
+## Numbers
+
+Step count 75 before, 75 after — 74 in the area files plus the console-error
+step, which stays in the runner because it is about the session rather than any
+one area.
+
+Full suite: **2:37.98 before**, **2:37.37 / 2:37.50 after** (`npm run verify`,
+both 75/75) — the split costs nothing and saves nothing on a whole run, as
+expected. What it saves is the iteration:
+
+| area | steps | wall clock | | area | steps | wall clock |
+|---|---|---|---|---|---|---|
+| link | 2 | 3.4s | | discovery | 1 | 3.9s |
+| browse | 16 | 35.9s | | search | 1 | 3.7s |
+| show | 4 | 6.1s | | devices | 1 | 4.2s |
+| recaps | 7 | 21.0s | | detail | 8 | 11.8s |
+| sections | 9 | 33.4s | | player | 18 | 52.3s |
+| deck | 7 | 27.7s | | *all* | *74* | *2:36* |
+
+Each figure is that area run alone, and includes the boot and the tail step, so
+`npm run smoke -- player` is 52s against 2:40 — the worst case. Most are under
+ten.
+
+Concurrency: `search` and `devices` were run at the same moment as a full
+`npm run smoke`, three suites at once, on ports 44601, 46579 and one of its
+own. No clash, all green.
+
+The offsite check was proved by making the link area load
+`http://10.0.0.99/escape.png`: `2/3 passed`, with `requests escaped the mock:
+http://10.0.0.99/escape.png`. Reverted, back to 3/3.
+
+## Findings — recorded, not fixed
+
+1. **The flaky step in the backlog is
+   `a title's own page offers the same removal, and only on the deck`**, and it
+   is not a timing margin. Caught in the act: when it fails, the focus is on
+   *subtitles* — one place short of *remove* — with the subtitles chooser open
+   and no confirmation ever asked for, so the step waits out its 15s.
+   `pressButton` read the row, counted the presses to the button and walked
+   them; `trailer` arrives with the extras, i.e. after the page is on screen,
+   and a button appearing mid-walk shifts every index past it. Fixed *in the
+   harness* rather than in any step: the walk now re-reads the row and repeats
+   until the focus is actually on the button it was asked for. No assertion
+   moved. Every other walker in the file (`menuChoose`, `sidebarWalkTo`,
+   `focusDeck`) has the same shape and could bite the same way; none has been
+   seen to, so none was touched. **docs/backlog.md's "A flaky smoke step" item
+   can be closed** — it is out of `files:` here.
+   Evidence: before the fix, `npm run verify` failed that step 4 times out of 4
+   and `player deck` 1 in 1 with the diagnosis above; after it, `player deck`
+   3/3 and `npm run verify` 2/2 at 75/75. The pre-split file passed 3/3 in the
+   same window, so the split shortened the window rather than opening it — the
+   race was there either way, and 018 had already tried to buy time with
+   `test(dev): give the removal confirmation longer to appear`.
+2. **`sections`' first step depends on where the rail is resting**, not on the
+   sidebar. It reads the nested rows as "the current section's categories", but
+   the sidebar nests the *cuts of Continue watching* while the rail sits on that
+   row — so cold, `cats` is `["Movies","TV Shows"]`, `sidebarPick('Movies')`
+   takes the section rather than the category, and the step times out. It only
+   ever passed because the step before it left the rail inside a section. The
+   area now says so out loud in a two-line prologue (`sidebarPick('TV Shows')`,
+   one press down) rather than papering over it; the assertion is untouched and
+   would be better written against a row it names.
+3. **`menuTabs()` in `dev/smoke.js` is dead** — defined, never called, by any
+   step or helper. Left alone so this stays a move.
+4. **`dev/server.js` prints the port it was asked for**, so with port 0 its
+   banner now reads `http://localhost:0`. The real one is printed by the smoke
+   runner on the next line (`smoke on http://localhost:44601   areas: ...`).
+   The honest fix is one line in `dev/server.js` — print
+   `server.address().port` from inside the listen callback — and that file is
+   not in `files:`.
+
+## For the orchestrator to apply
+
+**CLAUDE.md**, in *Testing*, where `npm run smoke` is described:
+
+> `npm run smoke` runs every area; `npm run smoke -- <area>` runs one, which is
+> what iterating wants — the areas are `link`, `browse`, `show`, `recaps`,
+> `sections`, `discovery`, `search`, `devices`, `detail`, `player`, `deck`, and
+> an unknown name lists them. The steps live in `dev/smoke/<area>.js`, one file
+> per area, and `dev/smoke.js` is the harness they are given. The mock takes
+> whatever port the OS hands out, so two suites can run at once. Iterate
+> against your area; run the whole suite before the gate.
+
+**`.claude/crew/roles/worker.md`**, under *The gate* and in the boundaries:
+
+> Declare `dev/smoke/<area>.js`, not `dev/smoke.js`, so two tasks that touch
+> different areas can run at once. A task that adds a whole screen adds an area
+> file and declares `dev/smoke.js` as well, for the `AREAS` list. Iterate with
+> `npm run smoke -- <area>`; run `npm run verify` before you ask for review.
 
 ## Review rounds
 
+**Round 1 — PASS.** `crew-reviewer` re-derived the step names and their order
+from the pre-split file and matched them against the areas concatenated in
+`AREAS` order: identical set, identical order, 75 either way. It ran
+`npm run verify` (75/75, 2:36.86), a single area, an unknown area name (lists
+the areas, exits 1), two suites concurrently on separate ports, and the deck
+area three times to confirm the `pressButton` fix. No findings.
+
 ## Graph writes proposed
+
+- **Decision — the smoke suite is one harness and many area files.**
+  `dev/smoke.js` keeps the browser, the collectors and every shared helper and
+  hands them to `dev/smoke/<area>.js` as one object; the areas run in a fixed
+  order because several depend on where the last one left the app. Rationale:
+  the suite was the most contended file in the repo (every task declared it)
+  and a whole run is 2:37, so a worker paid it several times per task. The
+  split does not make a full run faster — it makes iteration 4s to 52s instead
+  of 2:37, and lets two tasks declare different areas. Supersedes nothing;
+  extends the 2026-08-16 "a green baseline is load-bearing" decision, since the
+  gate is still one command reporting one total.
+
+- **Decision — the smoke mock takes port 0, not 8123.** The port is read back
+  off `server.address()` after `listening` and passed to the page and the
+  offsite check. Rationale: a fixed port serialised the orchestrator's
+  verification of `main` behind a worker's branch. Consequence to know:
+  `dev/server.js` prints the port it was *asked* for, so its banner now says
+  `localhost:0` until that one line is fixed.
+
+- **Pattern — a walk to a control must be re-read, not counted once.** The
+  suite walks rows by reading them, counting presses and pressing OK. On a page
+  still fetching (the film page's Trailer arrives with the extras), a button
+  appearing mid-walk shifts every index past it, OK lands a place short and
+  opens the wrong panel — and the failure surfaces as a *timeout in a later
+  assertion* rather than as a wrong press. This was the "flaky smoke step" in
+  docs/backlog.md, misread twice as a timing margin and once patched with a
+  longer timeout. Fix: walk, re-read, repeat until the focus is on the named
+  control, bounded. `menuChoose`, `sidebarWalkTo` and `focusDeck` still count
+  once and have the same shape.
+
+- **Pattern — a step that reads shared chrome depends on where the rail is
+  resting.** The sidebar nests the cuts of Continue watching while the rail
+  sits on that row, and the current section's categories otherwise. A step that
+  reads "the nested rows" therefore only means what it thinks it means from
+  inside a section. This is the class of coupling that a split exposes: it is
+  invisible while the step before it always leaves the app in the right place.
