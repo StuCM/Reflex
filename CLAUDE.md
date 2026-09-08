@@ -232,10 +232,17 @@ Screen:
   switch leaves the film playing and says why in a toast; it never stops
   playback to deliver a message.
 
-  Keys while playing: ◀ ▶ nudge 30s · ▲ ▼ open the menu · RW/FF 5 min ·
-  0–9 jump to that tenth · CH± next/previous chapter · red/green/yellow/blue
-  jump straight to a menu section · OK pauses, or takes the skip when one is
-  offered · BACK closes the menu, then dismisses a skip, then stops.
+  Keys while playing: ◀ ▶ nudge 30s · ▲ ▼ focus the control row, and from
+  there the arrows walk it and OK opens a panel · RW/FF 5 min · 0–9 jump to
+  that tenth · CH± next/previous chapter · red/green/yellow/blue focus and open
+  a panel in one press · OK pauses, or takes the skip when one is offered ·
+  BACK closes the panel, then the row, then dismisses a skip, then stops.
+
+  The control row is a **mode**, and that is what keeps the rest of this list
+  true: while it is unfocused every key above means what it says, and only once
+  ▲ has put a focus on the row do the four arrows belong to it. The cost is that
+  a panel is two presses rather than one, which is why the colour keys still do
+  it in one.
 - `js/app.js` — boot, and where each key goes.
 
 Tools:
