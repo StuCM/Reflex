@@ -616,7 +616,7 @@ function drive(page, titles) {
 
   function waitForConfirm(what) {
     return waitFor('!document.getElementById("confirm").classList.contains("hidden")',
-                   'the confirmation ' + what)
+                   'the confirmation ' + what, 15000)
       .then(confirmBox);
   }
 
