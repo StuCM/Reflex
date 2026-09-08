@@ -33,7 +33,59 @@
       onPlay: function (episode, verdict) {
         playChecked(episode, verdict, false, undefined, toShow);
       },
-      onChoose: function (episode) { openDetail(episode, toShow); }
+      onChoose: function (episode) { openDetail(episode, toShow); },
+      onRecap: openRecap
+    });
+  }
+
+  /* ---------- season recaps ----------
+
+     A recap is a YouTube video, not library content: it never reaches Guard,
+     Player or the timeline, and it opens nothing on anyone's Plex server. */
+
+  var recapVideo = null;         // playing in the overlay, or null
+  var recapOffer = null;         // the panel refused it; OK opens the app instead
+  var recapTimer = null;
+
+  /* Chromium 53 is nine years old and YouTube's embed drops old browsers over
+     time, so an embed that never loads is a real outcome, not a bug: it falls
+     back to the app that can play it rather than sitting on a black screen. */
+  function openRecap(video) {
+    var frame = document.getElementById('recap-frame');
+    recapVideo = video;
+    clearTimeout(recapTimer);
+    recapTimer = setTimeout(function () { recapFailed('did not load'); }, 8000);
+    frame.onload = function () { clearTimeout(recapTimer); };
+    frame.onerror = function () { recapFailed('would not load'); };
+    frame.src = Config.youtubeEmbedBase + video.id + '?autoplay=1';
+    document.getElementById('recap').classList.remove('hidden');
+  }
+
+  function closeRecap() {
+    var frame = document.getElementById('recap-frame');
+    clearTimeout(recapTimer);
+    frame.onload = null;
+    frame.onerror = null;
+    frame.src = 'about:blank';                 // stops it playing on the way out
+    document.getElementById('recap').classList.add('hidden');
+    recapVideo = null;
+  }
+
+  function recapFailed(why) {
+    var video = recapVideo;
+    if (!video) return;
+    closeRecap();
+    recapOffer = video;
+    UI.message('This panel ' + why, video.title +
+               '  ·  OK opens it in the YouTube app  ·  BACK to the recaps');
+  }
+
+  /* webOS only; on the laptop there is no app to hand it to. */
+  function launchYouTube(id) {
+    if (!window.webOS || !window.webOS.service) return;
+    window.webOS.service.request('luna://com.webos.applicationManager', {
+      method: 'launch',
+      parameters: { id: 'youtube.leanback.v4', params: { contentTarget: 'v=' + id } }
     });
   }
 
@@ -176,6 +228,13 @@
       return;
     }
 
+    /* The recap overlay sits over the show page, which is still the view: BACK
+       closes it and leaves the rail exactly where it was. */
+    if (recapVideo) {
+      if (UI.isBack(code)) { closeRecap(); e.preventDefault(); }
+      return;
+    }
+
     switch (UI.view()) {
       case 'search':  handled = Browse.searchKey(code); break;
       case 'devices': handled = Devices.key(code); break;
@@ -192,6 +251,15 @@
      open, which is where a refusal is most likely to have come from. */
   function messageKey(code) {
     if (!UI.isBack(code) && code !== UI.KEY.OK) return false;
+    /* The offer of the YouTube app: OK takes it, BACK declines, and either way
+       the show page and its recaps are what is behind this message. */
+    if (recapOffer) {
+      var video = recapOffer;
+      recapOffer = null;
+      if (code === UI.KEY.OK) launchYouTube(video.id);
+      UI.show('show');
+      return true;
+    }
     if (!Plex.hasToken()) doLink();
     else if (Detail.current()) UI.show('detail');
     else if (ShowPage.current()) UI.show('show');

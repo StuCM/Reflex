@@ -325,6 +325,16 @@ html, body {
 
 #sh-head { position: absolute; top: 56px; left: 64px; width: 1000px; }
 
+/* The page scrolls up as one to make room for the recaps strip below — see the
+   recaps block further down. Transform only; nothing here changes height. */
+#sh-head, #sh-seasons, #sh-episodes {
+  -webkit-transition: -webkit-transform 180ms ease-out;
+  transition: transform 180ms ease-out;
+}
+#sh-head.lifted, #sh-seasons.lifted, #sh-episodes.lifted {
+  -webkit-transform: translateY(-240px); transform: translateY(-240px);
+}
+
 #sh-title {
   font-size: 54px; font-weight: 300; line-height: 1.1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -376,7 +386,66 @@ html, body {
 }
 .sh-verdict { position: absolute; right: 16px; top: 35px; }
 
-#sh-hint { position: absolute; left: 64px; bottom: 40px; margin-top: 0; }
+#sh-hint { position: absolute; left: 64px; bottom: 30px; margin-top: 0; }
+
+/* ---- season recaps ----
+   A strip below the episodes, which already reach the bottom of the screen. So
+   the room is made by lifting the page rather than by shortening the list: one
+   transform each way, nothing that lays out or paints. */
+
+#sh-recaps {
+  position: absolute; top: 786px; left: 64px; width: 1792px; height: 222px;
+  white-space: nowrap; overflow: hidden;
+  opacity: 0;
+  -webkit-transition: opacity 180ms linear; transition: opacity 180ms linear;
+}
+#sh-recaps.open { opacity: 1; }
+
+/* Landscape cards, the rail tile's language turned on its side: a reserved
+   border so focus shifts nothing, and the same citron ring. */
+.sh-recap {
+  display: inline-block; vertical-align: top;
+  width: 208px; margin-right: 14px; padding: 4px;
+  border: 4px solid transparent; border-radius: 16px;
+  background: var(--surface);
+  white-space: normal;
+  font-size: 20px; color: var(--dim);
+  -webkit-transform-origin: 50% 50%; transform-origin: 50% 50%;
+  -webkit-transition: -webkit-transform 180ms ease-out;
+  transition: transform 180ms ease-out;
+}
+.sh-recap.on {
+  border-color: var(--ac); color: var(--fg);
+  -webkit-transform: scale(1.04); transform: scale(1.04);
+}
+
+.sh-recap-thumb {
+  display: block; width: 192px; height: 108px;
+  background: var(--raised) no-repeat center; border-radius: 12px;
+  -webkit-background-size: cover; background-size: cover;
+}
+.sh-recap-title {
+  display: block; margin-top: 10px; height: 52px; overflow: hidden;
+  line-height: 1.3;
+}
+.sh-recap-len { display: block; margin-top: 4px; font-size: 19px; color: var(--dim2); }
+
+/* Before it is a rail it is one action, so it reads as a button rather than as
+   a card with nothing in it. */
+.sh-recap.sh-recap-action {
+  width: 320px; padding: 26px;
+  font-size: 26px; text-align: center;
+}
+
+/* ---- a recap, playing ----
+   YouTube's own player in an iframe. Not library content: nothing here goes
+   near the guard, the player or a Plex session. */
+#recap {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  background: #000;
+}
+#recap-frame { position: absolute; top: 0; left: 0; width: 1920px; height: 1000px; border: 0; }
+#recap-hint { position: absolute; left: 64px; bottom: 26px; margin-top: 0; }
 
 /* Season chips, on the show page. */
 .chip {
