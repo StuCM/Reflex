@@ -1,7 +1,7 @@
 ---
 id: 022
 slug: series-theme-music
-status: draft
+status: approved
 branch: crew/022-series-theme-music
 model: sonnet
 env: laptop
@@ -37,7 +37,14 @@ nothing a kill-stream rule would notice. `grep theme js/` currently returns
 nothing.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing. 019 and 020
+merged; main verifies at 75/75.
+
+`dev/smoke.js` is now the harness only; the steps live in `dev/smoke/<area>.js`
+and this task owns `dev/smoke/show.js`. Task 021 runs beside it and owns
+`js/rail.js` and `dev/smoke/browse.js` — leave them alone. `css/app.css` no
+longer exists: the stylesheets are `css/base.css` plus one per screen, and this
+task should need none of them. Iterate with `npm run smoke -- show` (about 6s).
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from

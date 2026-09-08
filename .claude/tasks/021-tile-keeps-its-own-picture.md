@@ -1,7 +1,7 @@
 ---
 id: 021
 slug: tile-keeps-its-own-picture
-status: draft
+status: approved
 branch: crew/021-tile-keeps-its-own-picture
 model: sonnet
 env: laptop
@@ -31,7 +31,14 @@ swapping 160ms later. Optimising against a blank produced something worse: a
 wrong picture that then changes.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing. 019 and 020
+merged; main verifies at 75/75.
+
+`dev/smoke.js` is now the harness only; the steps live in `dev/smoke/<area>.js`
+and this task owns `dev/smoke/browse.js`. Task 022 runs beside it and owns
+`js/showpage.js`, `js/browse.js`, `js/sidebar.js`, `js/app.js`, `js/plex.js`,
+`index.html`, `dev/mock-plex.js` and `dev/smoke/show.js` — leave them alone.
+Iterate with `npm run smoke -- browse` (about 36s) rather than the full suite.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
