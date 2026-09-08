@@ -1,7 +1,7 @@
 ---
 id: 014
 slug: detail-page-face
-status: approved
+status: building
 branch: crew/014-detail-page-face
 model: sonnet
 env: laptop
