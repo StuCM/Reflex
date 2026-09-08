@@ -1,0 +1,54 @@
+/* The screens with nothing but words on them — link, search, devices, a
+   message — and the two things that sit over any of them: the toast and the
+   debug line. Loaded last, so .msg-hint still wins over .dt-hint as it did
+   when both lived in one file. */
+
+/* ---- link / message ---- */
+
+.link-lead { font-size: 30px; color: var(--dim); margin: 14px 0; }
+.link-url { font-size: 56px; font-weight: 300; }
+.link-code {
+  font-size: 120px; font-weight: 300; letter-spacing: 0.18em;
+  margin-top: 10px;
+}
+
+#search-input {
+  width: 1100px; padding: 18px 24px; margin: 10px 0;
+  font-size: 40px; font-family: inherit;
+  color: var(--fg); background: var(--surface);
+  border: 4px solid var(--soft); border-radius: var(--r-tag);
+  outline: none;
+}
+#search-input:focus { border-color: var(--ac); }
+
+#device-list { margin: 30px auto; width: 1100px; text-align: left; }
+
+.device-row {
+  padding: 12px 20px; font-size: 30px; color: var(--dim);
+  border-left: 6px solid transparent;   /* reserved, so focus shifts nothing */
+}
+.device-row.on { color: var(--fg); border-left-color: var(--ac); }
+.device-count { font-size: 22px; color: var(--dim2); }
+
+.msg-title { font-size: 48px; font-weight: 300; margin-bottom: 24px; }
+.msg-body {
+  font-size: 26px; color: var(--dim); line-height: 1.45;
+  max-width: 1400px; margin: 0 auto;
+  /* Some messages are a paragraph, some are a report with its own layout. */
+  white-space: pre-wrap;
+}
+.msg-hint { font-size: 22px; color: var(--dim2); margin-top: 40px; }
+
+/* ---- toast / debug ---- */
+
+#toast {
+  position: absolute; top: 130px; right: var(--sp-page);
+  padding: 12px 22px; border-radius: var(--r-badge);
+  background: var(--raised); font-size: 24px;
+}
+
+#debug {
+  position: absolute; bottom: 8px; left: var(--sp-edge); width: 1792px; height: 22px;
+  font-size: 18px; color: var(--dim2); white-space: nowrap; overflow: hidden;
+}
+

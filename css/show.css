@@ -1,0 +1,144 @@
+/* The series page: the artwork and its shade, the season chips' row, the
+   episode list, the recaps strip below it and the recap itself. */
+
+/* ---- show ----
+   Series across the top, episodes down the left. Same flat-gradient treatment
+   as the detail page: no blur, nothing animated but the focus. */
+
+#sh-art {
+  position: absolute; top: 0; right: 0; width: 1100px; height: 560px;
+  background-position: center; background-size: cover;
+  opacity: 0.45;
+}
+
+#sh-shade {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 560px;
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 44%, rgba(9, 10, 17, 0) 100%);
+  background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 44%, rgba(9, 10, 17, 0) 100%);
+}
+
+#sh-head { position: absolute; top: 56px; left: var(--sp-page); width: 1000px; }
+
+/* The page scrolls up as one to make room for the recaps strip below — see the
+   recaps block further down. Transform only; nothing here changes height. */
+#sh-head, #sh-seasons, #sh-episodes {
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+#sh-head.lifted, #sh-seasons.lifted, #sh-episodes.lifted {
+  -webkit-transform: translateY(-240px); transform: translateY(-240px);
+}
+
+#sh-title {
+  font-size: 54px; font-weight: 300; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#sh-meta { margin-top: 10px; font-size: 24px; color: var(--dim); }
+#sh-summary {
+  margin-top: 12px; font-size: 21px; line-height: 1.4; color: var(--dim);
+  max-height: 60px; overflow: hidden;
+}
+
+#sh-seasons { position: absolute; top: 280px; left: var(--sp-page); height: 42px; }
+
+#sh-episodes { position: absolute; top: 340px; left: var(--sp-page); width: 1180px; }
+
+/* Reserved border, so moving the selection shifts nothing sideways. */
+.sh-episode {
+  position: relative; height: 106px; padding: 8px 18px;
+  border-left: 6px solid transparent;
+  background: var(--surface);
+  margin-bottom: 5px;
+  font-size: 24px; color: var(--dim);
+  white-space: nowrap; overflow: hidden;
+}
+.sh-episode.on { background: var(--raised); border-left-color: var(--ac); color: var(--fg); }
+
+/* The episode's own still, which is the one place it is worth a picture each.
+   An episode with none keeps the box, so the row is never a different height
+   and never a broken image. */
+.sh-ep-still {
+  display: inline-block; width: 160px; height: 90px; margin-right: 18px;
+  vertical-align: middle;
+  background: var(--raised) no-repeat center; border-radius: var(--r-card);
+  -webkit-background-size: cover; background-size: cover;
+}
+
+.sh-ep-num {
+  display: inline-block; width: 54px; color: var(--dim2); font-size: 22px;
+  vertical-align: middle;
+}
+.sh-episode.on .sh-ep-num { color: var(--ac); }
+.sh-ep-title { display: inline-block; width: 560px; overflow: hidden; vertical-align: middle; }
+.sh-ep-mins {
+  display: inline-block; width: 110px; font-size: 21px; color: var(--dim2);
+  vertical-align: middle;
+}
+.sh-ep-seen {
+  display: inline-block; width: 120px; font-size: 21px; color: var(--dim2);
+  vertical-align: middle;
+}
+.sh-verdict { position: absolute; right: 16px; top: 35px; }
+
+#sh-hint { position: absolute; left: var(--sp-page); bottom: 30px; margin-top: 0; }
+
+/* ---- season recaps ----
+   A strip below the episodes, which already reach the bottom of the screen. So
+   the room is made by lifting the page rather than by shortening the list: one
+   transform each way, nothing that lays out or paints. */
+
+#sh-recaps {
+  position: absolute; top: 786px; left: var(--sp-page); width: 1792px; height: 222px;
+  white-space: nowrap; overflow: hidden;
+  opacity: 0;
+  -webkit-transition: opacity var(--t-quick) var(--ease); transition: opacity var(--t-quick) var(--ease);
+}
+#sh-recaps.open { opacity: 1; }
+
+/* Landscape cards, the rail tile's language turned on its side: a reserved
+   border so focus shifts nothing, and the same citron ring. */
+.sh-recap {
+  display: inline-block; vertical-align: top;
+  width: 208px; margin-right: 14px; padding: 4px;
+  border: 4px solid transparent; border-radius: var(--r-card);
+  background: var(--surface);
+  white-space: normal;
+  font-size: 20px; color: var(--dim);
+  -webkit-transform-origin: 50% 50%; transform-origin: 50% 50%;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+.sh-recap.on {
+  border-color: var(--ac); color: var(--fg);
+  -webkit-transform: scale(1.04); transform: scale(1.04);
+}
+
+.sh-recap-thumb {
+  display: block; width: 192px; height: 108px;
+  /* --r-card less the 4px the card pads it by, so the two corners nest. */
+  background: var(--raised) no-repeat center; border-radius: 12px;
+  -webkit-background-size: cover; background-size: cover;
+}
+.sh-recap-title {
+  display: block; margin-top: 10px; height: 52px; overflow: hidden;
+  line-height: 1.3;
+}
+.sh-recap-len { display: block; margin-top: 4px; font-size: 19px; color: var(--dim2); }
+
+/* Before it is a rail it is one action, so it reads as a button rather than as
+   a card with nothing in it. */
+.sh-recap.sh-recap-action {
+  width: 320px; padding: 26px;
+  font-size: 26px; text-align: center;
+}
+
+/* ---- a recap, playing ----
+   YouTube's own player in an iframe. Not library content: nothing here goes
+   near the guard, the player or a Plex session. */
+#recap {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  background: #000;
+}
+#recap-frame { position: absolute; top: 0; left: 0; width: 1920px; height: 1000px; border: 0; }
+#recap-hint { position: absolute; left: var(--sp-page); bottom: 26px; margin-top: 0; }
+

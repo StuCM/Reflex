@@ -103,21 +103,30 @@ function listFiles(dir, ext) {
 
 const jsFiles = listFiles(path.join(ROOT, 'js'), '.js');
 jsFiles.forEach(function (f) { scan(f, JS_RULES); });
-listFiles(path.join(ROOT, 'css'), '.css').forEach(function (f) { scan(f, CSS_RULES); });
+const cssFiles = listFiles(path.join(ROOT, 'css'), '.css');
+cssFiles.forEach(function (f) { scan(f, CSS_RULES); });
 
-/* Every module in js/ has to be in index.html, in one of the script tags, or it
-   simply is not in the app — there is no bundler to notice. */
+/* Every module in js/ has to be in index.html, in one of the script tags, and
+   every stylesheet in one of the link tags, or it simply is not in the app —
+   there is no bundler to notice. The stylesheets are one file per screen, so
+   this is now the way a whole screen loses its styling in silence. */
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const referenced = (html.match(/<script src="js\/[^"]+"/g) || [])
-  .map(function (s) { return s.replace(/.*js\//, '').replace(/"$/, ''); });
-const present = jsFiles.map(function (f) { return path.basename(f); });
 
-present.forEach(function (f) {
-  if (referenced.indexOf(f) < 0) problems.push('index.html  js/' + f + ' exists but is never loaded');
-});
-referenced.forEach(function (f) {
-  if (present.indexOf(f) < 0) problems.push('index.html  loads js/' + f + ', which does not exist');
-});
+function loaded(dir, files, tags) {
+  const referenced = (html.match(tags) || [])
+    .map(function (s) { return s.replace(/.*\//, '').replace(/"$/, ''); });
+  const present = files.map(function (f) { return path.basename(f); });
+  present.forEach(function (f) {
+    if (referenced.indexOf(f) < 0) problems.push('index.html  ' + dir + f + ' exists but is never loaded');
+  });
+  referenced.forEach(function (f) {
+    if (present.indexOf(f) < 0) problems.push('index.html  loads ' + dir + f + ', which does not exist');
+  });
+  return present;
+}
+
+const scripts = loaded('js/', jsFiles, /<script src="js\/[^"]+"/g);
+const sheets = loaded('css/', cssFiles, /<link rel="stylesheet" href="css\/[^"]+"/g);
 
 if (problems.length) {
   console.log('\n  ' + problems.length + ' problem' + (problems.length === 1 ? '' : 's') +
@@ -127,5 +136,5 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log('  chromium 53: ' + present.length + ' scripts, ' +
-            listFiles(path.join(ROOT, 'css'), '.css').length + ' stylesheets, nothing unsupported');
+console.log('  chromium 53: ' + scripts.length + ' scripts, ' +
+            sheets.length + ' stylesheets, nothing unsupported');

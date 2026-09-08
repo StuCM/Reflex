@@ -1,0 +1,279 @@
+/* Browse: the hero and its scrims, the masthead in both states, the search
+   pill's corner, the sidebar and the rail. Everything on the first screen. */
+
+/* ---- the hero ----
+
+   The backdrop of whatever is focused, full bleed, with two flat scrims over
+   it: one darkening the left so the title reads, one darkening the bottom so
+   the tiles do. Gradients, never a blur — blurring a full-screen image on a
+   2018 SoC costs a frame we do not have. */
+
+/* Two stacked layers, so a new backdrop crossfades in rather than cutting. The
+   wrapper carries the dense opacity and the layers carry the fade, so the two
+   never fight over the one property. */
+#hero-art {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+}
+
+.hero-layer {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  background-position: center top; background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  /* Slower than the UI's own motion: a big soft picture reads better crossfading
+     over half a second, and nothing is waiting on it. */
+  -webkit-transition: opacity var(--t-fade) var(--ease);
+  transition: opacity var(--t-fade) var(--ease);
+}
+.hero-layer.on { opacity: 1; }
+
+#hero-scrim-x {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  background-image: -webkit-linear-gradient(left, var(--bg) 0%, rgba(9, 10, 17, .74) 30%, rgba(9, 10, 17, 0) 72%);
+  background-image: linear-gradient(to right, var(--bg) 0%, rgba(9, 10, 17, .74) 30%, rgba(9, 10, 17, 0) 72%);
+}
+
+#hero-scrim-y {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  /* Solid only as far up as the rail reaches — the row label sits at y=681,
+     which is 37% of the way up. Above that the picture is the point. */
+  background-image: -webkit-linear-gradient(bottom, var(--bg) 0%, var(--bg) 37%, rgba(9, 10, 17, 0) 66%);
+  background-image: linear-gradient(to top, var(--bg) 0%, var(--bg) 37%, rgba(9, 10, 17, 0) 66%);
+}
+
+/* The backdrop follows the focus into the rows rather than being thrown away
+   there — it is what says which film the header is describing. Dimmed under
+   the tiles, and on opacity so the swap costs no layout. */
+#hero-art, #hero-scrim-x, #hero-scrim-y {
+  -webkit-transition: opacity var(--t-move) var(--ease);
+  transition: opacity var(--t-move) var(--ease);
+}
+#browse.dense #hero-art,
+#browse.dense #hero-scrim-x,
+#browse.dense #hero-scrim-y { opacity: .5; }
+
+/* ---- masthead ----
+
+   Two states of the same markup. Tall while the focus is on the first row —
+   where the rail shows Continue watching whole and nothing after it — and a
+   320px header the moment it leaves, which still carries the picture, the
+   title, the description and the cast while leaving room for two whole rows and
+   a peek at a third. No grid on Chromium 53, so the two columns of the header
+   are absolutely positioned inside it; nothing moves in the DOM. */
+
+#masthead { position: absolute; top: var(--sp-edge); left: var(--sp-edge); width: 1080px; height: 340px; }
+
+#mh-row {
+  font-size: 22px; letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--ac2);
+  white-space: nowrap; overflow: hidden;
+}
+
+#mh-title {
+  margin-top: 22px;
+  font-size: 100px; font-weight: 500; line-height: 1.02; letter-spacing: -0.028em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#mh-meta { margin-top: 12px; font-size: 26px; color: var(--dim); }
+
+/* Two lines at 22/1.45, clipped rather than ellipsised: -webkit-line-clamp
+   needs a -webkit-box, and a box is a layout mode this file does not want. */
+#mh-desc {
+  margin-top: 18px; max-height: 68px; overflow: hidden;
+  font-size: 22px; line-height: 1.45; color: var(--dim);
+}
+#mh-cast {
+  margin-top: 12px; font-size: 20px; color: var(--dim2);
+  white-space: nowrap; overflow: hidden;
+}
+
+/* ---- the hero as a header: the same elements, in two columns. ----
+   No background of its own: the backdrop behind it is the point. */
+
+/* The text sits where it sits on the first screen — the title on the same line
+   in both states — so stepping into the rows moves the rail, not the writing. */
+#browse.dense #masthead {
+  top: 0; left: 0; width: 1920px; height: 320px;
+  border-bottom: 1px solid var(--soft);
+  background: none;
+}
+
+#browse.dense #mh-row { display: none; }
+
+#browse.dense #mh-title {
+  position: absolute; top: 144px; left: var(--sp-edge); width: 760px;
+  margin-top: 0;
+}
+#browse.dense #mh-meta {
+  position: absolute; top: 258px; left: var(--sp-edge); width: 760px;
+  margin-top: 0;
+  white-space: nowrap; overflow: hidden;
+}
+/* The second column: to the right of the title rather than under it, so the
+   header stays 264px and the rows keep their room. */
+#browse.dense #mh-desc {
+  position: absolute; top: 144px; left: 900px; width: 620px;
+  margin-top: 0; max-height: 96px;
+}
+#browse.dense #mh-cast {
+  position: absolute; top: 256px; left: 900px; width: 620px; margin-top: 0;
+}
+
+/* ---- the search button ----
+   An affordance, not a target: the red key reaches search in one press from
+   anywhere on the rail, and the sidebar lists it for remotes that have no
+   colour buttons. */
+
+#top-right { position: absolute; top: 56px; right: var(--sp-page); }
+
+/* The select-mode key map, opposite the search pill and clear of the masthead
+   in both hero states. Amber, because it says the screen is in a mode. */
+#browse-hint {
+  position: absolute; top: 52px; left: var(--sp-edge);
+  font-size: 22px; color: var(--ac2);
+}
+
+/* ---- the sidebar ----
+
+   Off-screen by default and slid in on transform alone, so opening it costs
+   one composited layer and no layout. */
+
+#sidebar {
+  position: absolute; top: 0; left: 0; width: 520px; height: 1080px;
+  padding-top: 72px;
+  /* Over the hero and the rail both: it comes before #viewport in the document
+     so that opening it never reflows the rail, and z-index is what buys that. */
+  z-index: 5;
+  background: var(--surface);
+  /* The list is wound with a transform, so what runs past the bottom has to be
+     clipped here. Never overflow:auto — a scrollbar is a control this remote
+     cannot reach. */
+  overflow: hidden;
+  -webkit-transform: translateX(-520px); transform: translateX(-520px);
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+  will-change: transform;
+}
+#sidebar.open { -webkit-transform: translateX(0); transform: translateX(0); }
+
+#sidebar-list {
+  position: relative;           /* the offset parent reveal() measures against */
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+  will-change: transform;
+}
+
+.sb-row {
+  height: 64px; line-height: 64px; padding: 0 34px;
+  border-left: 8px solid transparent;    /* reserved, so focus shifts nothing */
+  font-size: 28px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-row.sub {
+  height: 52px; line-height: 52px; padding-left: 70px;
+  font-size: 24px; color: var(--dim2);
+}
+.sb-row.cur { color: var(--ac2); }
+.sb-row.on {
+  background: var(--ac); border-left-color: var(--ac); color: var(--bg);
+}
+
+/* ---- rows ---- */
+
+/* Fixed in both hero states: it is #rows that moves, by BIG_DROP, so the
+   collapse is one transform and nothing animates a height. */
+/* The rail sits well below the header, and is only tall enough for one row
+   plus the top of the next: enough of the following row to say it is there,
+   not so much that it reads as a second row competing for attention. */
+#viewport { position: absolute; top: 500px; left: 0; width: 1920px; height: 580px; overflow: hidden; }
+
+#rows {
+  position: absolute; top: 0; left: 0; width: 100%;
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease);
+  will-change: transform;
+}
+
+.row { position: absolute; top: 0; left: 0; width: 1920px; height: 440px; }
+
+.row-label {
+  position: absolute; top: 0; left: var(--sp-edge); height: 44px;
+  font-size: 24px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--dim2);
+}
+.row.on .row-label { color: var(--ac); }
+
+/* --t-move, not --t-quick: winding a strip is the same gesture as changing row,
+   and the two used to disagree, which is what read as jarring when they
+   happened at once. */
+.strip {
+  position: absolute; top: 44px; left: var(--sp-edge); width: 100%; height: 362px;
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease);
+  will-change: transform;
+}
+
+/* Outer tile is repositioned when recycled, so it must NOT transition —
+   otherwise a recycled tile flies across the screen. Only the inner element
+   animates, and only its transform. */
+.tile { position: absolute; top: 0; left: 0; width: 209px; height: 388px; }
+
+.tile-inner {
+  position: relative;
+  width: 209px; height: 314px;
+  background: var(--surface);
+  border: 4px solid transparent;
+  /* Same visual weight as the 28px the landscape tile had, not the same
+     number: a corner that size on a 209px tile reads as a lozenge. */
+  border-radius: var(--r-card);
+  overflow: hidden;
+  -webkit-transform-origin: 50% 50%; transform-origin: 50% 50%;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+/* Focus is a citron ring and a lift. A border colour swap costs a repaint of
+   the border box; a box-shadow transition would repaint the lot. */
+.tile.on .tile-inner {
+  border-color: var(--ac);
+  -webkit-transform: scale(1.05); transform: scale(1.05);
+}
+
+/* A poster in a 2:3 box, so cover barely crops. It still crops rather than
+   stretches, because a library always holds something of the wrong shape. */
+.tile img {
+  position: relative; display: block; width: 100%; height: 100%;
+  -o-object-fit: cover; object-fit: cover;
+}
+
+/* Two lines under the art: what the thing is, then where you are in it. An
+   episode names its show first — the episode's own title says nothing without
+   it, and a rail of them all read as different films. */
+.tile-title {
+  margin-top: 16px; padding: 0 4px;
+  font-size: 22px; line-height: 1.3; color: var(--dim);
+  height: 30px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.tile.on .tile-title { color: var(--fg); }
+
+.tile-sub {
+  padding: 0 4px;
+  font-size: 19px; line-height: 1.3; color: var(--dim2);
+  height: 26px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.tile.on .tile-sub { color: var(--dim); }
+
+/* Picked, while green has the Continue watching row in select mode. Amber
+   rather than the focus violet, so a picked tile still reads as picked once the
+   focus has moved along the row. */
+.tile.picked .tile-inner { border-color: var(--ac2); }
+
+/* Resume position, for the Continue Watching row. */
+.tile-progress {
+  position: absolute; left: 0; bottom: 0; height: 5px;
+  background: var(--ac2);
+  z-index: 2;
+}
+

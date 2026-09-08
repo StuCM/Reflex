@@ -10,7 +10,6 @@ Task files are the source of truth; this is the glance view.
 | 021 | A tile keeps its picture only while it is the same film | `draft` | laptop | crew/021-tile-keeps-its-own-picture *(gone)* |
 | 022 | The series theme, on the show page | `draft` | laptop | crew/022-series-theme-music *(gone)* |
 | 023 | Discovery, drawn from TMDB, asking the servers only when it must | `draft` | laptop | crew/023-tmdb-first-discovery *(gone)* |
-| 020 | One stylesheet per screen, and the tokens they share | `building` | laptop | crew/020-split-the-stylesheet |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -27,7 +26,8 @@ Task files are the source of truth; this is the glance view.
 | 016 | Choose the copy, the audio and the subtitles before pressing Play | `done` | laptop | crew/016-detail-choosers *(gone)* |
 | 017 | The player's controls, to the design | `done` | laptop | crew/017-player-osd *(gone)* |
 | 018 | Getting things out of Continue watching | `done` | laptop | crew/018-clear-continue-watching *(gone)* |
-| 019 | One suite, many files, and a free port | `done` | laptop | crew/019-split-the-smoke-suite |
+| 019 | One suite, many files, and a free port | `done` | laptop | crew/019-split-the-smoke-suite *(gone)* |
+| 020 | One stylesheet per screen, and the tokens they share | `done` | laptop | crew/020-split-the-stylesheet |
 
 ## Waiting on you
 
@@ -39,4 +39,4 @@ Task files are the source of truth; this is the glance view.
 
 ## In flight
 
-- **020 One stylesheet per screen, and the tokens they share** — `building` on `crew/020-split-the-stylesheet`
+Nothing running.
