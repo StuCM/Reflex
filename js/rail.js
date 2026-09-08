@@ -41,6 +41,22 @@ var Rail = (function () {
     el.style.webkitTransform = t;
   }
 
+  /* Moving within a row animates; being recycled to a different row must not.
+     A pool element carries the last row's scroll position, so letting that
+     transition means the row you just stepped onto slides in from wherever you
+     had walked to on the one above. Same reason .tile itself never transitions.
+     The offsetWidth read commits the jump before the transition comes back —
+     without it the browser coalesces both changes and animates anyway. */
+  function place(el, x, animate) {
+    if (animate) { translate(el, x, 0); return; }
+    el.style.transition = 'none';
+    el.style.webkitTransition = 'none';
+    translate(el, x, 0);
+    void el.offsetWidth;
+    el.style.transition = '';
+    el.style.webkitTransition = '';
+  }
+
   function build() {
     var r, i, rowEl, label, strip, tile, inner, img, name, sub, prog;
     for (r = 0; r < ROW_POOL; r++) {
@@ -140,7 +156,7 @@ var Rail = (function () {
 
     firstVisible = UI.clamp(row.focus - LEAD, 0, Math.max(0, row.total - TILES_VISIBLE));
     start = UI.clamp(firstVisible - 2, 0, Math.max(0, row.total - TILE_POOL));
-    translate(rowEl._strip, -firstVisible * STRIDE, 0);
+    place(rowEl._strip, -firstVisible * STRIDE, !reused);
 
     for (i = 0; i < TILE_POOL; i++) {
       tile = rowEl._tiles[i];
