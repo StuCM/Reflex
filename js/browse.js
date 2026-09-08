@@ -398,6 +398,12 @@ var Browse = (function () {
       render();
       return;
     }
+    if (choice.kind === 'theme') {
+      ShowPage.cycleTheme();
+      UI.toast('Theme music: ' + ShowPage.themeLabel());
+      render();
+      return;
+    }
     if (choice.kind === 'panel') {
       UI.message('What this panel claims it can play', Panel.report());
       return;

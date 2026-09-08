@@ -33,8 +33,12 @@
       onPlay: function (episode, verdict) {
         playChecked(episode, verdict, false, undefined, toShow);
       },
-      onChoose: function (episode) { openDetail(episode, toShow); },
-      onRecap: openRecap
+      /* Leaving the page by any route stops its theme. One call per route
+         rather than a listener, because the failure mode is two sources on one
+         ARC link — BACK goes through ShowPage's own close, and playback stops
+         it in playChecked. */
+      onChoose: function (episode) { ShowPage.silence(); openDetail(episode, toShow); },
+      onRecap: function (video) { ShowPage.silence(); openRecap(video); }
     });
   }
 
@@ -140,6 +144,9 @@
      survive a switch of audio track, version or quality, because a switch is
      a restart and neither of them should be lost to it. */
   function playChecked(item, verdict, isExtra, resumeAt, back, subLang) {
+    /* Before anything touches the video element: a series theme and playback
+       must never share the ARC link. */
+    ShowPage.silence();
     if (!verdict || !verdict.ok) return;
     var md = verdict.md;
     var server = Servers.of(md);

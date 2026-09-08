@@ -131,6 +131,11 @@
 
 <video id="video" class="hidden" preload="auto"></video>
 
+<!-- A series' theme tune, played quietly on its own page. One element for the
+     life of the app, and never at the same time as the video: two sources over
+     one ARC link is the fault this project can least afford. -->
+<audio id="theme" preload="none"></audio>
+
 <!-- Subtitles are drawn here rather than burned into the picture: burning them
      in is a transcode, and a transcode of a 4K file is what gets the session
      killed. See js/subs.js. -->

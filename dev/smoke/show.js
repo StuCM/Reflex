@@ -1,8 +1,56 @@
 'use strict';
-/* a series page: seasons, episodes, their copies */
+/* a series page: seasons, episodes, their copies, its theme tune */
+const buildLibrary = require('../library').build;
+const hasTheme = require('../mock-plex').hasTheme;
+
 module.exports = function (h) {
   const { shot, visible, press, waitFor, step, sidebarPick, backToLibrary,
+    openShowPage, openSidebar, sidebarRows, playEpisode,
     detailFace, kickerParts, page, titles } = h;
+
+  /* Two shows to open by name: one TheTVDB gave a theme tune to and one it did
+     not, picked out of the same generated library the mock serves — the way
+     dev/smoke.js picks its own titles. The themed one must also direct play, or
+     OK on its first episode opens the copy chooser instead of playing. */
+  const themed = pickShow(true), silent = pickShow(false);
+
+  function pickShow(want) {
+    const lib = buildLibrary({ films: h.FILMS });
+    const holders = {};
+    lib.servers.forEach(function (srv) {
+      srv.items['3'].forEach(function (m) {
+        (holders[m._show] = holders[m._show] || []).push(m);
+      });
+    });
+
+    /* Search matches on a substring, so a title another one contains is not
+       safe to open by name. */
+    function unambiguous(title) {
+      const inShows = lib.shows.filter(function (sh) { return sh.title.indexOf(title) >= 0; });
+      const inFilms = lib.films.filter(function (f) { return f.title.indexOf(title) >= 0; });
+      return inShows.length === 1 && inFilms.length === 0;
+    }
+
+    const hit = lib.shows.filter(function (sh) {
+      const copies = holders[sh.i] || [];
+      if (hasTheme(sh.i) !== want || !copies.length) return false;
+      if (want && (copies.length !== 1 || copies[0]._profile !== 'h264-eac3')) return false;
+      return unambiguous(sh.title);
+    })[0];
+    if (!hit) throw new Error('no unambiguous show ' + (want ? 'with' : 'without') + ' a theme');
+    return hit.title;
+  }
+
+  /* The audio element the theme plays on, and whether the show on screen even
+     has one to play. */
+  function themeState() {
+    return page.evaluate(function () {
+      const a = document.getElementById('theme');
+      const show = ShowPage.current();
+      return { src: a.getAttribute('src') || '', paused: a.paused, loop: a.loop,
+               volume: a.volume, offered: !!(show && show.theme) };
+    });
+  }
 
   return h.ready()
 
@@ -157,6 +205,101 @@ module.exports = function (h) {
             }
           })
           .then(function () { return shot('episode-copies'); })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('a series with a theme plays it, quietly and looping', function () {
+        return openShowPage(themed)
+          .then(function () {
+            return waitFor('(function(){var a=document.getElementById("theme");' +
+                           'return !a.paused && a.volume > 0.3;})()',
+                           'the theme playing, faded up', 10000);
+          })
+          .then(themeState)
+          .then(function (st) {
+            if (!st.offered) throw new Error(themed + ' was picked for its theme and has none');
+            if (st.src.indexOf('http://localhost:') !== 0 || st.src.indexOf('/theme/') < 0) {
+              throw new Error('the theme is not the server\'s theme file: ' + st.src);
+            }
+            if (!st.loop) throw new Error('the theme does not loop');
+            if (st.volume > 0.4) throw new Error('the theme plays at ' + st.volume + ', not quietly');
+          });
+      });
+    })
+
+    .then(function () {
+      return step('BACK off the show page stops the theme', function () {
+        return press('Backspace')
+          .then(function () { return page.waitForTimeout(150); })
+          .then(themeState)
+          .then(function (st) {
+            if (!st.paused) throw new Error('the theme followed us off the page');
+            if (st.src) throw new Error('the theme still holds a source: ' + st.src);
+          });
+      });
+    })
+
+    .then(function () {
+      return step('a series without a theme is silent', function () {
+        return openShowPage(silent)
+          .then(function () { return page.waitForTimeout(400); })
+          .then(themeState)
+          .then(function (st) {
+            if (st.offered) throw new Error(silent + ' was picked for having no theme and has one');
+            if (st.src || !st.paused) throw new Error('something played anyway: ' + st.src);
+          });
+      });
+    })
+
+    .then(function () {
+      return step('starting an episode stops the theme dead', function () {
+        return openShowPage(themed)
+          .then(function () {
+            return waitFor('!document.getElementById("theme").paused',
+                           'the theme playing again', 10000);
+          })
+          /* Episode 1 of this show direct plays, so OK plays it rather than
+             opening the copy chooser. */
+          .then(function () { return playEpisode(1, 1); })
+          .then(function () {
+            return waitFor('!document.getElementById("video").classList.contains("hidden")',
+                           'playback to start', 20000);
+          })
+          .then(themeState)
+          .then(function (st) {
+            if (!st.paused) throw new Error('the theme is still playing over the episode');
+            /* A paused element with a source still holds the pipeline, which on
+               ARC is the whole problem. */
+            if (st.src) throw new Error('the theme still holds a source: ' + st.src);
+          })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('theme music can be turned off, and off survives a reload', function () {
+        return sidebarPick('Theme music: on')
+          .then(function () { return openShowPage(themed); })
+          .then(function () { return page.waitForTimeout(400); })
+          .then(themeState)
+          .then(function (st) {
+            if (!st.offered) throw new Error(themed + ' lost its theme');
+            if (st.src || !st.paused) throw new Error('turned off and it played anyway: ' + st.src);
+          })
+          .then(function () { return page.reload(); })
+          .then(h.ready)
+          .then(openSidebar)
+          .then(sidebarRows)
+          .then(function (rows) {
+            if (rows.indexOf('Theme music: off') < 0) {
+              throw new Error('off did not survive the reload: ' + rows.join(' | '));
+            }
+          })
+          .then(function () { return press('Backspace'); })
+          /* Leave it as it was found: everything after this expects the default. */
+          .then(function () { return sidebarPick('Theme music: off'); })
           .then(backToLibrary);
       });
     });
