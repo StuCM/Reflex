@@ -1,7 +1,7 @@
 ---
 id: 012
 slug: recaps-rail
-status: approved
+status: building
 branch: crew/012-recaps-rail
 model: sonnet
 env: laptop
