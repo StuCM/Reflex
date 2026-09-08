@@ -3,7 +3,17 @@
 <head>
 <meta charset="utf-8">
 <title>Reflex</title>
-<link rel="stylesheet" href="css/app.css">
+<!-- No bundler here either, so the order is the cascade: the tokens and the
+     shared parts first, then one file per screen, each of which may override
+     them. screens.css is last because .msg-hint has to keep beating .dt-hint,
+     as it did when the two were one file. tools/check-es5.js fails if a file in
+     css/ is missing from this list. -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/browse.css">
+<link rel="stylesheet" href="css/detail.css">
+<link rel="stylesheet" href="css/show.css">
+<link rel="stylesheet" href="css/player.css">
+<link rel="stylesheet" href="css/screens.css">
 </head>
 <body>
 
