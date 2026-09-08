@@ -1,7 +1,7 @@
 ---
 id: 020
 slug: split-the-stylesheet
-status: approved
+status: building
 branch: crew/020-split-the-stylesheet
 model: sonnet
 env: laptop

@@ -1,7 +1,7 @@
 ---
 id: 019
 slug: split-the-smoke-suite
-status: approved
+status: building
 branch: crew/019-split-the-smoke-suite
 model: sonnet
 env: laptop
