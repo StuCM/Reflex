@@ -1,7 +1,7 @@
 ---
 id: 016
 slug: detail-choosers
-status: approved
+status: building
 branch: crew/016-detail-choosers
 model: sonnet
 env: laptop
