@@ -1,7 +1,7 @@
 ---
 id: 013
 slug: palette-and-motion
-status: draft
+status: approved
 branch: crew/013-palette-and-motion
 model: sonnet
 env: laptop
@@ -31,7 +31,20 @@ serialises on that file, so splitting small style work costs a whole extra
 round for nothing.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing — no branch
+carries commits touching `css/app.css`, `index.html`, `js/masthead.js` or
+`dev/smoke.js`. No worktrees are in flight; 012 merged as `c0ad5e5`.
+
+Read these as they now are:
+
+- `css/app.css` gained a `#recap` overlay and a `#sh-recaps` strip from 012.
+  Both need the palette applied like everything else, and 012's cards are
+  **16px** radius — matching the rail's tiles, which is the number to keep.
+- `index.html` gained the `#recap` overlay markup.
+- `dev/smoke.js` is at 59 steps, seven of them about recaps. The backdrop steps
+  it already has are the ones that must be adapted to two hero layers.
+- `CLAUDE.md` now records that `Array.prototype.sort` is not stable before
+  Chrome 70. Nothing in this task sorts, but do not add one that assumes it.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
