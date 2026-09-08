@@ -351,7 +351,7 @@ module.exports = function (h) {
                    heroFor: layer.transitionDuration,
                    stripFor: strip.transitionDuration };
         }).then(function (st) {
-          if (st.ac !== '#a79ce3') throw new Error('--ac is ' + st.ac + ', not the violet');
+          if (st.ac !== '#9d93d6') throw new Error('--ac is ' + st.ac + ', not the violet');
           if (st.bg !== '#161826') throw new Error('--bg is ' + st.bg + ', not the Mantis ground');
           if (st.move !== '340ms') throw new Error('--t-move is ' + st.move);
           if (st.fade !== '620ms') throw new Error('--t-fade is ' + st.fade);
