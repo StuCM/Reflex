@@ -115,10 +115,14 @@
          film and must not inherit its resume position.
 
          Stopping returns to this page rather than past it — the page is where
-         you pick another copy, or the next extra. */
-      onPlay: function (entry, verdict, isExtra) {
+         you pick another copy, or the next extra.
+
+         The verdict is the one the page's buttons already put through the
+         guard, and subLang is the subtitle language they chose, so playback
+         starts on exactly what those buttons said it would. */
+      onPlay: function (entry, verdict, isExtra, subLang) {
         playChecked(entry, verdict, isExtra, undefined,
-                    function () { openDetail(item, back); });
+                    function () { openDetail(item, back); }, subLang);
       },
       onExit: back || toBrowse
     });
