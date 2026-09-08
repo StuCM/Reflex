@@ -76,6 +76,23 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   wants a say in which TMDB categories exist rather than the four hardcoded in
   `js/tmdb.js`. Touches `js/browse.js`, `js/discovery.js`, `js/sidebar.js`.
 
+- **The film page's layout is wrong in five ways**, all seen on the panel:
+  1. `#dt-body` and `#dt-extras` are `width: 1000px` on a 1920px screen — a
+     leftover from when `#dt-art` occupied 1100px on the right. 008 and 014
+     replaced that with a full-width header and nobody widened the body, so cast
+     and extras have been squeezed into half the screen since.
+  2. Spacing throughout is cramped.
+  3. Extras should be a row you navigate **down** to with only its top showing —
+     the same peek the rail uses and the user already approved there — rather
+     than a strip inside the body.
+  4. `.dt-act.primary` is 280×88 while every other button is 88×88: Play is too
+     big and the rest too small.
+  5. **No way to play from the start** when a film is part-watched. Play
+     resumes; there is no second action.
+  Best done against `design/Mantis Screens.dc.html` if the user can export it —
+  screenshots carried the palette losslessly but carry no type scale and no
+  spacing, which is exactly what is wrong here.
+
 - **Rebuild the film and series pages to the design language the rail now
   uses** — portrait posters, the 264px header, ink & citron. The flow they have
   to serve is: search a title, land on its page, switch between servers and
