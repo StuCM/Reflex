@@ -811,22 +811,32 @@ function drive(page, titles, port) {
 
   /* Walk the row to a button and press OK. By name rather than by an index:
      Trailer is only there when the film has one, and Remove only when the thing
-     is on the deck. */
+     is on the deck — and Trailer arrives with the extras, which is to say after
+     the page is on screen. A row that grows a button mid-walk shifts every
+     index past it, so the walk is checked and repeated rather than counted
+     once: OK a place short opens the wrong panel, and the step that wanted the
+     confirmation waits out its timeout for one that was never asked for. */
   function pressButton(which) {
-    return actionRow().then(function (row) {
-      let at = 0, to = -1;
-      for (let i = 0; i < row.length; i++) {
-        if (row[i].on) at = i;
-        if (row[i].act === which) to = i;
-      }
-      if (to < 0) {
-        throw new Error('no ' + which + ' button: ' +
-                        row.map(function (a) { return a.act; }).join(', '));
-      }
-      return press(to > at ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - at))
-        .then(function () { return page.keyboard.press('Enter'); })
-        .then(function () { return page.waitForTimeout(80); });
-    });
+    function walk(n) {
+      return actionRow().then(function (row) {
+        let at = 0, to = -1;
+        for (let i = 0; i < row.length; i++) {
+          if (row[i].on) at = i;
+          if (row[i].act === which) to = i;
+        }
+        if (to < 0) {
+          throw new Error('no ' + which + ' button: ' +
+                          row.map(function (a) { return a.act; }).join(', '));
+        }
+        if (to === at) return;
+        if (n <= 0) throw new Error('the ' + which + ' button would not take the focus');
+        return press(to > at ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - at))
+          .then(function () { return walk(n - 1); });
+      });
+    }
+    return walk(4)
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () { return page.waitForTimeout(80); });
   }
 
   function openChooser(which) {
