@@ -14,7 +14,13 @@ files:
   - css/app.css
   - dev/mock-plex.js
   - dev/smoke.js
+  - js/sidebar.js
 ---
+
+<!-- js/sidebar.js was added to files: on the orchestrator's amendment: this
+     remote has no colour buttons (js/sidebar.js:7), so select mode reachable
+     only by green would ship unreachable. One entry in modes(), one kind. -->
+
 
 # Getting things out of Continue watching
 

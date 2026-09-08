@@ -251,6 +251,10 @@ function drive(page, titles) {
       /* One recap embed never answers on purpose, so that the app's fallback
          has something to fall back from; closing the overlay aborts it. */
       if (where.indexOf('/__ytembed/') >= 0) return;
+      /* Backup answers removeFromContinueWatching with a 404 on purpose — that
+         is the whole reason the app has a fallback. Only Backup's: a 404 from
+         Main would be a real failure. */
+      if (where.indexOf('/__plex2/actions/removeFromContinueWatching') >= 0) return;
       errors.push('console: ' + text + ' ' + where);
     }
   });
@@ -272,8 +276,12 @@ function drive(page, titles) {
      rather than a detail of it. */
   const ytCalls = [];
   const ytSearches = [];
+  /* Every write that takes something off the deck, so a step can say which
+     server was actually told rather than only that the row got shorter. */
+  const deckWrites = [];
   page.on('request', function (r) {
     const u = r.url();
+    if (/removeFromContinueWatching|\/:\/scrobble/.test(u)) deckWrites.push(u);
     if (/\/__yt\/(channels|search|videos)\?/.test(u)) ytCalls.push(u);
     if (u.indexOf('/__yt/search?') >= 0) ytSearches.push(u);
     if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
@@ -536,6 +544,119 @@ function drive(page, titles) {
       .then(function () { return page.waitForTimeout(200); });
   }
 
+  /* ---- the Continue watching row, as the clearing steps need it ----
+
+     Every entry in it, not only the tiles drawn: the row is one entry per
+     title, each carrying every copy of it, and clearing has to reach the server
+     behind each copy. */
+
+  function deckRow() {
+    return page.evaluate(function () {
+      const el = document.querySelector('#rows .row.on');
+      const row = el && el._rowRef;
+      if (!row || !row.items) return null;
+      return {
+        label: el.querySelector('.row-label').textContent.trim(),
+        focus: row.focus,
+        picked: Array.prototype.filter.call(el.querySelectorAll('.tile'), function (t) {
+          return t.classList.contains('picked');
+        }).length,
+        hint: !document.getElementById('browse-hint').classList.contains('hidden'),
+        entries: row.items.map(function (m) {
+          return { title: m.grandparentTitle || m.title, type: m.type,
+                   servers: [m._server].concat((m._sources || []).map(function (s) {
+                     return s._server;
+                   })) };
+        })
+      };
+    }).then(function (row) {
+      if (!row) throw new Error('the Continue watching row is not the focused one');
+      return row;
+    });
+  }
+
+  /* Move the focus onto the first entry `wanted` accepts, and hand it back. */
+  function focusDeck(wanted) {
+    return deckRow().then(function (row) {
+      let to = -1;
+      for (let i = 0; i < row.entries.length; i++) {
+        if (to < 0 && wanted(row.entries[i])) to = i;
+      }
+      if (to < 0) {
+        throw new Error('nothing in the row matched: ' + row.entries.map(function (e) {
+          return e.title + ' [' + e.servers.join(' + ') + ']';
+        }).join(' | '));
+      }
+      return press(to > row.focus ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - row.focus))
+        .then(function () { return row.entries[to]; });
+    });
+  }
+
+  const onMain = function (e) { return e.servers.length === 1 && /main$/.test(e.servers[0]); };
+  const onBackup = function (e) { return e.servers.length === 1 && /backup$/.test(e.servers[0]); };
+  const onBoth = function (e) { return e.servers.length === 2; };
+
+  /* The confirmation: what it says will happen, and which row it landed on. */
+  function confirmBox() {
+    return page.evaluate(function () {
+      const box = document.getElementById('confirm');
+      if (box.classList.contains('hidden')) return null;
+      return {
+        title: box.querySelector('.menu-tab').textContent.trim(),
+        note: box.querySelector('.menu-note').textContent.trim(),
+        rows: Array.prototype.map.call(box.querySelectorAll('.menu-row'), function (r) {
+          return (r.classList.contains('sel') ? '> ' : '') +
+                 r.querySelector('.menu-label').textContent.trim();
+        })
+      };
+    });
+  }
+
+  function waitForConfirm(what) {
+    return waitFor('!document.getElementById("confirm").classList.contains("hidden")',
+                   'the confirmation ' + what)
+      .then(confirmBox);
+  }
+
+  /* Take the action rather than the default: Cancel is what it lands on. */
+  function takeConfirm() {
+    return press('ArrowUp')
+      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () { return page.waitForTimeout(400); });
+  }
+
+  /* Whatever the browse screen has cached for a section's rows. Continue
+     watching sits in every one of them, so a removal has to clear the lot or a
+     reload paints the thing straight back. */
+  function cachedRows(section) {
+    return page.evaluate(function (key) {
+      return new Promise(function (resolve) {
+        const req = indexedDB.open('reflex', 1);
+        req.onerror = function () { resolve('no database'); };
+        req.onsuccess = function () {
+          const get = req.result.transaction('kv', 'readonly').objectStore('kv').get(key);
+          get.onsuccess = function () { resolve(get.result === undefined ? null : get.result); };
+          get.onerror = function () { resolve('read failed'); };
+        };
+      });
+    }, 'rows:' + section);
+  }
+
+  /* Land on Continue watching with the deck as the servers now have it. Out
+     through the other section and back: picking the section you are already on
+     repaints the rows it holds rather than asking the servers again, so a
+     reload that stays on Movies would prove nothing about what they now say. */
+  function reloadDeck() {
+    return backToLibrary()
+      .then(function () { return sidebarPick('TV Shows'); })
+      .then(function () { return page.waitForTimeout(500); })
+      .then(function () { return sidebarPick('Movies'); })
+      .then(function () { return page.waitForTimeout(500); })
+      .then(function () { return sidebarPick('Continue watching'); })
+      .then(function () { return page.waitForTimeout(200); })
+      .then(deckRow);
+  }
+
   /* What the focused row is showing, by kind: the tiles carry their item. */
   function focusedRowTypes() {
     return page.evaluate(function () {
@@ -646,6 +767,7 @@ function drive(page, titles) {
       return Array.prototype.map.call(document.querySelectorAll('#dt-actions .dt-act'),
         function (a) {
           return { on: a.classList.contains('on'),
+                   act: a.getAttribute('data-act'),
                    primary: a.classList.contains('primary'),
                    button: a.querySelector('.dt-act-btn').textContent.trim(),
                    caption: a.querySelector('.dt-act-cap').textContent.trim() };
@@ -653,15 +775,20 @@ function drive(page, titles) {
     });
   }
 
-  /* Walk the row to a button and press OK. Counted from the end for everything
-     but Play, because Trailer is only there when the film has one. */
-  const BUTTON = { play: 0, quality: -4, source: -3, audio: -2, subtitles: -1 };
-
+  /* Walk the row to a button and press OK. By name rather than by an index:
+     Trailer is only there when the film has one, and Remove only when the thing
+     is on the deck. */
   function pressButton(which) {
     return actionRow().then(function (row) {
-      let at = 0;
-      for (let i = 0; i < row.length; i++) if (row[i].on) at = i;
-      const to = BUTTON[which] < 0 ? row.length + BUTTON[which] : BUTTON[which];
+      let at = 0, to = -1;
+      for (let i = 0; i < row.length; i++) {
+        if (row[i].on) at = i;
+        if (row[i].act === which) to = i;
+      }
+      if (to < 0) {
+        throw new Error('no ' + which + ' button: ' +
+                        row.map(function (a) { return a.act; }).join(', '));
+      }
       return press(to > at ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - at))
         .then(function () { return page.keyboard.press('Enter'); })
         .then(function () { return page.waitForTimeout(80); });
@@ -3322,6 +3449,331 @@ function drive(page, titles) {
                            ' document.getElementById("upnext").classList.contains("hidden") &&' +
                            ' !document.getElementById("detail").classList.contains("hidden")',
                            'the film to end and the page to come back', 25000);
+          });
+      });
+    })
+
+    /* ---- getting things out of Continue watching ----
+
+       Green turns the row into a multi-select, and nothing goes without a
+       confirmation naming which of two different things is about to happen: the
+       item hidden, watch state untouched, or marked watched, which is not the
+       same and is not reversible. The mock's Backup server has no
+       removeFromContinueWatching, so both paths are walked here rather than
+       described. These steps come last because they shorten the row. */
+
+    .then(function () {
+      return step('green picks things off Continue watching, and BACK changes nothing',
+        function () {
+          let was;
+          return backToLibrary()
+            .then(function () { return sidebarPick('Continue watching'); })
+            .then(deckRow)
+            .then(function (row) {
+              was = row;
+              if (row.label !== 'Continue watching') {
+                throw new Error('the rail is on "' + row.label + '"');
+              }
+              if (row.entries.length < 3) {
+                throw new Error('only ' + row.entries.length + ' part-watched entries');
+              }
+              if (row.hint) throw new Error('the select-mode hint is up before green');
+            })
+            .then(function () { return press('F3'); })                    // green
+            .then(deckRow)
+            .then(function (row) {
+              if (row.label !== 'Select to remove — 0 picked') {
+                throw new Error('green left the row labelled "' + row.label + '"');
+              }
+              if (!row.hint) throw new Error('the select-mode hint never appeared');
+            })
+            .then(function () { return page.keyboard.press('Enter'); })   // pick this one
+            .then(function () { return press('ArrowRight'); })
+            .then(function () { return page.keyboard.press('Enter'); })   // and the next
+            .then(deckRow)
+            .then(function (row) {
+              if (row.label !== 'Select to remove — 2 picked') {
+                throw new Error('two picks read as "' + row.label + '"');
+              }
+              if (row.picked !== 2) throw new Error(row.picked + ' tiles are marked, not 2');
+            })
+            /* OK again unpicks, and up and down are ignored so the mode cannot
+               be left by wandering out of it. */
+            .then(function () { return page.keyboard.press('Enter'); })
+            .then(function () { return press('ArrowDown'); })
+            .then(deckRow)
+            .then(function (row) {
+              if (row.label !== 'Select to remove — 1 picked') {
+                throw new Error('after unpicking and a down press: "' + row.label + '"');
+              }
+            })
+            .then(function () { return shot('deck-picking'); })
+            .then(function () { return press('Backspace'); })
+            .then(deckRow)
+            .then(function (row) {
+              if (row.label !== 'Continue watching') {
+                throw new Error('BACK left the row labelled "' + row.label + '"');
+              }
+              if (row.picked || row.hint) throw new Error('BACK left the mode half up');
+              if (row.entries.length !== was.entries.length) {
+                throw new Error('BACK removed ' +
+                                (was.entries.length - row.entries.length) + ' entries');
+              }
+            });
+        });
+    })
+
+    .then(function () {
+      return step('the sidebar reaches select mode too, for a remote with no green key',
+        function () {
+          return backToLibrary()
+            .then(function () { return sidebarPick('Continue watching'); })
+            /* Off the row entirely, so picking the entry has to land the focus
+               back on it rather than arm a mode nobody can see. */
+            .then(function () { return press('ArrowDown'); })
+            .then(openSidebar)
+            .then(sidebarRows)
+            .then(function (rows) {
+              const listed = rows.map(function (r) { return r.replace(/^[*-] /g, '').trim(); });
+              if (listed.indexOf('Clear from Continue watching') < 0) {
+                throw new Error('no clear entry in the sidebar: ' + rows.join(' | '));
+              }
+            })
+            .then(function () { return press('ArrowLeft'); })              // close it again
+            .then(function () { return sidebarPick('Clear from Continue watching'); })
+            .then(deckRow)
+            .then(function (row) {
+              if (row.label !== 'Select to remove — 0 picked') {
+                throw new Error('the sidebar left the row labelled "' + row.label + '"');
+              }
+              if (!row.hint) throw new Error('the select-mode hint never appeared');
+            })
+            .then(function () { return press('Backspace'); })
+            /* And it is not offered where there is no Continue watching row to
+               clear — Kids builds its own rows. */
+            .then(function () { return sidebarPick('Kids'); })
+            .then(function () { return page.waitForTimeout(400); })
+            .then(openSidebar)
+            .then(sidebarRows)
+            .then(function (rows) {
+              if (rows.join(' | ').indexOf('Clear from Continue watching') >= 0) {
+                throw new Error('the clear entry is offered in Kids: ' + rows.join(' | '));
+              }
+              if (rows.join(' | ').indexOf('Devices') < 0) {
+                throw new Error('the sidebar is not even listing its modes: ' + rows.join(' | '));
+              }
+            })
+            .then(function () { return press('ArrowLeft'); })
+            .then(backToLibrary);
+        });
+    })
+
+    .then(function () {
+      return step('a title\'s own page offers the same removal, and only on the deck',
+        function () {
+          let film;
+          return backToLibrary()
+            .then(function () { return sidebarPick('Continue watching'); })
+            .then(function () {
+              return focusDeck(function (e) { return e.type === 'movie' && onMain(e); });
+            })
+            .then(function (entry) { film = entry; return page.keyboard.press('Enter'); })
+            .then(function () {
+              return waitFor('!document.getElementById("detail").classList.contains("hidden")',
+                             'the page for ' + film.title);
+            })
+            .then(actionRow)
+            .then(function (row) {
+              const acts = row.map(function (a) { return a.act; });
+              if (acts.indexOf('remove') < 0) {
+                throw new Error('no remove button on a deck title: ' + acts.join(', '));
+              }
+              const btn = row[acts.indexOf('remove')];
+              if (!/Continue watching/.test(btn.caption)) {
+                throw new Error('the remove button says "' + btn.caption + '"');
+              }
+            })
+            .then(function () { return pressButton('remove'); })
+            .then(function () { return waitForConfirm('from the film page'); })
+            .then(function (box) {
+              if (box.title !== 'Remove 1 from Continue watching') {
+                throw new Error('the confirmation says "' + box.title + '"');
+              }
+            })
+            .then(takeConfirm)
+            /* Back on the rail, with the row already redrawn without it. */
+            .then(function () {
+              return waitFor('document.getElementById("detail").classList.contains("hidden")',
+                             'the page to close onto the rail');
+            })
+            .then(deckRow)
+            .then(function (row) {
+              const still = row.entries.filter(function (e) { return e.title === film.title; });
+              if (still.length) throw new Error(film.title + ' is still in the row');
+            })
+            /* And a title that is not part-watched is not offered it at all. */
+            .then(function () { return openTitle(titles.directPlays.title); })
+            .then(actionRow)
+            .then(function (row) {
+              const acts = row.map(function (a) { return a.act; });
+              if (acts.join(',') !== 'play,trailer,quality,source,audio,subtitles') {
+                throw new Error('a film that is not on the deck offers: ' + acts.join(', '));
+              }
+            });
+        });
+    })
+
+    .then(function () {
+      return step('a picked entry is hidden, and stays gone after a reload', function () {
+        let film;
+        const before = deckWrites.length;
+        /* Through a real reload first, so the rows cache is freshly written and
+           the check below is about this removal rather than an earlier one. */
+        return reloadDeck()
+          .then(function () {
+            return focusDeck(function (e) { return e.type === 'movie' && onMain(e); });
+          })
+          .then(function (entry) { film = entry; return cachedRows('Movies'); })
+          /* Read before as well as after: a check that the cache is empty
+             afterwards proves nothing if the key was never the right one. */
+          .then(function (cached) {
+            if (!cached || !cached.rows) {
+              throw new Error('nothing cached under rows:Movies to begin with');
+            }
+          })
+          .then(function () { return press('F3'); })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () { return press('F3'); })
+          .then(function () { return waitForConfirm('for one picked film'); })
+          .then(function (box) {
+            if (box.title !== 'Remove 1 from Continue watching') {
+              throw new Error('the confirmation says "' + box.title + '"');
+            }
+            if (box.note !== 'They stay part-watched.') {
+              throw new Error('the note says "' + box.note + '"');
+            }
+            /* Cancel is what it lands on: the action is a key away and never
+               the default. */
+            if (box.rows.join(' | ') !== 'Remove them | > Cancel') {
+              throw new Error('the confirmation rows are: ' + box.rows.join(' | '));
+            }
+          })
+          .then(takeConfirm)
+          .then(function () {
+            const wrote = deckWrites.slice(before);
+            const hid = wrote.filter(function (u) {
+              return /__plex\/actions\/removeFromContinueWatching/.test(u);
+            });
+            if (hid.length !== 1) {
+              throw new Error('the hide went: ' + (wrote.join(', ') || 'nowhere'));
+            }
+            /* Hiding leaves watch state alone, so nothing may have been
+               scrobbled on the way. */
+            const marked = wrote.filter(function (u) { return /scrobble/.test(u); });
+            if (marked.length) throw new Error('it scrobbled as well: ' + marked.join(', '));
+          })
+          .then(deckRow)
+          .then(function (row) {
+            if (row.entries.filter(function (e) { return e.title === film.title; }).length) {
+              throw new Error(film.title + ' is still in the row');
+            }
+          })
+          /* The cached rows carry Continue watching too, in every section, so
+             they have to go or a reload paints it straight back. */
+          .then(function () { return Promise.all([cachedRows('Movies'), cachedRows('TV Shows')]); })
+          .then(function (cached) {
+            const kept = cached.filter(Boolean);
+            if (kept.length) {
+              throw new Error(kept.length + ' section(s) still have cached rows after a removal');
+            }
+          })
+          .then(reloadDeck)
+          .then(function (row) {
+            if (row.entries.filter(function (e) { return e.title === film.title; }).length) {
+              throw new Error(film.title + ' came back after a reload');
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('a server that cannot hide says so, and cancelling keeps the entry',
+        function () {
+          let entry;
+          const before = deckWrites.length;
+          return backToLibrary()
+            .then(function () { return sidebarPick('Continue watching'); })
+            .then(function () { return focusDeck(onBackup); })
+            .then(function (e) { entry = e; return press('F3'); })
+            .then(function () { return page.keyboard.press('Enter'); })
+            .then(function () { return press('F3'); })
+            .then(function () { return waitForConfirm('for the Backup copy'); })
+            .then(takeConfirm)
+            /* Backup has no removeFromContinueWatching, so the app asks again —
+               and says plainly that this one is not the same thing. */
+            .then(function () { return waitForConfirm('offering to mark it watched'); })
+            .then(function (box) {
+              if (box.title !== 'Mark 1 watched') {
+                throw new Error('the second confirmation says "' + box.title + '"');
+              }
+              if (!/cannot hide them/.test(box.note) ||
+                  !/marks every episode/.test(box.note)) {
+                throw new Error('the note does not say what marking watched costs: ' + box.note);
+              }
+              if (box.rows.join(' | ') !== 'Mark them watched | > Cancel') {
+                throw new Error('the rows are: ' + box.rows.join(' | '));
+              }
+            })
+            /* Cancel is selected, so OK cancels — and nothing is marked. */
+            .then(function () { return page.keyboard.press('Enter'); })
+            .then(function () { return page.waitForTimeout(200); })
+            .then(function () {
+              const marked = deckWrites.slice(before).filter(function (u) {
+                return /scrobble/.test(u);
+              });
+              if (marked.length) throw new Error('cancelling scrobbled anyway: ' + marked.join(', '));
+            })
+            .then(function () { return press('Backspace'); })            // out of the mode
+            .then(reloadDeck)
+            .then(function (row) {
+              if (!row.entries.filter(function (e) { return e.title === entry.title; }).length) {
+                throw new Error(entry.title + ' left the row after a cancelled removal');
+              }
+            });
+        });
+    })
+
+    .then(function () {
+      return step('an entry on both servers is cleared on both of them', function () {
+        let entry;
+        const before = deckWrites.length;
+        return backToLibrary()
+          .then(function () { return sidebarPick('Continue watching'); })
+          .then(function () { return focusDeck(onBoth); })
+          .then(function (e) { entry = e; return press('F3'); })
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () { return press('F3'); })
+          .then(function () { return waitForConfirm('for the shared film'); })
+          .then(takeConfirm)
+          /* Main hides it; Backup cannot, so the whole entry falls to the
+             second question rather than half-vanishing. */
+          .then(function () { return waitForConfirm('after Backup refused to hide it'); })
+          .then(takeConfirm)
+          .then(function () { return page.waitForTimeout(300); })
+          .then(function () {
+            const wrote = deckWrites.slice(before);
+            const each = ['/__plex/:/scrobble', '/__plex2/:/scrobble'];
+            each.forEach(function (path) {
+              if (!wrote.some(function (u) { return u.indexOf(path) >= 0; })) {
+                throw new Error('nothing was sent to ' + path + ': ' + wrote.join(', '));
+              }
+            });
+          })
+          .then(reloadDeck)
+          .then(function (row) {
+            if (row.entries.filter(function (e) { return e.title === entry.title; }).length) {
+              throw new Error(entry.title + ' survived on one of the two servers');
+            }
           });
       });
     })

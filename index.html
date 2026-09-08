@@ -32,6 +32,9 @@
       fill="none" stroke="currentColor" stroke-width="16"><circle cx="112" cy="112" r="80"/>
       <line x1="168" y1="168" x2="224" y2="224"/></svg>Search</span>
   </div>
+  <!-- What the keys mean while green has Continue watching in select mode.
+       Empty and hidden the rest of the time. -->
+  <div id="browse-hint" class="hidden"></div>
   <div id="sidebar"><div id="sidebar-list"></div></div>
   <div id="viewport"><div id="rows"></div></div>
 </div>
@@ -138,6 +141,11 @@
 </div>
 
 <div id="menu" class="hidden"></div>
+
+<!-- Nothing leaves Continue watching without this. Hiding an item and marking
+     it watched are different things, and only one of them is reversible, so
+     the confirmation names which one is about to happen. -->
+<div id="confirm" class="hidden"></div>
 
 <!-- Chapters are cards rather than a list: a still and a timecode say more
      about where you are going than "Chapter 7" ever does. -->

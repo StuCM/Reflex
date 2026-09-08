@@ -181,6 +181,13 @@ html, body {
 
 #top-right { position: absolute; top: 56px; right: 64px; }
 
+/* The select-mode key map, opposite the search pill and clear of the masthead
+   in both hero states. Amber, because it says the screen is in a mode. */
+#browse-hint {
+  position: absolute; top: 52px; left: 96px;
+  font-size: 22px; color: var(--ac2);
+}
+
 /* ---- the sidebar ----
 
    Off-screen by default and slid in on transform alone, so opening it costs
@@ -311,6 +318,11 @@ html, body {
   white-space: nowrap; text-overflow: ellipsis;
 }
 .tile.on .tile-sub { color: var(--dim); }
+
+/* Picked, while green has the Continue watching row in select mode. Amber
+   rather than the focus violet, so a picked tile still reads as picked once the
+   focus has moved along the row. */
+.tile.picked .tile-inner { border-color: var(--ac2); }
 
 /* Resume position, for the Continue Watching row. */
 .tile-progress {
@@ -929,6 +941,18 @@ html, body {
 .menu-note-inline { margin-left: 18px; font-size: 21px; color: var(--dim2); }
 
 .menu-note { margin-top: 12px; font-size: 20px; color: var(--dim2); height: 24px; }
+
+/* ---- the confirmation ----
+   Centred over whichever screen asked for it, in the same shell: a
+   confirmation is a title and two rows, not another kind of thing. Its note
+   runs to two lines, where the menus' is one. */
+#confirm {
+  position: absolute; left: 504px; top: 340px; width: 860px; z-index: 6;
+  padding: 22px 26px 18px; border-radius: 8px;
+  background: rgba(22, 24, 38, 0.94);
+}
+#confirm .menu-list { height: auto; max-height: 392px; }
+#confirm .menu-note { height: auto; }
 
 /* ---- toast / debug ---- */
 

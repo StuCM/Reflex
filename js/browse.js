@@ -14,6 +14,8 @@ var Browse = (function () {
 
   var elBrowse = document.getElementById('browse');
   var elInput = document.getElementById('search-input');
+  var elHint = document.getElementById('browse-hint');
+  var elConfirm = document.getElementById('confirm');
 
   var sections = [], secIdx = 0;
   var rows = [], rowIdx = 0;
@@ -28,8 +30,15 @@ var Browse = (function () {
   var pageTimer = null;
   var opts = {};
 
+  var picking = false;                    // green has the deck row in select mode
+  var picks = [];                         // the entries picked, while it has
+  var pickAt = -1;                        // the row that is happening on
+
   var RESULTS_PER_ROW = 10;
   var WATCHING = 'Continue watching';
+  /* UI.KEY carries red, which search already uses; green is free on this
+     screen and is the only other key the Magic Remote's siblings all have. */
+  var GREEN = 404;
 
   /* One section per kind of thing this app can play, whatever the servers call
      their libraries. Music and photos are neither, so they are left out. */
@@ -73,6 +82,7 @@ var Browse = (function () {
     /* The backdrop keeps its own debounce — Meta's skips a cached item and
        would leave the last film's art under the new one's title. */
     Masthead.art(focusedItem());
+    markPicks();
     scheduleWalk();
   }
 
@@ -126,8 +136,10 @@ var Browse = (function () {
   function openSidebar() {
     /* Continue watching is per account rather than per section, so it heads the
        list on its own rather than once under every section. */
-    var watching = { current: mode === 'library' && rowIdx === watchingRowIdx(),
-                     type: watchingType };
+    var at = watchingRowIdx();
+    var watching = { current: mode === 'library' && rowIdx === at,
+                     type: watchingType,
+                     has: at >= 0 && rows[at].total > 0 };
     Sidebar.open(sections.map(function (sec, i) {
       /* Category titles are the row titles of a section we have already built,
          so this fetches nothing. A section never visited simply lists none. */
@@ -136,10 +148,18 @@ var Browse = (function () {
     }), activate, mode, watching);
   }
 
+  /* Select mode renames the row, so while it is on the row is known by where it
+     is rather than by what it says. */
   function watchingRowIdx() {
     var i;
+    if (picking) return pickAt;
     for (i = 0; i < rows.length; i++) if (rows[i].title === WATCHING) return i;
     return -1;
+  }
+
+  function deckCut() {
+    if (!watchingType) return deckItems;
+    return deckItems.filter(function (m) { return m.type === watchingType; });
   }
 
   /* Continue watching, cut to films or episodes. The unfiltered deck is kept so
@@ -150,14 +170,185 @@ var Browse = (function () {
     var at = watchingRowIdx();
     if (at < 0) { UI.toast('Nothing part-watched there'); return; }
     watchingType = type || null;
-    var items = deckItems;
-    if (watchingType) {
-      items = deckItems.filter(function (m) { return m.type === watchingType; });
-    }
+    var items = deckCut();
     rows[at] = Rows.list(WATCHING, items);
     rowIdx = at;
     render();
     if (!items.length) UI.toast('Nothing part-watched there');
+  }
+
+  /* ---------- clearing Continue watching ----------
+
+     The row grows and never shrinks, and Plex's own way out is marking things
+     watched — which for a series two seasons in means losing the fact that you
+     have seen two. So an item is hidden where the server can, and only where it
+     cannot is the user asked to mark it watched instead. Nothing goes without a
+     confirmation, and nothing leaves the row before the server has agreed. */
+
+  function pickIndex(item) {
+    var key = Media.identity(item), i;
+    for (i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === key) return i;
+    return -1;
+  }
+
+  /* Amber on tiles the rail has already drawn. The row model knows nothing
+     about a mode that lasts seconds, and Rail owns no state to teach. */
+  function markPicks() {
+    var tiles = document.querySelectorAll('#rows .tile'), i, tile;
+    for (i = 0; i < tiles.length; i++) {
+      tile = tiles[i];
+      tile.classList.toggle('picked',
+        !!(picking && tile._item && pickIndex(tile._item) >= 0));
+    }
+  }
+
+  function paintPicking() {
+    var row = rows[pickAt];
+    /* A new row object rather than a renamed one: the rail repaints a label
+       only when the row it is handed changes identity. */
+    rows[pickAt] = Rows.list(picking ? 'Select to remove — ' + picks.length + ' picked'
+                                     : WATCHING, row.items);
+    rows[pickAt].focus = row.focus;
+    elHint.textContent = '◀ ▶ move  ·  OK picks one  ·  green removes what is picked  ·  ' +
+                         'BACK leaves it all as it was';
+    elHint.classList.toggle('hidden', !picking);
+    render();
+  }
+
+  function startPicking() {
+    var at = watchingRowIdx();
+    if (at < 0 || at !== rowIdx) { UI.toast('Green clears things out of Continue watching'); return; }
+    if (!rows[at].total) { UI.toast('Nothing part-watched to remove'); return; }
+    picking = true;
+    pickAt = at;
+    picks = [];
+    paintPicking();
+  }
+
+  function stopPicking() {
+    if (!picking) return;
+    picking = false;
+    picks = [];
+    paintPicking();
+  }
+
+  function togglePick() {
+    var item = focusedItem(), at;
+    if (!item) return;
+    at = pickIndex(item);
+    if (at >= 0) picks.splice(at, 1); else picks.push(item);
+    paintPicking();
+  }
+
+  /* The confirmation, in the shared menu shell — a title saying what will
+     happen and to how many, the action, and Cancel. Cancel is what it lands on:
+     the action is one key away and never the default. */
+  function askThen(count, mode, go) {
+    var hide = mode === 'hide';
+    Menu.open({
+      host: elConfirm,
+      tabs: [{
+        label: hide ? 'Remove ' + count + ' from Continue watching'
+                    : 'Mark ' + count + ' watched',
+        note: hide ? 'They stay part-watched.'
+                   : 'This server cannot hide them. Marking a show watched marks ' +
+                     'every episode.',
+        rows: function () {
+          return [{ label: hide ? 'Remove them' : 'Mark them watched', value: 'go' },
+                  { label: 'Cancel', on: true, value: null }];
+        }
+      }],
+      onChoose: function (value) { if (value === 'go') go(); },
+      onClose: render
+    });
+  }
+
+  /* Marking an episode watched only advances the deck to the next episode, so
+     the series stays in the row. Its show is what removes it — and marks every
+     episode of it, which is why this path is confirmed in exactly those
+     words. */
+  function watchedKey(copy) {
+    if (copy.type === 'episode' && copy.grandparentRatingKey) return copy.grandparentRatingKey;
+    return copy.ratingKey;
+  }
+
+  /* Out of the row and out of the cache, so a reload does not bring it back.
+     ponytail: the whole section's cached rows go rather than the one row —
+     Continue watching is per account and so sits in every section's entry, and
+     they are refetched on the next visit anyway. */
+  function dropFromDeck(entry) {
+    var gone = Media.identity(entry), at, row, i;
+    deckItems = deckItems.filter(function (m) { return Media.identity(m) !== gone; });
+    for (i = 0; i < sections.length; i++) Store.put('rows:' + sections[i].title, null);
+    at = watchingRowIdx();
+    if (at < 0) return;
+    row = Rows.list(rows[at].title, deckCut());
+    row.focus = UI.clamp(rows[at].focus, 0, Math.max(0, row.total - 1));
+    rows[at] = row;
+  }
+
+  /* One entry, on every server that has it: a film on both is still in the row
+     if only one of them is told. */
+  function clearFromDeck(entry, mode) {
+    return Promise.all(Merge.sources(entry).map(function (copy) {
+      var server = Servers.of(copy);
+      if (mode !== 'watched') return Plex.hideFromDeck(server, copy.ratingKey);
+      return Plex.scrobble(server, watchedKey(copy)).then(function () { return true; });
+    })).then(function (done) {
+      if (done.indexOf(false) >= 0) return { ok: false, needsWatched: true };
+      dropFromDeck(entry);
+      return { ok: true };
+    }, function (e) {
+      UI.debug('clear: ' + e.message);
+      return { ok: false };
+    });
+  }
+
+  /* Clear a list of entries, asking again about whatever the server would not
+     hide. A server that refuses both leaves its item in the row and says so. */
+  function clearAll(entries, mode, after) {
+    Promise.all(entries.map(function (entry) {
+      return clearFromDeck(entry, mode);
+    })).then(function (res) {
+      var again = [], failed = 0, i;
+      for (i = 0; i < res.length; i++) {
+        if (res[i].ok) continue;
+        if (res[i].needsWatched) again.push(entries[i]); else failed++;
+      }
+      if (picking) { picks = again.slice(); paintPicking(); } else render();
+      if (failed) {
+        UI.toast(failed + (failed === 1 ? ' was' : ' were') + ' refused — still in the row');
+      }
+      if (again.length) {
+        askThen(again.length, 'watched', function () { clearAll(again, 'watched', after); });
+        return;
+      }
+      stopPicking();
+      if (after) after();
+    });
+  }
+
+  /* Green a second time: confirm everything picked. */
+  function confirmPicks() {
+    var chosen = picks.slice();
+    if (!chosen.length) { UI.toast('Nothing picked — OK picks the tile you are on'); return; }
+    askThen(chosen.length, 'hide', function () { clearAll(chosen, 'hide', null); });
+  }
+
+  /* The same action for one title, from its own page. */
+  function clearOne(entry, after) {
+    askThen(1, 'hide', function () { clearAll([entry], 'hide', after); });
+  }
+
+  /* Is this on Continue watching? The detail page only offers to clear
+     something the row actually holds. */
+  function isOnDeck(item) {
+    var key = item && Media.identity(item), i;
+    if (!key) return false;
+    for (i = 0; i < deckItems.length; i++) {
+      if (Media.identity(deckItems[i]) === key) return true;
+    }
+    return false;
   }
 
   function activate(choice) {
@@ -167,6 +358,16 @@ var Browse = (function () {
          back first — it lands on row 0, which is it. */
       if (mode !== 'library') loadSection(secIdx, true);
       else showWatching(choice.type);
+      return;
+    }
+    if (choice.kind === 'clear') {
+      /* The focus can be anywhere when this is chosen, so land on the row
+         first: a mode you then have to go and find is not reachable, which is
+         the whole reason this entry exists beside the green key. */
+      var deckAt = watchingRowIdx();
+      if (deckAt < 0) { UI.toast('Nothing part-watched to remove'); return; }
+      rowIdx = deckAt;
+      startPicking();
       return;
     }
     if (choice.kind === 'kids') { loadKids(); return; }
@@ -224,6 +425,11 @@ var Browse = (function () {
     rows = [];
     rowIdx = 0;
     watchingType = null;
+    /* The rows the mode was over are gone, so it goes with them rather than
+       counting picks nobody can see. */
+    picking = false;
+    picks = [];
+    elHint.classList.add('hidden');
     render();
   }
 
@@ -572,6 +778,7 @@ var Browse = (function () {
   }
 
   function key(code) {
+    if (Menu.isOpen()) return Menu.key(code);
     if (Sidebar.isOpen()) return Sidebar.key(code);
 
     var row = focusedRow(), K = UI.KEY;
@@ -579,27 +786,33 @@ var Browse = (function () {
     switch (code) {
       case K.LEFT:
         /* Left off the front of a row is the way to the sections — there is
-           nowhere else for it to go, and the rail has no header any more. */
+           nowhere else for it to go, and the rail has no header any more.
+           Not while picking: the way out of the mode is BACK, not wandering. */
         if (row && row.focus > 0) { row.focus--; render(); }
-        else openSidebar();
+        else if (!picking) openSidebar();
         break;
       case K.RIGHT:
         if (row && row.focus < row.total - 1) { row.focus++; render(); }
         break;
       case K.UP:
-        if (rowIdx > 0) { rowIdx--; render(); }
+        if (!picking && rowIdx > 0) { rowIdx--; render(); }
         break;
       case K.DOWN:
-        if (rowIdx < rows.length - 1) { rowIdx++; render(); }
+        if (!picking && rowIdx < rows.length - 1) { rowIdx++; render(); }
         break;
       case K.OK:
+        if (picking) { togglePick(); break; }
         if (opts.onOpen) opts.onOpen(focusedItem());
         break;
       case K.RED:                                 // red, on remotes that have it
         openSearch();
         break;
+      case GREEN:                                 // enter the mode, then confirm it
+        if (picking) confirmPicks(); else startPicking();
+        break;
       default:
         if (!UI.isBack(code)) return false;
+        if (picking) { stopPicking(); break; }
         if (!clearResults() && !leaveMode() && opts.onExit) opts.onExit();
         break;
     }
@@ -609,6 +822,7 @@ var Browse = (function () {
   return {
     init: init, render: render, key: key, searchKey: searchKey,
     setSections: setSections, currentSection: currentSection,
-    loadSection: loadSection, focusedItem: focusedItem, hasRows: hasRows
+    loadSection: loadSection, focusedItem: focusedItem, hasRows: hasRows,
+    clearOne: clearOne, isOnDeck: isOnDeck
   };
 })();

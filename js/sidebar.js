@@ -36,6 +36,12 @@ var Sidebar = (function () {
       var pref = Servers.get(Servers.preferred());
       out.push({ label: 'Prefer ' + (pref ? pref.name : '?'), kind: 'prefer' });
     }
+    /* An action on Continue watching rather than a mode, but this remote has no
+       colour buttons at all, so green is the shortcut and this is the route.
+       Absent when the row is empty: there is nothing to clear out of it. */
+    if (watching && watching.has) {
+      out.push({ label: 'Clear from Continue watching', kind: 'clear' });
+    }
     out.push({ label: 'Devices', kind: 'devices' });
     out.push({ label: 'Panel', kind: 'panel' });
     out.push({ label: 'Autoplay next: ' + Player.autoplayLabel(), kind: 'autoplay' });
@@ -116,8 +122,8 @@ var Sidebar = (function () {
      it is the one showing. The current section opens expanded, so the thing
      most likely to be wanted is already on screen. mode marks kids or discovery
      the same way, since neither is a section and both can be what you are in.
-     watching is { current, type }: whether the Continue watching row has the
-     focus, and which cut of it. */
+     watching is { current, type, has }: whether the Continue watching row has
+     the focus, which cut of it, and whether it holds anything at all. */
   function open(sections, pick, mode, watchingState) {
     secs = sections || [];
     watching = watchingState || null;
