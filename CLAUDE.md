@@ -140,10 +140,11 @@ file is refused and the message lists what was actually on offer.
 **So audio track selection is required, not optional.** Prefer, in order:
 E-AC3 → AC3 → AAC stereo. Never select TrueHD or DTS-HD MA. Pass the chosen
 track as `audioStreamID` on the decision call, and surface the selected track
-where the copy is chosen — the detail page, which lists every copy with its
-verdict. It used to be badged in the masthead as well; that came out, because
-working it out means a metadata fetch for every tile you rest on, against a
-server we do not own, to answer a question you cannot act on until OK.
+where the copy is chosen — the detail page, whose Audio button names the track
+and says what choosing it costs before OK is pressed. It used to be badged in
+the masthead as well; that came out, because working it out means a metadata
+fetch for every tile you rest on, against a server we do not own, to answer a
+question you cannot act on until OK.
 
 ## Layout
 
@@ -186,17 +187,25 @@ Screen:
   server. Everything that reaches Player goes through it first.
 - `js/masthead.js` — the backdrop, the title, and one line under it.
 - `js/shows.js` — seasons and episodes of a show, merged across servers.
+- `js/menu.js` — the menu shell both the detail page and the player draw with:
+  tabs, rows, the winding transform, and an overlay that swallows every key. It
+  knows nothing about playback or copies; a row carries a `value` and the caller
+  decides what that means.
 - `js/detail.js` — the page OK opens on a film or an episode: cast, ratings,
-  extras, and every copy with its verdict, which is where playback is actually
-  chosen.
+  extras, and an action row — Play, then Trailer, Quality, Source, Audio and
+  Subtitles — where playback is actually chosen. Every choice goes back through
+  `Guard.check` before it sticks, and Play's caption carries the verdict for the
+  combination, so the cost is on screen before anything starts.
 - `js/showpage.js` — a show: its series across the top, its episodes down the
   side, each checked in place so OK means something.
 - `js/devices.js` — whose viewing is this; filters Continue watching.
 - `js/discovery.js` — turns a TMDB list into rows of what the servers have.
 - `js/browse.js` — the state: sections, rows, focus, mode, paging, search.
 - `js/player.js` — playback and everything you can do during it: the trackbar
-  with its chapter ticks and marker bands, seeking, skip intro, and a menu of
-  audio tracks, subtitle languages, quality and chapters.
+  with its chapter ticks and marker bands, seeking, skip intro, and — drawn with
+  `js/menu.js`, the same shell the detail page uses — a menu of audio tracks,
+  subtitle languages, quality and chapters. What the tabs hold and what choosing
+  does live here; the drawing and the d-pad do not.
   Seeks accumulate: every `currentTime` assignment on a direct-played file is a
   real range request, so holding a key aims first and seeks once.
 
