@@ -353,6 +353,16 @@ The three checks, and what each is for:
   not testing what you think. Splitting an element means re-reading every
   assertion that indexed into its text, not only the ones that go red.
 
+  **And a step can be structurally unable to see the thing it tests.** Task 021
+  went looking for a wrong picture on a tile *during* a sweep; a Playwright
+  round trip is slower than the rail's 160ms settle, so every reading landed
+  after the rail had stopped and the step passed on the broken code. Readings
+  that must catch a transient state have to be taken **page-side** — in a
+  listener registered after the app's own — and "what is on screen" derived from
+  committed transforms, because a rect read mid-transition is the position the
+  element is leaving. The row matters too: Continue watching is short enough
+  that the strip stops winding, so a sweep there never recycles a tile.
+
 **Never judge playback on the laptop.** A desktop browser decodes far less than
 this panel: Firefox has no AC3/E-AC3 and no HEVC at all, Chrome has no
 Matroska. A silent film or a decode error there is the browser, not the app —
