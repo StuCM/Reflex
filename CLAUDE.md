@@ -18,6 +18,12 @@ within a major webOS version. Therefore:
 - No CSS Grid (Chrome 57). Flexbox and inline-block only.
 - No object spread, no `Object.entries` (Chrome 54).
 - No `position: sticky` (Chrome 56).
+- **`Array.prototype.sort` is not stable** (V8 got a stable sort in Chrome 70).
+  Above ten elements equal items reorder arbitrarily. Where the original order
+  matters, sort the *indices* and tie-break on position — `bySeason` in
+  `js/youtube.js` is the pattern. Audited 2026-09-08: every other sort in `js/`
+  keys on something unique (season index, chapter start, cue start, server
+  name) or is a small cosmetic ordering, so nothing else needs changing.
 - Animate only `transform` and `opacity`. No shadow, filter, or blur
   transitions — they force layout and paint on a 2018 SoC.
 - Build target `es2015` if a bundler is introduced. Prefer no bundler.
