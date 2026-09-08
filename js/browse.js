@@ -28,6 +28,9 @@ var Browse = (function () {
   var searchQuery = null;                 // non-null while the results page is showing
   var generation = 0;                     // bumps on any row change, kills stale paints
   var pageTimer = null;
+  var resolveTimer = null;                // a Discovery tile, once you stop on it
+  var RESOLVE_HOLD = 420;                 // the stillness the backdrop also waits for
+  var MAX_SEEDS = 8;                      // titles the recommended row is built from
   var opts = {};
 
   var picking = false;                    // green has the deck row in select mode
@@ -82,6 +85,7 @@ var Browse = (function () {
     /* The backdrop keeps its own debounce — Meta's skips a cached item and
        would leave the last film's art under the new one's title. */
     Masthead.art(focusedItem());
+    scheduleResolve(focusedItem());
     markPicks();
     scheduleWalk();
   }
@@ -678,6 +682,31 @@ var Browse = (function () {
 
   /* ---------- discovery ---------- */
 
+  /* A Discovery tile is looked up on the servers only once you have stopped on
+     it, on the same stillness the backdrop waits for — so sweeping a row costs
+     nothing and painting the page costs nothing at all. */
+  function scheduleResolve(item) {
+    clearTimeout(resolveTimer);
+    if (!Discovery.isEntry(item) || item._resolved !== undefined) return;
+    var gen = generation;
+    resolveTimer = setTimeout(function () {
+      Discovery.resolve(item).then(function () {
+        if (gen === generation && focusedItem() === item) render();
+      });
+    }, RESOLVE_HOLD);
+  }
+
+  /* Seeds for the recommended row, out of the Continue watching row already in
+     memory. Asking a server for them would cost the page its whole point. */
+  function deckSeeds() {
+    var out = [], i, id;
+    for (i = 0; i < deckItems.length && out.length < MAX_SEEDS; i++) {
+      id = Plex.tmdbId(deckItems[i]);
+      if (id && out.indexOf(id) < 0) out.push(id);
+    }
+    return out;
+  }
+
   function loadDiscover() {
     reset('discover');
     var isCurrent = generationGuard();
@@ -692,17 +721,18 @@ var Browse = (function () {
 
     Discovery.load({
       isCurrent: isCurrent,
-      /* Rows appear as they resolve rather than all at the end — the first one
-         lands while the rest are still matching. */
+      seeds: deckSeeds(),
+      /* Rows appear as they arrive rather than all at the end — the first one
+         lands while the rest are still being fetched. */
       add: function (title, items) {
         rows.push(Rows.list(title, items));
         render();
       }
     }).then(function () {
       if (!isCurrent() || rows.length) return;
-      UI.message('Nothing matched',
-        'None of the curated titles are on either server, or the TMDB ids did ' +
-        'not line up. Check the debug line for which rows came back empty.');
+      UI.message('Nothing to show',
+        'TMDB returned no titles for any of the categories in js/config.js. ' +
+        'Check the debug line for which came back empty.');
     });
   }
 

@@ -44,7 +44,26 @@ function create(opts) {
     const out = [];
     for (let i = 0; i < ROW && i < films.length; i++) {
       const f = films[(offset + i * 3) % films.length];
-      out.push({ id: f.tmdb, title: f.title, vote_count: 900, vote_average: 7.5 });
+      out.push({ id: f.tmdb, title: f.title, release_date: f.year + '-01-01',
+                 poster_path: '/poster/' + f.tmdb + '/0.svg',
+                 backdrop_path: '/backdrop/' + f.tmdb + '/0.svg',
+                 vote_count: 900, vote_average: 7.5 });
+    }
+    return { results: out };
+  }
+
+  /* A genre row is titles the fake servers deliberately do NOT hold — the
+     library's own ids are 1000-ish and these are nowhere near them — so the
+     not-in-your-library path is walked rather than assumed. */
+  function unheld(genreId) {
+    const out = [];
+    for (let i = 0; i < ROW; i++) {
+      const id = 900000 + Number(genreId) * 100 + i;
+      out.push({ id: id, title: 'Genre ' + genreId + ' Film ' + (i + 1),
+                 release_date: '2019-01-01',
+                 poster_path: '/poster/' + id + '/0.svg',
+                 backdrop_path: '/backdrop/' + id + '/0.svg',
+                 vote_count: 900, vote_average: 7.5 });
     }
     return { results: out };
   }
@@ -105,6 +124,7 @@ function create(opts) {
     if (m) { json(res, detailsFor(m[1])); return true; }
     if (p === '/trending/movie/week') { json(res, results(0)); return true; }
     if (p === '/discover/movie') {
+      if (query.with_genres) { json(res, unheld(query.with_genres)); return true; }
       json(res, results(Number(query.with_watch_providers || 0)));
       return true;
     }

@@ -10,6 +10,7 @@ files:
   - js/tmdb.js
   - js/discovery.js
   - js/browse.js
+  - js/masthead.js
   - js/app.js
   - dev/mock-tmdb.js
   - dev/smoke/discovery.js

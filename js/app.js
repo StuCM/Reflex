@@ -21,9 +21,23 @@
      page, and an episode chosen there opens the same detail page a film would. */
   function openItem(item) {
     if (!item) return;
+    if (Discovery.isEntry(item)) { openDiscovered(item); return; }
     if (item.type === 'show') { openShow(item); return; }
     if (item.type === 'episode') { openEpisode(item); return; }
     openDetail(item, toBrowse);
+  }
+
+  /* A Discovery tile is a film TMDB knows about, which neither server need
+     have. Resolving it is one request and resting on it has usually paid for it
+     already; a title we do not hold reaches no guard and no player, so it says
+     so rather than opening a page about nothing. */
+  function openDiscovered(item) {
+    Discovery.resolve(item).then(function (found) {
+      if (found) { openItem(found); return; }
+      UI.message('Not in your library',
+        item.title + (item.year ? ' (' + item.year + ')' : '') +
+        ' is on neither server.  ·  BACK to the rows');
+    });
   }
 
   function openShow(entry, at) {
