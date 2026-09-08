@@ -1,7 +1,7 @@
 ---
 id: 018
 slug: clear-continue-watching
-status: approved
+status: review
 branch: crew/018-clear-continue-watching
 model: opus
 env: laptop

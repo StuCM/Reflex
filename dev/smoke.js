@@ -564,6 +564,8 @@ function drive(page, titles) {
         hint: !document.getElementById('browse-hint').classList.contains('hidden'),
         entries: row.items.map(function (m) {
           return { title: m.grandparentTitle || m.title, type: m.type,
+                   key: String(m.ratingKey),
+                   showKey: m.grandparentRatingKey ? String(m.grandparentRatingKey) : '',
                    servers: [m._server].concat((m._sources || []).map(function (s) {
                      return s._server;
                    })) };
@@ -3703,7 +3705,12 @@ function drive(page, titles) {
           const before = deckWrites.length;
           return backToLibrary()
             .then(function () { return sidebarPick('Continue watching'); })
-            .then(function () { return focusDeck(onBackup); })
+            /* An episode, because marking one watched is the destructive case:
+               it is the show that has to be scrobbled, and the confirmation
+               says so before it happens. */
+            .then(function () {
+              return focusDeck(function (e) { return e.type === 'episode' && onBackup(e); });
+            })
             .then(function (e) { entry = e; return press('F3'); })
             .then(function () { return page.keyboard.press('Enter'); })
             .then(function () { return press('F3'); })
@@ -3744,7 +3751,60 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('an entry on both servers is cleared on both of them', function () {
+      return step('marking a part-watched series watched scrobbles the show, not the episode',
+        function () {
+          let entry;
+          const before = deckWrites.length;
+          return backToLibrary()
+            .then(function () { return sidebarPick('Continue watching'); })
+            .then(function () {
+              return focusDeck(function (e) { return e.type === 'episode' && onBackup(e); });
+            })
+            .then(function (e) {
+              entry = e;
+              if (!e.showKey) throw new Error(e.title + ' carries no show to scrobble');
+              return press('F3');
+            })
+            .then(function () { return page.keyboard.press('Enter'); })
+            .then(function () { return press('F3'); })
+            .then(function () { return waitForConfirm('to hide the episode'); })
+            .then(takeConfirm)
+            .then(function () { return waitForConfirm('to mark the series watched'); })
+            .then(takeConfirm)
+            .then(function () { return page.waitForTimeout(300); })
+            .then(function () {
+              const wrote = deckWrites.slice(before).filter(function (u) {
+                return u.indexOf('/:/scrobble') >= 0;
+              });
+              /* The episode's own key would only advance the deck to the next
+                 episode and leave the series exactly where it was — which is
+                 the thing the user says they are stuck in. */
+              const onShow = wrote.filter(function (u) {
+                return u.indexOf('key=' + entry.showKey + '&') >= 0;
+              });
+              if (!onShow.length) {
+                throw new Error('nothing was scrobbled against show ' + entry.showKey +
+                                ': ' + (wrote.join(', ') || 'no scrobble at all'));
+              }
+              const onEpisode = wrote.filter(function (u) {
+                return u.indexOf('key=' + entry.key + '&') >= 0;
+              });
+              if (onEpisode.length) {
+                throw new Error('the episode was scrobbled instead of its show: ' +
+                                onEpisode.join(', '));
+              }
+            })
+            .then(reloadDeck)
+            .then(function (row) {
+              if (row.entries.filter(function (e) { return e.title === entry.title; }).length) {
+                throw new Error(entry.title + ' is still part-watched after the show was marked');
+              }
+            });
+        });
+    })
+
+    .then(function () {
+      return step('an entry on both servers is cleared on each as that one allows', function () {
         let entry;
         const before = deckWrites.length;
         return backToLibrary()
@@ -3762,12 +3822,23 @@ function drive(page, titles) {
           .then(function () { return page.waitForTimeout(300); })
           .then(function () {
             const wrote = deckWrites.slice(before);
-            const each = ['/__plex/:/scrobble', '/__plex2/:/scrobble'];
-            each.forEach(function (path) {
-              if (!wrote.some(function (u) { return u.indexOf(path) >= 0; })) {
-                throw new Error('nothing was sent to ' + path + ': ' + wrote.join(', '));
-              }
-            });
+            function went(path) {
+              return wrote.some(function (u) { return u.indexOf(path) >= 0; });
+            }
+            if (!went('/__plex/actions/removeFromContinueWatching')) {
+              throw new Error('Main was never asked to hide it: ' + wrote.join(', '));
+            }
+            if (!went('/__plex2/:/scrobble')) {
+              throw new Error('Backup was never marked watched: ' + wrote.join(', '));
+            }
+            /* Main had already hidden its copy, so it must not then be
+               scrobbled: the fallback is for the copy that was refused, not for
+               every copy of the entry. Hiding leaves watch state alone and that
+               is the whole point of preferring it. */
+            if (went('/__plex/:/scrobble')) {
+              throw new Error('Main was scrobbled after it had already hidden it: ' +
+                              wrote.join(', '));
+            }
           })
           .then(reloadDeck)
           .then(function (row) {

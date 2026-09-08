@@ -287,16 +287,23 @@ var Browse = (function () {
     rows[at] = row;
   }
 
-  /* One entry, on every server that has it: a film on both is still in the row
-     if only one of them is told. */
-  function clearFromDeck(entry, mode) {
-    return Promise.all(Merge.sources(entry).map(function (copy) {
+  /* A job is an entry and the copies of it still to be dealt with — a film on
+     both servers is still in the row if only one of them is told, and a copy
+     that has already been hidden must not then be marked watched as well. */
+  function jobFor(entry) { return { entry: entry, copies: Merge.sources(entry) }; }
+
+  /* The entry leaves the row only once every copy of it has gone; whatever a
+     server would not hide comes back as `copies` for the caller to ask about. */
+  function clearFromDeck(job, mode) {
+    return Promise.all(job.copies.map(function (copy) {
       var server = Servers.of(copy);
       if (mode !== 'watched') return Plex.hideFromDeck(server, copy.ratingKey);
       return Plex.scrobble(server, watchedKey(copy)).then(function () { return true; });
     })).then(function (done) {
-      if (done.indexOf(false) >= 0) return { ok: false, needsWatched: true };
-      dropFromDeck(entry);
+      var refused = [], i;
+      for (i = 0; i < done.length; i++) if (!done[i]) refused.push(job.copies[i]);
+      if (refused.length) return { needsWatched: true, copies: refused };
+      dropFromDeck(job.entry);
       return { ok: true };
     }, function (e) {
       UI.debug('clear: ' + e.message);
@@ -304,18 +311,23 @@ var Browse = (function () {
     });
   }
 
-  /* Clear a list of entries, asking again about whatever the server would not
-     hide. A server that refuses both leaves its item in the row and says so. */
-  function clearAll(entries, mode, after) {
-    Promise.all(entries.map(function (entry) {
-      return clearFromDeck(entry, mode);
+  /* Clear a list of jobs, asking again about only the copies the server would
+     not hide. A server that refuses both leaves its item in the row and says
+     so. */
+  function clearAll(jobs, mode, after) {
+    Promise.all(jobs.map(function (job) {
+      return clearFromDeck(job, mode);
     })).then(function (res) {
       var again = [], failed = 0, i;
       for (i = 0; i < res.length; i++) {
         if (res[i].ok) continue;
-        if (res[i].needsWatched) again.push(entries[i]); else failed++;
+        if (res[i].needsWatched) again.push({ entry: jobs[i].entry, copies: res[i].copies });
+        else failed++;
       }
-      if (picking) { picks = again.slice(); paintPicking(); } else render();
+      if (picking) {
+        picks = again.map(function (job) { return job.entry; });
+        paintPicking();
+      } else render();
       if (failed) {
         UI.toast(failed + (failed === 1 ? ' was' : ' were') + ' refused — still in the row');
       }
@@ -330,14 +342,14 @@ var Browse = (function () {
 
   /* Green a second time: confirm everything picked. */
   function confirmPicks() {
-    var chosen = picks.slice();
+    var chosen = picks.map(jobFor);
     if (!chosen.length) { UI.toast('Nothing picked — OK picks the tile you are on'); return; }
     askThen(chosen.length, 'hide', function () { clearAll(chosen, 'hide', null); });
   }
 
   /* The same action for one title, from its own page. */
   function clearOne(entry, after) {
-    askThen(1, 'hide', function () { clearAll([entry], 'hide', after); });
+    askThen(1, 'hide', function () { clearAll([jobFor(entry)], 'hide', after); });
   }
 
   /* Is this on Continue watching? The detail page only offers to clear
