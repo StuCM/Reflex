@@ -54,6 +54,17 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   claim: **every action stays d-pad reachable**, which is what makes the app
   work from the Magic Remote, a standard remote and the pointer alike.
 
+- **Correct the palette to `blurple-apricot`, the design's own named option.**
+  `design/Mantis Screens.dc.html` carries seven palettes as data and the export
+  defaults to `sage`, which is why the file appeared to disagree with the
+  screenshots. The user's is **Blurple + apricot**: `bg #161826`,
+  `tile #1f2233`, `ac #9d93d6`, `ac2 #e5a06d`, `scrim 9,10,17`. Sampling the
+  screenshots got `bg`, `tile` and `ac2` exactly right; two things are wrong in
+  the shipped app and both are one-line fixes once `css/app.css` is free:
+  `--ac` is `#a79ce3` and should be `#9d93d6`, and the six hero-gradient
+  literals fade to `rgba(22,24,38,…)` — the background itself — where the design
+  fades to a *darker* `rgba(9,10,17,…)`, which is why the scrims read flat.
+
 - **A design language, written down.** The user's point: radius, button sizes
   and spacing differ between the film page, the player and the rail because each
   was built to a screenshot rather than to a shared set of numbers. Wanted: one
