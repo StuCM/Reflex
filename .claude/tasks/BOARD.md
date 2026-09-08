@@ -6,7 +6,7 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 012 | Season recaps on a show, but only when asked for | `pending-tv` | laptop | crew/012-recaps-rail *(gone)* |
-| 013 | The Mantis palette, and motion that does not jar | `draft` | laptop | crew/013-palette-and-motion *(gone)* |
+| 013 | The Mantis palette, and motion that does not jar | `building` | laptop | crew/013-palette-and-motion |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -22,8 +22,7 @@ Task files are the source of truth; this is the glance view.
 ## Waiting on you
 
 - **012 Season recaps on a show, but only when asked for** — code-complete; only the panel can prove it
-- **013 The Mantis palette, and motion that does not jar** — spec needs your approval before anyone starts
 
 ## In flight
 
-Nothing running.
+- **013 The Mantis palette, and motion that does not jar** — `building` on `crew/013-palette-and-motion`
