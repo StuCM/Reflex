@@ -251,6 +251,13 @@ Tools:
 - `tools/package.sh` — `npm run package`. Stages only what runs and builds the
   .ipk from that: `ares-package .` ignores `--exclude` here and would ship the
   git history and the harness to the TV.
+
+  **The launcher caches the app icon.** Changing `icon.png` / `largeIcon.png`
+  and reinstalling over the same app id leaves the old icon on the tile — the
+  title updates, because `appinfo.json` is read fresh, while the icon is not.
+  A power cycle of the TV rebuilds the cache. Uninstalling clears it too but
+  wipes `localStorage`, taking the Plex token and the discovered servers with
+  it, so the app comes back at the `plex.tv/link` screen.
 - `probe.py` — runs the decision endpoint under several client profiles to
   find which declared capability flips transcode → direct play. Safe to run
   repeatedly; starts no sessions.
