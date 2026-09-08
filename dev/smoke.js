@@ -2554,15 +2554,20 @@ function drive(page, titles) {
             /* The h264-eac3 profile: E-AC3 5.1, AC3 5.1 and a French AAC
                stereo, all three named by language. */
             if (labels.length !== 3) throw new Error('audio rows: ' + labels.join(' | '));
-            /* Desktop Chrome exposes no audioTracks, so every row here has to
-               say the switch costs direct play — which is the honest answer,
-               and the whole point of saying it before OK. */
-            const quiet = labels.filter(function (l) { return !/\[/.test(l); });
-            if (quiet.length) {
-              throw new Error('a row that does not say what it costs: ' + labels.join(' | '));
+            /* What a row says has to be what OK does. Desktop Chrome exposes no
+               audioTracks, so every track but the one already chosen costs
+               direct play — and the one already chosen must not be warned
+               about, because choosing it costs nothing at all. */
+            const on = labels.filter(function (l) { return /^\* /.test(l); });
+            if (on.length !== 1) throw new Error('audio rows: ' + labels.join(' | '));
+            if (/\[/.test(on[0])) {
+              throw new Error('the track already chosen is warned about: ' + on[0]);
             }
-            if (!/restarts|panel switches/.test(labels.join(' '))) {
-              throw new Error('no note about who switches the track: ' + labels.join(' | '));
+            const others = labels.filter(function (l) { return !/^\* /.test(l); });
+            const quiet = others.filter(function (l) { return !/costs direct play/.test(l); });
+            if (quiet.length) {
+              throw new Error('a row that does not say it costs direct play: ' +
+                              labels.join(' | '));
             }
           })
           .then(function () { return menuChoose(/French/); })

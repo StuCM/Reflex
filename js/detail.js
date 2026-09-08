@@ -298,14 +298,23 @@ var Detail = (function () {
     });
   }
 
+  /* Would choosing this track mean giving up direct play? Only when the panel
+     cannot select tracks out of the file itself and this is not the track the
+     guard picks anyway — the note and the guard call are both this, so what the
+     row says before OK is what OK does. */
+  function needsMux(st) {
+    if (panelOwnsAudio()) return false;
+    var base = defaultAudio();
+    return !(base && String(base.id) === String(st.id));
+  }
+
   function audioRows() {
-    var owns = panelOwnsAudio();
     return Media.audioTracks(part()).map(function (st) {
+      var on = !!(chosenAudio && String(chosenAudio.id) === String(st.id));
       return { label: Media.audioMenuLabel(st),
-               note: owns ? 'the panel switches this one — instant'
-                          : 'restarts — the server has to mux this one',
-               on: !!(chosenAudio && String(chosenAudio.id) === String(st.id)),
-               value: st };
+               note: on ? '' : (needsMux(st) ? 'costs direct play — the server would mux it'
+                                             : 'keeps direct play'),
+               on: on, value: st };
     });
   }
 
@@ -383,7 +392,7 @@ var Detail = (function () {
   }
 
   function openSource() {
-    openChooser({ label: 'Play from', rows: sourceRows(),
+    openChooser({ label: 'Play from', rows: sourceRows,
                   note: 'Every copy on every server, each already checked.' },
       function (n) {
         if (n === sel) return;
@@ -392,7 +401,7 @@ var Detail = (function () {
   }
 
   function openQuality() {
-    openChooser({ label: 'Quality', rows: qualityRows(),
+    openChooser({ label: 'Quality', rows: qualityRows,
                   note: 'Anything but Original asks the server to re-encode.' },
       function (kbps) {
         if ((kbps || null) === maxBitrate) return;
@@ -401,15 +410,12 @@ var Detail = (function () {
   }
 
   function openAudio() {
-    openChooser({ label: 'Audio', rows: audioRows() }, function (st) {
+    openChooser({ label: 'Audio', rows: audioRows }, function (st) {
       if (chosenAudio && String(chosenAudio.id) === String(st.id)) return;
       /* A direct play hands the panel the whole file and the panel picks its own
          track, so a choice it cannot make itself means asking the server to mux
          — which on a 4K file the guard refuses, and rightly. */
-      var base = defaultAudio();
-      var isDefault = base && String(base.id) === String(st.id);
-      choose({ sel: sel, audio: st, maxBitrate: maxBitrate,
-               forceStream: !panelOwnsAudio() && !isDefault });
+      choose({ sel: sel, audio: st, maxBitrate: maxBitrate, forceStream: needsMux(st) });
     });
   }
 
@@ -418,7 +424,7 @@ var Detail = (function () {
      about the stream. An image track is the exception — the only way to show one
      is to have it burnt in, which is a transcode. */
   function openSubs() {
-    openChooser({ label: 'Subtitles', rows: subRows(),
+    openChooser({ label: 'Subtitles', rows: subRows,
                   note: 'Drawn over the video as text, so they cost the server nothing.' },
       function (st) {
         if (st && !Media.isTextSub(st)) {

@@ -13,14 +13,19 @@ var Menu = (function () {
   var ROW_H = 56;                  // .menu-row, in CSS pixels
   var ROWS_SHOWN = 7;
 
-  var host = null, tabs = [], tab = 0, sel = 0;
+  var host = null, tabs = [], tab = 0, sel = 0, built = [];
   var onChoose = null, onClose = null;
   var elTabs = null, elInner = null, elNote = null;
 
-  function rows() {
-    var list = (tabs[tab] && tabs[tab].rows) || [];
-    return list.length ? list : [{ label: 'Nothing to choose here', off: true }];
+  /* A tab's rows are asked for when the tab is shown, not when the menu opens:
+     what is on offer depends on where playback has got to, and a list built
+     four tabs ago is stale by the time you reach it. */
+  function build() {
+    var list = tabs[tab] ? tabs[tab].rows() : [];
+    built = list.length ? list : [{ label: 'Nothing to choose here', off: true }];
   }
+
+  function rows() { return built; }
 
   /* Land on what is already in use, so OK on the first press is a no-op rather
      than a surprise. */
@@ -57,8 +62,9 @@ var Menu = (function () {
     elNote.textContent = (tabs[tab] && tabs[tab].note) || '';
   }
 
-  /* Draw tabs of [{ label, note, rows: [{ label, note, on, value }] }] into host
-     and take the d-pad until a row is chosen or BACK closes it. */
+  /* Draw tabs of [{ label, note, rows }] into host and take the d-pad until a
+     row is chosen or BACK closes it. Each tab's rows() returns
+     [{ label, note, on, value }]; value is whatever onChoose is to act on. */
   function open(o) {
     host = o.host;
     tabs = o.tabs || [];
@@ -75,6 +81,7 @@ var Menu = (function () {
     elTabs = host.querySelector('.menu-tabs');
     elInner = host.querySelector('.menu-inner');
     elNote = host.querySelector('.menu-note');
+    build();
     land();
     host.classList.remove('hidden');
     paint();
@@ -104,6 +111,7 @@ var Menu = (function () {
     if (code === 40) { sel = (sel + 1) % list.length; paint(); return true; }
     if ((code === 37 || code === 39) && tabs.length > 1) {
       tab = (tab + (code === 39 ? 1 : tabs.length - 1)) % tabs.length;
+      build();
       land();
       paint();
       return true;

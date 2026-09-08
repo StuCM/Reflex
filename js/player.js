@@ -637,17 +637,18 @@ var Player = (function () {
     };
   }
 
-  /* The four sections, built from the stream as it is now. A row's value is
-     what choosing it does — js/menu.js draws and walks, and knows nothing about
-     any of it. */
+  /* The four sections. A row's value is what choosing it does — js/menu.js
+     draws and walks, and knows nothing about any of it. The builders are handed
+     over rather than called, so each list is made when its tab is reached and
+     the chapter you are in is the one marked. */
   function menuTabs() {
     return [
-      { label: 'Audio', rows: audioRows() },
-      { label: 'Subtitles', rows: subRows(),
+      { label: 'Audio', rows: audioRows },
+      { label: 'Subtitles', rows: subRows,
         note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.' },
-      { label: 'Quality', rows: qualityRows(),
+      { label: 'Quality', rows: qualityRows,
         note: 'Anything but Original asks the server to re-encode.' },
-      { label: 'Chapters', rows: chapterRows() }
+      { label: 'Chapters', rows: chapterRows }
     ];
   }
 
