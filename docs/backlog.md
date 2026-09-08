@@ -33,6 +33,23 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 2. The player on screen
 
+- **The Magic Remote's pointer.** The app is entirely d-pad driven and sets
+  `cursor: none`. On an LG Magic Remote the pointer is the primary control for
+  most people, and webOS raises ordinary mouse events for it plus a
+  `cursorStateChange` event on `document` saying whether it is visible. Wanted:
+  show the cursor while the pointer is active, hover to move the focus the
+  d-pad would have moved, and click to do what OK would do. Best done centrally
+  — one module translating pointer events into the focus and activate calls each
+  screen already has, rather than handlers sprinkled through the rail, the
+  menus, the sidebar and the player.
+
+  Worth settling with it: **does this remote actually have colour buttons?**
+  `js/sidebar.js:7`, `js/browse.js:123` and `js/servers.js:93` all assert it has
+  none — it is the stated reason the sidebar exists — yet search is on red, the
+  player's shortcuts are on red/green/yellow/blue, and 018 puts select mode on
+  green at the user's request. Either the note is stale or several features are
+  unreachable on the remote in the room.
+
 - **A design language, written down.** The user's point: radius, button sizes
   and spacing differ between the film page, the player and the rail because each
   was built to a screenshot rather than to a shared set of numbers. Wanted: one
