@@ -1,7 +1,7 @@
 ---
 id: 016
 slug: detail-choosers
-status: draft
+status: approved
 branch: crew/016-detail-choosers
 model: sonnet
 env: laptop
@@ -32,7 +32,21 @@ already renders exactly this kind of menu. This task is mostly wiring, provided
 the menu is shared rather than written twice.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing — no branch
+carries commits touching any of the seven declared files. No worktrees are in
+flight; 015 merged as `537bb00`, main verified at 64/64.
+
+Read these as they now are:
+
+- `js/rail.js` holds `paint(tile)`, a `_wait` flag and a 160ms settle timer from
+  015, plus `place(el, x, animate)` from `8625a76`. Not this task's file; listed
+  so the settle is not mistaken for something to copy into the menu.
+- `js/detail.js` — 014 rebuilt the header (kicker, chips, ratings) and fixed
+  `close()` to move the generation counter on. The copy list this task removes is
+  `#dt-sources` and its label, below that header.
+- `css/app.css` has `--t-fade: 620ms` used only on the hero layers; the menu
+  should use `--t-quick` or `--t-move`, not the backdrop's fade.
+- `dev/smoke.js` is at 64 steps.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
