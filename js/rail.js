@@ -31,9 +31,14 @@ var Rail = (function () {
      figure is the viewport less one row, so the first screen shows Continue
      watching whole and nothing of the row after it. */
   var BIG_DROP = VIEWPORT_H - ROW_H;
+  /* Sweeping a row used to cost a poster and a TMDB lookup per tile passed, all
+     of them for tiles already gone by. A tile's cheap parts still draw at once;
+     its picture waits this long for the movement to stop. */
+  var SETTLE = 160;
 
   var elRows = document.getElementById('rows');
   var rowEls = [];
+  var settleTimer = null;
 
   function translate(el, x, y) {
     var t = 'translate(' + x + 'px,' + y + 'px)';
@@ -69,7 +74,7 @@ var Rail = (function () {
       rowEl.appendChild(label);
       rowEl.appendChild(strip);
       rowEl._label = label; rowEl._strip = strip; rowEl._row = -1;
-      rowEl._rowRef = null; rowEl._tiles = [];
+      rowEl._rowRef = null; rowEl._tiles = []; rowEl._onScreen = false;
 
       for (i = 0; i < TILE_POOL; i++) {
         tile = document.createElement('div');
@@ -94,7 +99,7 @@ var Rail = (function () {
         tile.appendChild(name);
         tile.appendChild(sub);
         tile._img = img; tile._name = name; tile._sub = sub; tile._prog = prog;
-        tile._idx = -1; tile._filled = false; tile._item = null;
+        tile._idx = -1; tile._filled = false; tile._item = null; tile._wait = false;
         strip.appendChild(tile);
         rowEl._tiles.push(tile);
       }
@@ -112,7 +117,7 @@ var Rail = (function () {
     for (r = 0; r < ROW_POOL; r++) {
       for (i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
-        if (!t._item || t._deferred || Plex.tmdbId(t._item) !== tmdbId) continue;
+        if (!t._item || t._deferred || t._wait || Plex.tmdbId(t._item) !== tmdbId) continue;
         url = Art.tile(t._item, TILE_W, TILE_H);
         if (url) t._img.src = url;
       }
@@ -131,13 +136,36 @@ var Rail = (function () {
     }
   }
 
+  /* The expensive half of a tile: the lookup and the picture. Art decides
+     between TMDB and Plex, so only a tile worth looking at is worth calling on. */
+  function paint(tile) {
+    tile._wait = false;
+    Art.warm(tile._item);
+    var url = Art.tile(tile._item, TILE_W, TILE_H);
+    if (url) tile._img.src = url; else tile._img.removeAttribute('src');
+  }
+
+  /* The rail has stopped moving, so the tiles still on it can have their
+     pictures. Off-screen rows keep waiting — they have their own reason to. */
+  function settled() {
+    var r, i, t;
+    for (r = 0; r < ROW_POOL; r++) {
+      if (!rowEls[r]._onScreen) continue;
+      for (i = 0; i < TILE_POOL; i++) {
+        t = rowEls[r]._tiles[i];
+        if (t._wait && t._item) paint(t);
+      }
+    }
+  }
+
   function drawRow(rowEl, rows, r, rowIdx, onScreen) {
     /* Position alone does not identify a row: search results replace the rows
        in place and keep rowIdx 0, so a pool element holding row 0 went on
        showing the library's row 0 — right title over the wrong tiles. */
     var row = rows[r], reused = rowEl._row !== r || rowEl._rowRef !== row;
-    var i, idx, tile, item, url, firstVisible, start;
+    var i, idx, tile, item, focused, firstVisible, start;
 
+    rowEl._onScreen = onScreen;
     rowEl.classList.remove('hidden');
     translate(rowEl, 0, r * ROW_H);
     rowEl.classList.toggle('on', r === rowIdx);
@@ -164,10 +192,16 @@ var Rail = (function () {
       if (idx >= row.total) { tile.classList.add('hidden'); tile._idx = -1; tile._item = null; continue; }
       tile.classList.remove('hidden');
       translate(tile, idx * STRIDE, 0);
-      tile.classList.toggle('on', r === rowIdx && idx === row.focus);
+      focused = r === rowIdx && idx === row.focus;
+      tile.classList.toggle('on', focused);
       /* A tile whose poster was skipped has to be redrawn when its row comes
          into view, so the short circuit has to know about that. */
-      if (tile._idx === idx && !(tile._deferred && onScreen)) continue;
+      if (tile._idx === idx && !(tile._deferred && onScreen)) {
+        /* Nothing else changed, but the focus can arrive on a tile still
+           waiting for its picture, and that one never waits. */
+        if (focused && tile._wait) paint(tile);
+        continue;
+      }
       tile._idx = idx;
       item = Rows.itemAt(row, idx);
       tile._filled = !!item;
@@ -189,15 +223,17 @@ var Rail = (function () {
          single most expensive thing this app does. They load when scrolled to. */
       if (!onScreen) {
         tile._deferred = true;
+        tile._wait = false;
         tile._img.removeAttribute('src');
         continue;
       }
       tile._deferred = false;
-      /* Art decides between TMDB and Plex; only a tile that is actually on
-         screen is worth a lookup, which is why this sits below the guard. */
-      Art.warm(item);
-      url = Art.tile(item, TILE_W, TILE_H);
-      if (url) tile._img.src = url; else tile._img.removeAttribute('src');
+      /* The focused tile is the one being looked at and the one the hero is
+         about to draw, so it pays immediately. The rest keep whatever picture
+         they are holding until the movement settles — blanking a tile for
+         160ms looks far worse than showing the last one a moment too long. */
+      tile._wait = !focused;
+      if (focused) paint(tile);
     }
   }
 
@@ -215,9 +251,18 @@ var Rail = (function () {
     translate(elRows, 0, (rowIdx === 0 ? BIG_DROP : 0) - firstVisible * ROW_H);
     for (i = 0; i < ROW_POOL; i++) {
       r = start + i;
-      if (r >= rows.length) { rowEls[i].classList.add('hidden'); rowEls[i]._row = -1; continue; }
+      if (r >= rows.length) {
+        rowEls[i].classList.add('hidden');
+        rowEls[i]._row = -1;
+        rowEls[i]._onScreen = false;
+        continue;
+      }
       drawRow(rowEls[i], rows, r, rowIdx, r < firstVisible + ROWS_VISIBLE);
     }
+    /* One timer for the whole rail, restarted by every render: a sweep resets
+       it on each key and the pictures arrive once, when it stops. */
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settled, SETTLE);
   }
 
   return { build: build, render: render, invalidateEmpty: invalidateEmpty };

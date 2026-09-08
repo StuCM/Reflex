@@ -260,6 +260,9 @@ function drive(page, titles) {
   /* One lookup per title on screen and never a second: the whole point of the
      cache, and the difference between this and crawling the library. */
   const artLookups = [];
+  /* Tile posters only, by the size the rail asks for: the hero's backdrop is a
+     w1280 or a 1920-wide Plex crop and is not what a sweep must stop fetching. */
+  const tilePosters = [];
   /* Progress reports, in the order they were sent — which is how a step can
      tell that the finished episode was closed out before the next one opened
      anything on the server. */
@@ -274,6 +277,8 @@ function drive(page, titles) {
     if (/\/__yt\/(channels|search|videos)\?/.test(u)) ytCalls.push(u);
     if (u.indexOf('/__yt/search?') >= 0) ytSearches.push(u);
     if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
+    if (u.indexOf('/__tmdbimg/w342/') >= 0 ||
+        (u.indexOf('/photo/:/transcode') >= 0 && u.indexOf('width=209') >= 0)) tilePosters.push(u);
     if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
@@ -819,6 +824,81 @@ function drive(page, titles) {
             if (artLookups.length !== first) {
               throw new Error('walking the row again cost ' + (artLookups.length - first) +
                               ' more lookups');
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('a moving rail fetches only what has the focus, and fills in when it stops', function () {
+        /* Sweeping used to cost a poster and a lookup per tile passed, every one
+           of them for a tile already gone by. What each tile holds is compared
+           against what Art says it should hold: fresh is its own picture, stale
+           is the one the pool element was showing before, blank is the bug. */
+        const SWEEP = 10;
+        function tileArt() {
+          return page.evaluate(function () {
+            var out = { focused: 'none', fresh: 0, stale: 0, blank: [] };
+            var tiles = document.querySelectorAll('#rows .row.on .tile');
+            for (var i = 0; i < tiles.length; i++) {
+              var t = tiles[i];
+              if (t.classList.contains('hidden') || !t._item) continue;
+              var box = t.getBoundingClientRect();
+              if (box.right <= 0 || box.left >= 1920) continue;   // wound off the side
+              var got = t.querySelector('img').getAttribute('src') || '';
+              var state = !got ? 'blank' : (got === Art.tile(t._item, 209, 314) ? 'fresh' : 'stale');
+              if (t.classList.contains('on')) out.focused = state;
+              if (state === 'blank') out.blank.push(t.querySelector('.tile-title').textContent.trim());
+              else out[state]++;
+            }
+            return out;
+          });
+        }
+
+        let before;
+        return backToLibrary()
+          .then(function () { return press('ArrowUp', 8); })
+          .then(function () { return page.waitForTimeout(1500); })
+          /* Two rows down in one movement, onto a row that was below the fold:
+             none of its tiles has ever had a picture of its own. */
+          .then(function () { return press('ArrowDown', 2); })
+          .then(tileArt)
+          .then(function (st) {
+            if (st.focused !== 'fresh') {
+              throw new Error('the focused tile is ' + st.focused + ', not its own poster');
+            }
+            if (st.stale < 5) {
+              throw new Error('only ' + st.stale + ' of ' + (st.stale + st.fresh) +
+                              ' tiles waited — the rail is still fetching while it moves');
+            }
+            if (st.blank.length) throw new Error(st.blank.length + ' tiles blanked mid-move');
+          })
+          .then(function () { return page.waitForTimeout(1500); })
+          .then(tileArt)
+          .then(function (st) {
+            if (st.blank.length) {
+              throw new Error('after resting, no poster on: ' + st.blank.join(', '));
+            }
+          })
+          /* Well inside the row and settled, so from here every press winds
+             exactly one new tile into the strip. */
+          .then(function () { return press('ArrowRight', 4); })
+          .then(function () { return page.waitForTimeout(1500); })
+          .then(function () { before = tilePosters.length; })
+          .then(function () { return press('ArrowRight', SWEEP); })
+          .then(function () {
+            /* One request per tile passed is what the old code cost; anything
+               near that means the sweep is still fetching what it goes by. */
+            const during = tilePosters.length - before;
+            if (during * 2 >= SWEEP) {
+              throw new Error(during + ' poster requests while sweeping past ' + SWEEP + ' tiles');
+            }
+          })
+          .then(function () { return page.waitForTimeout(1500); })
+          .then(tileArt)
+          .then(function (st) {
+            if (st.blank.length) {
+              throw new Error('after the sweep settled, no poster on: ' + st.blank.join(', '));
             }
           });
       });
@@ -1883,13 +1963,23 @@ function drive(page, titles) {
            colour every focused thing on every screen is drawn in. */
         return page.evaluate(function () {
           var css = getComputedStyle(document.documentElement);
+          var layer = getComputedStyle(document.querySelector('#hero-art .hero-layer'));
+          var strip = getComputedStyle(document.querySelector('#rows .strip'));
           return { ac: css.getPropertyValue('--ac').trim(),
                    bg: css.getPropertyValue('--bg').trim(),
-                   move: css.getPropertyValue('--t-move').trim() };
+                   move: css.getPropertyValue('--t-move').trim(),
+                   fade: css.getPropertyValue('--t-fade').trim(),
+                   heroFor: layer.transitionDuration,
+                   stripFor: strip.transitionDuration };
         }).then(function (st) {
           if (st.ac !== '#a79ce3') throw new Error('--ac is ' + st.ac + ', not the violet');
           if (st.bg !== '#161826') throw new Error('--bg is ' + st.bg + ', not the Mantis ground');
           if (st.move !== '340ms') throw new Error('--t-move is ' + st.move);
+          if (st.fade !== '620ms') throw new Error('--t-fade is ' + st.fade);
+          /* The backdrop crossfades gently; the UI's own motion must not be
+             slowed with it. */
+          if (st.heroFor !== '0.62s') throw new Error('a hero layer fades over ' + st.heroFor);
+          if (st.stripFor !== '0.34s') throw new Error('a strip slides over ' + st.stripFor);
         });
       });
     })

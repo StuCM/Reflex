@@ -21,6 +21,7 @@
 
   --t-quick: 180ms;   /* a tile lifting, a strip sliding */
   --t-move:  340ms;   /* a row change, the hero collapsing */
+  --t-fade:  620ms;   /* one backdrop crossfading into the next */
   --ease:    cubic-bezier(.2, .7, .2, 1);
 }
 
@@ -65,8 +66,10 @@ html, body {
   background-position: center top; background-size: cover;
   background-repeat: no-repeat;
   opacity: 0;
-  -webkit-transition: opacity var(--t-move) var(--ease);
-  transition: opacity var(--t-move) var(--ease);
+  /* Slower than the UI's own motion: a big soft picture reads better crossfading
+     over half a second, and nothing is waiting on it. */
+  -webkit-transition: opacity var(--t-fade) var(--ease);
+  transition: opacity var(--t-fade) var(--ease);
 }
 .hero-layer.on { opacity: 1; }
 

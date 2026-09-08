@@ -18,7 +18,9 @@ var Masthead = (function () {
   var artLayers = [document.getElementById('hero-art-a'),
                    document.getElementById('hero-art-b')];
   var shown = 0;
-  var HOLD = 280;                // ms of stillness before asking for a backdrop
+  /* Long enough that sweeping a row never starts a full-screen image, short
+     enough that a deliberate step still feels answered. */
+  var HOLD = 420;                // ms of stillness before asking for a backdrop
   var artTimer = null, artWant = null, lastArt = '';
 
   /* The backdrop, debounced: only the last item asked for is drawn, so sweeping
