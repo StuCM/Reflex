@@ -7,7 +7,7 @@ model: sonnet
 env: laptop
 files:
   - dev/smoke.js
-  - dev/smoke/
+  - dev/smoke/*
   - package.json
 ---
 
