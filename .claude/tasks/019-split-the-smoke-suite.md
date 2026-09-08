@@ -1,7 +1,7 @@
 ---
 id: 019
 slug: split-the-smoke-suite
-status: approved
+status: review
 branch: crew/019-split-the-smoke-suite
 model: sonnet
 env: laptop
@@ -146,7 +146,7 @@ Workers must not go digging for more.
 
 ## What changed
 
-- `dev/smoke.js` — 3,867 lines to 1,075. Keeps everything that is not a step:
+- `dev/smoke.js` — 3,867 lines to 1,107. Keeps everything that is not a step:
   the browser launch, the console and network collectors, the offsite check,
   `step`/`press`/`waitFor`/`shot`, the fixture detection and every shared
   helper. It hands them to an area file as one object `h`, walks the areas in
@@ -172,9 +172,9 @@ Step count 75 before, 75 after — 74 in the area files plus the console-error
 step, which stays in the runner because it is about the session rather than any
 one area.
 
-Full suite: **2:37.98 before**, **2:36.31 / 2:40.02 after** — the split costs
-nothing and saves nothing on a whole run, as expected. What it saves is the
-iteration:
+Full suite: **2:37.98 before**, **2:37.37 / 2:37.50 after** (`npm run verify`,
+both 75/75) — the split costs nothing and saves nothing on a whole run, as
+expected. What it saves is the iteration:
 
 | area | steps | wall clock | | area | steps | wall clock |
 |---|---|---|---|---|---|---|
@@ -213,6 +213,12 @@ http://10.0.0.99/escape.png`. Reverted, back to 3/3.
    `focusDeck`) has the same shape and could bite the same way; none has been
    seen to, so none was touched. **docs/backlog.md's "A flaky smoke step" item
    can be closed** — it is out of `files:` here.
+   Evidence: before the fix, `npm run verify` failed that step 4 times out of 4
+   and `player deck` 1 in 1 with the diagnosis above; after it, `player deck`
+   3/3 and `npm run verify` 2/2 at 75/75. The pre-split file passed 3/3 in the
+   same window, so the split shortened the window rather than opening it — the
+   race was there either way, and 018 had already tried to buy time with
+   `test(dev): give the removal confirmation longer to appear`.
 2. **`sections`' first step depends on where the rail is resting**, not on the
    sidebar. It reads the nested rows as "the current section's categories", but
    the sidebar nests the *cuts of Continue watching* while the rail sits on that
