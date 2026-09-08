@@ -1,7 +1,7 @@
 ---
 id: 017
 slug: player-osd
-status: approved
+status: building
 branch: crew/017-player-osd
 model: sonnet
 env: laptop
