@@ -1,7 +1,7 @@
 ---
 id: 015
 slug: cheap-fast-scrolling
-status: building
+status: pending-tv
 branch: crew/015-cheap-fast-scrolling
 model: sonnet
 env: laptop
@@ -156,20 +156,73 @@ Workers must not go digging for more.
   definition of done.
 
 ## Definition of done
-- [ ] Sweeping a row with ten rapid presses makes fewer poster requests than
+- [x] Sweeping a row with ten rapid presses makes fewer poster requests than
       tiles passed, and the smoke step proving it fails against `main`.
-- [ ] After the movement settles, every on-screen tile has its poster — nothing
+- [x] After the movement settles, every on-screen tile has its poster — nothing
       is left permanently blank.
-- [ ] The focused tile gets its poster and its lookup immediately.
-- [ ] A tile keeps its previous picture while awaiting a new one rather than
+- [x] The focused tile gets its poster and its lookup immediately.
+- [x] A tile keeps its previous picture while awaiting a new one rather than
       blanking.
-- [ ] Titles, second lines and progress bars are never deferred.
-- [ ] The hero backdrop still ends on the focused item after a sweep, and
+- [x] Titles, second lines and progress bars are never deferred.
+- [x] The hero backdrop still ends on the focused item after a sweep, and
       crossfades over `--t-fade` while the rest of the UI stays on `--t-move`.
-- [ ] `npm run verify` passes.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] `npm run verify` passes.
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Review rounds
 
+**Round 1 — PASS.** `crew-reviewer` re-ran the gate (check clean, 9/9 unit
+files, smoke 64/64), traced `drawRow`/`paint`/`settled`, confirmed `place()` and
+the `8625a76` recycle suppression are untouched, that `--t-fade` reaches only
+`.hero-layer` while the dense dimming stays on `--t-move`, and that the new
+smoke step counts real requests rather than restating the implementation. No
+findings.
+
+## What changed
+
+- `js/rail.js` — `paint(tile)` now holds the two expensive lines (`Art.warm` and
+  the `src`); `drawRow` keeps position, title, sub-line and progress immediate,
+  paints the focused tile at once and marks every other on-screen tile `_wait`,
+  leaving the picture it already shows; one module-level 160ms `settle` timer,
+  restarted by every `render`, paints the waiting tiles of on-screen rows.
+- `js/masthead.js` — `HOLD` 280 → 420ms.
+- `css/app.css` — `--t-fade: 620ms`, used only for the two hero layers' opacity.
+- `dev/smoke.js` — one new step (64 total): a fresh row's focused tile is its own
+  poster while its neighbours still hold the pool's last one, nothing is blank
+  once it rests, and ten rapid presses cost fewer than five poster requests. Two
+  assertions added to the palette step for `--t-fade` against `--t-move`.
+
+## Notes for the next person
+
+- The spec's "assert fewer requests than tiles passed" needed a firmer bar than
+  "fewer": `main` costs **19** requests for a ten-tile sweep, not ten, because a
+  tile is painted twice — Plex's poster first, then TMDB's when `Art.onReady`
+  fires `repaint`. The step's bar is fewer than five.
+- Two states, not one, so `_deferred` could not simply be reused: off-screen
+  tiles clear their `src`, swept-past tiles must keep theirs. `_wait` is the
+  sibling flag the spec allowed for.
+- **Not proven on the panel.** The laptop proves the requests stop and that
+  nothing is left blank. Whether the sweep now *feels* smooth on the B8 is the
+  question that started this, and only the TV can answer it.
+
 ## Graph writes proposed
+
+- **Pattern — "Defer the expensive half of a tile, not the tile."** A rail that
+  paints title, sub-line and progress immediately but holds the poster and the
+  TMDB lookup behind a single module-level settle timer (160ms, reset on every
+  render) never fetches for a tile it is passing. Two rules keep it honest: the
+  focused tile is exempt, and a waiting tile keeps the picture it already has
+  rather than blanking. Relates to `js/rail.js`, and to the existing
+  `Masthead.art` (420ms) and `Browse.scheduleWalk` (150ms) debounces.
+- **Gotcha — a tile costs two poster requests, not one.** `Art.tile` answers
+  synchronously with Plex's poster and is reassigned to TMDB's when
+  `Art.onReady` fires `repaint`. Any budget or assertion counting poster
+  requests has to expect roughly 2n, which is why `main` costs 19 for a ten-tile
+  sweep. `repaint` now skips `_wait` tiles so a landing backdrop cannot jump the
+  settle.
+- **Decision — the backdrop fades on its own timing token.** `--t-fade` (620ms)
+  is separate from `--t-move` (340ms) because a full-screen picture reads better
+  crossfading slowly while the UI's own motion must not be slowed with it. Only
+  `.hero-layer` uses it; the `dense` dimming on `#hero-art` stays on `--t-move`
+  so the two never fight.
