@@ -43,12 +43,16 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   screen already has, rather than handlers sprinkled through the rail, the
   menus, the sidebar and the player.
 
-  Worth settling with it: **does this remote actually have colour buttons?**
-  `js/sidebar.js:7`, `js/browse.js:123` and `js/servers.js:93` all assert it has
-  none — it is the stated reason the sidebar exists — yet search is on red, the
-  player's shortcuts are on red/green/yellow/blue, and 018 puts select mode on
-  green at the user's request. Either the note is stale or several features are
-  unreachable on the remote in the room.
+  **Settled 2026-09-08: the user does have colour buttons.** So the comments in
+  `js/sidebar.js:7`, `js/browse.js:123` and `js/servers.js:93` — all asserting
+  the Magic Remote has none, and citing that as the reason the sidebar exists —
+  are wrong as written and should be corrected once 018 releases those files.
+  An earlier session recorded that the B8's bundled Magic Remote (AN-MR18BA) has
+  none and that search was moved off red because red did not register, so the
+  likeliest truth is that a second, standard remote is in use as well. Word the
+  correction as "not every remote has colour buttons" rather than flipping the
+  claim: **every action stays d-pad reachable**, which is what makes the app
+  work from the Magic Remote, a standard remote and the pointer alike.
 
 - **A design language, written down.** The user's point: radius, button sizes
   and spacing differ between the film page, the player and the rail because each
