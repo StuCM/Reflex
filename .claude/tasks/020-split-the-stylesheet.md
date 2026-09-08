@@ -1,7 +1,7 @@
 ---
 id: 020
 slug: split-the-stylesheet
-status: blocked
+status: review
 branch: crew/020-split-the-stylesheet
 model: sonnet
 env: laptop
@@ -154,26 +154,49 @@ produced this task. Workers must not go digging for more.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
-## Blocked on: the palette correction and the 019 embargo disagree
-
-The work is finished and committed as `2491761`. It is blocked on one line that
-neither task is allowed to write.
+## One line hands off to the orchestrator (settled, not open)
 
 `dev/smoke.js:2224` asserts `--ac === '#a79ce3'` — the *old* accent, in a step
 called "the Mantis palette is what the stylesheet is serving". Step 4 of this
-spec orders `--ac` to `#9d93d6`, so that assertion now fails: **74/75, and the
-one failure is the spec doing what it was told**. Every other step passes, and
+spec orders `--ac` to `#9d93d6`, so that assertion fails: **74/75, and the one
+failure is the spec doing what it was told**. Every other step passes, and
 `npm run check` and `npm test` are green.
 
-The fix is one constant:
+Neither task could fix it: 019 owns `dev/smoke.js`, and its own spec forbids it
+changing an assertion. **The orchestrator has taken it** — the constant is
+applied at merge, in whichever file the step lands in after 019's split.
 
     dev/smoke.js:2224   '#a79ce3'  ->  '#9d93d6'
 
-This task may not make it — the spec says 019 owns `dev/smoke.js` — and 019 may
-not either, because its own spec says 020 owns the palette and that it must not
-lose or change an assertion. Whoever merges second is the one who can apply it,
-in whichever file the step lands in after 019's split. It is the only thing
-standing between this branch and 75/75.
+So the gate reads as passing but for that one known line, and the palette
+correction stands exactly as specced. An accepted hand-off, not an open
+question.
+
+Worth keeping: 019 and 020 were cleared to run in parallel because their
+`files:` lists do not overlap, which does not catch a token in one task's file
+that a test in the other's asserts. When a spec changes a value, grep the suite
+for the old one before deciding who owns which file.
+
+## How the move was proved, and how to repeat it
+
+Two throwaway scripts, both against `git show HEAD:css/app.css` and the
+concatenation of the new files in `<link>` order. Worth re-running for any
+future stylesheet split; neither needs anything installed.
+
+1. **Nothing renders differently.** Strip comments from both sides, substitute
+   every new token back to its literal (`var(--r-card)` → `16px`, and so on),
+   drop the token declarations themselves, then parse each into
+   `selector { decl; decl }` and diff the two *sorted* lists. Both sides came to
+   204 rules, and what survived the diff was exactly the intended change: `--ac`,
+   the gradient literals, and the five radii where `999px` renders identically to
+   half the element's width. Anything else in that diff is a mistake.
+
+2. **The cascade did not move.** Diff the *unsorted* selector lists. Reading the
+   git diff cannot answer "does a rule now win that used to lose"; this can. The
+   output is the three groups that moved — the shared rules up into base, detail
+   ahead of show, screens down past player — and each was then walked for a
+   same-element, same-property, equal-specificity pair. `.msg-hint`/`.dt-hint` is
+   the only one in the app, which is what fixes screens.css last in the order.
 
 ## What changed, per file
 
@@ -303,9 +326,6 @@ same way it does for `js/` — worth a line beside the existing one under
 **Testing**.
 
 ## Review rounds
-
-None. The gate does not pass (74/75, see **Blocked on** above), and the role
-says not to ask for review on a failing gate. Nothing else is outstanding.
 
 ## Graph writes proposed
 
