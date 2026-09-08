@@ -6,7 +6,7 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 012 | Season recaps on a show, but only when asked for | `pending-tv` | laptop | crew/012-recaps-rail *(gone)* |
-| 014 | The detail page's face | `building` | laptop | crew/014-detail-page-face |
+| 015 | Scrolling fast costs nothing until you stop | `draft` | laptop | crew/015-cheap-fast-scrolling *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -19,11 +19,13 @@ Task files are the source of truth; this is the glance view.
 | 010 | OK on an episode opens the series, at that episode | `done` | laptop | crew/010-series-not-episode *(gone)* |
 | 011 | Up next, when an episode ends | `done` | laptop | crew/011-play-next *(gone)* |
 | 013 | The Mantis palette, and motion that does not jar | `done` | laptop | crew/013-palette-and-motion *(gone)* |
+| 014 | The detail page's face | `done` | laptop | crew/014-detail-page-face |
 
 ## Waiting on you
 
 - **012 Season recaps on a show, but only when asked for** — code-complete; only the panel can prove it
+- **015 Scrolling fast costs nothing until you stop** — spec needs your approval before anyone starts
 
 ## In flight
 
-- **014 The detail page's face** — `building` on `crew/014-detail-page-face`
+Nothing running.
