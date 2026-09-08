@@ -96,6 +96,25 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 4. The rail
 
+- **Two Continue watching rows, on a real server only.** `mergeHubs` in
+  `js/browse.js` passes through every hub `/hubs/sections/<key>` returns, and a
+  real Plex server serves one called `Continue Watching` — so the app shows its
+  own onDeck row *and* the server's hub. `dev/mock-plex.js` serves only Recently
+  Added, Recently Released, Top Rated and Directors, so no test has ever been
+  able to see it. Fix: drop hubs that duplicate what we build ourselves
+  (`continue watching`, `on deck`, case-insensitively) **and** make the mock
+  serve one so the step can fail.
+- **Tiles show the previous item's poster while scrolling.** 015 deliberately
+  keeps a swept-past tile's existing picture rather than blanking it, on the
+  reasoning that a held poster beats an empty box. On a recycled tile that means
+  showing the *wrong* film for 160ms and then swapping, which reads as the image
+  jumping. A neutral placeholder on recycle, or a crossfade on the swap, is
+  what was actually wanted.
+- **The scrolled header should be laid out like the first screen**, not in two
+  columns. The description is hard to read where it is, and the lower rows'
+  layout is off. Replicate the tall hero's arrangement, and **add the ratings
+  row** the detail page has.
+
 - **The motion is jarring.** With one row fitting under the header, every press
   of down scrolls a whole 466px row, and the tall-to-dense change moves the
   header, the rail and the backdrop at once. `#rows` already eases over 340ms
