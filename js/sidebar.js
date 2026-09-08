@@ -45,6 +45,7 @@ var Sidebar = (function () {
     out.push({ label: 'Devices', kind: 'devices' });
     out.push({ label: 'Panel', kind: 'panel' });
     out.push({ label: 'Autoplay next: ' + Player.autoplayLabel(), kind: 'autoplay' });
+    out.push({ label: 'Theme music: ' + ShowPage.themeLabel(), kind: 'theme' });
     return out;
   }
 

@@ -540,6 +540,13 @@ var Plex = (function () {
     return photoUrl(Servers.of(item), item.art, w, h);
   }
 
+  /* A show's theme tune, or '' when it has none — most shows do not, and that
+     is normal. A plain file GET like a poster: no decision, no session. */
+  function themeUrl(server, item) {
+    if (!server || !item || !item.theme) return '';
+    return server.base + item.theme + '?X-Plex-Token=' + server.token;
+  }
+
   /* ---------- playback decision ---------- */
 
   var sessionId = null;
@@ -691,7 +698,7 @@ var Plex = (function () {
     linkStart: linkStart, linkPoll: linkPoll, forgetServers: forgetServers,
     discover: discover, state: s,
     sections: sections, items: items, metadata: metadata,
-    posterUrl: posterUrl, artUrl: artUrl, photoUrl: photoUrl,
+    posterUrl: posterUrl, artUrl: artUrl, photoUrl: photoUrl, themeUrl: themeUrl,
     onDeck: onDeck, hideFromDeck: hideFromDeck, scrobble: scrobble,
     hubs: hubs, search: search, children: children,
     history: history, devices: devices, findByGuid: findByGuid, tmdbId: tmdbId,

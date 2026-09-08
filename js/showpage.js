@@ -17,6 +17,7 @@ var ShowPage = (function () {
   var elHint = document.getElementById('sh-hint');
   var elRecaps = document.getElementById('sh-recaps');
   var elHead = document.getElementById('sh-head');
+  var elTheme = document.getElementById('theme');
 
   var EPISODE_POOL = 6;          // episode rows on screen at once, at 111px each
   var EPISODE_LEAD = 3;          // rows kept above the focused one
@@ -51,6 +52,8 @@ var ShowPage = (function () {
 
     UI.show('show');
     paintHeader();
+    silence();                   // whatever the last series was, it is over
+    playTheme();
     renderRecaps();
     elSeasons.innerHTML = '';
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
@@ -84,6 +87,7 @@ var ShowPage = (function () {
 
   function close() {
     clearTimeout(checkTimer);
+    silence();
     show = null;
     if (opts.onExit) opts.onExit();
   }
@@ -233,6 +237,81 @@ var ShowPage = (function () {
     });
   }
 
+  /* ---------- the theme tune ----------
+
+     Shows have one, films do not. It is a static file on the server, so playing
+     it costs a GET and nothing else: no decision, no session, nothing a
+     kill-stream rule would ever see. */
+
+  var THEME_VOL = 0.35;           // quiet: it announces the show, it is not the show
+  var FADE_STEP = 40;             // ms between volume steps while fading in
+  var fadeTimer = null;
+  var themeOn = null;             // read from storage once, then cached
+
+  /* Whether a series' theme plays when its page opens. Storage that refuses us
+     reads as on, because on is what was asked for. */
+  function themePlays() {
+    if (themeOn !== null) return themeOn;
+    var stored = null;
+    try { stored = localStorage.getItem('reflex.theme'); } catch (e) { stored = null; }
+    themeOn = stored !== 'off';
+    return themeOn;
+  }
+
+  /* on → off → on, persisted; the sidebar cycles it the way it cycles autoplay. */
+  function cycleTheme() {
+    themeOn = !themePlays();
+    try { localStorage.setItem('reflex.theme', themeOn ? 'on' : 'off'); } catch (e) { /* private mode */ }
+    if (!themeOn) silence();
+    return themeOn;
+  }
+
+  /* 'on' or 'off' — what the sidebar entry and its toast say. */
+  function themeLabel() { return themePlays() ? 'on' : 'off'; }
+
+  /* A show with no theme is the ordinary case, so this says nothing about it. */
+  function playTheme() {
+    var url = themePlays() ? Plex.themeUrl(Servers.of(show), show) : '';
+    if (!url) return;
+    elTheme.loop = true;
+    elTheme.volume = 0;
+    elTheme.src = url;
+    var started = elTheme.play();
+    /* The platform may refuse to start audio nobody asked for. That is an
+       answer, not a fault: say so once and stay silent. */
+    if (started && started.catch) {
+      started.catch(function (e) { UI.debug('theme: ' + e.message); });
+    }
+    fadeIn();
+  }
+
+  function fadeIn() {
+    var span = parseFloat(getComputedStyle(document.documentElement)
+                            .getPropertyValue('--t-move')) || 340;
+    var step = THEME_VOL / Math.max(1, Math.round(span / FADE_STEP));
+    clearInterval(fadeTimer);
+    fadeTimer = setInterval(function () {
+      var v = elTheme.volume + step;
+      if (v < THEME_VOL) { elTheme.volume = v; return; }
+      elTheme.volume = THEME_VOL;
+      clearInterval(fadeTimer);
+      fadeTimer = null;
+    }, FADE_STEP);
+  }
+
+  /* Stops the theme dead — paused, rewound, and the source dropped, because a
+     paused element still holding a source is still holding the audio pipeline.
+     Anything that wants the audio calls this first. */
+  function silence() {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+    if (!elTheme.getAttribute('src')) return;
+    elTheme.pause();
+    elTheme.currentTime = 0;
+    elTheme.removeAttribute('src');
+    elTheme.load();
+  }
+
   /* ---------- loading ---------- */
 
   function loadEpisodes() {
@@ -351,5 +430,6 @@ var ShowPage = (function () {
 
   function current() { return show; }
 
-  return { open: open, key: key, current: current };
+  return { open: open, key: key, current: current, silence: silence,
+           cycleTheme: cycleTheme, themeLabel: themeLabel };
 })();

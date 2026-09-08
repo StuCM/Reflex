@@ -27,11 +27,41 @@ const DEVICES = [
   { id: '3', name: 'Attic Fire TV', platform: 'Android' }
 ];
 
+/* Which shows TheTVDB gave a theme tune to. Half of them, so the silent path
+   is exercised rather than assumed — a show without one is normal, not a fault.
+   dev/smoke/show.js picks its titles with this. */
+function hasTheme(showIndex) { return showIndex % 2 === 0; }
+
+/* No theme tune to hand either, so the mock makes one: a second of a quiet
+   sine as a WAV, which is enough for "it is playing" to mean something. */
+const THEME_WAV = (function () {
+  const rate = 8000, samples = rate;            // one second, mono, 16-bit
+  const data = Buffer.alloc(samples * 2);
+  for (let i = 0; i < samples; i++) {
+    data.writeInt16LE(Math.round(6000 * Math.sin(2 * Math.PI * 220 * i / rate)), i * 2);
+  }
+  const head = Buffer.alloc(44);
+  head.write('RIFF', 0); head.writeUInt32LE(36 + data.length, 4); head.write('WAVE', 8);
+  head.write('fmt ', 12); head.writeUInt32LE(16, 16); head.writeUInt16LE(1, 20);
+  head.writeUInt16LE(1, 22); head.writeUInt32LE(rate, 24); head.writeUInt32LE(rate * 2, 28);
+  head.writeUInt16LE(2, 32); head.writeUInt16LE(16, 34);
+  head.write('data', 36); head.writeUInt32LE(data.length, 40);
+  return Buffer.concat([head, data]);
+})();
+
 function create(opts) {
   const log = opts.log || function () {};
   const lib = buildLibrary({ films: opts.films });
   const pins = {};
   let nextPin = 4000;
+
+  /* A show carries the path to its theme; a film never does. */
+  lib.servers.forEach(function (srv) {
+    srv.items['3'].forEach(function (m) {
+      if (!hasTheme(m._show)) return;
+      m.theme = '/library/metadata/' + m.ratingKey + '/theme/' + (1600000000 + m._show);
+    });
+  });
 
   /* Continue watching and history, per server. A film held by both servers can
      be part-watched on either — Plex syncs the position between them, so the
@@ -596,6 +626,18 @@ function create(opts) {
       return true;
     }
 
+    /* The theme tune, handed over as a file — the same shape as a poster or a
+       subtitle track. One GET, no session. */
+    m = pathname.match(/^\/library\/metadata\/(\d+)\/theme\/\d+$/);
+    if (m) {
+      log(srv.name + ' theme for ' + m[1] + ' fetched');
+      res.writeHead(200, { 'Content-Type': 'audio/wav',
+                           'Access-Control-Allow-Origin': '*',
+                           'Content-Length': THEME_WAV.length });
+      res.end(THEME_WAV);
+      return true;
+    }
+
     /* A text subtitle track, handed over as a file. This is the entire cost of
        subtitles in this app: one GET, no session, nothing to burn in. An image
        track has no text to give, and answering 415 is how the app finds out —
@@ -671,4 +713,4 @@ function create(opts) {
   };
 }
 
-module.exports = { create: create, DEVICES: DEVICES };
+module.exports = { create: create, DEVICES: DEVICES, hasTheme: hasTheme };
