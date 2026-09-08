@@ -67,6 +67,15 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   and it needs no probe script and no write to a server we do not own just to
   find out what it supports.
 
+- **TMDB categories as the default rows, server hubs in the menu.** Today the
+  browse screen shows the server's own hubs (Recently Added, Recently Released,
+  Top Rated) and TMDB's curated rows live in a separate Discovery *mode*. The
+  user wants that inverted: their own TMDB categories — trending, what is on
+  Netflix / Prime / Disney+, recommendations — as the rows shown by default,
+  with the server's hubs still reachable but demoted into the sidebar. Also
+  wants a say in which TMDB categories exist rather than the four hardcoded in
+  `js/tmdb.js`. Touches `js/browse.js`, `js/discovery.js`, `js/sidebar.js`.
+
 - **Rebuild the film and series pages to the design language the rail now
   uses** — portrait posters, the 264px header, ink & citron. The flow they have
   to serve is: search a title, land on its page, switch between servers and
