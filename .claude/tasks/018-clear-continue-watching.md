@@ -1,7 +1,7 @@
 ---
 id: 018
 slug: clear-continue-watching
-status: review
+status: done
 branch: crew/018-clear-continue-watching
 model: opus
 env: laptop
@@ -179,22 +179,108 @@ produced this task. Workers must not go digging for more.
 - **`js/guard.js`, `js/player.js`, `js/menu.js`** beyond calling `Menu.open`.
 
 ## Definition of done
-- [ ] Green on the Continue watching row enters a select mode that counts what
+- [x] Green on the Continue watching row enters a select mode that counts what
       is picked, and BACK leaves without changing anything.
-- [ ] Confirming removes every picked entry from the row, on every server that
+- [x] Confirming removes every picked entry from the row, on every server that
       has it, and they are still gone after a reload.
-- [ ] Where the server supports it, entries are **hidden** and their watch state
+- [x] Where the server supports it, entries are **hidden** and their watch state
       is untouched.
-- [ ] Where it does not, the user is told that and asked; a show is never marked
+- [x] Where it does not, the user is told that and asked; a show is never marked
       watched without an explicit confirmation naming that consequence.
-- [ ] Cancel is the default selection on the confirmation.
-- [ ] A title's own page offers the same action, and only when it is on the deck.
-- [ ] A server that refuses both leaves the item in the row and says so.
-- [ ] `npm run verify` passes, and the mock exercises both the hide and the
+- [x] Cancel is the default selection on the confirmation.
+- [x] A title's own page offers the same action, and only when it is on the deck.
+- [x] A server that refuses both leaves the item in the row and says so.
+- [x] `npm run verify` passes, and the mock exercises both the hide and the
       fallback paths.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Review rounds
 
+**Round 1 — CHANGES.** One blocking finding, and it was right: the watched
+fallback re-read `Merge.sources(entry)` and so scrobbled *every* copy of an
+entry, including the copy a server had already hidden. On a film held by both
+servers that threw away the watch state on Main — the server that had done the
+non-destructive thing and never needed the fallback — which is the opposite of
+"where the server supports it, watch state is untouched". Fixed in `0ccf280`
+by threading a job of `{ entry, copies }`: a refusal comes back carrying only
+the copies that were refused, and the watched round reaches only those. The
+smoke step now asserts Main is never scrobbled, and that assertion was checked
+against the old code, where it fails naming all three requests.
+
+Two non-blocking observations came with it, both addressed: the episode → show
+scrobble had no deterministic step (there is one now, asserting the scrobble
+carries `key=<show>` and never `key=<episode>`), and a server refusing *both*
+endpoints is still verified by inspection only — teaching the mock to 404 a
+scrobble would be testing something no real server does. The reviewer agreed
+that one does not block.
+
+**Round 2 — PASS.**
+
+## What changed, per file
+
+- `js/plex.js` — `hideFromDeck` and `scrobble`, both `PUT`. `hideFromDeck`
+  resolves `false` on 400/404 and remembers that per server in memory, so ten
+  removals do not rediscover the same 404 ten times.
+- `js/browse.js` — the select mode (green in, OK picks, green confirms, BACK
+  out), the confirmation built on `Menu`, and the clearing itself: per copy, on
+  that copy's own server, with the row and every section's `rows:` cache
+  updated only once the server has agreed. Exports `clearOne` and `isOnDeck`.
+- `js/detail.js` — a `Remove from Continue watching` button after Subtitles,
+  present only when `Browse.isOnDeck` says so; every action now carries a
+  `data-act` name so nothing has to count buttons from the end.
+- `js/sidebar.js` — one `modes()` entry, `Clear from Continue watching`, shown
+  only when the deck row holds something (see the note under the front matter).
+- `index.html`, `css/app.css` — `#browse-hint` (the select-mode key map) and
+  `#confirm` (the confirmation host), plus `.tile.picked`, amber so a picked
+  tile still reads as picked once the focus has moved along.
+- `dev/mock-plex.js` — both endpoints, with **Backup answering 404** to
+  `removeFromContinueWatching` so the fallback is walked rather than asserted,
+  and one film put on both decks so an entry with two copies exists at all.
+- `dev/smoke.js` — six new steps, 68 → 75. `pressButton` now finds a button by
+  name rather than by an offset from the end of the row.
+- `js/app.js` — declared, not touched: `Browse.key` and `Detail.key` already
+  route to `Menu` when one is open, so the confirmation needed no wiring.
+
+## What the spec got wrong
+
+- **Approach 2, the watched key.** As written — "for an **episode**, scrobble
+  the episode; for a **show**, scrobble the show's own rating key" — both
+  branches reduce to `entry.ratingKey`, because `Plex.onDeck` only ever yields
+  movies and episodes and nothing else reaches this code. No show could then be
+  marked watched, which makes the prescribed note ("Marking a show watched marks
+  every episode") and the Definition-of-done line about it vacuous, and leaves
+  the actual complaint unfixed: scrobbling one episode only advances the deck to
+  the next one, so the series stays in the row. `watchedKey` therefore scrobbles
+  an episode's `grandparentRatingKey`. That matches `docs/backlog.md` ("a series
+  you are two seasons into is removed by marking all thirty watched") and the
+  constraint against falling through to it silently. The reviewer agreed.
+- **`js/ui.js` is not in `files:`** but `UI.KEY` is where keycodes live, so
+  green is a local `GREEN = 404` in `js/browse.js` instead. Worth moving next
+  time something touches `ui.js`.
+- **`js/sidebar.js` was missing from `files:`** — added on the orchestrator's
+  amendment, because a mode reachable only by a colour button this remote does
+  not have is a mode that ships unreachable.
+
 ## Graph writes proposed
+
+- **Pattern — a renamed row does not repaint.** `js/rail.js` treats a row as
+  unchanged when `rowEl._row` and `rowEl._rowRef` both match, so mutating
+  `row.title` in place leaves the old label on screen; only handing the rail a
+  *new* row object repaints it. Cost most of a smoke round to find, and it
+  looked exactly like the key never arriving. Anything that changes a row label
+  without changing its items has to rebuild the row.
+- **Decision — capability by trying, per server, in memory.**
+  `removeFromContinueWatching` exists on newer servers only. `Plex.hideFromDeck`
+  resolves `false` on 400/404 rather than throwing, and caches that per server
+  id for the session — not to disk, because a server can be upgraded under us.
+  Version sniffing was considered and rejected in `docs/backlog.md`.
+- **Decision — the fallback is per copy, not per entry.** Hiding is
+  non-destructive and marking watched is not, so when one server hides and
+  another refuses, only the refusing copy may be scrobbled. Reading
+  `Merge.sources` again on the second round is what re-scrobbles a copy that was
+  already dealt with; the copies that were refused have to be carried forward.
+  This was the round-one review finding.
+- **Gotcha — never `git checkout <file>` to undo a temporary experiment on
+  uncommitted work.** It reverted a whole file of unstaged changes mid-task and
+  cost a full re-application. Copy the file to the scratchpad and copy it back.
