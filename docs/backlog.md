@@ -33,6 +33,31 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 2. The player on screen
 
+- **A design language, written down.** The user's point: radius, button sizes
+  and spacing differ between the film page, the player and the rail because each
+  was built to a screenshot rather than to a shared set of numbers. Wanted: one
+  token block — radius, control sizes, spacing steps — in `css/app.css` beside
+  the palette and the timings, used everywhere and documented in CLAUDE.md, so
+  "the same radius" is one number rather than a habit. To be settled against
+  `design/Mantis Screens.dc.html`, which the user is supplying.
+- **The player does not match the design**: Play and the next/previous controls
+  are different sizes when they should match, the option panels are not rounded
+  enough, the buttons are too big, and the panels should not be translucent —
+  the user does not want opacity there.
+- **The player's keys are wrong.** Wanted: ▲ controls the **trackbar** (scrub),
+  and a menu opens **only** on OK on its button. Today ▲ focuses the control row
+  and a second press opens a panel. Needs the reachability of the buttons
+  settling — probably ▼ — before it is specced.
+- **Some subtitles fail with a 501.** The image-track guard is right
+  (`Media.isTextSub` is checked in both `js/player.js` and `js/detail.js`), so
+  this is a *text* track the server will not serve: `Plex.subtitleUrl` falls back
+  to `/library/streams/<id>` when a stream has no `key`, which asks the server to
+  extract an embedded track, and some answer 501. The app reports a generic
+  "returned no text" and leaves the entry in the menu. At minimum it should say
+  what happened with the status, mark that track unavailable, and log the codec
+  and whether the stream had a `key`, so the real cause is learnable from the
+  panel.
+
 - ~~A scrub bar~~ — done: position, duration, buffered, a knob, chapter ticks
   and bands for the intro and end credits.
 - ~~Subtitle and audio track pickers in one place~~ — done: one menu on the
