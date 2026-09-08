@@ -1,7 +1,7 @@
 ---
 id: 020
 slug: split-the-stylesheet
-status: review
+status: done
 branch: crew/020-split-the-stylesheet
 model: sonnet
 env: laptop
@@ -326,6 +326,15 @@ same way it does for `js/` — worth a line beside the existing one under
 **Testing**.
 
 ## Review rounds
+
+**Round 1 — PASS** (crew-reviewer). Verified independently: the move is verbatim
+(token-resolved rule diff shows only the intended changes), the link order and
+its `.msg-hint`/`.dt-hint` reason hold, both palette corrections are complete
+and correctly scoped (ten literals across eight lines; the panel and tag
+backgrounds rightly untouched), the tokens change nothing that renders,
+`check-es5.js` reuses one `loaded()` helper for both `js/` and `css/` with both
+failure directions confirmed, and scope and commit conventions are respected.
+The `dev/smoke.js` constant was not re-raised — it is the orchestrator's.
 
 ## Graph writes proposed
 
