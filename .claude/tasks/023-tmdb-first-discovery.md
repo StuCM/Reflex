@@ -1,7 +1,7 @@
 ---
 id: 023
 slug: tmdb-first-discovery
-status: approved
+status: building
 model: opus
 env: laptop
 branch: crew/023-tmdb-first-discovery
