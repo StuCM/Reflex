@@ -1,7 +1,7 @@
 ---
 id: 014
 slug: detail-page-face
-status: approved
+status: done
 branch: crew/014-detail-page-face
 model: sonnet
 env: laptop
@@ -180,4 +180,62 @@ Workers must not go digging for more.
 
 ## Review rounds
 
+**Round 1 — PASS.** Traced the kicker/chip/rating builders, confirmed no score
+carries a source it did not come from, the Chromium 53 rules hold in the CSS,
+the new smoke steps assert behaviour rather than restating the implementation,
+and only the declared files changed. One soft observation, not blocking: no
+single smoke scenario has a film with *nothing* — the generator in
+`dev/library.js` always fills genre, director, ratings and cast, and that file
+is outside `files:`. The pieces are each covered (empty-part guard on every
+kicker, an episode proving the empty ratings row), and a dedicated fixture
+would want `dev/library.js` in scope.
+
+## What changed
+
+- `js/art.js` — `Art.facts` gains `rating`: `vote_average` to one decimal, and
+  `null` for TMDB's zero, which means "nobody voted", not "scored nothing".
+- `index.html` — `#dt-kicker`, `#dt-chips` and `#dt-ratings` inside
+  `#dt-header`; `#dt-meta` gone.
+- `js/detail.js` — the kicker, the chip row and the ratings row; extras drawn
+  as cards; cast without a photograph show initials; `close()` moves the
+  generation on.
+- `css/app.css` — the header laid out down the left at 300px with the backdrop
+  to its right, chip and rating styles, the extras cards, the initials disc.
+- `dev/smoke.js` — three new steps (the kicker and chips, the labelling of
+  every score, initials with the photographs taken away); the two episode steps
+  and the extras step retargeted from `#dt-meta` and `.dt-source` to the chips
+  and the cards.
+
+## What the spec got wrong
+
+- **`vote_average` is not in the mock's details payload.** It is in the real
+  API's `/movie/{id}` and in `dev/mock-tmdb.js`'s *list* rows, but
+  `detailsFor()` does not emit it, and that file is outside `files:`. So the
+  `<n> TMDB` rating is correct against a real server and unreachable in the
+  harness — the smoke step covers the two Plex scores and asserts that nothing
+  anywhere is labelled IMDb.
+- **The header was 264px, not 320px.** It is 300px now, and `#dt-body` moved
+  from 288px to 324px, because the description moved to the left column as step
+  7 asks. A film with four copies can run the cast row into the bottom of the
+  screen; it could before this change too, and shrinking the copy chooser is
+  task 015's business.
+- **Step 2 lists `#dt-meta` as staying and then removes it.** Removed.
+  `#dt-tagline` and `#dt-names` are named in neither list; both were kept and
+  re-placed in the left column.
+
 ## Graph writes proposed
+
+**Pattern — a page that reads `item` must bump the generation when it closes.**
+`js/detail.js` guarded every async landing with a generation counter but only
+`open()` moved it on, so a `Meta.load` or `Guard.check` arriving after BACK
+still called `renderSources()`. That was harmless while the source list read
+only its own arrays; the moment the chip row read `item` it threw
+`Cannot read properties of null`. The counter was already the mechanism — it
+just was not moved on the way out. Cost a smoke round to find.
+
+**Decision — a score is labelled with the source it came from, never IMDb.**
+The Mantis design shows an IMDb badge. We have no IMDb: Plex gives `rating`
+(critics, out of ten) and `audienceRating`, TMDB gives `vote_average`. Each is
+drawn with its own label, and the smoke test asserts the string "IMDb" appears
+nowhere on the page. Same rule as the HDR chip, which is only added when the
+server actually says so.
