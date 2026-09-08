@@ -7,8 +7,8 @@
   "title": "Reflex",
   "icon": "icon.png",
   "largeIcon": "largeIcon.png",
-  "bgColor": "#0b0b0d",
-  "iconColor": "#0b0b0d",
+  "bgColor": "#131724",
+  "iconColor": "#131724",
   "disableBackHistoryAPI": true,
   "requiredMemory": 150
 }
