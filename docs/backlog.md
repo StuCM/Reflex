@@ -48,6 +48,18 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### 3. The pages that lead into playback
 
+- **Clear things out of Continue watching.** The list grows and never shrinks.
+  Wanted: a coloured button on the browse screen that turns the Continue
+  watching row into a multi-select, and the same action on a title's own page.
+  **The mechanism needs deciding before this is specced.** "Mark watched" is the
+  obvious answer and is wrong for shows: a series you are two seasons into is
+  removed by marking all thirty watched, which destroys the fact that you have
+  seen two. Plex has `PUT /actions/removeFromContinueWatching?ratingKey=` on
+  newer servers, which hides the item without touching watch state — exactly the
+  intent — so the task should use that where the server has it and fall back to
+  `PUT /:/scrobble` only where it does not. Neither has been tried against these
+  servers; that is the first thing the task must find out.
+
 - **Rebuild the film and series pages to the design language the rail now
   uses** — portrait posters, the 264px header, ink & citron. The flow they have
   to serve is: search a title, land on its page, switch between servers and
