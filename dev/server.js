@@ -34,7 +34,10 @@ function fixture() {
 }
 
 function parseArgs(argv) {
-  const out = { port: Number(process.env.PORT) || 8080,
+  /* `|| 8080` would swallow PORT=0, which legitimately means "any free port".
+     Absent and empty are the only cases that take the default. */
+  const envPort = process.env.PORT;
+  const out = { port: (envPort === undefined || envPort === '') ? 8080 : Number(envPort),
                 films: 2000, latency: 0, pinPolls: 2,
                 proxy: false, quiet: false };
   for (let i = 0; i < argv.length; i++) {
@@ -164,8 +167,12 @@ function start(opts) {
   });
 
   server.listen(opts.port, function () {
+    /* The port asked for may be 0, which means "whatever is free" — so report
+       the one actually bound, or the banner sends you to localhost:0. */
+    var port = server.address().port;
+    opts.port = port;          // so the origin fallback above reports it too
     console.log('');
-    console.log('  Reflex dev server   http://localhost:' + opts.port);
+    console.log('  Mantis dev server   http://localhost:' + port);
     if (opts.proxy) {
       console.log('  plex.tv proxied for real — sign in with your own account.');
       console.log('  No mock library is served. Your real servers are reached directly,');
