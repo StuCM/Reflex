@@ -121,16 +121,19 @@ produced this task. Workers must not go digging for more.
      invalidate the `rows:` cache entry for the section.
 
 3. **`js/browse.js` — green enters select mode.** On the Continue watching row
-   only:
-   - `K.GREEN` toggles a select mode. In it, OK marks and unmarks the tile under
-     the focus, left and right still move, and the row label says how many are
-     picked.
-   - Pressing green again, or BACK, leaves without doing anything.
-   - A second key — make it **OK held on nothing selected, or blue** — is not
-     needed: **green again with a selection confirms**. Choose one and say which
-     in the task file; the rule is that entering, picking and confirming are
-     distinguishable and none of them is a single accidental press.
-   - Confirming opens the confirmation of step 5 for the whole selection.
+   only, and only when it has something in it:
+   - **Green** enters the mode. The row's label becomes `Select to remove — 0
+     picked`, and the hint line says what the keys now do.
+   - **OK** marks and unmarks the tile under the focus. Left and right still
+     move along the row; up and down are ignored, so the mode cannot be left by
+     wandering out of it.
+   - **Green again** confirms, opening the confirmation of step 5 for everything
+     picked. With nothing picked it does nothing but say so.
+   - **BACK** leaves the mode, unmarks everything and changes nothing.
+
+   Three distinct keys for three distinct things: enter, pick, confirm. No
+   single press both selects and destroys, and the way out is the key that
+   always means "out".
 
 4. **`js/detail.js` — the same, for one.** A round button in the action row,
    after Subtitles: `Remove from Continue watching`, present only when the item
