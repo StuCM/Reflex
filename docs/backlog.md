@@ -229,6 +229,21 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 
 ### Housekeeping
 
+- **`css/app.css` is what serialises the crew loop.** Every UI task declares it,
+  so no two can run at once even when they share nothing else. It is 944 lines
+  covering the rail, the hero, the sidebar, the show page, the detail page, the
+  player, the menus and the overlays. Splitting it per screen — with the tokens
+  and the shared button rules in a `base.css` the others build on — would let
+  two UI tasks run in parallel, which is worth more than the tidiness. Do it
+  once rather than serialising three more UI tasks behind it. (`dev/smoke.js`,
+  the other contended file, is task 019.)
+- **The big `js/` files, in order:** `js/player.js` 1,160 lines,
+  `js/detail.js` 699, `js/plex.js` 667, `js/browse.js` 614. Not blocked by
+  Chromium 53 — the app has no bundler by choice, and a new file is one more
+  global and one more `<script>` in `index.html`, which `npm run check`
+  already enforces. `js/menu.js` was carved out of `js/player.js` in 016 with no
+  behaviour change and is the pattern to follow.
+
 - `js/browse.js` and `js/plex.js` are both past 550 lines and are the next
   split candidates — search, kids and the discovery rows would go cleanly.
 - `js/guard.js` has no unit test. It is the most important logic in the app
