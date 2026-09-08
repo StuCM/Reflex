@@ -5,6 +5,71 @@ module.exports = function (h) {
     sidebarPick, shown, backToLibrary, searchFor, pictures, openTitle, openChooser,
     sourceRows, playable, detailFace, kickerParts, page, titles } = h;
 
+  /* What every tile of the focused row is showing, against what Art says that
+     tile's own item should show: fresh is its own picture, stale is one that
+     belongs to another film, blank is waiting on the settle. Blank and stale
+     tiles are named by their title, which is never deferred and so is there
+     whatever the picture is doing.
+
+     The reading is taken in the page rather than over a round trip, because a
+     round trip is slower than the 160ms settle: by the time it lands the rail
+     has stopped and every tile is its own again. Recording it from a keydown
+     listener — registered after the app's, so it runs after the render — is
+     what catches the rail actually moving. */
+  function installTileArt() {
+    return page.evaluate(function () {
+      if (window.__tileArt) return;
+      /* Where the app has just put something, which is not where it is being
+         drawn: the strip transitions into place, so a rect read from a keydown
+         is the position it is leaving rather than the one it is taking. */
+      function xOf(el) {
+        var m = /translate\((-?[\d.]+)px/.exec(el.style.transform || el.style.webkitTransform || '');
+        return m ? parseFloat(m[1]) : 0;
+      }
+      window.__tileArt = function () {
+        var out = { focused: 'none', fresh: 0, stale: [], blank: [] };
+        var row = document.querySelector('#rows .row.on');
+        if (!row) return out;
+        var base = xOf(row.querySelector('.strip'));
+        var tiles = row.querySelectorAll('.tile');
+        for (var i = 0; i < tiles.length; i++) {
+          var t = tiles[i];
+          if (t.classList.contains('hidden') || !t._item) continue;
+          var x = base + xOf(t);
+          if (x + 209 <= 0 || x >= 1920) continue;            // wound off the side
+          var title = t.querySelector('.tile-title').textContent.trim();
+          var got = t.querySelector('img').getAttribute('src') || '';
+          var state = !got ? 'blank' : (got === Art.tile(t._item, 209, 314) ? 'fresh' : 'stale');
+          if (t.classList.contains('on')) out.focused = state;
+          if (state === 'fresh') out.fresh++; else out[state].push(title || '(no title)');
+        }
+        return out;
+      };
+      document.addEventListener('keydown', function () {
+        if (window.__sweep) window.__sweep.push(window.__tileArt());
+      }, false);
+    });
+  }
+
+  function tileArt() {
+    return installTileArt().then(function () {
+      return page.evaluate(function () { return window.__tileArt(); });
+    });
+  }
+
+  /* Every reading taken during the presses fn makes, one per key, each as the
+     app left the rail at that moment. */
+  function sweepReadings(fn) {
+    return installTileArt()
+      .then(function () { return page.evaluate(function () { window.__sweep = []; }); })
+      .then(fn)
+      .then(function () {
+        return page.evaluate(function () {
+          var got = window.__sweep; window.__sweep = null; return got;
+        });
+      });
+  }
+
   return h.ready()
 
     .then(function () {
@@ -50,46 +115,29 @@ module.exports = function (h) {
     .then(function () {
       return step('a moving rail fetches only what has the focus, and fills in when it stops', function () {
         /* Sweeping used to cost a poster and a lookup per tile passed, every one
-           of them for a tile already gone by. What each tile holds is compared
-           against what Art says it should hold: fresh is its own picture, stale
-           is the one the pool element was showing before, blank is the bug. */
+           of them for a tile already gone by. A tile that has not paid yet
+           waits on the surface colour; what it must never do is fetch while the
+           rail is moving, and what it must never show is another film. */
         const SWEEP = 10;
-        function tileArt() {
-          return page.evaluate(function () {
-            var out = { focused: 'none', fresh: 0, stale: 0, blank: [] };
-            var tiles = document.querySelectorAll('#rows .row.on .tile');
-            for (var i = 0; i < tiles.length; i++) {
-              var t = tiles[i];
-              if (t.classList.contains('hidden') || !t._item) continue;
-              var box = t.getBoundingClientRect();
-              if (box.right <= 0 || box.left >= 1920) continue;   // wound off the side
-              var got = t.querySelector('img').getAttribute('src') || '';
-              var state = !got ? 'blank' : (got === Art.tile(t._item, 209, 314) ? 'fresh' : 'stale');
-              if (t.classList.contains('on')) out.focused = state;
-              if (state === 'blank') out.blank.push(t.querySelector('.tile-title').textContent.trim());
-              else out[state]++;
-            }
-            return out;
-          });
-        }
-
         let before;
         return backToLibrary()
           .then(function () { return press('ArrowUp', 8); })
           .then(function () { return page.waitForTimeout(1500); })
           /* Two rows down in one movement, onto a row that was below the fold:
              none of its tiles has ever had a picture of its own. */
-          .then(function () { return press('ArrowDown', 2); })
-          .then(tileArt)
-          .then(function (st) {
+          .then(function () {
+            return sweepReadings(function () { return press('ArrowDown', 2); });
+          })
+          .then(function (readings) {
+            const st = readings[readings.length - 1];
             if (st.focused !== 'fresh') {
               throw new Error('the focused tile is ' + st.focused + ', not its own poster');
             }
-            if (st.stale < 5) {
-              throw new Error('only ' + st.stale + ' of ' + (st.stale + st.fresh) +
+            if (st.blank.length < 5) {
+              throw new Error('only ' + st.blank.length + ' of ' +
+                              (st.blank.length + st.fresh + st.stale.length) +
                               ' tiles waited — the rail is still fetching while it moves');
             }
-            if (st.blank.length) throw new Error(st.blank.length + ' tiles blanked mid-move');
           })
           .then(function () { return page.waitForTimeout(1500); })
           .then(tileArt)
@@ -117,6 +165,54 @@ module.exports = function (h) {
           .then(function (st) {
             if (st.blank.length) {
               throw new Error('after the sweep settled, no poster on: ' + st.blank.join(', '));
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('a tile carries no picture but its own while the row sweeps', function () {
+        /* The pool hands each element the item its neighbour was showing, so a
+           picture kept across that reassignment is another film's, travelling
+           with the tile and swapping when the settle catches up. Every press is
+           read as the app leaves it: nothing may be stale, a tile still waiting
+           shows the surface colour, and its title is there throughout.
+
+           Two rows down first, and well into that one: Continue watching is
+           short enough that the strip stops winding, and a strip that does not
+           wind never hands a tile anything new. */
+        return backToLibrary()
+          .then(function () { return press('ArrowUp', 8); })
+          .then(function () { return press('ArrowDown', 2); })
+          .then(function () { return press('ArrowRight', 4); })
+          .then(function () { return page.waitForTimeout(1500); })
+          .then(function () {
+            return sweepReadings(function () { return press('ArrowRight', 6); });
+          })
+          .then(function (readings) {
+            if (readings.length !== 6) {
+              throw new Error('read ' + readings.length + ' of 6 presses');
+            }
+            readings.forEach(function (st, n) {
+              if (st.stale.length) {
+                throw new Error('press ' + (n + 1) + ' left another film\'s poster on: ' +
+                                st.stale.join(', '));
+              }
+              if (st.focused !== 'fresh') {
+                throw new Error('press ' + (n + 1) + ': the focused tile is ' + st.focused +
+                                ', not its own poster');
+              }
+              if (st.blank.indexOf('(no title)') >= 0) {
+                throw new Error('press ' + (n + 1) + ': a waiting tile has no title either');
+              }
+            });
+          })
+          .then(function () { return page.waitForTimeout(1500); })
+          .then(tileArt)
+          .then(function (st) {
+            if (st.stale.length || st.blank.length) {
+              throw new Error('after the sweep settled: ' +
+                              st.stale.concat(st.blank).join(', '));
             }
           });
       });
