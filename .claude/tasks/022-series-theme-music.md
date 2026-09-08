@@ -1,7 +1,7 @@
 ---
 id: 022
 slug: series-theme-music
-status: approved
+status: pending-tv
 branch: crew/022-series-theme-music
 model: sonnet
 env: laptop
@@ -161,6 +161,63 @@ Workers must not go digging for more.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `js/plex.js` — `themeUrl(server, item)`: `server.base + item.theme` with the
+  token, `''` when there is no theme. Same shape as `photoUrl`; no request.
+- `index.html` — one `<audio id="theme" preload="none">` beside `#video`.
+- `js/showpage.js` — the theme section: `playTheme` on `open`, a volume fade
+  over `--t-move` read off the stylesheet, `silence()` (pause, rewind, drop the
+  src, `load()`) called from `open` and `close`, and the `reflex.theme` setting
+  with its label and cycle.
+- `js/app.js` — `ShowPage.silence()` at the top of `playChecked`, and on the
+  `onChoose` and `onRecap` routes off the show page. BACK is covered by
+  `ShowPage.close`.
+- `js/sidebar.js` — `Theme music: on | off` after `Autoplay next`.
+- `js/browse.js` — the `theme` case in `activate`, the same shape as `autoplay`.
+- `dev/mock-plex.js` — `hasTheme(showIndex)` (every other show), a `theme` path
+  on those show items, and a route serving a generated one-second WAV.
+- `dev/smoke/show.js` — five steps: it plays looping and quiet, BACK stops it, a
+  show without one is silent, starting an episode stops it dead (paused *and*
+  src gone), and off survives a reload. The two shows are picked out of the
+  generated library the way `dev/smoke.js` picks its own titles.
+
+## What the spec got wrong
+
+- **Nothing needs `Plex.metadata`.** `theme` is on the show entry the rail
+  already holds, because it is part of the section listing — so the page starts
+  the theme from what it was opened with and makes no call at all. Step 3's "when
+  a show's metadata resolves" would have added a request for nothing.
+- **Whether a real server puts `theme` in a *listing* is unverified.** The mock
+  now does, and that is all the laptop can prove. If a real Plex server only
+  returns `theme` from `/library/metadata/<key>`, no theme ever plays — which
+  degrades to the defined silent path, not a fault — and the fix is one
+  `Meta.load` on the show page. Worth a look on the TV with `ares-inspect`.
+- **There is no screensaver.** The constraints list one as a route that must
+  stop the theme; `grep -rn "screensaver\|idle" js/` returns nothing.
+
+`pending-tv`, not `done`: the laptop proves the wiring, but whether webOS lets
+an unprompted `<audio>` start at all, and what a theme sounds like over ARC, are
+panel questions.
+
 ## Review rounds
 
+1. **PASS** — crew-reviewer, after its own `npm run smoke -- show` (10/10) and
+   `npm run verify` (80/80). One non-blocking note: the spec asked whether a
+   real server needs anything extra for `theme`, which is answered above.
+
 ## Graph writes proposed
+
+- **Decision — a series theme is not library content.** It is a static file GET
+  (`/library/metadata/<key>/theme/<id>`), like a poster or a subtitle track: no
+  decision call, no session, nothing a kill-stream rule sees. It therefore never
+  goes near `Guard`, `Player` or the timeline — the same shape as season recaps.
+- **Decision — `theme` rides in on the listing.** Show entries from
+  `/library/sections/N/all` carry it, so the show page needs no metadata fetch to
+  start one. Unconfirmed against a real server; the fallback if it is absent is
+  silence, which is already the normal case for a show without a theme.
+- **Pattern — one hard stop, at every route out.** Two audio sources on plain
+  ARC is the fault class that has cost this project the most, so the theme is
+  stopped (paused, rewound, `src` removed) rather than paused or faded, at the
+  top of `playChecked` and in `ShowPage.close`. A paused element still holding a
+  source still holds the pipeline, which is why the smoke test asserts both.
