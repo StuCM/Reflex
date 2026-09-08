@@ -320,6 +320,18 @@ The three checks, and what each is for:
   steps need a fixture and skip without one. Keep it green; add a step when you
   add a screen.
 
+  **An assertion that can pass on nothing is worse than no assertion**, and this
+  suite has produced three in one day. Each was a check that something was
+  *absent* or that indexed into markup: a lookup counter matching
+  `/__tmdb/movie/<id>/images` after the endpoint moved, so it passed on zero
+  lookups; a request bar set from an assumed cost of one per tile when it is
+  two; `indexOf("0:00 /")` after the clock split into two elements, so it
+  matched nothing and passed instantly. Assert on **positive content** — the
+  rendered text, the actual count — and when a step exists to catch a specific
+  bug, run it against `main` and watch it fail. If it does not fail there, it is
+  not testing what you think. Splitting an element means re-reading every
+  assertion that indexed into its text, not only the ones that go red.
+
 **Never judge playback on the laptop.** A desktop browser decodes far less than
 this panel: Firefox has no AC3/E-AC3 and no HEVC at all, Chrome has no
 Matroska. A silent film or a decode error there is the browser, not the app —
