@@ -1,7 +1,7 @@
 ---
 id: 013
 slug: palette-and-motion
-status: approved
+status: done
 branch: crew/013-palette-and-motion
 model: sonnet
 env: laptop
@@ -189,4 +189,51 @@ Workers must not go digging for more.
 
 ## Review rounds
 
+**Round 1 — PASS.** Gate reproduced locally by the reviewer. No blocking
+findings. The reviewer agreed with the one departure from the spec's letter
+(below), on the grounds that the Approach's exception list was factually out of
+date and following it literally would have left a half-applied palette.
+
+## What changed
+
+- `css/app.css` — the Mantis values on `:root` plus `--t-quick`, `--t-move` and
+  `--ease`; every transition in the file now takes both from there; `.strip`
+  moved from 180ms ease-out to `--t-move`/`--ease`; the hero split into a
+  wrapper carrying the dense opacity and a `.hero-layer` pair carrying the
+  crossfade; the six `rgba(12, 15, 22, …)` literals rewritten; the three verdict
+  badges re-picked against `#161826`.
+- `index.html` — `#hero-art` now wraps `#hero-art-a` and `#hero-art-b`.
+- `js/masthead.js` — `paintArt` writes into the layer that is not showing and
+  swaps `.on` in the preloader's `onload`/`onerror`, dropping a swap a newer
+  backdrop has already overtaken. The 280ms debounce and the `lastArt`
+  short-circuit are untouched.
+- `dev/smoke.js` — the two backdrop readers now read the lit layer; the "hero
+  art follows focus" step also asserts exactly two layers; one new step asserts
+  the computed `--ac`, `--bg` and `--t-move`. 59 steps → 60.
+
+## What the spec got wrong
+
+Approach step 2 and the Graph context both say only the two hero gradients spell
+`--bg` out as `rgba(12, 15, 22, …)`. Six declarations did: `#hero-scrim-x`,
+`#hero-scrim-y`, `#sh-shade`, `#dt-shade`, `#upnext` and `#menu`. All six were
+updated, alphas untouched. The remaining literals in the file are black and
+white — the video letterbox, the subtitle text and shadow, the marker band and
+the trackbar knob — which are not palette colours and were left alone.
+
 ## Graph writes proposed
+
+- **Pattern — a crossfade wants a wrapper, not a shared property.** Two stacked
+  layers can fade between themselves on `opacity` only if nothing else is also
+  animating `opacity` on them. The `dense` dimming already was, so the fix is a
+  wrapper element that owns the dimming while the layers inside own the fade.
+  One property, one owner, and neither has to know about the other.
+- **Pattern — preload before you swap, and check you were not overtaken.**
+  Fading to a layer whose background image has not decoded shows an empty box.
+  `new Image()` with the swap in `onload`, `onerror` swapping anyway so a broken
+  URL cannot pin the old picture, and a `lastArt !== url` guard inside the
+  handler so a slow load that a newer backdrop has overtaken is dropped rather
+  than painted.
+- **Decision — one easing, not two.** Every transition in `css/app.css` now uses
+  `--ease`; the `linear` on the two opacity fades went with the rest. The
+  complaint being answered was that the rail's movements disagree, and a
+  duration that agrees while the curve does not still disagrees.
