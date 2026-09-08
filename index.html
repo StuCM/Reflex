@@ -139,16 +139,28 @@
 
 <div id="menu" class="hidden"></div>
 
+<!-- Chapters are cards rather than a list: a still and a timecode say more
+     about where you are going than "Chapter 7" ever does. -->
+<div id="osd-chapters" class="hidden"><div id="osd-chapters-inner"></div></div>
+
 <div id="osd" class="hidden">
-  <div id="osd-title"></div>
-  <div id="osd-bar">
-    <div id="osd-buffered"></div>
-    <div id="osd-fill"></div>
-    <div id="osd-ticks"></div>
-    <div id="osd-knob"></div>
+  <div id="osd-title"><span class="osd-back">‹</span><span id="osd-name"></span></div>
+  <div id="osd-track">
+    <div id="osd-time"></div>
+    <div id="osd-bar">
+      <div id="osd-buffered"></div>
+      <div id="osd-fill"></div>
+      <div id="osd-ticks"></div>
+      <div id="osd-knob"></div>
+    </div>
+    <div id="osd-total"></div>
   </div>
-  <div id="osd-time"></div>
-  <div id="osd-tracks"></div>
+  <!-- Transport on the left, the four things that can be changed on the right,
+       each captioned with what is chosen now. js/player.js fills both. -->
+  <div id="osd-controls">
+    <div id="osd-left"></div>
+    <div id="osd-right"></div>
+  </div>
   <div id="osd-hint"></div>
 </div>
 

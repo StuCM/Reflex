@@ -257,8 +257,9 @@ var Media = (function () {
     return 'Skip';
   }
 
-  /* [{ title, start, end }] in seconds, in order. Both Marker and Chapter use
-     the same offsets, so the trackbar can draw either. */
+  /* [{ title, start, end, thumb }] in seconds, in order. Both Marker and Chapter
+     use the same offsets, so the trackbar can draw either. thumb is null far
+     more often than not — Plex only carries one where it indexed the file. */
   function chapters(item) {
     var list = (item && item.Chapter) || [], out = [], i, c;
     for (i = 0; i < list.length; i++) {
@@ -266,7 +267,8 @@ var Media = (function () {
       out.push({
         title: c.tag || c.title || ('Chapter ' + (c.index || i + 1)),
         start: (c.startTimeOffset || 0) / 1000,
-        end: (c.endTimeOffset || 0) / 1000
+        end: (c.endTimeOffset || 0) / 1000,
+        thumb: c.thumb || null
       });
     }
     out.sort(function (a, b) { return a.start - b.start; });

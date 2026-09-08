@@ -1,7 +1,7 @@
 ---
 id: 017
 slug: player-osd
-status: building
+status: done
 branch: crew/017-player-osd
 model: sonnet
 env: laptop
@@ -11,7 +11,16 @@ files:
   - index.html
   - css/app.css
   - dev/smoke.js
+  - test/subs.test.js
+  - dev/library.js
 ---
+
+<!-- files: amended by the worker. Approach 4 asks for a unit test for a chapter
+     without a thumb and the tests for Media.chapters live in test/subs.test.js;
+     Approach 7 asks the rail to be checked both with a thumbnail and without,
+     and the mock generated chapters with neither. Nothing else in either file
+     was touched. -->
+
 
 # The player's controls, to the design
 
@@ -180,4 +189,65 @@ Workers must not go digging for more.
 
 ## Review rounds
 
+**Round 1 — PASS.** Checked the four things the handover flagged: the CLAUDE.md
+key map still resolves the same way while the control row is unfocused (▲/▼ now
+focus the row rather than open a panel, which is the redesign the spec asks
+for); the detail page's button rules receive every property they did before the
+factoring, and `js/detail.js` and `js/menu.js` are untouched; no smoke assertion
+became vacuous; and `qualityNote()` mirrors what `Guard.check` actually does, so
+the 4K refusal note only appears where the guard would refuse.
+
+## What changed
+
+- `index.html` — `#osd` restructured: the title behind a back chevron,
+  `#osd-track` (elapsed · bar · total), `#osd-controls` holding `#osd-left` and
+  `#osd-right`. `#osd-tracks` gone; `#osd-chapters` added.
+- `css/app.css` — the round-button rules now serve both `.dt-act-btn` and
+  `.osd-btn`; new rules for the control row and the chapter rail; `#menu`
+  narrowed and put on a shelf clear of the trackbar; `#subtitle.lifted`,
+  `#osd-skip` and `#upnext` raised to clear the taller OSD.
+- `js/player.js` — `paintTracks` became `paintControls`, a seven-button row with
+  its own focus. Each of the four right-hand buttons opens `Menu` with one
+  section anchored over it; Chapters opens a card rail with its own key handler.
+  Quality rows gained cost notes; the colour keys focus and open their button.
+- `js/media.js` — `Media.chapters` carries `thumb: c.thumb || null`.
+- `test/subs.test.js` — a chapter with a thumb and one without, asserted.
+- `dev/library.js` — the mock gives half its chapters a thumb, so the rail's
+  degrade path is exercised both ways.
+- `dev/smoke.js` — the player steps re-pointed at the new markup and extended;
+  a chapter-rail step added. 68 steps, from 67.
+
+## What the spec got wrong
+
+- `files:` omitted `test/subs.test.js`, where the `Media.chapters` tests
+  actually live, though Approach 4 asks for a test there. Amended, with the
+  reason under the front matter.
+- It also omitted `dev/library.js`. Approach 7 asks the rail to be checked with
+  a thumbnail and without, and the mock generated chapters with neither — so
+  "a card of the same size" would have been true of a rail that never drew a
+  thumbnail at all. One line in the mock, amended the same way.
+- The constraint says `#subtitle` lifts to `bottom: 320px`; it was 320 in the
+  file, and is now 400.
+
 ## Graph writes proposed
+
+- **Pattern — factor shared CSS by selector list, not by markup.** The player's
+  control row had to wear the film page's round button, but `js/detail.js` was
+  out of scope, so its markup could not gain a shared class. Adding `.osd-btn`
+  to each of `.dt-act-btn`'s rules costs nothing, changes no rendered pixel on
+  the page that was settled, and is what "factor rather than copy" means when
+  one of the two screens is closed for edits.
+
+- **Decision — the control row is a mode, not a permanent focus.** CLAUDE.md
+  promises ◀ ▶ nudge 30s during playback, and the design wants ◀ ▶ to walk a row
+  of buttons. Both hold because the row has no focus until ▲ or ▼ puts one
+  there: unfocused, every key means what CLAUDE.md says; focused, the four
+  arrows belong to the row and everything else (digits, CH±, RW/FF, the colour
+  keys) still falls through to playback. A colour key sets the focus *and*
+  opens, so the shortcut and the ring never disagree.
+
+- **Gotcha — a smoke assertion can go vacuous when markup splits.** The OSD
+  clock was `0:00 / 2:15:00` in one element and became two. The step that waited
+  for `indexOf("0:00 /") !== 0` went on passing — it now matches nothing, so it
+  is true on the first poll. Splitting an element means re-reading every
+  assertion that indexed into its text, not only the ones that fail.

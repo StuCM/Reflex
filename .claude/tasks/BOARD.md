@@ -20,7 +20,8 @@ Task files are the source of truth; this is the glance view.
 | 011 | Up next, when an episode ends | `done` | laptop | crew/011-play-next *(gone)* |
 | 013 | The Mantis palette, and motion that does not jar | `done` | laptop | crew/013-palette-and-motion *(gone)* |
 | 014 | The detail page's face | `done` | laptop | crew/014-detail-page-face *(gone)* |
-| 016 | Choose the copy, the audio and the subtitles before pressing Play | `done` | laptop | crew/016-detail-choosers |
+| 016 | Choose the copy, the audio and the subtitles before pressing Play | `done` | laptop | crew/016-detail-choosers *(gone)* |
+| 017 | The player's controls, to the design | `done` | laptop | crew/017-player-osd |
 
 ## Waiting on you
 
