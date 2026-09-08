@@ -68,14 +68,17 @@
     <div id="dt-names"></div>
   </div>
   <div id="dt-body">
+    <!-- Play, then a round button per choice: the copy, the quality, the audio
+         track and the subtitles, each captioned with what is chosen now. The
+         popup below is the same menu the player uses. -->
+    <div id="dt-actions"></div>
     <div id="dt-crew"></div>
-    <div id="dt-sources-label" class="dt-label">Play from</div>
-    <div id="dt-sources"></div>
     <div id="dt-extras-label" class="dt-label hidden">Extras</div>
     <div id="dt-extras"></div>
     <div id="dt-cast"></div>
   </div>
-  <div class="msg-hint dt-hint">↑↓ choose a copy · OK to play · BACK to the rail</div>
+  <div id="dt-menu" class="hidden"></div>
+  <div class="msg-hint dt-hint">◀ ▶ choose · OK to open it · BACK to the rail</div>
 </div>
 
 <div id="link" class="view hidden">
@@ -134,11 +137,7 @@
   </div>
 </div>
 
-<div id="menu" class="hidden">
-  <div id="menu-tabs"></div>
-  <div id="menu-list"><div id="menu-inner"></div></div>
-  <div id="menu-note"></div>
-</div>
+<div id="menu" class="hidden"></div>
 
 <div id="osd" class="hidden">
   <div id="osd-title"></div>
@@ -179,6 +178,7 @@
 <script src="js/art.js"></script>
 
 <script src="js/ui.js"></script>
+<script src="js/menu.js"></script>
 <script src="js/rows.js"></script>
 <script src="js/rail.js"></script>
 <script src="js/meta.js"></script>

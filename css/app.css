@@ -573,29 +573,58 @@ html, body {
   text-transform: uppercase; color: var(--dim2);
 }
 
-#dt-sources { margin-top: 10px; width: 1000px; }
+/* ---- the action row ----
 
-/* Reserved border, so moving the selection shifts nothing. */
-.dt-source {
-  position: relative; height: 54px; padding: 10px 18px;
-  border-left: 6px solid transparent;
-  background: var(--surface);
-  margin-bottom: 6px;
+   A primary Play, then one round button per choice, each captioned with what is
+   currently chosen. The ring is reserved on every button, so taking the focus
+   shifts nothing; the lift is a scale, which is the one thing this panel can
+   animate for free. */
+
+#dt-actions { width: 1500px; height: 160px; white-space: nowrap; }
+
+.dt-act {
+  display: inline-block; vertical-align: top; width: 152px; margin-right: 20px;
+  text-align: center; white-space: normal;
 }
-.dt-source.on { background: var(--raised); border-left-color: var(--ac); }
+.dt-act.primary { width: 280px; }
 
-.dt-source-name {
-  display: inline-block; width: 250px; font-size: 24px; color: var(--dim);
-  white-space: nowrap; overflow: hidden;
+.dt-act-btn {
+  width: 88px; height: 88px; margin: 0 auto; border-radius: 44px;
+  background: var(--surface); border: 3px solid transparent; color: var(--dim);
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
 }
-.dt-source.on .dt-source-name { color: var(--fg); }
+.dt-act-btn svg { display: block; margin: 19px auto 0; }
 
-.dt-source-media {
-  display: inline-block; width: 460px; font-size: 22px; color: var(--dim);
-  white-space: nowrap; overflow: hidden;
+.dt-act.primary .dt-act-btn {
+  width: 280px; background: var(--ac); color: var(--bg);
+  font-size: 30px; line-height: 88px; letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.dt-source-verdict { position: absolute; right: 14px; top: 12px; }
+.dt-act.on .dt-act-btn {
+  border-color: var(--ac); color: var(--fg);
+  -webkit-transform: scale(1.06); transform: scale(1.06);
+}
+.dt-act.primary.on .dt-act-btn { border-color: var(--fg); color: var(--bg); }
+
+.dt-act-cap {
+  margin-top: 12px; height: 48px; overflow: hidden;
+  font-size: 19px; line-height: 1.25; color: var(--dim2);
+}
+.dt-act.on .dt-act-cap { color: var(--fg); }
+
+/* The chooser, anchored under the button that opened it. Same .menu-* shell as
+   the player's, so both screens read as one control. */
+#dt-menu {
+  position: absolute; top: 500px; width: 860px;
+  padding: 22px 26px 18px; border-radius: 8px;
+  background: rgba(22, 24, 38, 0.94);
+}
+/* The player's menu is anchored to the bottom of the screen and holds its
+   height so the tabs never move; this one hangs off a button and can be three
+   rows long, so it shrinks to what it holds. */
+#dt-menu .menu-list { height: auto; max-height: 392px; }
 
 /* ---- extras ----
    Cards in the rail's language: the same 16px corner and the same violet ring,
@@ -808,8 +837,8 @@ html, body {
 }
 .menu-tab.on { color: var(--fg); border-bottom-color: var(--ac); }
 
-#menu-list { height: 392px; overflow: hidden; margin-top: 18px; }
-#menu-inner {
+.menu-list { height: 392px; overflow: hidden; margin-top: 18px; }
+.menu-inner {
   -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
   transition: transform var(--t-quick) var(--ease);
 }
@@ -826,7 +855,7 @@ html, body {
 .menu-label { display: inline-block; }
 .menu-note-inline { margin-left: 18px; font-size: 21px; color: var(--dim2); }
 
-#menu-note { margin-top: 12px; font-size: 20px; color: var(--dim2); height: 24px; }
+.menu-note { margin-top: 12px; font-size: 20px; color: var(--dim2); height: 24px; }
 
 /* ---- toast / debug ---- */
 

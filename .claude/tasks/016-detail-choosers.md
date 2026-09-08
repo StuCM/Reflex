@@ -1,7 +1,7 @@
 ---
 id: 016
 slug: detail-choosers
-status: building
+status: done
 branch: crew/016-detail-choosers
 model: sonnet
 env: laptop
@@ -184,4 +184,104 @@ Workers must not go digging for more.
 
 ## Review rounds
 
+### Round one — CHANGES
+
+1. `js/detail.js` `audioRows` computed the cost note from `panelOwnsAudio()`
+   alone, so the track already in use — the one the guard picked, which costs
+   nothing to keep — was captioned as if choosing it would cost a mux. The note
+   and the `forceStream` handed to `Guard.check` came from two different tests.
+2. `js/menu.js` built all four of the player's tabs at open, where the old
+   `menuKey` rebuilt on every left/right. Only `chapterRow`'s `on` depends on
+   live state, but that is enough: the chapter marked as current froze at
+   whichever one was playing when the menu opened.
+
+Both fixed in `4a92ea5`.
+
+1. One predicate, `needsMux(st)`, now feeds both the note and `forceStream`, so
+   what a row says before OK is what OK does; the row already chosen carries no
+   note at all, as the player's does not. The wording is this page's rather than
+   the player's — nothing is playing here, so "restarts" would be wrong: it says
+   `costs direct play — the server would mux it` or `keeps direct play`. The
+   smoke step asserts that shape rather than merely that a note exists.
+2. `Menu` takes each tab's `rows` as a builder and calls it in `build()`, on
+   open and on every tab change. Only the tab being shown is built, which is
+   what the player did before.
+
+### Round two — PASS
+
+Both fixes verified against the rendered DOM rather than the source: the smoke
+step reads the `on` row's note back off the page, and the chapter marker is
+recomputed per visit. Gate re-run independently: check clean, 9/9, 67/67, in
+scope.
+
+## What changed, per file
+
+- `js/menu.js` (new) — the shared shell: tabs, rows, the winding transform, the
+  d-pad, and an overlay that swallows every key. Rows carry a `value`; what that
+  means belongs to the caller.
+- `js/player.js` — its menu is now `Menu`. The row builders are handed over
+  uncalled and return arrays; `menuOn`, `tab`, `sel`, `rows`, `paintMenu`,
+  `menuKey` and `closeMenu` are gone, and `Menu.isOpen()` answers what `menuOn`
+  did. 170 lines changed, most of them removed.
+- `js/detail.js` — the copy list becomes an action row: Play, Trailer (only with
+  an extra), Quality, Source, Audio, Subtitles, each captioned with the current
+  choice. Each chooser re-runs `Guard.check` for the combination; a refusal
+  toasts `Kept as it was — …` and the page does not move. Subtitles never reach
+  the guard, because they change nothing the server does — but an image track is
+  refused in the same shape.
+- `js/app.js` — `Detail`'s `onPlay` gained a fourth argument, the chosen
+  subtitle language, which goes straight into `playChecked`'s existing
+  `subLang`. No second route into `Player.play`.
+- `index.html` — `#dt-actions` and `#dt-menu`; `#dt-sources` and its label gone;
+  `#menu` is now an empty host; `js/menu.js` in the script list before both
+  screens that use it.
+- `css/app.css` — the action row and the popup; `.dt-source*` removed; the
+  menu's inner elements are classes rather than ids, so two hosts can carry
+  them. `#dt-menu .menu-list` is the one override: the player's menu holds its
+  height so the tabs never move, this one hangs off a button and shrinks.
+- `dev/smoke.js` — the copy-list steps became button-and-chooser steps, plus
+  three new ones: the action row itself, an audio row's cost note and the
+  caption following it, and a subtitle language chosen on the page and drawn
+  over the video during playback. 64 → 67.
+
+## Where the spec was thin
+
+- **Quality "versions and bitrate caps".** On this page a version is already a
+  separate row in Source (a source is server × version), so version rows in
+  Quality would have been the same choice twice. Quality is `Media.qualities`
+  for the selected copy and nothing else.
+- **`tabs` as `[{ label, rows: [...] }]`.** Rows are a builder function instead.
+  An array built at open is stale by the time you arrow to it, which is what
+  froze the player's current-chapter marker — see round one.
+- **The extras strip.** The spec removes only `#dt-sources`, so the strip stays
+  and is reached with ▼ off the action row. Trailer plays the first extra; the
+  strip is how you reach the rest.
+
 ## Graph writes proposed
+
+- **Pattern — one predicate behind a menu's note and its consequence.** A menu
+  row that says what choosing it will cost, and a handler that decides what it
+  actually costs, must be the same test called twice. Written as two tests they
+  agree on the day they are written and drift the first time either is touched;
+  the row then lies about the one thing it exists to say. `Detail.needsMux` is
+  the shape: the note is a function of it, and so is the `forceStream` handed to
+  `Guard.check`.
+- **Pattern — a shared menu takes row builders, not rows.** `Menu.open` is given
+  each tab's `rows` uncalled and builds the tab when it is shown. Building all
+  tabs at open looks equivalent and is not: any row whose `on` depends on live
+  state — the chapter being played, in this case — freezes at whatever it was
+  when the menu opened. It is also less work, since only the tab you reach is
+  ever built.
+- **Decision — a choice on the film page goes through `Guard.check` again, not
+  through the verdict already on the row.** Every copy is checked as the page
+  opens, so the baseline verdict is there and reusing it would save a call. It
+  is not reused, because a choice is a *combination* — copy, bitrate cap, audio
+  track — and only the copy's own verdict is on the row. `hasMDE=1` opens no
+  session, so the extra call costs a query and nothing else, and the alternative
+  is a page that says direct play about a combination it never asked about.
+- **Decision — subtitles do not reach the guard, on either screen.** They are
+  fetched as text and drawn over the video, so they change nothing about the
+  stream the server serves. The one exception is an image track, which could
+  only be shown by burning it in; the film page refuses one with the same
+  wording a refused copy gets, rather than accepting it and going silently
+  blank at playback.

@@ -37,17 +37,11 @@ var Player = (function () {
   var nextHintEl = document.getElementById('un-hint');
   var subEl = document.getElementById('subtitle');
   var menuEl = document.getElementById('menu');
-  var menuTabsEl = document.getElementById('menu-tabs');
-  var menuListEl = document.getElementById('menu-list');
-  var menuInnerEl = document.getElementById('menu-inner');
-  var menuNoteEl = document.getElementById('menu-note');
 
   var BAR_W = 1792;                // #osd-bar, in CSS pixels
   var SEEK_SETTLE = 400;           // ms of stillness before a seek is applied
   var NUDGE = 30;                  // left / right, seconds
   var JUMP = 300;                  // rewind / fast forward, seconds
-  var ROW_H = 56;                  // a menu row, in CSS pixels
-  var ROWS_SHOWN = 7;
 
   var item = null, server = null, onExit = null, onError = null, onSwitch = null;
   var onNext = null, onPlayNext = null;
@@ -71,9 +65,8 @@ var Player = (function () {
      means the same thing. */
   var cues = [], currentSub = null, wantedLang = null, subToken = 0, subNote = '';
 
-  /* The skip prompt, and the menu. */
+  /* The skip prompt. The menu is js/menu.js and keeps its own state. */
   var marker = null;
-  var menuOn = false, tab = 0, sel = 0, rows = [];
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -157,7 +150,7 @@ var Player = (function () {
        so it stays until the seek lands. The menu keeps it up too — it sits
        above the bar and reads as one panel. */
     osdTimer = setTimeout(function () {
-      if (pending !== null || menuOn) { showOsd(); return; }
+      if (pending !== null || Menu.isOpen()) { showOsd(); return; }
       osd.style.opacity = '0';
       subEl.classList.remove('lifted');
     }, 4000);
@@ -166,7 +159,7 @@ var Player = (function () {
   function osdShowing() { return osd.style.opacity !== '0' && !osd.classList.contains('hidden'); }
 
   function hint() {
-    osdHint.textContent = menuOn
+    osdHint.textContent = Menu.isOpen()
       ? '◀ ▶ section · ▲ ▼ choose · OK select · BACK close'
       : '◀ ▶ ' + NUDGE + 's · ▲ ▼ menu · 0–9 jump · CH± chapter · OK pause';
   }
@@ -249,7 +242,7 @@ var Player = (function () {
   }
 
   function chooseAudio(st) {
-    if (currentAudio && String(currentAudio.id) === String(st.id)) { closeMenu(); return; }
+    if (currentAudio && String(currentAudio.id) === String(st.id)) return;
     var n = panelIndexOf(st);
     if (n >= 0 && selectPanelTrack(n)) {
       /* The good case: the panel switched it, nothing restarted, the server
@@ -257,7 +250,6 @@ var Player = (function () {
       currentAudio = st;
       UI.debug('audio switched on the panel (track ' + n + '): ' + Media.audioLabel(st));
       paintTracks();
-      closeMenu();
       showOsd();
       return;
     }
@@ -436,7 +428,7 @@ var Player = (function () {
   function showNext(found) {
     next = found;
     dismissSkip();
-    if (menuOn) closeMenu();
+    Menu.close();
     var ep = found.episode;
     var still = Plex.posterUrl(ep, 320, 180);
     nextStillEl.style.backgroundImage = still ? 'url("' + still + '")' : 'none';
@@ -555,22 +547,10 @@ var Player = (function () {
      list, driven with four arrows and OK — which is all the remote reliably
      has. */
 
-  var TABS = ['Audio', 'Subtitles', 'Quality', 'Chapters'];
-
-  function buildRows() {
-    rows = [];
-    if (tab === 0) buildAudioRows();
-    else if (tab === 1) buildSubRows();
-    else if (tab === 2) buildQualityRows();
-    else buildChapterRows();
-    if (!rows.length) rows.push({ label: 'Nothing to choose here', off: true });
-  }
-
-  function buildAudioRows() {
-    var tracks = Media.audioTracks(currentPart), i;
-    for (i = 0; i < tracks.length; i++) {
-      rows.push(audioRow(tracks[i]));
-    }
+  function audioRows() {
+    var tracks = Media.audioTracks(currentPart), out = [], i;
+    for (i = 0; i < tracks.length; i++) out.push(audioRow(tracks[i]));
+    return out;
   }
 
   function audioRow(st) {
@@ -583,17 +563,15 @@ var Player = (function () {
       note: (currentAudio && String(currentAudio.id) === String(st.id)) ? ''
         : (panelIndexOf(st) >= 0 ? '' : 'restarts — the server has to mux this one'),
       on: !!(currentAudio && String(currentAudio.id) === String(st.id)),
-      act: function () { chooseAudio(st); }
+      value: function () { chooseAudio(st); }
     };
   }
 
-  function buildSubRows() {
+  function subRows() {
     var list = Media.subtitleTracks(currentPart), i;
-    rows.push({
-      label: 'Off', on: !currentSub,
-      act: function () { setSub(null); closeMenu(); }
-    });
-    for (i = 0; i < list.length; i++) rows.push(subRow(list[i]));
+    var out = [{ label: 'Off', on: !currentSub, value: function () { setSub(null); } }];
+    for (i = 0; i < list.length; i++) out.push(subRow(list[i]));
+    return out;
   }
 
   function subRow(st) {
@@ -601,7 +579,7 @@ var Player = (function () {
       label: Media.subLabel(st),
       note: Media.isTextSub(st) ? '' : 'image track — cannot be shown without a transcode',
       on: !!(currentSub && String(currentSub.id) === String(st.id)),
-      act: function () { setSub(st); closeMenu(); }
+      value: function () { setSub(st); }
     };
   }
 
@@ -610,21 +588,22 @@ var Player = (function () {
      which is the server re-encoding this one. Both belong here because both are
      what the user means by "make this play properly", and both go through the
      guard, so the 4K rule refuses the cap and offers the other version. */
-  function buildQualityRows() {
-    var versions = (item && item.Media) || [], i;
+  function qualityRows() {
+    var versions = (item && item.Media) || [], out = [], i;
     if (versions.length > 1) {
-      for (i = 0; i < versions.length; i++) rows.push(versionRow(versions[i], i));
+      for (i = 0; i < versions.length; i++) out.push(versionRow(versions[i], i));
     }
     var list = Media.qualities(currentMedia);
-    for (i = 0; i < list.length; i++) rows.push(qualityRow(list[i]));
+    for (i = 0; i < list.length; i++) out.push(qualityRow(list[i]));
+    return out;
   }
 
   function versionRow(media, n) {
     return {
       label: 'Version — ' + Media.versionLabel(media),
       on: n === mediaIndex && !maxBitrate,
-      act: function () {
-        if (n === mediaIndex && !maxBitrate) { closeMenu(); return; }
+      value: function () {
+        if (n === mediaIndex && !maxBitrate) return;
         switchTo({ mediaIndex: n, maxBitrate: null }, Media.versionLabel(media));
       }
     };
@@ -636,96 +615,53 @@ var Player = (function () {
       note: q.bitrate && Media.isUHD(currentMedia)
         ? 'a 4K transcode is what gets the stream killed — this will be refused' : '',
       on: (q.bitrate || null) === maxBitrate,
-      act: function () {
-        if ((q.bitrate || null) === maxBitrate) { closeMenu(); return; }
+      value: function () {
+        if ((q.bitrate || null) === maxBitrate) return;
         switchTo({ maxBitrate: q.bitrate || null }, q.label);
       }
     };
   }
 
-  function buildChapterRows() {
+  function chapterRows() {
     var list = Media.chapters(item), i;
-    rows.push({
-      label: 'Play from the beginning',
-      act: function () { seekTo(0); closeMenu(); }
-    });
-    for (i = 0; i < list.length; i++) rows.push(chapterRow(list[i]));
+    var out = [{ label: 'Play from the beginning', value: function () { seekTo(0); } }];
+    for (i = 0; i < list.length; i++) out.push(chapterRow(list[i]));
+    return out;
   }
 
   function chapterRow(c) {
     return {
       label: c.title, note: fmt(c.start),
       on: target() >= c.start && (!c.end || target() < c.end),
-      act: function () { seekTo(c.start); closeMenu(); }
+      value: function () { seekTo(c.start); }
     };
   }
 
-  function paintMenu() {
-    var html = '', i, r;
-    for (i = 0; i < TABS.length; i++) {
-      html += '<span class="menu-tab' + (i === tab ? ' on' : '') + '">' +
-              UI.escapeHtml(TABS[i]) + '</span>';
-    }
-    menuTabsEl.innerHTML = html;
-
-    html = '';
-    for (i = 0; i < rows.length; i++) {
-      r = rows[i];
-      html += '<div class="menu-row' + (i === sel ? ' sel' : '') +
-              (r.on ? ' on' : '') + (r.off ? ' off' : '') + '">' +
-              '<span class="menu-mark">' + (r.on ? '●' : '') + '</span>' +
-              '<span class="menu-label">' + UI.escapeHtml(r.label) + '</span>' +
-              (r.note ? '<span class="menu-note-inline">' + UI.escapeHtml(r.note) + '</span>' : '') +
-              '</div>';
-    }
-    menuListEl.innerHTML = html;
-
-    /* Keep the selection in view without a scrollbar the remote cannot use. */
-    var top = UI.clamp(sel - 3, 0, Math.max(0, rows.length - ROWS_SHOWN));
-    menuInnerEl.style.webkitTransform = menuInnerEl.style.transform =
-      'translateY(' + (-top * ROW_H) + 'px)';
-    menuNoteEl.textContent = tab === 1
-      ? 'Subtitles are fetched as text and drawn here, so they cost the server nothing.'
-      : (tab === 2 ? 'Anything but Original asks the server to re-encode.' : '');
+  /* The four sections. A row's value is what choosing it does — js/menu.js
+     draws and walks, and knows nothing about any of it. The builders are handed
+     over rather than called, so each list is made when its tab is reached and
+     the chapter you are in is the one marked. */
+  function menuTabs() {
+    return [
+      { label: 'Audio', rows: audioRows },
+      { label: 'Subtitles', rows: subRows,
+        note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.' },
+      { label: 'Quality', rows: qualityRows,
+        note: 'Anything but Original asks the server to re-encode.' },
+      { label: 'Chapters', rows: chapterRows }
+    ];
   }
 
   function openMenu(which) {
-    menuOn = true;
-    if (which !== undefined) tab = which;
-    sel = 0;
-    buildRows();
-    /* Land on what is currently in use, so OK on the first press is a no-op
-       rather than a surprise. */
-    var i;
-    for (i = 0; i < rows.length; i++) if (rows[i].on) { sel = i; break; }
-    menuEl.classList.remove('hidden');
-    paintMenu();
+    Menu.open({
+      host: menuEl,
+      tab: which || 0,
+      tabs: menuTabs(),
+      onChoose: function (act) { act(); },
+      onClose: function () { hint(); showOsd(); }
+    });
     hint();
     showOsd();
-  }
-
-  function closeMenu() {
-    menuOn = false;
-    menuEl.classList.add('hidden');
-    hint();
-    showOsd();
-  }
-
-  function menuKey(code) {
-    if (code === 38) { sel = (sel + rows.length - 1) % rows.length; paintMenu(); return true; }
-    if (code === 40) { sel = (sel + 1) % rows.length; paintMenu(); return true; }
-    if (code === 37 || code === 39) {
-      tab = (tab + (code === 39 ? 1 : TABS.length - 1)) % TABS.length;
-      openMenu(tab);
-      return true;
-    }
-    if (code === 13 || code === 415 || code === 19) {
-      var r = rows[sel];
-      if (r && r.act) r.act(); else closeMenu();
-      return true;
-    }
-    if (UI.isBack(code) || code === 413) { closeMenu(); return true; }
-    return true;                       // the menu swallows everything else
   }
 
   /* Another version, a quality cap, and an audio track the panel will not
@@ -742,7 +678,6 @@ var Player = (function () {
     /* Carried so a later switch does not silently drop back to a direct play
        and lose the track the user chose. */
     if (change.forceStream === undefined) change.forceStream = forceStream;
-    closeMenu();
     osdTracks.textContent = 'Switching to ' + what + '…';
     showOsd();
     onSwitch(change);
@@ -820,7 +755,7 @@ var Player = (function () {
     currentMedia = (item.Media && item.Media[mediaIndex]) || null;
     marker = null; skipDismissed = null;
     skipEl.classList.add('hidden');
-    menuOn = false; menuEl.classList.add('hidden');
+    Menu.close();
     cues = []; currentSub = null; subNote = '';
     subEl.classList.add('hidden'); subEl.textContent = '';
     subEl.setAttribute('data-cue', '');
@@ -933,6 +868,7 @@ var Player = (function () {
      onExit would bounce back to the film page mid-restart. */
   function stop(state, quiet) {
     if (!item) return;
+    Menu.close();
     UI.debug(summary());
     report(state || 'stopped');
     clearInterval(ticker); ticker = null;
@@ -948,10 +884,9 @@ var Player = (function () {
     v.load();
     v.classList.add('hidden');
     osd.classList.add('hidden');
-    menuEl.classList.add('hidden');
     skipEl.classList.add('hidden');
     subEl.classList.add('hidden');
-    menuOn = false; marker = null; cues = [];
+    marker = null; cues = [];
     var done = quiet ? null : onExit;
     item = null; server = null; onExit = null; onError = null; onSwitch = null;
     onNext = null; onPlayNext = null;
@@ -965,7 +900,7 @@ var Player = (function () {
     /* The offer owns the remote while it is up: the film has ended, so seeking
        and pausing have nothing left to act on. */
     if (next) return nextKey(code);
-    if (menuOn) return menuKey(code);
+    if (Menu.isOpen()) return Menu.key(code);
 
     /* Digits jump by tenths — the cheapest way past a first act there is. */
     if (code >= 48 && code <= 57) { jumpToTenth(code - 48); return true; }

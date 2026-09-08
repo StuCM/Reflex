@@ -327,30 +327,37 @@ function drive(page, titles) {
      index, walk the selection to it and press OK. The menu is what audio,
      subtitles and quality are chosen from without leaving playback. */
 
+  /* The player and the film page draw the same menu into different hosts, and
+     only one of them is ever up — so every reader here asks for whichever is
+     not hidden rather than naming a screen. */
+  const MENU_ROWS = '#menu:not(.hidden) .menu-row, #dt-menu:not(.hidden) .menu-row';
+  const MENU_TABS = '#menu:not(.hidden) .menu-tab, #dt-menu:not(.hidden) .menu-tab';
+
   /* The label, plus the note beside it — the note is where a row says what
      choosing it will cost, so a check that cannot see it is not checking. */
   function menuLabels() {
-    return page.evaluate(function () {
-      return Array.prototype.map.call(document.querySelectorAll('#menu .menu-row'),
+    return page.evaluate(function (sel) {
+      return Array.prototype.map.call(document.querySelectorAll(sel),
         function (r) {
           const note = r.querySelector('.menu-note-inline');
           return (r.classList.contains('on') ? '* ' : '') +
                  r.querySelector('.menu-label').textContent.trim() +
                  (note ? '  [' + note.textContent.trim() + ']' : '');
         });
-    });
+    }, MENU_ROWS);
   }
 
   function menuTabs() {
-    return page.evaluate(function () {
-      return Array.prototype.map.call(document.querySelectorAll('#menu .menu-tab'),
+    return page.evaluate(function (sel) {
+      return Array.prototype.map.call(document.querySelectorAll(sel),
         function (t) { return t.textContent.trim() + (t.classList.contains('on') ? '*' : ''); });
-    });
+    }, MENU_TABS);
   }
 
   function menuChoose(re) {
     return page.evaluate(function (src) {
-      const rows = document.querySelectorAll('#menu .menu-row');
+      const rows = document.querySelectorAll(
+        '#menu:not(.hidden) .menu-row, #dt-menu:not(.hidden) .menu-row');
       const want = new RegExp(src);
       let sel = 0, to = -1;
       for (let i = 0; i < rows.length; i++) {
@@ -571,12 +578,79 @@ function drive(page, titles) {
                        JSON.stringify(title), 'the detail page for ' + title);
       })
       /* Every copy is checked as the page opens; nothing can be chosen
-         meaningfully until at least the selected one has a verdict. */
+         meaningfully until at least the selected one has a verdict, and Play's
+         caption is where that verdict is said. */
       .then(function () {
-        return waitFor('(function(){var s=document.querySelector(".dt-source.on");' +
-                       'return s && !/checking/.test(s.textContent);})()',
+        return waitFor('(function(){var c=document.querySelector("#dt-actions .dt-act-cap");' +
+                       'return c && !/checking/.test(c.textContent);})()',
                        'a verdict on the selected copy', 15000);
       });
+  }
+
+  /* ---- the film page's action row ----
+
+     Play, then a round button per choice, each captioned with what is chosen
+     now. The captions are the assertion: they are what says, before OK, what
+     Play would do. */
+
+  function actionRow() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(document.querySelectorAll('#dt-actions .dt-act'),
+        function (a) {
+          return { on: a.classList.contains('on'),
+                   primary: a.classList.contains('primary'),
+                   button: a.querySelector('.dt-act-btn').textContent.trim(),
+                   caption: a.querySelector('.dt-act-cap').textContent.trim() };
+        });
+    });
+  }
+
+  /* Walk the row to a button and press OK. Counted from the end for everything
+     but Play, because Trailer is only there when the film has one. */
+  const BUTTON = { play: 0, quality: -4, source: -3, audio: -2, subtitles: -1 };
+
+  function pressButton(which) {
+    return actionRow().then(function (row) {
+      let at = 0;
+      for (let i = 0; i < row.length; i++) if (row[i].on) at = i;
+      const to = BUTTON[which] < 0 ? row.length + BUTTON[which] : BUTTON[which];
+      return press(to > at ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - at))
+        .then(function () { return page.keyboard.press('Enter'); })
+        .then(function () { return page.waitForTimeout(80); });
+    });
+  }
+
+  function openChooser(which) {
+    return pressButton(which).then(function () {
+      return waitFor('!document.getElementById("dt-menu").classList.contains("hidden")',
+                     'the ' + which + ' chooser');
+    });
+  }
+
+  /* The source chooser's rows, split back into the version, the server it is on
+     and the verdict the guard gave it. */
+  function sourceRows() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(
+        document.querySelectorAll('#dt-menu:not(.hidden) .menu-row'),
+        function (r) {
+          const note = r.querySelector('.menu-note-inline');
+          const parts = r.querySelector('.menu-label').textContent.trim().split(' \u00b7 ');
+          const preferred = parts[parts.length - 1] === 'preferred';
+          if (preferred) parts.pop();
+          return { on: r.classList.contains('on'),
+                   preferred: preferred,
+                   server: parts.pop(),
+                   version: parts.join(' \u00b7 '),
+                   verdict: note ? note.textContent.trim() : '' };
+        });
+    });
+  }
+
+  /* Guard says yes to exactly these three and no to everything else, so listing
+     the yeses is the formulation that cannot go stale. */
+  function playable(verdict) {
+    return /direct play|direct stream|audio transcode|server transcodes/.test(verdict);
   }
 
   /* The kicker, the chips and the ratings, read off whatever page is open.
@@ -1218,36 +1292,34 @@ function drive(page, titles) {
         return findTwin(60)
           .then(function (st) { entry = st; return page.keyboard.press('Enter'); })
           .then(function () {
-            return waitFor('(function(){var s=document.querySelectorAll("#dt-sources .dt-source");' +
-                           'if (!s.length) return false;' +
-                           'for (var i=0;i<s.length;i++) if (/checking/.test(s[i].textContent)) return false;' +
+            return waitFor('(function(){var c=document.querySelector("#dt-actions .dt-act-cap");' +
+                           'return c && !/checking/.test(c.textContent);})()',
+                           'a verdict for ' + entry.title, 20000);
+          })
+          .then(function () { return openChooser('source'); })
+          .then(function () {
+            /* Every copy has to be checked before the notes mean anything. */
+            return waitFor('(function(){var r=document.querySelectorAll(' +
+                           '"#dt-menu:not(.hidden) .menu-row");' +
+                           'if (!r.length) return false;' +
+                           'for (var i=0;i<r.length;i++) if (/checking/.test(r[i].textContent)) return false;' +
                            'return true;})()', 'every copy of ' + entry.title + ' checked', 20000);
           })
-          .then(function () {
-            return page.evaluate(function () {
-              return Array.prototype.map.call(
-                document.querySelectorAll('#dt-sources .dt-source'),
-                function (s) {
-                  return { name: s.querySelector('.dt-source-name').textContent.trim(),
-                           media: s.querySelector('.dt-source-media').textContent.trim(),
-                           verdict: s.querySelector('.dt-source-verdict').textContent.trim() };
-                });
-            });
-          })
+          .then(sourceRows)
           .then(function (src) {
-            /* The page lists exactly what the merge holds — a copy dropped in
+            /* The chooser lists exactly what the merge holds — a copy dropped in
                the fold would show up as one row fewer. */
             if (src.length !== entry.copies) {
               throw new Error(src.length + ' copies listed for ' + entry.title +
                               ' but the merge holds ' + entry.copies);
             }
             const names = {};
-            src.forEach(function (s) { names[s.name] = (names[s.name] || 0) + 1; });
+            src.forEach(function (s) { names[s.server] = (names[s.server] || 0) + 1; });
             const twice = Object.keys(names).filter(function (n) { return names[n] > 1; });
             if (!twice.length) throw new Error('no server listed twice: ' +
-                                               src.map(function (s) { return s.name; }).join(' | '));
-            const media = src.filter(function (s) { return s.name === twice[0]; })
-                             .map(function (s) { return s.media; });
+                                               src.map(function (s) { return s.server; }).join(' | '));
+            const media = src.filter(function (s) { return s.server === twice[0]; })
+                             .map(function (s) { return s.version; });
             if (media[0] === media[1]) {
               throw new Error('the same server\'s two copies read alike: ' + media[0]);
             }
@@ -1257,6 +1329,7 @@ function drive(page, titles) {
               throw new Error('expected a playable copy and a refused 4K one: ' + text);
             }
           })
+          .then(function () { return press('Backspace'); })
           .then(function () { return shot('detail-two-libraries'); })
           .then(backToLibrary);
       });
@@ -1414,8 +1487,8 @@ function drive(page, titles) {
           .then(function () { return page.keyboard.press('ArrowRight'); })
           .then(function () {
             return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
-                           ' document.querySelectorAll(".dt-source").length > 0',
-                           'the copy chooser for an episode', 20000);
+                           ' document.querySelectorAll("#dt-actions .dt-act").length > 0',
+                           'the action row for an episode', 20000);
           })
           .then(detailFace)
           .then(function (st) {
@@ -1871,8 +1944,8 @@ function drive(page, titles) {
           .then(function () { return page.keyboard.press('ArrowRight'); })
           .then(function () {
             return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
-                           ' document.querySelectorAll(".dt-source").length > 0',
-                           'the copy chooser for the next episode', 20000);
+                           ' document.querySelectorAll("#dt-actions .dt-act").length > 0',
+                           'the action row for the next episode', 20000);
           })
           .then(detailFace)
           .then(function (st) {
@@ -2284,8 +2357,9 @@ function drive(page, titles) {
            made every awkward file unplayable. */
         return openTitle(titles.transcodes.title)
           .then(function () {
-            return waitFor('/transcode/.test(document.querySelector(".dt-source.on").textContent)',
-                           'a transcode verdict on the selected copy', 15000);
+            return waitFor('/transcode/.test(' +
+                           'document.querySelector("#dt-actions .dt-act-cap").textContent)',
+                           'a transcode verdict on Play\'s caption', 15000);
           })
           .then(function () { return page.keyboard.press('Enter'); })
           .then(function () {
@@ -2323,40 +2397,29 @@ function drive(page, titles) {
           .then(function (n) {
             if (n !== 1) throw new Error('the same film appeared ' + n + ' times');
           })
+          .then(function () { return openChooser('source'); })
           .then(function () {
-            /* Scoped to the copies: extras render the same row shape, in their
-               own list, and counting those as copies makes this never settle. */
-            return waitFor('(function(){var s=document.querySelectorAll("#dt-sources .dt-source");' +
-                           'if (s.length !== 2) return false;' +
-                           'return !/checking/.test(s[0].textContent) &&' +
-                           ' !/checking/.test(s[1].textContent);})()',
+            return waitFor('(function(){var r=document.querySelectorAll(' +
+                           '"#dt-menu:not(.hidden) .menu-row");' +
+                           'if (r.length !== 2) return false;' +
+                           'return !/checking/.test(r[0].textContent) &&' +
+                           ' !/checking/.test(r[1].textContent);})()',
                            'both copies checked', 15000);
           })
-          .then(function () {
-            return page.evaluate(function () {
-              /* Copies only: extras render as .dt-source too, in their own list. */
-              return Array.prototype.map.call(
-                document.querySelectorAll('#dt-sources .dt-source'),
-                function (s) {
-                  return { on: s.classList.contains('on'),
-                           text: s.textContent.replace(/\s+/g, ' ') };
-                });
-            });
-          })
+          .then(sourceRows)
           .then(function (src) {
             /* The two copies must not read the same, and exactly one of them
                must be playable — that is the case this whole feature exists
                for: a 4K TrueHD remux on one server, a passable copy on the
                other. */
-            const playable = src.filter(function (s) { return /direct play/.test(s.text); });
-            const refused = src.filter(function (s) { return /4K, would transcode/.test(s.text); });
-            if (playable.length !== 1 || refused.length !== 1) {
+            const plays = src.filter(function (s) { return /direct play/.test(s.verdict); });
+            const refused = src.filter(function (s) { return /4K, would transcode/.test(s.verdict); });
+            if (plays.length !== 1 || refused.length !== 1) {
               throw new Error('expected one playable and one refused copy, got:\n        ' +
-                              src.map(function (s) { return s.text; }).join('\n        '));
+                              src.map(function (s) { return s.server + ' ' + s.version + ' — ' +
+                                                            s.verdict; }).join('\n        '));
             }
-            if (!/preferred/.test(src[0].text)) {
-              throw new Error('the preferred server should be listed first');
-            }
+            if (!src[0].preferred) throw new Error('the preferred server should be listed first');
             if (!src[0].on) throw new Error('the preferred copy should be selected');
           })
           .then(function () { return shot('detail-shared'); });
@@ -2364,32 +2427,37 @@ function drive(page, titles) {
     })
 
     .then(function () {
-      return step('switching copy changes what OK does', function () {
-        /* Select the copy that cannot play and confirm the app refuses it,
-           rather than quietly falling back to the one that can. */
-        return press('ArrowDown')
+      return step('a copy the guard refuses toasts and leaves the last one chosen', function () {
+        /* The chooser is still up from the step before. Pick the copy that
+           cannot play: the page must say why in a line and go on offering the
+           one that can, rather than accepting a choice it will refuse at Play. */
+        let was;
+        return sourceRows()
+          .then(function (src) {
+            was = src.filter(function (s) { return s.on; })[0];
+            const bad = src.filter(function (s) { return !playable(s.verdict); })[0];
+            if (!bad) throw new Error('no refused copy to choose');
+            /* By the whole label: two copies of the same film routinely differ
+               only in bitrate, so half of one matches the other as well. */
+            const label = bad.version + ' \u00b7 ' + bad.server;
+            return menuChoose(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+          })
           .then(function () {
-            return page.evaluate(function () {
-              const on = document.querySelector('.dt-source.on');
-              return on ? on.textContent.replace(/\s+/g, ' ') : '';
-            });
+            return waitFor('(function(){var t=document.getElementById("toast");' +
+                           'return !t.classList.contains("hidden") &&' +
+                           ' /Kept as it was/.test(t.textContent);})()',
+                           'the refusal toast', 15000);
           })
-          .then(function (text) {
-            /* Read the verdict the page is showing rather than assuming which
-               way this copy went — "4K, would transcode" is a refusal and
-               "audio transcode" is not, and both contain the same word. Guard
-               says yes to exactly these three and no to everything else, so
-               listing the yeses is the formulation that cannot go stale. */
-            const refusing = !/direct play|audio transcode|server transcodes/.test(text);
-            return page.keyboard.press('Enter').then(function () {
-              return waitFor('(function(){var m=document.getElementById("message");' +
-                             'var v=document.getElementById("video");' +
-                             'return ' + (refusing ? '!m.classList.contains("hidden")'
-                                                   : '!v.classList.contains("hidden")') + ';})()',
-                             refusing ? 'a refusal for the unplayable copy'
-                                      : 'playback of the playable copy', 15000);
-            });
+          .then(function () { return openChooser('source'); })
+          .then(sourceRows)
+          .then(function (src) {
+            const on = src.filter(function (s) { return s.on; })[0];
+            if (!on || on.version !== was.version || on.server !== was.server) {
+              throw new Error('the refused copy was selected anyway: ' +
+                              (on ? on.server + ' ' + on.version : 'nothing'));
+            }
           })
+          .then(function () { return press('Backspace'); })
           .then(backToLibrary);
       });
     })
@@ -2427,13 +2495,8 @@ function drive(page, titles) {
               throw new Error('no length on the card: "' + cards[0].len + '"');
             }
           })
-          .then(function () {
-            /* Down past every copy of the film to reach the first extra. */
-            return page.evaluate(function () {
-              return document.querySelectorAll('#dt-sources .dt-source').length;
-            });
-          })
-          .then(function (copies) { return press('ArrowDown', copies); })
+          /* Down off the action row is the extras strip. */
+          .then(function () { return press('ArrowDown'); })
           .then(function () {
             return waitFor('!!document.querySelector("#dt-extras .dt-extra.on")',
                            'focus to reach the extras');
@@ -2446,6 +2509,109 @@ function drive(page, titles) {
                            'the extra to start', 15000);
           })
           .then(function () { return shot('extras'); })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('the film page opens on Play, with a button per choice', function () {
+        return openTitle(titles.directPlays.title)
+          .then(actionRow)
+          .then(function (row) {
+            /* Play, Trailer, Quality, Source, Audio, Subtitles — and Play has
+               the focus, so OK is still one press. */
+            if (row.length !== 6) {
+              throw new Error('the action row is: ' +
+                              row.map(function (a) { return a.button || a.caption; }).join(' | '));
+            }
+            if (!row[0].primary || !row[0].on || row[0].button !== 'Play') {
+              throw new Error('Play is not the focused primary: ' + JSON.stringify(row[0]));
+            }
+            /* Every caption names what is chosen now, and none of them is
+               still saying "checking". */
+            const blank = row.filter(function (a) {
+              return !a.caption || /checking/.test(a.caption);
+            });
+            if (blank.length) {
+              throw new Error('a button with nothing chosen: ' +
+                              row.map(function (a) { return a.caption; }).join(' | '));
+            }
+            /* Play says what it will do and what the server will make of it. */
+            if (!/from start|resume at/.test(row[0].caption) ||
+                !/direct play/.test(row[0].caption)) {
+              throw new Error('Play\'s caption is: ' + row[0].caption);
+            }
+          })
+          .then(function () { return shot('detail-actions'); });
+      });
+    })
+
+    .then(function () {
+      return step('an audio track says what it costs, and the caption follows it', function () {
+        return openChooser('audio')
+          .then(menuLabels)
+          .then(function (labels) {
+            /* The h264-eac3 profile: E-AC3 5.1, AC3 5.1 and a French AAC
+               stereo, all three named by language. */
+            if (labels.length !== 3) throw new Error('audio rows: ' + labels.join(' | '));
+            /* What a row says has to be what OK does. Desktop Chrome exposes no
+               audioTracks, so every track but the one already chosen costs
+               direct play — and the one already chosen must not be warned
+               about, because choosing it costs nothing at all. */
+            const on = labels.filter(function (l) { return /^\* /.test(l); });
+            if (on.length !== 1) throw new Error('audio rows: ' + labels.join(' | '));
+            if (/\[/.test(on[0])) {
+              throw new Error('the track already chosen is warned about: ' + on[0]);
+            }
+            const others = labels.filter(function (l) { return !/^\* /.test(l); });
+            const quiet = others.filter(function (l) { return !/costs direct play/.test(l); });
+            if (quiet.length) {
+              throw new Error('a row that does not say it costs direct play: ' +
+                              labels.join(' | '));
+            }
+          })
+          .then(function () { return menuChoose(/French/); })
+          .then(function () {
+            return waitFor('/AAC/.test(document.querySelectorAll(' +
+                           '"#dt-actions .dt-act-cap")[4].textContent)',
+                           'the audio button to name the chosen track', 15000);
+          })
+          .then(actionRow)
+          .then(function (row) {
+            /* Choosing a track the panel cannot select gives up direct play, so
+               Play must now say so rather than still promising one. */
+            if (/direct play/.test(row[0].caption)) {
+              throw new Error('the audio choice cost nothing: ' + row[0].caption);
+            }
+          })
+          .then(function () { return shot('detail-audio'); })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('a subtitle language chosen on the film page is what plays', function () {
+        return openTitle(titles.directPlays.title)
+          .then(function () { return openChooser('subtitles'); })
+          .then(menuLabels)
+          .then(function (labels) {
+            if (!/Off/.test(labels[0])) throw new Error('subtitle rows: ' + labels.join(' | '));
+          })
+          .then(function () { return menuChoose(/French/); })
+          .then(function () {
+            return waitFor('/French/.test(document.querySelectorAll(' +
+                           '"#dt-actions .dt-act-cap")[5].textContent)',
+                           'the subtitles button to name French', 15000);
+          })
+          /* And Play starts on it: the language crosses into the player, which
+             fetches that track and draws it over the video. */
+          .then(function () { return pressButton('play'); })
+          .then(function () {
+            return waitFor('/fran\u00e7ais/.test(document.getElementById("subtitle").textContent)',
+                           'the chosen subtitle track drawn over the video', 15000);
+          })
+          .then(function () { return shot('detail-subtitles'); })
           .then(backToLibrary);
       });
     })
