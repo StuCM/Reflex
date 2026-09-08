@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-40eb2fd4-ef74-4c9e-be90-2b29402cef8a/styles.css">
+<script src="_ds/nocturne-40eb2fd4-ef74-4c9e-be90-2b29402cef8a/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<style>
+.pf{width:1920px;height:1080px;position:relative;overflow:hidden;display:flex;flex-direction:column;font-family:Inter,system-ui,sans-serif}
+.pfph{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.pfell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</helmet>
+<div class="pf" style="--ac:{{ ac }};--ac2:{{ ac2 }};--bg:{{ bg }};--fg:{{ fg }};--dim:{{ dim }};--soft:{{ soft }};--tile:{{ tile }};background:var(--bg);color:var(--fg)">
+  <div style="position:absolute;left:0;right:0;top:0;height:610px;z-index:0;background:{{ wash }}"></div>
+  <div style="position:absolute;left:0;right:0;top:310px;height:300px;z-index:1;background:linear-gradient(180deg,transparent,var(--bg));pointer-events:none"></div>
+
+  <div style="position:relative;z-index:5;height:96px;flex:none;display:flex;align-items:center;padding:0 96px;gap:24px">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 18px 10px 12px;border-radius:22px;background:var(--soft)">
+      <div style="width:56px;height:56px;border-radius:18px;background:color-mix(in srgb, var(--ac) 26%, transparent);display:flex;align-items:center;justify-content:center"><i class="ph ph-list" style="font-size:32px;color:var(--ac)"></i></div>
+      <i class="ph ph-caret-right" style="font-size:26px;color:var(--dim)"></i>
+    </div>
+    <div style="font:500 30px Inter;letter-spacing:.3em">MANTIS</div>
+    <div style="margin-left:auto;display:flex;gap:14px">
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--soft);display:flex;align-items:center;justify-content:center"><i class="ph ph-magnifying-glass" style="font-size:30px;color:var(--dim)"></i></div>
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--soft);display:flex;align-items:center;justify-content:center"><i class="ph ph-user" style="font-size:30px;color:var(--dim)"></i></div>
+    </div>
+  </div>
+
+  <div style="position:relative;z-index:3;height:520px;flex:none;padding:76px 96px 0;width:1180px">
+    <div style="display:flex;align-items:center;gap:14px;font:400 24px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">
+      <i class="ph ph-trend-up" style="font-size:30px"></i><span>{{ view.hero.rowTitle }}</span>
+    </div>
+    <div style="font:500 100px/1.02 Inter;letter-spacing:-.028em;margin-top:22px;text-wrap:balance">{{ view.hero.t }}</div>
+    <div style="display:flex;gap:16px;margin-top:44px">
+      <button style="display:flex;align-items:center;gap:14px;font:500 27px Inter;padding:17px 44px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:28px"></i>{{ view.hero.cta }}</button>
+      <button style="display:flex;align-items:center;gap:14px;font:500 27px Inter;padding:17px 36px;border-radius:999px;background:var(--soft);border:none;color:var(--fg)"><i class="ph ph-info" style="font-size:28px"></i>More info</button>
+      <button style="width:66px;height:66px;border-radius:999px;background:var(--soft);border:none;color:var(--dim);display:flex;align-items:center;justify-content:center"><i class="ph ph-heart" style="font-size:30px"></i></button>
+    </div>
+  </div>
+
+  <div style="position:relative;z-index:3;flex:1;overflow:hidden;margin-bottom:80px">
+    <div style="transform:{{ view.ty }};transition:transform .34s cubic-bezier(.2,.7,.2,1);padding-top:24px">
+      <sc-for list="{{ view.rows }}" as="row" hint-placeholder-count="2">
+        <div style="margin-bottom:52px">
+          <div style="padding:0 96px;height:52px;display:flex;align-items:center;gap:14px">
+            <div style="font:400 26px Inter;letter-spacing:.22em;text-transform:uppercase;color:{{ row.headColor }}">{{ row.title }}</div>
+          </div>
+          <div style="overflow:hidden;padding:0 96px">
+            <div style="display:flex;gap:44px;transform:{{ row.tx }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
+              <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="4">
+                <div onClick="{{ it.pick }}" style="flex:none;width:372px;transform:{{ it.tf }};transition:transform .2s ease;cursor:pointer">
+                  <div class="pfph" style="width:100%;height:209px;border-radius:28px;background:var(--tile);box-shadow:{{ it.ring }};transition:box-shadow .2s">
+                    <div style="font:500 64px Inter;color:color-mix(in srgb, var(--fg) 14%, transparent)">{{ it.initial }}</div>
+                    <sc-if value="{{ it.pct }}"><div style="position:absolute;left:0;right:0;bottom:0;height:5px;background:color-mix(in srgb, var(--fg) 16%, transparent);z-index:2"><div style="height:100%;width:{{ it.pctW }};background:var(--ac2)"></div></div></sc-if>
+                  </div>
+                  <div class="pfell" style="margin-top:18px;font:400 27px Inter;color:{{ it.titleColor }}">{{ it.t }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:96px;bottom:26px;z-index:4;font:400 24px Inter;color:var(--dim)">{{ label }}</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1920, &quot;height&quot;: 1080}}"></script>
+</body>
+</html>

@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-40eb2fd4-ef74-4c9e-be90-2b29402cef8a/styles.css">
+<script src="_ds/nocturne-40eb2fd4-ef74-4c9e-be90-2b29402cef8a/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<style>
+body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(255,255,255,.08)}
+.dv-thd{margin:0 0 20px}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#e9e9ed}
+.dv-opts{display:flex;flex-wrap:wrap;align-items:flex-start}
+.dv-opt{flex:none;margin:0 32px 0 0;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(255,255,255,.12);color:#e9e9ed;border-radius:5px;text-decoration:none;margin-right:8px}
+.dv-olabel{font:400 11px/1.3 system-ui,sans-serif;color:rgba(233,233,237,.55);margin:0 0 9px}
+.dv-card{background:#000;border:1px solid rgba(255,255,255,.1);border-radius:8px;overflow:hidden;width:960px;height:540px}
+.dv-opt:target .dv-oid{background:var(--ac);color:var(--bg)}
+:root{--bg:#131719;--fg:#e8eaec;--dim:rgba(232,234,236,.46);--soft:rgba(232,234,236,.07);--tile:#1c2124;--ac:#a3bfa8;--ac2:#b9a98c;--ac40:rgba(163,191,168,.4);--ac28:rgba(163,191,168,.28);--ac22:rgba(163,191,168,.22);--ac20:rgba(163,191,168,.2);--ac14:rgba(163,191,168,.14);--bg72:rgba(19,23,25,.72);--bg86:rgba(19,23,25,.86);--bg18:rgba(19,23,25,.18);--bg0:rgba(19,23,25,0);--sc95:rgba(9,11,12,.95);--sc94:rgba(9,11,12,.94);--sc90:rgba(9,11,12,.9);--sc72:rgba(9,11,12,.72);--sc55:rgba(9,11,12,.55);--sc50:rgba(9,11,12,.5);--sc45:rgba(9,11,12,.45);--sc0:rgba(9,11,12,0)}
+.pal-bar{display:flex;flex-wrap:wrap;align-items:flex-start}
+.pal{display:block;text-align:left;margin:0 12px 0 0;padding:11px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;cursor:pointer;font:inherit}
+.pal-sw{display:flex;margin-bottom:8px}
+.pal-sw span{width:26px;height:26px;border-radius:5px;margin-right:5px;display:block}
+.pal-name{font:600 11px system-ui,sans-serif;color:#e9e9ed}
+.pal-note{font:400 10.5px system-ui,sans-serif;color:rgba(233,233,237,.5);margin-top:3px}
+.frame{width:1920px;height:1080px;position:relative;overflow:hidden;transform:scale(.5);transform-origin:top left;display:flex;flex-direction:column}
+.phq3{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(130% 100% at 26% 16%,rgba(255,255,255,.09),rgba(255,255,255,.02) 70%),var(--tile)}
+.ini{font:500 84px Inter,sans-serif;color:rgba(238,241,243,.14);letter-spacing:.02em}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</helmet>
+
+<section class="dv-turn">
+<div class="dv-thd"><span class="dv-tname">Palette — four calmer sets. Low-chroma accents at 46-50% lightness, so the accent reads as a marker rather than a flood. Pick one and every screen below re-tints.</span></div>
+<div class="pal-bar">
+  <sc-for list="{{ palettes }}" as="p" hint-placeholder-count="4">
+    <button class="pal" onClick="{{ p.pick }}" style="border-color:{{ p.border }};background:{{ p.chipBg }}">
+      <div class="pal-sw"><span style="background:{{ p.bg }}"></span><span style="background:{{ p.tile }}"></span><span style="background:{{ p.ac }}"></span><span style="background:{{ p.ac2 }}"></span></div>
+      <div class="pal-name">{{ p.name }}</div>
+      <div class="pal-note">{{ p.note }}</div>
+    </button>
+  </sc-for>
+</div>
+</section>
+
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><span class="dv-tname">Discovery — home, the dense row state, and the movie page</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="6a">
+<div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a>Home — Continue Watching leads. Header is just the wordmark, search and profile.</div>
+<div class="dv-card" onMouseEnter="{{ actJ }}">
+<div class="frame" style="background:var(--bg);color:var(--fg)">
+  <sc-if value="{{ viewJ.big }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:0;top:0;right:0;bottom:470px;z-index:0"><image-slot id="mantis-home-hero" shape="rect" placeholder="Drop backdrop art"></image-slot></div>
+    <div style="position:absolute;left:0;top:0;right:0;bottom:470px;z-index:1;background:linear-gradient(88deg,var(--bg) 0%,var(--bg72) 48%,var(--bg0) 84%);pointer-events:none"></div>
+    <div style="position:absolute;left:0;right:0;top:350px;height:300px;z-index:1;background:linear-gradient(180deg,var(--bg0),var(--bg));pointer-events:none"></div>
+  </sc-if>
+
+  <div style="position:relative;z-index:5;height:96px;flex:none;display:flex;align-items:center;padding:0 96px">
+    <div style="font:500 30px Inter;letter-spacing:.3em">MANTIS</div>
+    <div style="margin-left:auto;display:flex">
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--soft);display:flex;align-items:center;justify-content:center"><i class="ph ph-magnifying-glass" style="font-size:30px;color:var(--dim)"></i></div>
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--soft);display:flex;align-items:center;justify-content:center;margin-left:14px"><i class="ph ph-user" style="font-size:30px;color:var(--dim)"></i></div>
+    </div>
+  </div>
+
+  <sc-if value="{{ viewJ.big }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:3;height:540px;flex:none;padding:76px 96px 0;width:1180px">
+      <div style="display:flex;align-items:center;font:400 24px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">
+        <i class="ph ph-clock-counter-clockwise" style="font-size:30px;margin-right:14px"></i><span>{{ viewJ.hero.rowTitle }}</span>
+      </div>
+      <div style="font:500 100px/1.02 Inter;letter-spacing:-.028em;margin-top:22px;">{{ viewJ.hero.t }}</div>
+      <div style="display:flex;align-items:center;margin-top:22px;font:400 27px Inter;color:var(--dim)">
+        <span style="margin-right:26px">{{ viewJ.hero.sub }}</span><span>{{ viewJ.hero.left }}</span>
+      </div>
+      <div style="display:flex;margin-top:40px">
+        <button class="btn" style="display:flex;align-items:center;font:500 27px Inter;padding:17px 44px;margin-right:16px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:28px;margin-right:14px"></i>{{ viewJ.hero.cta }}</button>
+        <button class="btn" style="display:flex;align-items:center;font:500 27px Inter;padding:17px 36px;margin-right:16px;border-radius:999px;background:var(--soft);border:none;color:var(--fg)"><i class="ph ph-info" style="font-size:28px;margin-right:14px"></i>More info</button>
+        <button class="btn" style="width:66px;height:66px;border-radius:999px;background:var(--soft);border:none;color:var(--dim);display:flex;align-items:center;justify-content:center"><i class="ph ph-heart" style="font-size:30px"></i></button>
+      </div>
+    </div>
+    <div style="position:relative;z-index:3;flex:1;overflow:hidden;margin-bottom:80px">
+      <div style="padding-top:24px">
+        <sc-for list="{{ viewJ.rows }}" as="row" hint-placeholder-count="2">
+          <div style="margin-bottom:52px">
+            <div style="padding:0 96px;height:52px;display:flex;align-items:center">
+              <div style="font:400 26px Inter;letter-spacing:.22em;text-transform:uppercase;color:{{ row.headColor }}">{{ row.title }}</div>
+            </div>
+            <div style="overflow:hidden;padding:0 96px">
+              <div style="display:flex;transform:{{ row.tx }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
+                <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="4">
+                  <div onClick="{{ it.pick }}" style="flex:none;width:372px;margin-right:44px;transform:{{ it.tf }};transition:transform .2s ease;cursor:pointer">
+                    <div class="phq3" style="width:100%;height:209px;border-radius:28px;background:var(--tile);box-shadow:{{ it.ring }}">
+                      <div class="ini" style="font-size:64px">{{ it.initial }}</div>
+                      <sc-if value="{{ it.pct }}"><div style="position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(238,241,243,.16);z-index:2"><div style="height:100%;width:{{ it.pctW }};background:var(--ac2)"></div></div></sc-if>
+                    </div>
+                    <div class="ell" style="margin-top:18px;font:400 27px Inter;color:{{ it.titleColor }}">{{ it.t }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewJ.dense }}">
+    <div style="position:relative;z-index:3;height:132px;flex:none;padding:0 96px;display:flex;align-items:center;border-bottom:1px solid rgba(238,241,243,.08)">
+      <div class="ell" style="font:500 46px Inter;letter-spacing:-.02em;min-width:0;margin-right:32px">{{ viewJ.hero.t }}</div>
+      <div style="font:400 25px Inter;color:var(--dim);white-space:nowrap">{{ viewJ.hero.sub }}</div>
+      <div style="margin-left:auto;display:flex">
+        <button class="btn" style="display:flex;align-items:center;font:500 25px Inter;padding:14px 34px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:26px;margin-right:12px"></i>{{ viewJ.hero.cta }}</button>
+        <button class="btn" style="width:58px;height:58px;border-radius:999px;margin-left:14px;background:var(--soft);border:none;color:var(--dim);display:flex;align-items:center;justify-content:center"><i class="ph ph-info" style="font-size:26px"></i></button>
+      </div>
+    </div>
+    <div style="position:relative;z-index:3;flex:1;overflow:hidden;margin-bottom:64px">
+      <div style="transform:{{ viewJ.tyD }};transition:transform .34s cubic-bezier(.2,.7,.2,1);padding-top:22px">
+        <sc-for list="{{ viewJ.rows }}" as="row" hint-placeholder-count="3">
+          <div style="margin-bottom:34px">
+            <div style="padding:0 96px;height:44px;display:flex;align-items:center">
+              <div style="font:400 23px Inter;letter-spacing:.22em;text-transform:uppercase;color:{{ row.headColor }}">{{ row.title }}</div>
+            </div>
+            <div style="overflow:hidden;padding:0 96px">
+              <div style="display:flex;transform:{{ row.txD }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
+                <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="6">
+                  <div onClick="{{ it.pick }}" style="flex:none;width:268px;margin-right:32px;transform:{{ it.tf }};transition:transform .2s ease;cursor:pointer">
+                    <div class="phq3" style="width:100%;height:151px;border-radius:20px;background:var(--tile);box-shadow:{{ it.ring }}">
+                      <div class="ini" style="font-size:46px">{{ it.initial }}</div>
+                      <sc-if value="{{ it.pct }}"><div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(238,241,243,.16);z-index:2"><div style="height:100%;width:{{ it.pctW }};background:var(--ac2)"></div></div></sc-if>
+                    </div>
+                    <div class="ell" style="margin-top:14px;font:400 23px Inter;color:{{ it.titleColor }}">{{ it.t }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute;left:96px;bottom:26px;z-index:4;display:flex;align-items:center;font:400 24px Inter;color:var(--dim)">
+    <i class="ph ph-arrows-out-cardinal" style="font-size:26px;margin-right:14px"></i><span>◀ ▶ browse · ▼ into the rows · OK opens</span>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="6b">
+<div class="dv-olabel"><a class="dv-oid" href="#6b">6b</a>Down into the rows — the hero drops to a band and the tiles step down, so three rows sit on screen at once.</div>
+<div class="dv-card" onMouseEnter="{{ actL }}">
+<div class="frame" style="background:var(--bg);color:var(--fg)">
+  <sc-if value="{{ viewL.big }}">
+    <div style="position:absolute;left:0;top:0;right:0;bottom:470px;z-index:0"><image-slot id="mantis-rows-hero" shape="rect" placeholder="Drop backdrop art"></image-slot></div>
+    <div style="position:absolute;left:0;top:0;right:0;bottom:470px;z-index:1;background:linear-gradient(88deg,var(--bg) 0%,var(--bg72) 48%,var(--bg0) 84%);pointer-events:none"></div>
+    <div style="position:absolute;left:0;right:0;top:350px;height:300px;z-index:1;background:linear-gradient(180deg,var(--bg0),var(--bg));pointer-events:none"></div>
+  </sc-if>
+
+  <div style="position:relative;z-index:5;height:96px;flex:none;display:flex;align-items:center;padding:0 96px">
+    <div style="font:500 30px Inter;letter-spacing:.3em">MANTIS</div>
+    <div style="margin-left:auto;display:flex">
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--soft);display:flex;align-items:center;justify-content:center"><i class="ph ph-magnifying-glass" style="font-size:30px;color:var(--dim)"></i></div>
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--soft);display:flex;align-items:center;justify-content:center;margin-left:14px"><i class="ph ph-user" style="font-size:30px;color:var(--dim)"></i></div>
+    </div>
+  </div>
+
+  <sc-if value="{{ viewL.big }}">
+    <div style="position:relative;z-index:3;height:540px;flex:none;padding:76px 96px 0;width:1180px">
+      <div style="display:flex;align-items:center;font:400 24px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">
+        <i class="ph ph-clock-counter-clockwise" style="font-size:30px;margin-right:14px"></i><span>{{ viewL.hero.rowTitle }}</span>
+      </div>
+      <div style="font:500 100px/1.02 Inter;letter-spacing:-.028em;margin-top:22px;">{{ viewL.hero.t }}</div>
+      <div style="display:flex;align-items:center;margin-top:22px;font:400 27px Inter;color:var(--dim)">
+        <span style="margin-right:26px">{{ viewL.hero.sub }}</span><span>{{ viewL.hero.left }}</span>
+      </div>
+      <div style="display:flex;margin-top:40px">
+        <button class="btn" style="display:flex;align-items:center;font:500 27px Inter;padding:17px 44px;margin-right:16px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:28px;margin-right:14px"></i>{{ viewL.hero.cta }}</button>
+        <button class="btn" style="display:flex;align-items:center;font:500 27px Inter;padding:17px 36px;margin-right:16px;border-radius:999px;background:var(--soft);border:none;color:var(--fg)"><i class="ph ph-info" style="font-size:28px;margin-right:14px"></i>More info</button>
+      </div>
+    </div>
+    <div style="position:relative;z-index:3;flex:1;overflow:hidden;margin-bottom:80px">
+      <div style="padding-top:24px">
+        <sc-for list="{{ viewL.rows }}" as="row" hint-placeholder-count="1">
+          <div style="margin-bottom:52px">
+            <div style="padding:0 96px;height:52px;display:flex;align-items:center">
+              <div style="font:400 26px Inter;letter-spacing:.22em;text-transform:uppercase;color:{{ row.headColor }}">{{ row.title }}</div>
+            </div>
+            <div style="overflow:hidden;padding:0 96px">
+              <div style="display:flex;transform:{{ row.tx }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
+                <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="4">
+                  <div onClick="{{ it.pick }}" style="flex:none;width:372px;margin-right:44px;transform:{{ it.tf }};transition:transform .2s ease;cursor:pointer">
+                    <div class="phq3" style="width:100%;height:209px;border-radius:28px;background:var(--tile);box-shadow:{{ it.ring }}">
+                      <div class="ini" style="font-size:64px">{{ it.initial }}</div>
+                    </div>
+                    <div class="ell" style="margin-top:18px;font:400 27px Inter;color:{{ it.titleColor }}">{{ it.t }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ viewL.dense }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:3;height:132px;flex:none;padding:0 96px;display:flex;align-items:center;border-bottom:1px solid rgba(238,241,243,.08)">
+      <div class="ell" style="font:500 46px Inter;letter-spacing:-.02em;min-width:0;margin-right:32px">{{ viewL.hero.t }}</div>
+      <div style="font:400 25px Inter;color:var(--dim);white-space:nowrap">{{ viewL.hero.sub }}</div>
+      <div style="margin-left:auto;display:flex">
+        <button class="btn" style="display:flex;align-items:center;font:500 25px Inter;padding:14px 34px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:26px;margin-right:12px"></i>{{ viewL.hero.cta }}</button>
+        <button class="btn" style="width:58px;height:58px;border-radius:999px;margin-left:14px;background:var(--soft);border:none;color:var(--dim);display:flex;align-items:center;justify-content:center"><i class="ph ph-info" style="font-size:26px"></i></button>
+      </div>
+    </div>
+    <div style="position:relative;z-index:3;flex:1;overflow:hidden;margin-bottom:64px">
+      <div style="transform:{{ viewL.tyD }};transition:transform .34s cubic-bezier(.2,.7,.2,1);padding-top:22px">
+        <sc-for list="{{ viewL.rows }}" as="row" hint-placeholder-count="3">
+          <div style="margin-bottom:34px">
+            <div style="padding:0 96px;height:44px;display:flex;align-items:center">
+              <div style="font:400 23px Inter;letter-spacing:.22em;text-transform:uppercase;color:{{ row.headColor }}">{{ row.title }}</div>
+            </div>
+            <div style="overflow:hidden;padding:0 96px">
+              <div style="display:flex;transform:{{ row.txD }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
+                <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="6">
+                  <div onClick="{{ it.pick }}" style="flex:none;width:268px;margin-right:32px;transform:{{ it.tf }};transition:transform .2s ease;cursor:pointer">
+                    <div class="phq3" style="width:100%;height:151px;border-radius:20px;background:var(--tile);box-shadow:{{ it.ring }}">
+                      <div class="ini" style="font-size:46px">{{ it.initial }}</div>
+                      <sc-if value="{{ it.pct }}"><div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(238,241,243,.16);z-index:2"><div style="height:100%;width:{{ it.pctW }};background:var(--ac2)"></div></div></sc-if>
+                    </div>
+                    <div class="ell" style="margin-top:14px;font:400 23px Inter;color:{{ it.titleColor }}">{{ it.t }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute;left:96px;bottom:26px;z-index:4;display:flex;align-items:center;font:400 24px Inter;color:var(--dim)">
+    <i class="ph ph-arrows-out-cardinal" style="font-size:26px;margin-right:14px"></i><span>▲ back up to the hero · OK opens the title</span>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="6c">
+<div class="dv-olabel"><a class="dv-oid" href="#6c">6c</a>Movie page after OK — description and ratings, the actions as icons with their current setting underneath, cast then extras stacked below.</div>
+<div class="dv-card">
+<div class="frame" style="background:var(--bg);color:var(--fg)">
+  <div style="position:absolute;right:0;top:0;width:1240px;height:760px;z-index:0"><image-slot id="mantis-detail-hero" shape="rect" placeholder="Drop backdrop art"></image-slot></div>
+  <div style="position:absolute;right:0;top:0;width:1240px;height:760px;z-index:1;background:linear-gradient(90deg,var(--bg) 0%,var(--bg86) 34%,var(--bg18) 100%);pointer-events:none"></div>
+  <div style="position:absolute;right:0;top:380px;width:1240px;height:380px;z-index:1;background:linear-gradient(180deg,var(--bg0),var(--bg) 78%);pointer-events:none"></div>
+
+  <div style="position:relative;z-index:3;height:88px;flex:none;display:flex;align-items:center;padding:0 96px">
+    <div style="width:56px;height:56px;border-radius:18px;background:var(--soft);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph ph-arrow-left" style="font-size:28px;color:var(--fg)"></i></div>
+    <div style="font:500 26px Inter;letter-spacing:.3em;color:var(--dim)">MANTIS</div>
+  </div>
+
+  <div style="position:relative;z-index:3;padding:14px 96px 0;width:1240px">
+    <div style="font:400 23px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">Movie · Science fiction · Denis Villeneuve</div>
+    <div style="font:500 72px/1.04 Inter;letter-spacing:-.03em;margin-top:12px">Dune: Part Two</div>
+    <div style="display:flex;align-items:center;margin-top:18px;font:400 25px Inter;color:var(--dim)">
+      <span style="border:2px solid rgba(238,241,243,.24);border-radius:8px;padding:2px 10px;font-size:21px;margin-right:24px">PG-13</span>
+      <span style="margin-right:24px">2024</span><span style="margin-right:24px">2h 46m</span>
+      <span style="border:2px solid var(--ac40);border-radius:8px;padding:2px 10px;font-size:21px;color:var(--ac)">4K HDR</span>
+    </div>
+    <div style="display:flex;align-items:center;margin-top:16px;font:400 25px Inter">
+      <div style="display:flex;align-items:center;margin-right:40px"><i class="ph-fill ph-star" style="font-size:26px;color:var(--ac);margin-right:10px"></i><span style="margin-right:10px">8.5</span><span style="color:var(--dim)">IMDb</span></div>
+      <div style="display:flex;align-items:center;margin-right:40px"><i class="ph ph-seal-check" style="font-size:26px;color:var(--ac2);margin-right:10px"></i><span style="margin-right:10px">92%</span><span style="color:var(--dim)">Critics</span></div>
+      <div style="display:flex;align-items:center"><i class="ph ph-users-three" style="font-size:26px;color:var(--dim);margin-right:10px"></i><span style="margin-right:10px">95%</span><span style="color:var(--dim)">Audience</span></div>
+    </div>
+    <div style="margin-top:16px;font:400 25px/1.45 Inter;color:rgba(238,241,243,.68);max-width:1120px">Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family, caught between the love of his life and the fate of the known universe.</div>
+
+    <div style="display:flex;align-items:flex-start;margin-top:24px">
+      <div style="display:flex;flex-direction:column;align-items:center;margin-right:20px">
+        <button class="btn" style="display:flex;align-items:center;font:500 27px Inter;padding:17px 44px;margin-bottom:10px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:28px;margin-right:14px"></i>Play</button>
+        <div style="font:400 20px Inter;color:var(--dim)">from start</div>
+      </div>
+      <sc-for list="{{ actions }}" as="ac" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;align-items:center;width:112px;margin-right:20px">
+          <div style="width:70px;height:70px;border-radius:999px;margin-bottom:10px;background:{{ ac.bg }};box-shadow:{{ ac.ring }};display:flex;align-items:center;justify-content:center"><i class="ph {{ ac.icon }}" style="font-size:32px;color:{{ ac.fg }}"></i></div>
+          <div style="font:400 20px Inter;color:{{ ac.labelColor }};text-align:center;line-height:1.25">{{ ac.label }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative;z-index:3;margin-top:auto;padding:0 96px 48px">
+    <div style="margin-bottom:26px">
+      <div style="font:400 22px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)">Cast</div>
+      <div style="display:flex;margin-top:16px">
+        <sc-for list="{{ cast }}" as="c" hint-placeholder-count="5">
+          <div style="width:176px;display:flex;flex-direction:column;align-items:center;margin-right:24px">
+            <div class="phq3" style="width:88px;height:88px;border-radius:999px;background:var(--tile);margin-bottom:10px">
+              <div style="font:500 30px Inter;color:rgba(238,241,243,.22)">{{ c.ini }}</div>
+            </div>
+            <div style="text-align:center;width:176px">
+              <div style="font:400 19px/1.3 Inter;white-space:nowrap">{{ c.name }}</div>
+              <div class="ell" style="font:400 18px/1.3 Inter;color:var(--dim);margin-top:3px">{{ c.role }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div>
+      <div style="font:400 22px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)">Extras</div>
+      <div style="display:flex;margin-top:16px">
+        <sc-for list="{{ extras }}" as="x" hint-placeholder-count="4">
+          <div style="width:236px;flex:none;margin-right:24px">
+            <div class="phq3" style="width:100%;height:133px;border-radius:16px;background:var(--tile);box-shadow:0 0 0 1px rgba(238,241,243,.06)">
+              <i class="ph-fill ph-play" style="font-size:30px;color:rgba(238,241,243,.28)"></i>
+              <div style="position:absolute;right:10px;bottom:10px;font:400 18px Inter;padding:3px 9px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ x.dur }}</div>
+            </div>
+            <div class="ell" style="margin-top:10px;font:400 22px Inter">{{ x.t }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+
+<section class="dv-turn" id="t7">
+<div class="dv-thd"><span class="dv-tname">Player — controls over the picture, and a setting opened from the row</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="7a">
+<div class="dv-olabel"><a class="dv-oid" href="#7a">7a</a>Playback controls — one press of any key brings this up over the picture, transport on the left, sound, subtitles and quality on the right with their current setting under each.</div>
+<div class="dv-card">
+<div class="frame" style="background:var(--bg);color:var(--fg)">
+  <div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:0"><image-slot id="mantis-player-frame" shape="rect" placeholder="Drop a still from the film"></image-slot></div>
+  <div style="position:absolute;left:0;top:0;right:0;height:280px;z-index:1;background:linear-gradient(180deg,var(--sc90),var(--sc0));pointer-events:none"></div>
+  <div style="position:absolute;left:0;bottom:0;right:0;height:560px;z-index:1;background:linear-gradient(0deg,var(--sc94),var(--sc55) 45%,var(--sc0));pointer-events:none"></div>
+
+  <div style="position:absolute;left:96px;top:64px;right:96px;z-index:3;display:flex;align-items:flex-start">
+    <div style="width:64px;height:64px;border-radius:20px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center;margin-right:28px;flex:none"><i class="ph ph-arrow-left" style="font-size:30px;color:var(--fg)"></i></div>
+    <div style="min-width:0">
+      <div class="ell" style="font:500 46px Inter;letter-spacing:-.02em">Dune: Part Two</div>
+      <div style="font:400 25px Inter;color:rgba(238,241,243,.6);margin-top:8px">Chapter 6 · Arrakeen</div>
+    </div>
+    <div style="margin-left:auto;text-align:right;flex:none">
+      <div style="font:400 30px Inter;color:rgba(238,241,243,.8)">21:48</div>
+      <div style="font:400 22px Inter;color:rgba(238,241,243,.45);margin-top:6px">ends 00:25</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:96px;right:96px;bottom:72px;z-index:3">
+    <div style="position:relative;height:8px;border-radius:4px;background:rgba(238,241,243,.16)">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:58%;border-radius:4px;background:rgba(238,241,243,.28)"></div>
+      <div style="position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:4px;background:var(--ac)"></div>
+      <div style="position:absolute;left:42%;top:-9px;width:26px;height:26px;margin-left:-13px;border-radius:13px;background:var(--ac);box-shadow:0 0 0 8px var(--ac22)"></div>
+    </div>
+    <div style="display:flex;align-items:baseline;margin-top:18px;font:400 25px Inter;color:rgba(238,241,243,.65)">
+      <span>1:09:12</span>
+      <span style="margin-left:auto">2:46:10</span>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;margin-top:34px">
+      <div style="display:flex;align-items:center">
+        <div style="width:80px;height:80px;border-radius:40px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph ph-rewind" style="font-size:34px;color:var(--fg)"></i></div>
+        <div style="width:104px;height:104px;border-radius:52px;background:var(--ac);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px var(--ac28),0 18px 44px rgba(0,0,0,.5);margin-right:22px"><i class="ph-fill ph-pause" style="font-size:44px;color:var(--bg)"></i></div>
+        <div style="width:80px;height:80px;border-radius:40px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center"><i class="ph ph-fast-forward" style="font-size:34px;color:var(--fg)"></i></div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:flex-start">
+        <sc-for list="{{ playerBtns }}" as="b" hint-placeholder-count="4">
+          <div style="width:150px;display:flex;flex-direction:column;align-items:center;margin-left:14px">
+            <div style="width:76px;height:76px;border-radius:38px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center"><i class="ph {{ b.icon }}" style="font-size:34px;color:var(--fg)"></i></div>
+            <div style="font:400 21px/1.3 Inter;color:rgba(238,241,243,.6);margin-top:12px;text-align:center;white-space:nowrap">{{ b.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7b">
+<div class="dv-olabel"><a class="dv-oid" href="#7b">7b</a>A setting opened from the row — the list sits above its own button so the picture stays visible, and the picked value is the one on the button.</div>
+<div class="dv-card">
+<div class="frame" style="background:var(--bg);color:var(--fg)">
+  <div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:0"><image-slot id="mantis-player-frame-2" shape="rect" placeholder="Drop a still from the film"></image-slot></div>
+  <div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:1;background:var(--sc50);pointer-events:none"></div>
+  <div style="position:absolute;left:0;bottom:0;right:0;height:660px;z-index:1;background:linear-gradient(0deg,var(--sc95),var(--sc50) 55%,var(--sc0));pointer-events:none"></div>
+
+  <div style="position:absolute;left:96px;top:64px;z-index:3;display:flex;align-items:center">
+    <div style="width:64px;height:64px;border-radius:20px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center;margin-right:28px"><i class="ph ph-arrow-left" style="font-size:30px;color:var(--fg)"></i></div>
+    <div style="font:500 40px Inter;letter-spacing:-.02em;color:rgba(238,241,243,.8)">Dune: Part Two</div>
+  </div>
+
+  <div style="position:absolute;right:260px;bottom:310px;width:520px;z-index:4;border-radius:26px;padding:26px 18px;background:rgba(18,22,31,.97);box-shadow:0 0 0 1px rgba(238,241,243,.1),0 40px 90px rgba(0,0,0,.7)">
+    <div style="font:400 22px Inter;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,241,243,.45);padding:0 18px 16px">Video quality</div>
+    <sc-for list="{{ qualityOpts }}" as="q" hint-placeholder-count="4">
+      <div style="display:flex;align-items:center;padding:16px 18px;border-radius:18px;background:{{ q.bg }}">
+        <i class="ph {{ q.icon }}" style="font-size:28px;color:{{ q.fg }};margin-right:18px;flex:none"></i>
+        <div style="min-width:0">
+          <div style="font:400 27px Inter;color:{{ q.fg }}">{{ q.label }}</div>
+          <div style="font:400 21px Inter;color:rgba(238,241,243,.42);margin-top:4px">{{ q.note }}</div>
+        </div>
+        <sc-if value="{{ q.on }}"><i class="ph ph-check" style="font-size:28px;color:var(--ac);margin-left:auto;flex:none"></i></sc-if>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position:absolute;left:96px;right:96px;bottom:72px;z-index:3">
+    <div style="position:relative;height:8px;border-radius:4px;background:rgba(238,241,243,.16)">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:4px;background:rgba(238,241,243,.5)"></div>
+      <div style="position:absolute;left:42%;top:-7px;width:22px;height:22px;margin-left:-11px;border-radius:11px;background:rgba(238,241,243,.7)"></div>
+    </div>
+    <div style="display:flex;align-items:baseline;margin-top:18px;font:400 25px Inter;color:rgba(238,241,243,.5)">
+      <span>1:09:12</span>
+      <span style="margin-left:auto">2:46:10</span>
+    </div>
+    <div style="display:flex;align-items:flex-start;margin-top:34px">
+      <div style="display:flex;align-items:center;opacity:.55">
+        <div style="width:80px;height:80px;border-radius:40px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph ph-rewind" style="font-size:34px;color:var(--fg)"></i></div>
+        <div style="width:96px;height:96px;border-radius:48px;background:rgba(238,241,243,.16);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph-fill ph-pause" style="font-size:40px;color:var(--fg)"></i></div>
+        <div style="width:80px;height:80px;border-radius:40px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center"><i class="ph ph-fast-forward" style="font-size:34px;color:var(--fg)"></i></div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:flex-start">
+        <sc-for list="{{ playerBtns2 }}" as="b" hint-placeholder-count="4">
+          <div style="width:150px;display:flex;flex-direction:column;align-items:center;margin-left:14px">
+            <div style="width:76px;height:76px;border-radius:38px;background:{{ b.bg }};box-shadow:{{ b.ring }};display:flex;align-items:center;justify-content:center"><i class="ph {{ b.icon }}" style="font-size:34px;color:{{ b.fg }}"></i></div>
+            <div style="font:400 21px/1.3 Inter;color:{{ b.labelColor }};margin-top:12px;text-align:center;white-space:nowrap">{{ b.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7c">
+<div class="dv-olabel"><a class="dv-oid" href="#7c">7c</a>Chapters — the strip sits under the transport, one box per chapter, focus moves along it with ◀ ▶ and the row scrolls.</div>
+<div class="dv-card">
+<div class="frame" style="background:var(--bg);color:var(--fg)">
+  <div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:0"><image-slot id="mantis-player-frame-3" shape="rect" placeholder="Drop a still from the film"></image-slot></div>
+  <div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:1;background:var(--sc45);pointer-events:none"></div>
+  <div style="position:absolute;left:0;bottom:0;right:0;height:700px;z-index:1;background:linear-gradient(0deg,var(--sc95),var(--sc55) 55%,var(--sc0));pointer-events:none"></div>
+
+  <div style="position:absolute;left:96px;top:64px;z-index:3;display:flex;align-items:center">
+    <div style="width:64px;height:64px;border-radius:20px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center;margin-right:28px"><i class="ph ph-arrow-left" style="font-size:30px;color:var(--fg)"></i></div>
+    <div style="font:500 40px Inter;letter-spacing:-.02em;color:rgba(238,241,243,.8)">Dune: Part Two</div>
+  </div>
+
+  <div style="position:absolute;left:96px;right:96px;bottom:72px;z-index:3">
+    <div style="position:relative;height:8px;border-radius:4px;background:rgba(238,241,243,.16)">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:4px;background:rgba(238,241,243,.5)"></div>
+      <div style="position:absolute;left:42%;top:-7px;width:22px;height:22px;margin-left:-11px;border-radius:11px;background:rgba(238,241,243,.7)"></div>
+    </div>
+    <div style="display:flex;align-items:baseline;margin-top:18px;font:400 25px Inter;color:rgba(238,241,243,.5)">
+      <span>1:09:12</span>
+      <span style="margin-left:auto">2:46:10</span>
+    </div>
+    <div style="display:flex;align-items:flex-start;margin-top:30px">
+      <div style="display:flex;align-items:center;opacity:.55">
+        <div style="width:80px;height:80px;border-radius:40px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph ph-rewind" style="font-size:34px;color:var(--fg)"></i></div>
+        <div style="width:96px;height:96px;border-radius:48px;background:rgba(238,241,243,.16);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph-fill ph-pause" style="font-size:40px;color:var(--fg)"></i></div>
+        <div style="width:80px;height:80px;border-radius:40px;background:rgba(238,241,243,.1);display:flex;align-items:center;justify-content:center"><i class="ph ph-fast-forward" style="font-size:34px;color:var(--fg)"></i></div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:flex-start">
+        <sc-for list="{{ playerBtns3 }}" as="b" hint-placeholder-count="4">
+          <div style="width:150px;display:flex;flex-direction:column;align-items:center;margin-left:14px">
+            <div style="width:76px;height:76px;border-radius:38px;background:{{ b.bg }};box-shadow:{{ b.ring }};display:flex;align-items:center;justify-content:center"><i class="ph {{ b.icon }}" style="font-size:34px;color:{{ b.fg }}"></i></div>
+            <div style="font:400 21px/1.3 Inter;color:{{ b.labelColor }};margin-top:12px;text-align:center;white-space:nowrap">{{ b.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="margin-top:30px">
+      <div style="font:400 21px Inter;letter-spacing:.22em;text-transform:uppercase;color:rgba(238,241,243,.45)">Chapters</div>
+      <div style="overflow:hidden;margin-top:16px">
+        <div style="display:flex;transform:{{ chapterTx }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
+          <sc-for list="{{ chapters }}" as="ch" hint-placeholder-count="5">
+            <div style="width:300px;flex:none;margin-right:24px">
+              <div class="phq3" style="width:100%;height:169px;border-radius:18px;background:var(--tile);box-shadow:{{ ch.ring }}">
+                <i class="ph-fill ph-play" style="font-size:30px;color:{{ ch.playColor }}"></i>
+                <div style="position:absolute;left:12px;bottom:12px;font:400 19px Inter;padding:3px 10px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ ch.at }}</div>
+              </div>
+              <div class="ell" style="margin-top:12px;font:400 23px Inter;color:{{ ch.titleColor }}">{{ ch.t }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;palette&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Slate &amp; sage&quot;,&quot;Nocturne blurple&quot;,&quot;Blurple + apricot&quot;,&quot;Blurple + aqua&quot;,&quot;Blurple + rose&quot;,&quot;Dusk &amp; clay&quot;,&quot;Harbour &amp; sand&quot;],&quot;default&quot;:&quot;Blurple + apricot&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Colour&quot;}}">
+const S = (t, y, r, rated, dur, extra) => Object.assign({ t, y, r, rated, dur, initial: t[0] }, extra || {});
+
+const ROWS = [
+  { title: 'Continue Watching', kind: 'wide', items: [
+    S('Archive 81', 2022, '7.4', 'TV-MA', '57m', { pct: 38, sub: 'S1 E4 · Spirit Receivers', d: 'An archivist restoring damaged videotapes is pulled into a mystery involving the missing director and a demonic cult.' }),
+    S('The Shape of Water', 2017, '7.3', 'R', '2h 3m', { pct: 62, d: 'A mute custodian at a secret research facility forms a bond with an amphibian creature held captive there.' }),
+    S('Deadwood', 2004, '8.6', 'TV-MA', '55m', { pct: 14, sub: 'S2 E7 · E.B. Was Left Out', d: 'A lawless mining camp in the Dakota Territory grows into a town under the eye of its saloon owners and prospectors.' }),
+    S('Ms. Marvel', 2022, '6.2', 'TV-14', '48m', { pct: 80, sub: 'S1 E3 · Destined', d: 'A teenager from Jersey City discovers powers that connect her to a family history she never knew.' }),
+    S('The Responder', 2022, '7.4', 'TV-MA', '58m', { pct: 25, sub: 'S1 E2', d: 'A night-shift response officer in Liverpool works a beat that keeps pulling him past the line.' }),
+    S('Jurassic World Dominion', 2022, '5.6', 'PG-13', '2h 27m', { pct: 47, d: 'Dinosaurs live alongside humans across the globe, and the balance of the food chain is under threat.' }),
+    S('The Wonder Years', 2021, '6.9', 'TV-PG', '22m', { pct: 90, sub: 'S1 E9', d: 'A Black family in Montgomery, Alabama in the late 1960s, seen through the eyes of their youngest son.' })
+  ] },
+  { title: 'Recently Added', kind: 'poster', items: [
+    S('Dune: Part Two', 2024, '8.5', 'PG-13', '2h 46m', { d: 'Paul Atreides unites with the Fremen to wage war against the conspirators who destroyed his family.' }),
+    S('Poor Things', 2023, '7.8', 'R', '2h 21m', { d: 'A young woman brought back to life by an unorthodox scientist sets off on an adventure across continents.' }),
+    S('The Zone of Interest', 2023, '7.4', 'PG-13', '1h 45m', { d: 'A commandant and his wife build a domestic life in a house beside the wall of Auschwitz.' }),
+    S('Past Lives', 2023, '7.8', 'PG-13', '1h 45m', { d: 'Two childhood friends reunite in New York two decades after their families parted ways.' }),
+    S('Anatomy of a Fall', 2023, '7.7', 'R', '2h 32m', { d: 'A writer stands trial for the death of her husband, and the case turns on the state of their marriage.' }),
+    S('Killers of the Flower Moon', 2023, '7.6', 'R', '3h 26m', { d: 'Members of the Osage nation are murdered one by one after oil is discovered on their land.' }),
+    S('La Chimera', 2023, '7.0', 'R', '2h 10m', { d: 'A British archaeologist falls in with a band of grave robbers trading in Etruscan artefacts.' }),
+    S('Perfect Days', 2023, '7.9', 'PG', '2h 4m', { d: 'A Tokyo toilet cleaner keeps a quiet routine that is gradually disturbed by figures from his past.' })
+  ] },
+  { title: 'Latest Movies', kind: 'poster', items: [
+    S('Blade Runner 2049', 2017, '8.0', 'R', '2h 44m', { d: 'A young blade runner uncovers a secret that could tip what is left of society into chaos.' }),
+    S('Arrival', 2016, '7.9', 'PG-13', '1h 56m', { d: 'A linguist is recruited to communicate with the occupants of twelve craft that appear around the world.' }),
+    S('Sicario', 2015, '7.6', 'R', '2h 1m', { d: 'An FBI agent joins a task force operating on the border with rules she does not recognise.' }),
+    S('Prisoners', 2013, '8.1', 'R', '2h 33m', { d: 'A father takes the search for his abducted daughter into his own hands as the case stalls.' }),
+    S('Enemy', 2013, '6.9', 'R', '1h 31m', { d: 'A history lecturer spots his exact double in a film and sets out to find him.' }),
+    S('Nightcrawler', 2014, '7.8', 'R', '1h 57m', { d: 'A drifter finds work filming crime scenes for local news and begins shaping what he shoots.' }),
+    S('Drive', 2011, '7.8', 'R', '1h 40m', { d: 'A stunt driver moonlighting as a getaway man gets caught between a neighbour and the people she owes.' }),
+    S('Only God Forgives', 2013, '5.6', 'R', '1h 30m', { d: 'A smuggler in Bangkok is pressed by his mother to avenge his brother\u2019s death.' })
+  ] },
+  { title: 'Latest TV', kind: 'poster', items: [
+    S('Severance', 2022, '8.7', 'TV-MA', '50m', { sub: '2 seasons', d: 'Office workers undergo a procedure that separates their memories of work from the rest of their lives.' }),
+    S('Andor', 2022, '8.4', 'TV-14', '45m', { sub: '2 seasons', d: 'A thief drifts into the early rebellion and finds the machinery of an empire closing around him.' }),
+    S('Dark', 2017, '8.7', 'TV-MA', '55m', { sub: '3 seasons', d: 'A child disappears in a German town and four families uncover a fracture running through time.' }),
+    S('Chernobyl', 2019, '9.3', 'TV-MA', '1h 5m', { sub: 'Limited series', d: 'The 1986 reactor explosion and the people ordered to contain what followed.' }),
+    S('The Leftovers', 2014, '8.3', 'TV-MA', '58m', { sub: '3 seasons', d: 'Three years after two percent of the world\u2019s population vanishes, a town tries to carry on.' }),
+    S('Legion', 2017, '8.2', 'TV-MA', '54m', { sub: '3 seasons', d: 'A man diagnosed as schizophrenic learns the voices he hears may be something else entirely.' }),
+    S('Devs', 2020, '7.6', 'TV-MA', '48m', { sub: 'Limited series', d: 'A software engineer investigates the secretive development division of the company she works for.' }),
+    S('From', 2022, '7.7', 'TV-MA', '50m', { sub: '3 seasons', d: 'A town traps everyone who enters it, and something waits in the trees after dark.' })
+  ] },
+  { title: 'Collections', kind: 'wide', items: [
+    S('Studio Ghibli', '', '', '', '', { sub: '24 films', d: 'Every feature from the studio, in release order, with the shorts collected at the end.' }),
+    S('A24', '', '', '', '', { sub: '61 films', d: 'The distributor\u2019s catalogue as held on this server.' }),
+    S('Villeneuve', '', '', '', '', { sub: '9 films', d: 'Director collection, from Polytechnique through Dune: Part Two.' }),
+    S('Nolan', '', '', '', '', { sub: '12 films', d: 'Director collection, Following to Oppenheimer.' }),
+    S('Coen Brothers', '', '', '', '', { sub: '18 films', d: 'Director collection, including the solo features.' }),
+    S('Kurosawa', '', '', '', '', { sub: '30 films', d: 'Director collection, restorations preferred where both exist.' }),
+    S('Criterion 4K', '', '', '', '', { sub: '48 films', d: 'Everything on the server sourced from a Criterion 4K release.' })
+  ] },
+  { title: 'Because you watched Archive 81', kind: 'poster', items: [
+    S('Marianne', 2019, '7.3', 'TV-MA', '50m', { sub: '1 season', d: 'A horror novelist returns to her home town to find the witch from her books is real.' }),
+    S('The Haunting of Hill House', 2018, '8.6', 'TV-MA', '55m', { sub: '1 season', d: 'Siblings who grew up in a haunted house are pulled back together by what happened there.' }),
+    S('Channel Zero', 2016, '7.0', 'TV-MA', '43m', { sub: '4 seasons', d: 'An anthology built from internet horror stories, one per season.' }),
+    S('Servant', 2019, '7.5', 'TV-MA', '30m', { sub: '4 seasons', d: 'A Philadelphia couple hire a nanny for a doll, and the arrangement does not stay that way.' }),
+    S('The Outsider', 2020, '7.6', 'TV-MA', '58m', { sub: '1 season', d: 'An investigation into a child\u2019s murder runs into evidence that cannot both be true.' }),
+    S('Midnight Mass', 2021, '7.7', 'TV-MA', '1h 5m', { sub: 'Limited series', d: 'A new priest arrives on an isolated island and miracles begin, with a cost.' }),
+    S('Hannibal', 2013, '8.5', 'TV-MA', '44m', { sub: '3 seasons', d: 'A profiler with an unusual gift is drawn into the orbit of his psychiatrist.' }),
+    S('Bly Manor', 2020, '7.3', 'TV-MA', '55m', { sub: '1 season', d: 'An au pair takes a post at a country house whose grounds hold more than its residents admit.' })
+  ] }
+];
+
+const EPS = [
+  ['1. Mystery Signals', '58m', '7.9', 100], ['2. Wellspring', '57m', '7.9', 100],
+  ['3. Terror in the Aisles', '45m', '8.2', 100], ['4. Spirit Receivers', '57m', '8.8', 100],
+  ['5. Through the Looking Glass', '52m', '8.0', 41], ['6. The Circle', '55m', '8.0', 0],
+  ['7. The Ferryman', '46m', '8.0', 0], ['8. What Lies Beneath', '56m', '7.6', 0]
+];
+
+const pick = (ri, ci) => ROWS[ri].items[ci];
+const ROWS2 = [
+  { title: 'Trending', items: [pick(3, 0), pick(1, 0), pick(3, 1), pick(5, 5), pick(1, 1), pick(3, 2), pick(2, 0), pick(5, 1)] },
+  { title: 'Continue Watching', items: ROWS[0].items },
+  { title: 'Recently Added', items: ROWS[1].items },
+  { title: 'Latest Movies', items: ROWS[2].items },
+  { title: 'Latest TV', items: ROWS[3].items },
+  { title: 'Collections', items: ROWS[4].items }
+];
+const ROWS3 = [
+  { title: 'Continue Watching', items: ROWS[0].items },
+  { title: 'Trending', items: ROWS2[0].items },
+  { title: 'Recently Added', items: ROWS[1].items },
+  { title: 'Latest Movies', items: ROWS[2].items },
+  { title: 'Latest TV', items: ROWS[3].items },
+  { title: 'Collections', items: ROWS[4].items }
+];
+const DENSE_H = 267, DENSE_STEP = 300;
+
+const ACTIONS = [
+  ['ph-film-reel', 'Trailer'], ['ph-monitor-play', '4K HDR'], ['ph-hard-drives', 'Remux · Tower'],
+  ['ph-speaker-high', 'TrueHD 7.1'], ['ph-subtitles', 'Subtitles off'], ['ph-plus-circle', 'My list']
+];
+const PLAYER_BTNS = [
+  ['ph-speaker-high', 'TrueHD 7.1'], ['ph-subtitles', 'Subtitles off'],
+  ['ph-monitor-play', 'Auto · 4K'], ['ph-list-numbers', 'Chapters']
+];
+const QUALITY = [
+  ['Auto', 'follows the connection'], ['Original · 4K HDR', 'Remux · 68 Mbps'],
+  ['1080p', 'transcode · 12 Mbps'], ['720p', 'transcode · 4 Mbps']
+];
+const PALETTES = [
+  { id: 'sage', name: 'Slate & sage', note: 'cool grey-green, quietest of the four', bg: '#131719', tile: '#1c2124', ac: '#a3bfa8', ac2: '#b9a98c', sc: '9,11,12' },
+  { id: 'blurple', name: 'Nocturne blurple', note: 'the design system accent, unflooded', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#93a0b8', sc: '9,10,17' },
+  { id: 'blurple-apricot', name: 'Blurple + apricot', note: 'warm complement — most lift, still soft', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#e5a06d', sc: '9,10,17' },
+  { id: 'blurple-aqua', name: 'Blurple + aqua', note: 'cool split-complement, keeps the calm', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#6fc3bd', sc: '9,10,17' },
+  { id: 'blurple-rose', name: 'Blurple + rose', note: 'neighbouring warm, gentlest contrast', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#e2879e', sc: '9,10,17' },
+  { id: 'clay', name: 'Dusk & clay', note: 'warm violet ground, terracotta second', bg: '#191621', tile: '#221e2c', ac: '#b6a6cc', ac2: '#c49a88', sc: '11,9,15' },
+  { id: 'harbour', name: 'Harbour & sand', note: 'deep teal with a sand highlight', bg: '#0f181b', tile: '#182226', ac: '#93b6bb', ac2: '#c8b795', sc: '6,11,13' }
+];
+const rgbOf = (hex) => [1, 3, 5].map(i => parseInt(hex.substr(i, 2), 16)).join(',');
+
+const CHAPTERS = [
+  ['0:00', 'Opening'], ['11:26', 'Sietch Tabr'], ['38:14', 'The gom jabbar'],
+  ['1:02:50', 'Arrakeen'], ['1:36:18', 'Riding the worm'], ['2:11:04', 'The reckoning']
+];
+const CAST = [
+  ['Timothée Chalamet', 'Paul Atreides'], ['Zendaya', 'Chani'], ['Rebecca Ferguson', 'Lady Jessica'],
+  ['Austin Butler', 'Feyd-Rautha'], ['Florence Pugh', 'Princess Irulan'], ['Javier Bardem', 'Stilgar']
+];
+const EXTRAS = [['Official trailer', '2:31'], ['Behind the sands', '8:14'], ['Creating the worm', '6:02'], ['Deleted scene: the sietch', '3:47']];
+
+
+class Component extends DCLogic {
+  state = { pal: 2, active: 'j', j: { r: 0, cols: [0, 0, 0, 0, 0, 0] }, l: { r: 2, cols: [0, 0, 1, 0, 0, 0] } };
+
+  view3(k) {
+    const f = this.state[k];
+    const dense = f.r > 0;
+    const rows = ROWS3.map((row, ri) => {
+      const focusedRow = ri === f.r;
+      return {
+        title: row.title,
+        headColor: focusedRow ? 'var(--fg)' : 'var(--dim)',
+        tx: 'translateX(' + (-Math.max(0, f.cols[ri] - 1) * 416) + 'px)',
+        txD: 'translateX(' + (-Math.max(0, f.cols[ri] - 1) * DENSE_STEP) + 'px)',
+        items: row.items.map((it, ci) => {
+          const on = focusedRow && ci === f.cols[ri];
+          return {
+            t: it.t, initial: it.initial, pct: it.pct, pctW: (it.pct || 0) + '%',
+            tf: on ? 'scale(1.04)' : 'scale(1)',
+            ring: on ? '0 0 0 2px var(--ac), 0 24px 54px rgba(0,0,0,.6)' : '0 0 0 1px rgba(238,241,243,.06)',
+            titleColor: on ? 'var(--fg)' : 'var(--dim)',
+            pick: () => this.setState({ active: k, [k]: { r: ri, cols: Object.assign(f.cols.slice(), { [ri]: ci }) } })
+          };
+        })
+      };
+    });
+    const item = ROWS3[f.r].items[f.cols[f.r]];
+    return {
+      rows, big: !dense, dense,
+      tyD: 'translateY(' + (-Math.max(0, f.r - 1) * DENSE_H) + 'px)',
+      hero: {
+        t: item.t, rowTitle: ROWS3[f.r].title,
+        sub: item.sub || (item.y ? item.y + ' \u00b7 ' + item.dur : ''),
+        left: item.pct ? (100 - item.pct) + '% remaining' : '',
+        cta: item.pct ? 'Resume' : 'Play'
+      }
+    };
+  }
+
+  applyPal(idx) {
+    const p = PALETTES[idx == null ? this.state.pal : idx];
+    const bg = rgbOf(p.bg), ac = rgbOf(p.ac), s = document.documentElement.style;
+    const v = {
+      '--bg': p.bg, '--tile': p.tile, '--ac': p.ac, '--ac2': p.ac2,
+      '--ac40': 'rgba(' + ac + ',.4)', '--ac28': 'rgba(' + ac + ',.28)', '--ac22': 'rgba(' + ac + ',.22)',
+      '--ac20': 'rgba(' + ac + ',.2)', '--ac14': 'rgba(' + ac + ',.14)',
+      '--bg72': 'rgba(' + bg + ',.72)', '--bg86': 'rgba(' + bg + ',.86)', '--bg18': 'rgba(' + bg + ',.18)', '--bg0': 'rgba(' + bg + ',0)',
+      '--sc95': 'rgba(' + p.sc + ',.95)', '--sc94': 'rgba(' + p.sc + ',.94)', '--sc90': 'rgba(' + p.sc + ',.9)',
+      '--sc72': 'rgba(' + p.sc + ',.72)', '--sc55': 'rgba(' + p.sc + ',.55)', '--sc50': 'rgba(' + p.sc + ',.5)',
+      '--sc45': 'rgba(' + p.sc + ',.45)', '--sc0': 'rgba(' + p.sc + ',0)'
+    };
+    Object.keys(v).forEach(k => s.setProperty(k, v[k]));
+  }
+  setPal(i) { this.applyPal(i); this.setState({ pal: i }); }
+
+  componentDidMount() {
+    this.applyPal();
+    this._k = (e) => {
+      const map = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] };
+      const d = map[e.key];
+      if (!d) return;
+      e.preventDefault();
+      const k = this.state.active;
+      const f = this.state[k];
+      const cols = f.cols.slice();
+      let r = f.r;
+      if (d[0]) r = Math.max(0, Math.min(ROWS3.length - 1, r + d[0]));
+      if (d[1]) cols[r] = Math.max(0, Math.min(ROWS3[r].items.length - 1, cols[r] + d[1]));
+      this.setState({ [k]: { r, cols } });
+    };
+    window.addEventListener('keydown', this._k);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); }
+
+  renderVals() {
+    return {
+      palettes: (() => {
+        const want = PALETTES.map(p => p.name).indexOf(this.props.palette);
+        if (want > -1 && want !== this._propPal) { this._propPal = want; if (want !== this.state.pal) this.setPal(want); }
+        return PALETTES;
+      })().map((p, i) => ({
+        name: p.name, note: p.note, bg: p.bg, tile: p.tile, ac: p.ac, ac2: p.ac2,
+        border: i === this.state.pal ? p.ac : 'rgba(255,255,255,.12)',
+        chipBg: i === this.state.pal ? 'rgba(255,255,255,.06)' : 'transparent',
+        pick: () => this.setPal(i)
+      })),
+      viewJ: this.view3('j'),
+      viewL: this.view3('l'),
+      actJ: () => this.setState({ active: 'j' }),
+      actL: () => this.setState({ active: 'l' }),
+      actions: ACTIONS.map(([icon, label], i) => ({
+        icon, label,
+        bg: i === 0 ? 'var(--ac20)' : 'var(--soft)',
+        ring: i === 0 ? '0 0 0 2px var(--ac)' : 'none',
+        fg: i === 0 ? 'var(--ac)' : 'var(--fg)',
+        labelColor: i === 0 ? 'var(--fg)' : 'var(--dim)'
+      })),
+      cast: CAST.map(([name, role]) => ({ name, role, ini: name.split(' ').map(w => w[0]).join('') })),
+      extras: EXTRAS.map(([t, dur]) => ({ t, dur })),
+      playerBtns: PLAYER_BTNS.map(([icon, label]) => ({ icon, label })),
+      playerBtns2: PLAYER_BTNS.map(([icon, label], i) => ({
+        icon, label: i === 2 ? '4K HDR' : label,
+        bg: i === 2 ? 'var(--ac20)' : 'rgba(238,241,243,.1)',
+        ring: i === 2 ? '0 0 0 2px var(--ac)' : 'none',
+        fg: i === 2 ? 'var(--ac)' : 'var(--fg)',
+        labelColor: i === 2 ? 'var(--fg)' : 'rgba(238,241,243,.6)'
+      })),
+      playerBtns3: PLAYER_BTNS.map(([icon, label], i) => ({
+        icon, label,
+        bg: i === 3 ? 'var(--ac20)' : 'rgba(238,241,243,.1)',
+        ring: i === 3 ? '0 0 0 2px var(--ac)' : 'none',
+        fg: i === 3 ? 'var(--ac)' : 'var(--fg)',
+        labelColor: i === 3 ? 'var(--fg)' : 'rgba(238,241,243,.6)'
+      })),
+      chapterTx: 'translateX(-324px)',
+      chapters: CHAPTERS.map(([at, t], i) => ({
+        at, t,
+        ring: i === 3 ? '0 0 0 2px var(--ac), 0 20px 44px rgba(0,0,0,.6)' : '0 0 0 1px rgba(238,241,243,.08)',
+        playColor: i === 3 ? 'var(--ac)' : 'rgba(238,241,243,.28)',
+        titleColor: i === 3 ? 'var(--fg)' : 'rgba(238,241,243,.55)'
+      })),
+      qualityOpts: QUALITY.map(([label, note], i) => ({
+        label, note, on: i === 1,
+        icon: i === 1 ? 'ph-monitor-play' : 'ph-monitor',
+        bg: i === 1 ? 'var(--ac14)' : 'transparent',
+        fg: i === 1 ? 'var(--fg)' : 'rgba(238,241,243,.68)'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
