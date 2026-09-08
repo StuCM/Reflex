@@ -76,6 +76,35 @@ function create(opts) {
     srv.history.sort(function (a, b) { return b.viewedAt - a.viewedAt; });
   });
 
+  /* One film part-watched on BOTH servers, so the row has an entry whose copies
+     have to be cleared on each of them. The decks are otherwise built from each
+     server's own list and rarely overlap. */
+  (function () {
+    const main = lib.servers[0], backup = lib.servers[1];
+    const held = {};
+    backup.items['1'].forEach(function (m) { held[m.guid] = true; });
+    const shared = main.items['1'].find(function (m) { return held[m.guid]; });
+    if (!shared) return;
+    [main, backup].forEach(function (srv) {
+      const copy = JSON.parse(JSON.stringify(
+        srv.items['1'].find(function (m) { return m.guid === shared.guid; })));
+      copy.viewOffset = Math.floor(copy.duration * 0.35);
+      copy.lastViewedAt = 1720000900;
+      srv.deck.unshift(copy);
+    });
+  })();
+
+  /* Removing something from the deck, whichever way the app got there. A show's
+     key takes its episodes with it, which is what Plex does and the whole
+     reason the app scrobbles a show rather than thirty seasons of it. */
+  function dropFromDeck(srv, key) {
+    const before = srv.deck.length;
+    srv.deck = srv.deck.filter(function (m) {
+      return String(m.ratingKey) !== key && String(m.grandparentRatingKey || '') !== key;
+    });
+    return before - srv.deck.length;
+  }
+
   function container(fields) {
     const mc = { size: 0, identifier: 'com.plexapp.plugins.library' };
     Object.keys(fields || {}).forEach(function (k) { mc[k] = fields[k]; });
@@ -449,6 +478,30 @@ function create(opts) {
 
     if (pathname === '/library/onDeck') {
       json(res, 200, container({ size: srv.deck.length, Metadata: srv.deck.map(stripStreams) }));
+      return true;
+    }
+
+    /* Hiding an item without touching its watch state — what the app wants, and
+       what only newer servers have. Backup does not, which is the whole reason
+       the app has a fallback and this harness has two servers. */
+    if (pathname === '/actions/removeFromContinueWatching' && req.method === 'PUT') {
+      if (srv.spec.index !== 1) {
+        log(srv.name + ' has no removeFromContinueWatching — 404');
+        res.writeHead(404, { 'Content-Type': 'text/plain',
+                             'Access-Control-Allow-Origin': '*' });
+        res.end('not found');
+        return true;
+      }
+      log(srv.name + ' hid ' + q.ratingKey + ' from the deck (' +
+          dropFromDeck(srv, String(q.ratingKey)) + ' gone)');
+      json(res, 200, container({ size: 0 }));
+      return true;
+    }
+
+    if (pathname === '/:/scrobble' && req.method === 'PUT') {
+      log(srv.name + ' scrobbled ' + q.key + ' (' +
+          dropFromDeck(srv, String(q.key)) + ' off the deck)');
+      json(res, 200, container({ size: 0 }));
       return true;
     }
 

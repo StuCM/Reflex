@@ -344,6 +344,41 @@ var Plex = (function () {
     }).catch(function () { return []; });
   }
 
+  /* ---------- getting things off the deck ----------
+
+     Two endpoints, tried in that order. Only the first is what the user
+     actually means — it hides the item and leaves its watch state alone — but
+     it exists only on newer servers, and these are not our servers. Which one
+     a server has is found out by asking it, not by reading a version number:
+     versions lie, and the fallback has to exist either way. */
+
+  /* Whether a server answered removeFromContinueWatching. Memory only, so a
+     row of ten does not rediscover the same 404 ten times and an upgraded
+     server is not written off for ever. */
+  var canHide = {};
+
+  /* Hide an item from Continue watching without touching its watch state.
+     Resolves false where the server has no such endpoint, so the caller can ask
+     about the destructive alternative rather than fall into it. */
+  function hideFromDeck(server, ratingKey) {
+    if (canHide[server.id] === false) return Promise.resolve(false);
+    return request('PUT', server.base + '/actions/removeFromContinueWatching?' +
+                   qs({ ratingKey: ratingKey }), { token: server.token })
+      .then(function () { canHide[server.id] = true; return true; }, function (e) {
+        if (!/-> 40[04](\s|$)/.test(e.message)) throw e;
+        canHide[server.id] = false;
+        return false;
+      });
+  }
+
+  /* Mark an item watched, which is how an older server is made to forget it.
+     Plex propagates a show's scrobble down to every episode of it. */
+  function scrobble(server, ratingKey) {
+    return request('PUT', server.base + '/:/scrobble?' +
+                   qs({ key: ratingKey, identifier: 'com.plexapp.plugins.library' }),
+                   { token: server.token });
+  }
+
   /* The show hierarchy, one level at a time: a show's children are its seasons,
      a season's are its episodes. Never /allLeaves on a library we don't own —
      one show at a time is the whole point. */
@@ -657,7 +692,8 @@ var Plex = (function () {
     discover: discover, state: s,
     sections: sections, items: items, metadata: metadata,
     posterUrl: posterUrl, artUrl: artUrl, photoUrl: photoUrl,
-    onDeck: onDeck, hubs: hubs, search: search, children: children,
+    onDeck: onDeck, hideFromDeck: hideFromDeck, scrobble: scrobble,
+    hubs: hubs, search: search, children: children,
     history: history, devices: devices, findByGuid: findByGuid, tmdbId: tmdbId,
     allVersions: allVersions,
     contentRatings: contentRatings,

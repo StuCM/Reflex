@@ -61,7 +61,9 @@ var Detail = (function () {
                  '<path d="M188 92a52 52 0 0 1 0 72"/>'),
     subs: glyph('<rect x="28" y="52" width="200" height="152" rx="18"/>' +
                 '<line x1="64" y1="124" x2="140" y2="124"/>' +
-                '<line x1="64" y1="164" x2="192" y2="164"/>')
+                '<line x1="64" y1="164" x2="192" y2="164"/>'),
+    remove: glyph('<circle cx="128" cy="128" r="100"/>' +
+                  '<line x1="84" y1="128" x2="172" y2="128"/>')
   };
 
   var item = null;                 // the merged entry
@@ -72,6 +74,7 @@ var Detail = (function () {
   var strip = 0;                   // 0 = the action row, 1 = the extras
   var idx = 0;                     // within that row
   var headMd = null;               // the first copy's metadata: what the header says
+  var onDeck = false;              // is this in Continue watching, and so clearable
   var opts = {};
   var generation = 0;
 
@@ -92,6 +95,7 @@ var Detail = (function () {
       return { item: copy, server: Servers.of(copy), versions: null };
     });
     extras = [];
+    onDeck = Browse.isOnDeck(entry);
     strip = 0;
     idx = 0;
     verdict = null; chosenAudio = null; chosenSub = null;
@@ -353,20 +357,36 @@ var Detail = (function () {
     return Media.versionLabel(sources[sel] && sources[sel].media);
   }
 
-  /* Six at most: Play, then the extras, then the three things about the copy
-     that can be chosen. Trailer is only here when there is one. */
+  /* Getting this out of Continue watching, which the row does for several at a
+     time and this does for one. On success there is nothing left to say about
+     it here, so the page closes onto the rail it has already been dropped
+     from. */
+  function removeFromDeck() {
+    Browse.clearOne(item, function () { onDeck = false; close(); });
+  }
+
+  /* Seven at most: Play, then the extras, then the three things about the copy
+     that can be chosen. Trailer is only here when there is one, and Remove only
+     when the thing is actually on the deck. */
   function actions() {
-    var out = [{ label: 'Play', primary: true, caption: playCaption(),
+    var out = [{ act: 'play', label: 'Play', primary: true, caption: playCaption(),
                  run: function () { start(verdict, false); } }];
     if (extras.length) {
-      out.push({ glyph: GLYPHS.trailer, caption: extras[0].title,
+      out.push({ act: 'trailer', glyph: GLYPHS.trailer, caption: extras[0].title,
                  run: function () { start(extras[0].verdict, true); } });
     }
-    out.push({ glyph: GLYPHS.quality, caption: qualityCaption(), run: openQuality });
-    out.push({ glyph: GLYPHS.source, caption: sourceCaption(), run: openSource });
-    out.push({ glyph: GLYPHS.audio, run: openAudio,
+    out.push({ act: 'quality', glyph: GLYPHS.quality, caption: qualityCaption(),
+               run: openQuality });
+    out.push({ act: 'source', glyph: GLYPHS.source, caption: sourceCaption(),
+               run: openSource });
+    out.push({ act: 'audio', glyph: GLYPHS.audio, run: openAudio,
                caption: chosenAudio ? Media.audioLabel(chosenAudio) : 'checking…' });
-    out.push({ glyph: GLYPHS.subs, caption: Media.subLabel(chosenSub), run: openSubs });
+    out.push({ act: 'subtitles', glyph: GLYPHS.subs, caption: Media.subLabel(chosenSub),
+               run: openSubs });
+    if (onDeck) {
+      out.push({ act: 'remove', glyph: GLYPHS.remove, run: removeFromDeck,
+                 caption: 'Remove from Continue watching' });
+    }
     return out;
   }
 
@@ -375,7 +395,7 @@ var Detail = (function () {
     for (i = 0; i < list.length; i++) {
       a = list[i];
       html += '<div class="dt-act' + (a.primary ? ' primary' : '') +
-              (strip === 0 && i === idx ? ' on' : '') + '">' +
+              (strip === 0 && i === idx ? ' on' : '') + '" data-act="' + a.act + '">' +
               '<div class="dt-act-btn">' + (a.glyph || UI.escapeHtml(a.label)) + '</div>' +
               '<div class="dt-act-cap">' + UI.escapeHtml(a.caption) + '</div>' +
               '</div>';
