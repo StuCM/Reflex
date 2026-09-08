@@ -1,7 +1,7 @@
 ---
 id: 020
 slug: split-the-stylesheet
-status: draft
+status: approved
 branch: crew/020-split-the-stylesheet
 model: sonnet
 env: laptop
@@ -9,8 +9,6 @@ files:
   - css/
   - index.html
   - tools/check-es5.js
-  - CLAUDE.md
-  - .claude/crew/roles/worker.md
 ---
 
 # One stylesheet per screen, and the tokens they share
@@ -33,7 +31,12 @@ for: radius, control sizes and spacing as tokens, read from
 a habit that has already drifted between the rail, the film page and the player.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing. 018 merged as
+`f10d70a`; main verifies at 75/75.
+
+`css/app.css` is 944 lines. Task 019 runs beside this one and owns
+`dev/smoke.js`, `dev/smoke/` and `package.json` — do not touch them, and do not
+add or move a smoke step.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
@@ -120,10 +123,11 @@ produced this task. Workers must not go digging for more.
    if a file in `css/` is not linked from `index.html`. The split creates
    exactly the failure mode that rule exists to prevent.
 
-7. **`CLAUDE.md` and `.claude/crew/roles/worker.md`** — describe the new layout
-   and say that a task declares the screen's stylesheet, not the whole `css/`
-   directory. That is the point of the exercise, so it needs to be written down
-   where the next spec author will read it.
+7. **Do not edit `CLAUDE.md` or the worker role.** 019 is running beside this
+   task and would collide on both. Instead, write into the task file what those
+   documents need to say — the new layout, and that a task now declares one
+   screen's stylesheet rather than the whole `css/` directory — and the
+   orchestrator will apply it at close.
 
 ## Out of scope
 - **Any visual change** beyond the two palette corrections in step 4.

@@ -1,7 +1,7 @@
 ---
 id: 019
 slug: split-the-smoke-suite
-status: draft
+status: approved
 branch: crew/019-split-the-smoke-suite
 model: sonnet
 env: laptop
@@ -9,8 +9,6 @@ files:
   - dev/smoke.js
   - dev/smoke/
   - package.json
-  - .claude/crew/roles/worker.md
-  - CLAUDE.md
 ---
 
 # One suite, many files, and a free port
@@ -39,7 +37,11 @@ are now the loop's bottleneck rather than any feature:
 a worker verifies its branch, so those waits are serial too.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing. 018 merged as
+`f10d70a`; main verifies at 75/75.
+
+`dev/smoke.js` is at 75 steps and 3,344 lines. Task 020 runs beside this one
+and owns `css/`, `index.html` and `tools/check-es5.js` — do not touch them.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from
@@ -102,10 +104,11 @@ Workers must not go digging for more.
      passing silently.
    - `verify` is unchanged and still runs the whole thing.
 
-5. **`CLAUDE.md` and `.claude/crew/roles/worker.md`** — tell workers the new
-   shape: iterate against your area, and run the whole suite before the gate.
-   Note that a task now declares `dev/smoke/<area>.js` in `files:` rather than
-   the whole suite, which is what lets two UI tasks run at once.
+5. **Do not edit `CLAUDE.md` or the worker role.** 020 is running beside this
+   task and would collide on both. Instead, write into the task file what those
+   documents need to say — iterate against your area, run the whole suite before
+   the gate, and declare `dev/smoke/<area>.js` rather than the whole suite — and
+   the orchestrator will apply it at close.
 
 6. **Prove the split kept everything.** In the task file, record the step count
    before and after — they must match — and the wall-clock time for the full
@@ -135,8 +138,8 @@ Workers must not go digging for more.
 - [ ] No assertion was deleted or weakened; anything that looked wrong while
       being moved is recorded in the task file.
 - [ ] `npm run verify` passes and is unchanged in what it covers.
-- [ ] CLAUDE.md and the worker role say how to run one area and that tasks now
-      declare a single area file.
+- [ ] The task file states what CLAUDE.md and the worker role must be changed
+      to say, for the orchestrator to apply.
 - [ ] The task file records the before and after step counts and both timings.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
