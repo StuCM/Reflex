@@ -61,15 +61,15 @@
      A recap is a YouTube video, not library content: it never reaches Guard,
      Player or the timeline, and it opens nothing on anyone's Plex server. */
 
-  var recapVideo = null;         // playing in the overlay, or null
-  var recapOffer = null;         // the panel refused it; OK opens the app instead
-  var recapTimer = null;
+  let recapVideo = null;         // playing in the overlay, or null
+  let recapOffer = null;         // the panel refused it; OK opens the app instead
+  let recapTimer = null;
 
   /* Chromium 53 is nine years old and YouTube's embed drops old browsers over
      time, so an embed that never loads is a real outcome, not a bug: it falls
      back to the app that can play it rather than sitting on a black screen. */
   function openRecap(video) {
-    var frame = document.getElementById('recap-frame');
+    const frame = document.getElementById('recap-frame');
     recapVideo = video;
     clearTimeout(recapTimer);
     recapTimer = setTimeout(function () { recapFailed('did not load'); }, 8000);
@@ -80,7 +80,7 @@
   }
 
   function closeRecap() {
-    var frame = document.getElementById('recap-frame');
+    const frame = document.getElementById('recap-frame');
     clearTimeout(recapTimer);
     frame.onload = null;
     frame.onerror = null;
@@ -90,7 +90,7 @@
   }
 
   function recapFailed(why) {
-    var video = recapVideo;
+    const video = recapVideo;
     if (!video) return;
     closeRecap();
     recapOffer = video;
@@ -166,12 +166,12 @@
        must never share the ARC link. */
     ShowPage.silence();
     if (!verdict || !verdict.ok) return;
-    var md = verdict.md;
-    var server = Servers.of(md);
+    const md = verdict.md;
+    const server = Servers.of(md);
     /* Only an episode has a next. A film does not, and a trailer or an extra is
        not the thing you sat down to watch. */
-    var hasNext = !isExtra && md.type === 'episode';
-    var goBack = back || function () { openDetail(item, toBrowse); };
+    const hasNext = !isExtra && md.type === 'episode';
+    const goBack = back || function () { openDetail(item, toBrowse); };
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0
       : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
@@ -251,7 +251,7 @@
   /* ---------- keys ---------- */
 
   function onKey(e) {
-    var code = e.keyCode, handled;
+    let code = e.keyCode, handled;
 
     if (Player.playing()) {
       if (Player.key(code)) e.preventDefault();
@@ -284,7 +284,7 @@
     /* The offer of the YouTube app: OK takes it, BACK declines, and either way
        the show page and its recaps are what is behind this message. */
     if (recapOffer) {
-      var video = recapOffer;
+      const video = recapOffer;
       recapOffer = null;
       if (code === UI.KEY.OK) launchYouTube(video.id);
       UI.show('show');
@@ -343,7 +343,7 @@
         });
       }));
     }).then(function (perServer) {
-      var any = perServer.filter(function (r) { return r.sections.length; });
+      const any = perServer.filter(function (r) { return r.sections.length; });
       if (!any.length) {
         UI.message('No libraries', 'Neither server shares a film or show section.');
         return;
@@ -358,7 +358,7 @@
   /* Cached sections name their server by id; turn them back into the server
      objects discovery handed us. A server that has since gone is dropped. */
   function rehydrate(cached) {
-    var out = [], i, server;
+    let out = [], i, server;
     for (i = 0; i < cached.length; i++) {
       server = Servers.get(cached[i].serverId);
       if (server) out.push({ server: server, sections: cached[i].sections });
@@ -394,7 +394,7 @@
   /* Does persistence actually work here? If not, every launch is a first
      launch, which looks like a login loop. */
   function storageSelfTest() {
-    var ok;
+    let ok;
     try {
       localStorage.setItem('selftest', 'y');
       ok = localStorage.getItem('selftest') === 'y';

@@ -12,10 +12,10 @@
 var Meta = (function () {
   'use strict';
 
-  var CAP = 500;                 // metadata payloads kept in RAM
-  var HOLD = 280;                // ms of stillness before asking a server
+  const CAP = 500;                 // metadata payloads kept in RAM
+  const HOLD = 280;                // ms of stillness before asking a server
 
-  var cache = {}, count = 0, timer = null;
+  let cache = {}, count = 0, timer = null;
 
   function keyOf(item) {
     return (item && item._server ? item._server : '?') + ':' + (item && item.ratingKey);
@@ -33,9 +33,9 @@ var Meta = (function () {
 
   function load(item) {
     if (!item || !item.ratingKey) return Promise.resolve(null);
-    var key = keyOf(item);
+    const key = keyOf(item);
     if (cache[key]) return Promise.resolve(cache[key]);
-    var server = Servers.of(item);
+    const server = Servers.of(item);
     if (!server) return Promise.resolve(null);
 
     return Store.get('meta:' + key).then(function (cached) {
@@ -65,7 +65,7 @@ var Meta = (function () {
     /* Already held: the caller drew the badge from the cache a moment ago, so
        there is nothing to fetch and nothing to repaint. */
     if (cache[keyOf(item)]) return;
-    var ratingKey = item.ratingKey;
+    const ratingKey = item.ratingKey;
     timer = setTimeout(function () {
       load(item).then(function (md) { if (md) onLoaded(ratingKey, md); });
     }, HOLD);

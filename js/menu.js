@@ -10,18 +10,18 @@
 var Menu = (function () {
   'use strict';
 
-  var ROW_H = 56;                  // .menu-row, in CSS pixels
-  var ROWS_SHOWN = 7;
+  const ROW_H = 56;                  // .menu-row, in CSS pixels
+  const ROWS_SHOWN = 7;
 
-  var host = null, tabs = [], tab = 0, sel = 0, built = [];
-  var onChoose = null, onClose = null;
-  var elTabs = null, elInner = null, elNote = null;
+  let host = null, tabs = [], tab = 0, sel = 0, built = [];
+  let onChoose = null, onClose = null;
+  let elTabs = null, elInner = null, elNote = null;
 
   /* A tab's rows are asked for when the tab is shown, not when the menu opens:
      what is on offer depends on where playback has got to, and a list built
      four tabs ago is stale by the time you reach it. */
   function build() {
-    var list = tabs[tab] ? tabs[tab].rows() : [];
+    const list = tabs[tab] ? tabs[tab].rows() : [];
     built = list.length ? list : [{ label: 'Nothing to choose here', off: true }];
   }
 
@@ -30,13 +30,13 @@ var Menu = (function () {
   /* Land on what is already in use, so OK on the first press is a no-op rather
      than a surprise. */
   function land() {
-    var list = rows(), i;
+    let list = rows(), i;
     sel = 0;
     for (i = 0; i < list.length; i++) if (list[i].on) { sel = i; return; }
   }
 
   function paint() {
-    var list = rows(), html = '', i, r;
+    let list = rows(), html = '', i, r;
     for (i = 0; i < tabs.length; i++) {
       html += '<span class="menu-tab' + (i === tab ? ' on' : '') + '">' +
               UI.escapeHtml(tabs[i].label) + '</span>';
@@ -56,7 +56,7 @@ var Menu = (function () {
     elInner.innerHTML = html;
 
     /* Keep the selection in view without a scrollbar the remote cannot use. */
-    var top = UI.clamp(sel - 3, 0, Math.max(0, list.length - ROWS_SHOWN));
+    const top = UI.clamp(sel - 3, 0, Math.max(0, list.length - ROWS_SHOWN));
     elInner.style.webkitTransform = elInner.style.transform =
       'translateY(' + (-top * ROW_H) + 'px)';
     elNote.textContent = (tabs[tab] && tabs[tab].note) || '';
@@ -89,7 +89,7 @@ var Menu = (function () {
 
   function close() {
     if (!host) return;
-    var done = onClose;
+    const done = onClose;
     host.classList.add('hidden');
     host = null; tabs = []; onChoose = null; onClose = null;
     if (done) done();
@@ -100,13 +100,13 @@ var Menu = (function () {
   /* Closed before the choice is acted on, so a screen that reopens the menu or
      tears itself down in response is not fighting an overlay that is still up. */
   function choose() {
-    var r = rows()[sel], go = onChoose;
+    const r = rows()[sel], go = onChoose;
     close();
     if (r && !r.off && go) go(r.value, r);
   }
 
   function key(code) {
-    var list = rows();
+    const list = rows();
     if (code === 38) { sel = (sel + list.length - 1) % list.length; paint(); return true; }
     if (code === 40) { sel = (sel + 1) % list.length; paint(); return true; }
     if ((code === 37 || code === 39) && tabs.length > 1) {

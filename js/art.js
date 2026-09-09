@@ -18,25 +18,25 @@ var Art = (function () {
 
   /* The tile is 209 wide, so w342 is the next size up — w500 was for a tile
      nearly twice as wide and is now a third of a megabyte per poster wasted. */
-  var POSTER_SIZE = 'w342', HERO_SIZE = 'w1280';
-  var MAX_IN_FLIGHT = 4;
-  var CAST = 4;          // names in the header's key actors line
+  const POSTER_SIZE = 'w342', HERO_SIZE = 'w1280';
+  const MAX_IN_FLIGHT = 4;
+  const CAST = 4;          // names in the header's key actors line
 
-  var cache = {};        // tmdbId -> { hero: path|null, poster: path|null, facts: {} }
-  var pending = {};      // tmdbId -> true while a lookup is queued or running
-  var queue = [];
-  var active = 0;
-  var listeners = [];
+  const cache = {};        // tmdbId -> { hero: path|null, poster: path|null, facts: {} }
+  const pending = {};      // tmdbId -> true while a lookup is queued or running
+  const queue = [];
+  let active = 0;
+  const listeners = [];
 
   /* The best-voted path out of one of TMDB's image lists, or null. */
   function bestOf(list) {
-    var usable = [], i;
+    let usable = [], i;
     if (!Array.isArray(list)) return null;
     for (i = 0; i < list.length; i++) {
       if (list[i] && list[i].file_path) usable.push(list[i]);
     }
     usable.sort(function (a, b) {
-      var byScore = (b.vote_average || 0) - (a.vote_average || 0);
+      const byScore = (b.vote_average || 0) - (a.vote_average || 0);
       return byScore || (b.vote_count || 0) - (a.vote_count || 0);
     });
     return usable.length ? usable[0].file_path : null;
@@ -47,20 +47,20 @@ var Art = (function () {
   function pick(payload) {
     /* The images used to be the whole payload and are now appended to it,
        so both shapes are read — the old cache entries are still the old one. */
-    var images = (payload && payload.images) || payload || {};
+    const images = (payload && payload.images) || payload || {};
     return { hero: bestOf(images.backdrops), poster: bestOf(images.posters) };
   }
 
   /* What the header says about a title, out of the same payload the backdrops
      came from. Pure, and never throws: anything missing gives empty. */
   function facts(payload) {
-    var credits = (payload && payload.credits) || {};
-    var billing = Array.isArray(credits.cast) ? credits.cast : [];
-    var cast = [], i;
+    const credits = (payload && payload.credits) || {};
+    const billing = Array.isArray(credits.cast) ? credits.cast : [];
+    let cast = [], i;
     for (i = 0; i < billing.length && cast.length < CAST; i++) {
       if (billing[i] && billing[i].name) cast.push(billing[i].name);
     }
-    var score = (payload && typeof payload.vote_average === 'number') ? payload.vote_average : 0;
+    const score = (payload && typeof payload.vote_average === 'number') ? payload.vote_average : 0;
     return {
       overview: (payload && typeof payload.overview === 'string') ? payload.overview : '',
       runtime: (payload && typeof payload.runtime === 'number') ? payload.runtime : null,
@@ -80,7 +80,7 @@ var Art = (function () {
   }
 
   function picked(item) {
-    var id = idOf(item);
+    const id = idOf(item);
     return id ? (cache[id] || null) : null;
   }
 
@@ -89,7 +89,7 @@ var Art = (function () {
      the item's own thumb. Never a backdrop: 16:9 in a 2:3 box is a smear. */
   function tile(item, w, h) {
     if (!item) return '';
-    var got = picked(item);
+    const got = picked(item);
     if (got && got.poster) return url(got.poster, POSTER_SIZE);
     if (item.type === 'episode') {
       return Plex.photoUrl(Servers.of(item), item.grandparentThumb, w, h) ||
@@ -100,7 +100,7 @@ var Art = (function () {
 
   /* The backdrop: TMDB's best, else the same Plex fallback the masthead used. */
   function hero(item) {
-    var got = picked(item);
+    const got = picked(item);
     if (got && got.hero) return url(got.hero, HERO_SIZE);
     return Plex.artUrl(item, 1920, 1080) || Plex.posterUrl(item, 1920, 1080);
   }
@@ -108,7 +108,7 @@ var Art = (function () {
   /* The description, run time and key actors for a title, or null if TMDB has
      not answered for it yet. Synchronous, like tile() and hero(). */
   function factsFor(item) {
-    var got = picked(item);
+    const got = picked(item);
     return (got && got.facts) || null;
   }
 
@@ -116,7 +116,7 @@ var Art = (function () {
      repaint. Cheap to call on every draw: a hit, a miss and a request already in
      flight all return without doing anything. */
   function warm(item) {
-    var id = idOf(item);
+    const id = idOf(item);
     if (!id || !Tmdb.enabled() || cache[id] || pending[id]) return;
     pending[id] = true;
     queue.push(id);
@@ -139,7 +139,7 @@ var Art = (function () {
          them, or an old cache would leave a title short of one for ever. */
       if (hit && hit.facts && hit.poster !== undefined) return hit;
       return Tmdb.details(id).then(function (payload) {
-        var got = pick(payload);
+        const got = pick(payload);
         got.facts = facts(payload);
         Store.put('art:' + id, got);
         return got;
@@ -151,7 +151,7 @@ var Art = (function () {
   /* A title with no usable backdrops is cached too, or an obscure one costs a
      request every time the row is walked past. */
   function landed(id, got) {
-    var i;
+    let i;
     active--;
     delete pending[id];
     cache[id] = got;

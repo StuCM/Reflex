@@ -24,7 +24,7 @@ var Merge = (function () {
   }
 
   function before(a, b) {
-    var ka = sortKey(a), kb = sortKey(b);
+    const ka = sortKey(a), kb = sortKey(b);
     if (ka !== kb) return ka < kb;
     return ((a && a.year) || 0) < ((b && b.year) || 0);
   }
@@ -45,7 +45,7 @@ var Merge = (function () {
      make the row a cycle, and these get written to IndexedDB. Read it through
      sources(), which puts the shown copy back at the front. */
   function combine(primary, item) {
-    var extras = primary._sources || [], i, key = copyKey(item);
+    let extras = primary._sources || [], i, key = copyKey(item);
     /* One copy per library. A film listed twice by the same library (two
        editions in one) is not what this is for — versions within one item are,
        and those live in Media[], not here. */
@@ -56,9 +56,9 @@ var Merge = (function () {
 
     /* Plex syncs the position between servers, but if they disagree, the
        furthest through is the one worth resuming. */
-    var offset = Math.max(primary.viewOffset || 0, item.viewOffset || 0);
-    var seen = Math.max(primary.lastViewedAt || 0, item.lastViewedAt || 0);
-    var shown;
+    const offset = Math.max(primary.viewOffset || 0, item.viewOffset || 0);
+    const seen = Math.max(primary.lastViewedAt || 0, item.lastViewedAt || 0);
+    let shown;
 
     if (Servers.preferred() === item._server && primary._server !== Servers.preferred()) {
       delete primary._sources;
@@ -78,7 +78,7 @@ var Merge = (function () {
      longer carries the ids they were derived from. */
   function push(idx, item, keys) {
     if (!item) return false;
-    var i, at = -1;
+    let i, at = -1;
     keys = keys || Media.identities(item);
     for (i = 0; i < keys.length; i++) {
       if (idx.map[keys[i]] !== undefined) { at = idx.map[keys[i]]; break; }
@@ -103,7 +103,7 @@ var Merge = (function () {
      in its own order, with anything only the others have appended where it
      first appears. */
   function lists(arrays) {
-    var idx = index(), i, j, arr;
+    let idx = index(), i, j, arr;
     for (i = 0; i < arrays.length; i++) {
       arr = arrays[i] || [];
       for (j = 0; j < arr.length; j++) push(idx, arr[j]);
@@ -130,8 +130,8 @@ var Merge = (function () {
      stays because without it a film walked into the All row has no TMDB id, so
      it gets neither a backdrop of its own nor a place in the merge by identity. */
   function slim(item) {
-    var media = (item.Media && item.Media[0]) || null;
-    var out = {
+    const media = (item.Media && item.Media[0]) || null;
+    const out = {
       ratingKey: item.ratingKey,
       _server: item._server,
       _part: item._part,
@@ -177,7 +177,7 @@ var Merge = (function () {
   /* An upper bound until the walk finishes: every copy on every server, less
      the duplicates found so far. It only ever gets more accurate. */
   function estimate(st) {
-    var total = 0, i;
+    let total = 0, i;
     for (i = 0; i < st.streams.length; i++) total += st.streams[i].total;
     return Math.max(st.idx.out.length, total - st.idx.dupes);
   }
@@ -186,7 +186,7 @@ var Merge = (function () {
 
   function fetchInto(st, s) {
     return st.fetch(s.part, s.offset).then(function (res) {
-      var got = (res && res.items) || [], i;
+      let got = (res && res.items) || [], i;
       if (res && res.total) s.total = res.total;
       s.offset += got.length;
       for (i = 0; i < got.length; i++) {
@@ -216,7 +216,7 @@ var Merge = (function () {
   }
 
   function fill(st, upTo) {
-    var i, needs, live, pick;
+    let i, needs, live, pick;
     /* A loop, not recursion: walking deep into a big library would otherwise
        build a stack frame per film. */
     while (st.idx.out.length <= upTo) {
@@ -240,7 +240,7 @@ var Merge = (function () {
       }
       /* Identities come off the full item — slimming drops the Guid array they
          are mostly derived from. */
-      var raw = pick.buffer.shift();
+      const raw = pick.buffer.shift();
       push(st.idx, slim(raw), Media.identities(raw));
     }
     return Promise.resolve(st.idx.out);

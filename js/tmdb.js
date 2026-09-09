@@ -10,18 +10,18 @@
 var Tmdb = (function () {
   'use strict';
 
-  var KEY = Config.tmdbKey;                      // see js/config.js
-  var API = Config.tmdbBase;                     // see js/config.js
-  var REGION = 'GB';
+  const KEY = Config.tmdbKey;                      // see js/config.js
+  const API = Config.tmdbBase;                     // see js/config.js
+  const REGION = 'GB';
 
   /* The rubbish filter. Junk has almost no votes, so a floor removes most of it
      without any taste modelling at all. */
-  var MIN_VOTES = 500;
+  const MIN_VOTES = 500;
 
   function enabled() { return !!KEY; }
 
   function qs(params) {
-    var keys = Object.keys(params), parts = [], i, v;
+    let keys = Object.keys(params), parts = [], i, v;
     for (i = 0; i < keys.length; i++) {
       v = params[keys[i]];
       if (v === null || v === undefined) continue;
@@ -34,7 +34,7 @@ var Tmdb = (function () {
     params = params || {};
     params.api_key = KEY;
     return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
+      const xhr = new XMLHttpRequest();
       xhr.open('GET', API + path + '?' + qs(params), true);
       xhr.timeout = 15000;
       xhr.onload = function () {
@@ -66,7 +66,7 @@ var Tmdb = (function () {
   }
 
   function films(results) {
-    var out = [], i;
+    let out = [], i;
     for (i = 0; i < (results || []).length; i++) {
       if (goodEnough(results[i])) out.push(film(results[i]));
     }
@@ -100,12 +100,12 @@ var Tmdb = (function () {
      watched, then count how often each suggestion comes up. No model, no
      training — frequency across several seeds is enough to be useful. */
   function recommendedFrom(seedTmdbIds) {
-    var seeds = (seedTmdbIds || []).slice(0, 8);
+    const seeds = (seedTmdbIds || []).slice(0, 8);
     if (!seeds.length) return Promise.resolve([]);
-    var score = {}, seen = {};
+    const score = {}, seen = {};
     return serial(seeds, function (id) {
       return get('/movie/' + id + '/recommendations').then(function (r) {
-        var list = films(r.results), i, m;
+        let list = films(r.results), i, m;
         for (i = 0; i < list.length; i++) {
           m = list[i];
           if (seeds.indexOf(m.id) >= 0) continue;              // don't suggest the seed
@@ -123,7 +123,7 @@ var Tmdb = (function () {
      in the config rather than a crash: it gives an empty row. `seeds` are TMDB
      ids of what has been watched, and only the recommended kind uses them. */
   function catalogue(category, seeds) {
-    var kind = category && category.kind;
+    const kind = category && category.kind;
     if (kind === 'trending') return trending();
     if (kind === 'provider') return onProvider(category.id);
     if (kind === 'genre') return byGenre(category.id);
@@ -144,7 +144,7 @@ var Tmdb = (function () {
 
   /* One at a time, on purpose — this is a courtesy API and the rows are small. */
   function serial(list, fn) {
-    var i = 0;
+    let i = 0;
     function step() {
       if (i >= list.length) return Promise.resolve();
       return fn(list[i++]).then(step);

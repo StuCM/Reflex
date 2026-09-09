@@ -10,10 +10,10 @@
 var Discovery = (function () {
   'use strict';
 
-  var DAY = 24 * 60 * 60 * 1000;
+  const DAY = 24 * 60 * 60 * 1000;
   /* A film can be added to a library but is rarely taken out, so a hit stands
      and only a miss is ever asked again. */
-  var MISS_AGAIN_AFTER = 7 * DAY;
+  const MISS_AGAIN_AFTER = 7 * DAY;
 
   function enabled() { return Tmdb.enabled(); }
 
@@ -33,7 +33,7 @@ var Discovery = (function () {
   /* The line the masthead shows under the name — the honest answer before OK
      is pressed. */
   function settle(item, found) {
-    var sub = found ? Media.railSub(found) : '';
+    const sub = found ? Media.railSub(found) : '';
     item._resolved = found || null;
     item._availability = !found ? 'Not in your library'
       : (sub ? 'In your library  ·  ' + sub : 'In your library');
@@ -43,7 +43,7 @@ var Discovery = (function () {
     return Promise.all(Servers.all().map(function (sv) {
       return Plex.findByGuid(sv, 'tmdb://' + id).catch(function () { return null; });
     })).then(function (perServer) {
-      var hits = [], i;
+      let hits = [], i;
       for (i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
       return hits.length ? Merge.lists([hits])[0] : null;
     });
@@ -55,7 +55,7 @@ var Discovery = (function () {
   function resolve(item) {
     if (item._resolved !== undefined) return Promise.resolve(item._resolved);
     if (item._asking) return item._asking;
-    var key = 'tmdb:' + item._tmdb.id;
+    const key = 'tmdb:' + item._tmdb.id;
     item._asking = Store.get(key).then(function (hit) {
       if (hit && (hit.item || Date.now() - hit.at < MISS_AGAIN_AFTER)) return hit.item || null;
       return ask(item._tmdb.id).then(function (found) {
@@ -79,7 +79,7 @@ var Discovery = (function () {
      watched, which the caller already holds — asking a server for them would
      cost the page the very thing it exists to avoid. */
   function load(ctx) {
-    var cats = Config.categories || [], i = 0;
+    let cats = Config.categories || [], i = 0;
     function step() {
       if (!ctx.isCurrent() || i >= cats.length) return Promise.resolve();
       return one(ctx, cats[i++]).then(step);
@@ -88,8 +88,8 @@ var Discovery = (function () {
   }
 
   function one(ctx, cat) {
-    var seeds = ctx.seeds || [];
-    var key = 'disc:' + cat.kind + ':' + (cat.id || seeds.join('-'));
+    const seeds = ctx.seeds || [];
+    const key = 'disc:' + cat.kind + ':' + (cat.id || seeds.join('-'));
     return Store.get(key).then(function (hit) {
       if (hit && hit.films.length && Date.now() - hit.at < DAY) return hit.films;
       return Tmdb.catalogue(cat, seeds).then(function (found) {

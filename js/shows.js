@@ -9,17 +9,17 @@
 var Shows = (function () {
   'use strict';
 
-  var entries = {};              // '<server>:<showKey>' -> Promise<entry|null>
+  const entries = {};              // '<server>:<showKey>' -> Promise<entry|null>
 
   /* Seasons of a merged show entry, in order.
      Each returned season carries its own per-server copies, which is what the
      episode fetch then walks. */
   function seasons(entry) {
-    var copies = Merge.sources(entry);
+    const copies = Merge.sources(entry);
     return Promise.all(copies.map(function (copy) {
       return Plex.children(Servers.of(copy), copy.ratingKey);
     })).then(function (perServer) {
-      var merged = Merge.lists(perServer.map(function (list) {
+      const merged = Merge.lists(perServer.map(function (list) {
         return list.filter(function (m) { return m.type === 'season'; });
       }));
       merged.sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
@@ -29,11 +29,11 @@ var Shows = (function () {
 
   /* Episodes of a merged season, in order. */
   function episodes(season) {
-    var copies = Merge.sources(season);
+    const copies = Merge.sources(season);
     return Promise.all(copies.map(function (copy) {
       return Plex.children(Servers.of(copy), copy.ratingKey);
     })).then(function (perServer) {
-      var merged = Merge.lists(perServer.map(function (list) {
+      const merged = Merge.lists(perServer.map(function (list) {
         return list.filter(function (m) { return m.type === 'episode'; });
       }));
       merged.sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
@@ -46,7 +46,7 @@ var Shows = (function () {
      three episodes of one show must cost one resolution. */
   function entryFor(episode) {
     if (!episode || !episode.grandparentRatingKey) return Promise.resolve(null);
-    var key = episode._server + ':' + episode.grandparentRatingKey;
+    const key = episode._server + ':' + episode.grandparentRatingKey;
     if (!entries[key]) entries[key] = resolve(episode);
     return entries[key];
   }
@@ -71,7 +71,7 @@ var Shows = (function () {
      every copy, because the episode playing is one server's and the merged
      entry may lead with the other's. */
   function isCopyOf(entry, episode) {
-    var copies = Merge.sources(entry), i;
+    let copies = Merge.sources(entry), i;
     for (i = 0; i < copies.length; i++) {
       if (String(copies[i].ratingKey) === String(episode.ratingKey)) return true;
     }
@@ -82,7 +82,7 @@ var Shows = (function () {
      when `current` is not in the list at all. Pure, so it is unit tested. */
   function nextInList(episodes, current) {
     if (!episodes || !current) return null;
-    var i;
+    let i;
     for (i = 0; i < episodes.length; i++) {
       if (isCopyOf(episodes[i], current)) return episodes[i + 1] || null;
     }
@@ -97,13 +97,13 @@ var Shows = (function () {
     return entryFor(episode).then(function (entry) {
       if (!entry) return null;
       return seasons(entry).then(function (list) {
-        var at = -1, i;
+        let at = -1, i;
         for (i = 0; i < list.length; i++) {
           if (list[i].index === episode.parentIndex) { at = i; break; }
         }
         if (at < 0) return null;
         return episodes(list[at]).then(function (eps) {
-          var next = nextInList(eps, episode);
+          const next = nextInList(eps, episode);
           if (next) return { episode: next, newSeason: false };
           /* seasons() is sorted by index, so the one after is simply the next. */
           if (at + 1 >= list.length) return null;
@@ -117,7 +117,7 @@ var Shows = (function () {
 
   /* "4 series · 38 episodes", or as much of it as the server told us. */
   function summary(entry) {
-    var bits = [];
+    const bits = [];
     if (entry.childCount) {
       bits.push(entry.childCount + ' series');
     }
@@ -134,7 +134,7 @@ var Shows = (function () {
      unwatched, else the first. Somebody part way through series three does not
      want to land on series one every time. */
   function openAt(list) {
-    var i;
+    let i;
     for (i = 0; i < list.length; i++) {
       if ((list[i].leafCount || 0) > (list[i].viewedLeafCount || 0)) return i;
     }

@@ -6,7 +6,7 @@
 var Config = (function () {
   'use strict';
 
-  var cfg = {
+  const cfg = {
     /* plex.tv itself, unless something is standing in for it. */
     plexTvBase: 'https://plex.tv',
 
@@ -48,9 +48,9 @@ var Config = (function () {
     dev: false
   };
 
-  var over = (typeof window !== 'undefined' && window.REFLEX_CONFIG) || null;
+  const over = (typeof window !== 'undefined' && window.REFLEX_CONFIG) || null;
   if (over) {
-    var keys = Object.keys(over), i;
+    let keys = Object.keys(over), i;
     for (i = 0; i < keys.length; i++) cfg[keys[i]] = over[keys[i]];
   }
   return cfg;

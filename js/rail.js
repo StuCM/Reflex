@@ -11,37 +11,37 @@ var Rail = (function () {
   'use strict';
 
   /* 2:3, so seven fit across at 1920: 96 left margin + 7×209 + 6×44 = 1823. */
-  var TILE_W = 209, TILE_H = 314, GAP = 44, STRIDE = TILE_W + GAP;
-  var ROW_H = 466;               // 44 header + 314 art + 74 two lines + 34 below
-  var VIEWPORT_H = 580;          // css #viewport, well below the 264px header
-  var TILE_POOL = 12;            // tiles per row element
-  var ROW_POOL = 4;              // row elements in the DOM, ever
-  var TILES_VISIBLE = 7;         // tiles across at 1920 wide
-  var LEAD = 1;                  // tiles kept to the left of the focused one
+  const TILE_W = 209, TILE_H = 314, GAP = 44, STRIDE = TILE_W + GAP;
+  const ROW_H = 466;               // 44 header + 314 art + 74 two lines + 34 below
+  const VIEWPORT_H = 580;          // css #viewport, well below the 264px header
+  const TILE_POOL = 12;            // tiles per row element
+  const ROW_POOL = 4;              // row elements in the DOM, ever
+  const TILES_VISIBLE = 7;         // tiles across at 1920 wide
+  const LEAD = 1;                  // tiles kept to the left of the focused one
   /* Two different questions, and answering both with one number clipped the
      last row of every section. ROWS_FIT is how many rows fit *whole* in the
      viewport, and is what stops the window scrolling past the end — get it
      wrong and the final row is pinned half below the fold, title and all.
      ROWS_VISIBLE is how many are on screen at all, including the one peeking
      at the bottom, and is only about which posters are worth fetching. */
-  var ROWS_FIT = Math.floor(VIEWPORT_H / ROW_H);
-  var ROWS_VISIBLE = ROWS_FIT + 1;   // the last one peeks, so its posters load
+  const ROWS_FIT = Math.floor(VIEWPORT_H / ROW_H);
+  const ROWS_VISIBLE = ROWS_FIT + 1;   // the last one peeks, so its posters load
   /* The tall hero and the header differ by this much, and the rows carry the
      whole move on one transform rather than anything animating a height. The
      figure is the viewport less one row, so the first screen shows Continue
      watching whole and nothing of the row after it. */
-  var BIG_DROP = VIEWPORT_H - ROW_H;
+  const BIG_DROP = VIEWPORT_H - ROW_H;
   /* Sweeping a row used to cost a poster and a TMDB lookup per tile passed, all
      of them for tiles already gone by. A tile's cheap parts still draw at once;
      its picture waits this long for the movement to stop. */
-  var SETTLE = 160;
+  const SETTLE = 160;
 
-  var elRows = document.getElementById('rows');
-  var rowEls = [];
-  var settleTimer = null;
+  const elRows = document.getElementById('rows');
+  const rowEls = [];
+  let settleTimer = null;
 
   function translate(el, x, y) {
-    var t = 'translate(' + x + 'px,' + y + 'px)';
+    const t = 'translate(' + x + 'px,' + y + 'px)';
     el.style.transform = t;
     el.style.webkitTransform = t;
   }
@@ -63,7 +63,7 @@ var Rail = (function () {
   }
 
   function build() {
-    var r, i, rowEl, label, strip, tile, inner, img, name, sub, prog;
+    let r, i, rowEl, label, strip, tile, inner, img, name, sub, prog;
     for (r = 0; r < ROW_POOL; r++) {
       rowEl = document.createElement('div');
       rowEl.className = 'row hidden';
@@ -113,7 +113,7 @@ var Rail = (function () {
      for them is reassigned in place. A whole-rail render per image would be far
      more work than one picture is worth. */
   function repaint(tmdbId) {
-    var r, i, t, url;
+    let r, i, t, url;
     for (r = 0; r < ROW_POOL; r++) {
       for (i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
@@ -127,7 +127,7 @@ var Rail = (function () {
   /* A tile showing a placeholder must re-render once its page lands. One that
      already shows a poster must not, or we reassign src for nothing. */
   function invalidateEmpty() {
-    var r, i, t;
+    let r, i, t;
     for (r = 0; r < ROW_POOL; r++) {
       for (i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
@@ -141,14 +141,14 @@ var Rail = (function () {
   function paint(tile) {
     tile._wait = false;
     Art.warm(tile._item);
-    var url = Art.tile(tile._item, TILE_W, TILE_H);
+    const url = Art.tile(tile._item, TILE_W, TILE_H);
     if (url) tile._img.src = url; else tile._img.removeAttribute('src');
   }
 
   /* The rail has stopped moving, so the tiles still on it can have their
      pictures. Off-screen rows keep waiting — they have their own reason to. */
   function settled() {
-    var r, i, t;
+    let r, i, t;
     for (r = 0; r < ROW_POOL; r++) {
       if (!rowEls[r]._onScreen) continue;
       for (i = 0; i < TILE_POOL; i++) {
@@ -162,8 +162,8 @@ var Rail = (function () {
     /* Position alone does not identify a row: search results replace the rows
        in place and keep rowIdx 0, so a pool element holding row 0 went on
        showing the library's row 0 — right title over the wrong tiles. */
-    var row = rows[r], reused = rowEl._row !== r || rowEl._rowRef !== row;
-    var i, idx, tile, item, held, focused, firstVisible, start;
+    const row = rows[r], reused = rowEl._row !== r || rowEl._rowRef !== row;
+    let i, idx, tile, item, held, focused, firstVisible, start;
 
     rowEl._onScreen = onScreen;
     rowEl.classList.remove('hidden');
@@ -248,9 +248,9 @@ var Rail = (function () {
        focused one itself. A portrait row leaves room for exactly one, so this
        is zero now and the focused row sits at the top; typed as 1 it would draw
        the row you just moved to half below the fold. */
-    var firstVisible = UI.clamp(rowIdx - (ROWS_FIT - 1), 0, Math.max(0, rows.length - ROWS_FIT));
-    var start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
-    var i, r;
+    const firstVisible = UI.clamp(rowIdx - (ROWS_FIT - 1), 0, Math.max(0, rows.length - ROWS_FIT));
+    const start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
+    let i, r;
     /* Row 0 sits under the tall hero; everything below it sits under the band.
        Both states are one translate on this element, so the collapse animates
        for free on the transform that was moving anyway. */

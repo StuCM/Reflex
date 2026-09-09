@@ -12,41 +12,41 @@
 var Browse = (function () {
   'use strict';
 
-  var elBrowse = document.getElementById('browse');
-  var elInput = document.getElementById('search-input');
-  var elHint = document.getElementById('browse-hint');
-  var elConfirm = document.getElementById('confirm');
+  const elBrowse = document.getElementById('browse');
+  const elInput = document.getElementById('search-input');
+  const elHint = document.getElementById('browse-hint');
+  const elConfirm = document.getElementById('confirm');
 
-  var sections = [], secIdx = 0;
-  var rows = [], rowIdx = 0;
-  var cats = {};                          // section title -> its row titles, for the sidebar
-  var deckItems = [];                     // Continue watching, before any type filter
-  var watchingType = null;                // the cut applied to it: null, movie or episode
-  var wantRow = 0;                        // row to land on once the next section is built
-  var mode = 'library';                   // library | kids | discover
-  var savedRows = null;                   // rows parked while showing search results
-  var searchQuery = null;                 // non-null while the results page is showing
-  var generation = 0;                     // bumps on any row change, kills stale paints
-  var pageTimer = null;
-  var resolveTimer = null;                // a Discovery tile, once you stop on it
-  var RESOLVE_HOLD = 420;                 // the stillness the backdrop also waits for
-  var MAX_SEEDS = 8;                      // titles the recommended row is built from
-  var opts = {};
+  let sections = [], secIdx = 0;
+  let rows = [], rowIdx = 0;
+  const cats = {};                          // section title -> its row titles, for the sidebar
+  let deckItems = [];                     // Continue watching, before any type filter
+  let watchingType = null;                // the cut applied to it: null, movie or episode
+  let wantRow = 0;                        // row to land on once the next section is built
+  let mode = 'library';                   // library | kids | discover
+  let savedRows = null;                   // rows parked while showing search results
+  let searchQuery = null;                 // non-null while the results page is showing
+  let generation = 0;                     // bumps on any row change, kills stale paints
+  let pageTimer = null;
+  let resolveTimer = null;                // a Discovery tile, once you stop on it
+  const RESOLVE_HOLD = 420;                 // the stillness the backdrop also waits for
+  const MAX_SEEDS = 8;                      // titles the recommended row is built from
+  let opts = {};
 
-  var picking = false;                    // green has the deck row in select mode
-  var picks = [];                         // the entries picked, while it has
-  var pickAt = -1;                        // the row that is happening on
+  let picking = false;                    // green has the deck row in select mode
+  let picks = [];                         // the entries picked, while it has
+  let pickAt = -1;                        // the row that is happening on
 
-  var RESULTS_PER_ROW = 10;
-  var WATCHING = 'Continue watching';
+  const RESULTS_PER_ROW = 10;
+  const WATCHING = 'Continue watching';
   /* UI.KEY carries red, which search already uses; green is free on this
      screen and is the only other key the Magic Remote's siblings all have. */
-  var GREEN = 404;
+  const GREEN = 404;
 
   /* One section per kind of thing this app can play, whatever the servers call
      their libraries. Music and photos are neither, so they are left out. */
-  var SECTION_TITLES = { movie: 'Movies', show: 'TV Shows' };
-  var SECTION_ORDER = ['movie', 'show'];
+  const SECTION_TITLES = { movie: 'Movies', show: 'TV Shows' };
+  const SECTION_ORDER = ['movie', 'show'];
 
   function init(options) {
     opts = options || {};
@@ -65,13 +65,13 @@ var Browse = (function () {
   /* ---------- state the rest of the app asks about ---------- */
 
   function focusedRow() { return rows[rowIdx]; }
-  function focusedItem() { var r = focusedRow(); return r ? Rows.itemAt(r, r.focus) : null; }
+  function focusedItem() { const r = focusedRow(); return r ? Rows.itemAt(r, r.focus) : null; }
   function hasRows() { return rows.length > 0; }
   function currentSection() { return sections[secIdx] || null; }
 
   /* A guard any in-flight load can check before it paints. */
   function generationGuard() {
-    var gen = generation;
+    const gen = generation;
     return function () { return gen === generation; };
   }
 
@@ -98,7 +98,7 @@ var Browse = (function () {
      one entry per film, the way it already does across servers. */
 
   function setSections(perServer) {
-    var byType = {}, i, j, list, sec, type;
+    let byType = {}, i, j, list, sec, type;
     for (i = 0; i < perServer.length; i++) {
       list = perServer[i].sections || [];
       for (j = 0; j < list.length; j++) {
@@ -110,19 +110,19 @@ var Browse = (function () {
                                   updatedAt: sec.updatedAt || 0 });
       }
     }
-    var merged = [];
+    const merged = [];
     for (i = 0; i < SECTION_ORDER.length; i++) {
       if (byType[SECTION_ORDER[i]]) merged.push(byType[SECTION_ORDER[i]]);
     }
-    var currentTitle = sections[secIdx] && sections[secIdx].title;
+    const currentTitle = sections[secIdx] && sections[secIdx].title;
     sections = merged;
-    var at = 0;
+    let at = 0;
     for (i = 0; i < merged.length; i++) if (merged[i].title === currentTitle) at = i;
     return at;
   }
 
   function serversOf(sec) {
-    var out = [], seen = {}, i, id;
+    let out = [], seen = {}, i, id;
     for (i = 0; i < sec.parts.length; i++) {
       id = sec.parts[i].server.id;
       if (seen[id]) continue;
@@ -140,8 +140,8 @@ var Browse = (function () {
   function openSidebar() {
     /* Continue watching is per account rather than per section, so it heads the
        list on its own rather than once under every section. */
-    var at = watchingRowIdx();
-    var watching = { current: mode === 'library' && rowIdx === at,
+    const at = watchingRowIdx();
+    const watching = { current: mode === 'library' && rowIdx === at,
                      type: watchingType,
                      has: at >= 0 && rows[at].total > 0 };
     Sidebar.open(sections.map(function (sec, i) {
@@ -155,7 +155,7 @@ var Browse = (function () {
   /* Select mode renames the row, so while it is on the row is known by where it
      is rather than by what it says. */
   function watchingRowIdx() {
-    var i;
+    let i;
     if (picking) return pickAt;
     for (i = 0; i < rows.length; i++) if (rows[i].title === WATCHING) return i;
     return -1;
@@ -171,10 +171,10 @@ var Browse = (function () {
      leaves the row where it is — a row vanishing on a keypress reads as a
      crash. */
   function showWatching(type) {
-    var at = watchingRowIdx();
+    const at = watchingRowIdx();
     if (at < 0) { UI.toast('Nothing part-watched there'); return; }
     watchingType = type || null;
-    var items = deckCut();
+    const items = deckCut();
     rows[at] = Rows.list(WATCHING, items);
     rowIdx = at;
     render();
@@ -190,7 +190,7 @@ var Browse = (function () {
      confirmation, and nothing leaves the row before the server has agreed. */
 
   function pickIndex(item) {
-    var key = Media.identity(item), i;
+    let key = Media.identity(item), i;
     for (i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === key) return i;
     return -1;
   }
@@ -198,7 +198,7 @@ var Browse = (function () {
   /* Amber on tiles the rail has already drawn. The row model knows nothing
      about a mode that lasts seconds, and Rail owns no state to teach. */
   function markPicks() {
-    var tiles = document.querySelectorAll('#rows .tile'), i, tile;
+    let tiles = document.querySelectorAll('#rows .tile'), i, tile;
     for (i = 0; i < tiles.length; i++) {
       tile = tiles[i];
       tile.classList.toggle('picked',
@@ -207,7 +207,7 @@ var Browse = (function () {
   }
 
   function paintPicking() {
-    var row = rows[pickAt];
+    const row = rows[pickAt];
     /* A new row object rather than a renamed one: the rail repaints a label
        only when the row it is handed changes identity. */
     rows[pickAt] = Rows.list(picking ? 'Select to remove — ' + picks.length + ' picked'
@@ -220,7 +220,7 @@ var Browse = (function () {
   }
 
   function startPicking() {
-    var at = watchingRowIdx();
+    const at = watchingRowIdx();
     if (at < 0 || at !== rowIdx) { UI.toast('Green clears things out of Continue watching'); return; }
     if (!rows[at].total) { UI.toast('Nothing part-watched to remove'); return; }
     picking = true;
@@ -237,7 +237,7 @@ var Browse = (function () {
   }
 
   function togglePick() {
-    var item = focusedItem(), at;
+    let item = focusedItem(), at;
     if (!item) return;
     at = pickIndex(item);
     if (at >= 0) picks.splice(at, 1); else picks.push(item);
@@ -248,7 +248,7 @@ var Browse = (function () {
      happen and to how many, the action, and Cancel. Cancel is what it lands on:
      the action is one key away and never the default. */
   function askThen(count, mode, go) {
-    var hide = mode === 'hide';
+    const hide = mode === 'hide';
     Menu.open({
       host: elConfirm,
       tabs: [{
@@ -281,7 +281,7 @@ var Browse = (function () {
      Continue watching is per account and so sits in every section's entry, and
      they are refetched on the next visit anyway. */
   function dropFromDeck(entry) {
-    var gone = Media.identity(entry), at, row, i;
+    let gone = Media.identity(entry), at, row, i;
     deckItems = deckItems.filter(function (m) { return Media.identity(m) !== gone; });
     for (i = 0; i < sections.length; i++) Store.put('rows:' + sections[i].title, null);
     at = watchingRowIdx();
@@ -300,11 +300,11 @@ var Browse = (function () {
      server would not hide comes back as `copies` for the caller to ask about. */
   function clearFromDeck(job, mode) {
     return Promise.all(job.copies.map(function (copy) {
-      var server = Servers.of(copy);
+      const server = Servers.of(copy);
       if (mode !== 'watched') return Plex.hideFromDeck(server, copy.ratingKey);
       return Plex.scrobble(server, watchedKey(copy)).then(function () { return true; });
     })).then(function (done) {
-      var refused = [], i;
+      let refused = [], i;
       for (i = 0; i < done.length; i++) if (!done[i]) refused.push(job.copies[i]);
       if (refused.length) return { needsWatched: true, copies: refused };
       dropFromDeck(job.entry);
@@ -322,7 +322,7 @@ var Browse = (function () {
     Promise.all(jobs.map(function (job) {
       return clearFromDeck(job, mode);
     })).then(function (res) {
-      var again = [], failed = 0, i;
+      let again = [], failed = 0, i;
       for (i = 0; i < res.length; i++) {
         if (res[i].ok) continue;
         if (res[i].needsWatched) again.push({ entry: jobs[i].entry, copies: res[i].copies });
@@ -346,7 +346,7 @@ var Browse = (function () {
 
   /* Green a second time: confirm everything picked. */
   function confirmPicks() {
-    var chosen = picks.map(jobFor);
+    const chosen = picks.map(jobFor);
     if (!chosen.length) { UI.toast('Nothing picked — OK picks the tile you are on'); return; }
     askThen(chosen.length, 'hide', function () { clearAll(chosen, 'hide', null); });
   }
@@ -359,7 +359,7 @@ var Browse = (function () {
   /* Is this on Continue watching? The detail page only offers to clear
      something the row actually holds. */
   function isOnDeck(item) {
-    var key = item && Media.identity(item), i;
+    let key = item && Media.identity(item), i;
     if (!key) return false;
     for (i = 0; i < deckItems.length; i++) {
       if (Media.identity(deckItems[i]) === key) return true;
@@ -380,7 +380,7 @@ var Browse = (function () {
       /* The focus can be anywhere when this is chosen, so land on the row
          first: a mode you then have to go and find is not reachable, which is
          the whole reason this entry exists beside the green key. */
-      var deckAt = watchingRowIdx();
+      const deckAt = watchingRowIdx();
       if (deckAt < 0) { UI.toast('Nothing part-watched to remove'); return; }
       rowIdx = deckAt;
       startPicking();
@@ -389,7 +389,7 @@ var Browse = (function () {
     if (choice.kind === 'kids') { loadKids(); return; }
     if (choice.kind === 'discover') { loadDiscover(); return; }
     if (choice.kind === 'prefer') {
-      var now = Servers.get(Servers.cyclePreferred());
+      const now = Servers.get(Servers.cyclePreferred());
       UI.debug('preferring ' + (now ? now.name : '?') + ' where both servers have a film');
       /* Rebuild the rows: which copy of a shared film is shown changes with
          the preference. */
@@ -458,7 +458,7 @@ var Browse = (function () {
   /* Rows from titled item lists, remembering the part-watched ones so the
      Continue watching cut has something to filter. */
   function listRows(built) {
-    var i;
+    let i;
     deckItems = [];
     for (i = 0; i < built.length; i++) {
       if (built[i].title === WATCHING) deckItems = built[i].items;
@@ -476,12 +476,12 @@ var Browse = (function () {
 
   function allRow(sec, title, filter, tag) {
     /* type 2 asks a show section for shows rather than every episode in it. */
-    var base = { type: sec.type === 'show' ? 2 : 1 };
+    const base = { type: sec.type === 'show' ? 2 : 1 };
     if (filter) {
-      var keys = Object.keys(filter), i;
+      let keys = Object.keys(filter), i;
       for (i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
     }
-    var parts = sec.parts.map(function (p) {
+    const parts = sec.parts.map(function (p) {
       return { server: p.server, key: p.key, updatedAt: p.updatedAt,
                filter: base, tag: tag || '' };
     });
@@ -494,9 +494,9 @@ var Browse = (function () {
      has found so far, so it only gets more accurate. */
   function primeTotals(row, isCurrent) {
     if (!row || row.kind !== 'merge') return;
-    var jobs = row.state.streams.map(function (s) {
+    const jobs = row.state.streams.map(function (s) {
       if (s.total) return Promise.resolve();
-      var ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
+      const ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
       return Store.get(ck).then(function (cached) {
         if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
           s.total = cached.total;
@@ -525,9 +525,9 @@ var Browse = (function () {
     secIdx = i;
     wantRow = focusRow || 0;
     reset('library');
-    var isCurrent = generationGuard();
-    var sec = sections[i];
-    var cacheKey = 'rows:' + sec.title;
+    const isCurrent = generationGuard();
+    const sec = sections[i];
+    const cacheKey = 'rows:' + sec.title;
 
     Store.get(cacheKey).then(function (cached) {
       if (!isCurrent()) return;
@@ -545,20 +545,20 @@ var Browse = (function () {
       /* Continue watching is per server; the category rows are per section. Two
          requests per server for the whole browse screen, however big the
          library is. */
-      var servers = serversOf(sec);
+      const servers = serversOf(sec);
       return Promise.all([
         Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
         Promise.all(sec.parts.map(function (p) { return Plex.hubs(p.server, p.key); })),
         Devices.ensureHistory()
       ]).then(function (res) {
         if (!isCurrent()) return;
-        var built = [];
+        const built = [];
 
         /* onDeck is per server, not per section, and hands back films and
            episodes together — which is what you want to carry on with, so it is
            kept whole rather than cut to the section's own type. Most recently
            watched first. */
-        var deck = Devices.mine(Merge.lists(res[0]));
+        const deck = Devices.mine(Merge.lists(res[0]));
         deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
         if (deck.length) built.push({ title: WATCHING, items: deck });
 
@@ -585,7 +585,7 @@ var Browse = (function () {
      Order within it is first-seen, which keeps each server's own ordering
      intact rather than inventing a ranking across them. */
   function mergeHubs(perPart) {
-    var byTitle = {}, order = [], i, j, list;
+    let byTitle = {}, order = [], i, j, list;
     for (i = 0; i < perPart.length; i++) {
       list = perPart[i] || [];
       for (j = 0; j < list.length; j++) {
@@ -605,11 +605,11 @@ var Browse = (function () {
   function scheduleWalk() {
     clearTimeout(pageTimer);
     pageTimer = setTimeout(function () {
-      var row = focusedRow();
+      const row = focusedRow();
       if (!row || row.kind !== 'merge') return;
       if (Rows.haveUpTo(row) > Rows.needsUpTo(row)) return;
-      var isCurrent = generationGuard();
-      var had = Rows.haveUpTo(row), was = row.total;
+      const isCurrent = generationGuard();
+      const had = Rows.haveUpTo(row), was = row.total;
       Merge.advance(row.state, Rows.needsUpTo(row)).then(function () {
         if (!isCurrent()) return;
         row.total = Merge.estimate(row.state);
@@ -628,9 +628,9 @@ var Browse = (function () {
   /* ---------- kids ---------- */
 
   function loadKids() {
-    var sec = sections[secIdx];
+    const sec = sections[secIdx];
     reset('kids');
-    var isCurrent = generationGuard();
+    const isCurrent = generationGuard();
 
     /* Ask each library which certificates it uses, keep the ones at or below
        the cutoff, and let the servers do the filtering. */
@@ -638,7 +638,7 @@ var Browse = (function () {
       return Plex.contentRatings(p.server, p.key);
     })).then(function (perPart) {
       if (!isCurrent()) return;
-      var kid = [], seen = {};
+      const kid = [], seen = {};
       perPart.forEach(function (list) {
         list.filter(Media.isKidsRating).forEach(function (r) {
           if (!seen[r]) { seen[r] = true; kid.push(r); }
@@ -646,21 +646,21 @@ var Browse = (function () {
       });
       UI.debug('kids certificates: ' + (kid.join(', ') || 'none'));
 
-      var servers = serversOf(sec);
+      const servers = serversOf(sec);
       return Promise.all([
         Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
         Devices.ensureHistory()
       ]).then(function (res) {
         if (!isCurrent()) return;
-        var kidsWant = sec.type === 'show' ? 'episode' : 'movie';
-        var watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
+        const kidsWant = sec.type === 'show' ? 'episode' : 'movie';
+        const watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
           return m.type === kidsWant && Media.isKidsRating(m.contentRating);
         });
         rows = [];
         if (watching.length) rows.push(Rows.list('Kids · carry on watching', watching));
 
         if (kid.length) {
-          var row = allRow(sec, 'Kids · all films',
+          const row = allRow(sec, 'Kids · all films',
                            { contentRating: kid.join(',') }, 'kids' + Media.KIDS_MAX_AGE);
           rows.push(row);
           render();
@@ -688,7 +688,7 @@ var Browse = (function () {
   function scheduleResolve(item) {
     clearTimeout(resolveTimer);
     if (!Discovery.isEntry(item) || item._resolved !== undefined) return;
-    var gen = generation;
+    const gen = generation;
     resolveTimer = setTimeout(function () {
       Discovery.resolve(item).then(function () {
         if (gen === generation && focusedItem() === item) render();
@@ -699,7 +699,7 @@ var Browse = (function () {
   /* Seeds for the recommended row, out of the Continue watching row already in
      memory. Asking a server for them would cost the page its whole point. */
   function deckSeeds() {
-    var out = [], i, id;
+    let out = [], i, id;
     for (i = 0; i < deckItems.length && out.length < MAX_SEEDS; i++) {
       id = Plex.tmdbId(deckItems[i]);
       if (id && out.indexOf(id) < 0) out.push(id);
@@ -709,7 +709,7 @@ var Browse = (function () {
 
   function loadDiscover() {
     reset('discover');
-    var isCurrent = generationGuard();
+    const isCurrent = generationGuard();
 
     if (!Discovery.enabled()) {
       mode = 'library';
@@ -762,25 +762,25 @@ var Browse = (function () {
      a grid of RESULTS_PER_ROW using the same row machinery. Both servers are
      asked, and a film on both appears once. */
   function runSearch() {
-    var q = elInput.value.trim();
+    const q = elInput.value.trim();
     if (!q) { closeSearch(); return; }
     elInput.blur();
     UI.show('browse');
     UI.toast('Searching…');
-    var isCurrent = generationGuard();
+    const isCurrent = generationGuard();
     Promise.all(Servers.all().map(function (sv) {
       return Plex.search(sv, q);
     })).then(function (perServer) {
       if (!isCurrent()) return;
-      var found = Merge.lists(perServer);
+      const found = Merge.lists(perServer);
       if (!savedRows) savedRows = rows;
       searchQuery = q;
-      var noun = countNoun(found);
+      const noun = countNoun(found);
       /* The results page has no chips to head it any more, so the first row's
          own title carries what was asked, what came back, and the way out. */
-      var header = q + '  ·  ' + found.length + ' ' + noun + '  ·  BACK to library';
+      const header = q + '  ·  ' + found.length + ' ' + noun + '  ·  BACK to library';
       rows = [];
-      for (var i = 0; i < found.length; i += RESULTS_PER_ROW) {
+      for (let i = 0; i < found.length; i += RESULTS_PER_ROW) {
         rows.push(Rows.list(i === 0 ? header : '', found.slice(i, i + RESULTS_PER_ROW)));
       }
       if (!rows.length) rows = [Rows.list(header, [])];
@@ -796,7 +796,7 @@ var Browse = (function () {
      list that is half shows is the kind of small lie that makes a screen feel
      untrustworthy. */
   function countNoun(found) {
-    var films = 0, shows = 0, i;
+    let films = 0, shows = 0, i;
     for (i = 0; i < found.length; i++) {
       if (found[i].type === 'show') shows++; else films++;
     }
@@ -829,7 +829,7 @@ var Browse = (function () {
     if (Menu.isOpen()) return Menu.key(code);
     if (Sidebar.isOpen()) return Sidebar.key(code);
 
-    var row = focusedRow(), K = UI.KEY;
+    const row = focusedRow(), K = UI.KEY;
 
     switch (code) {
       case K.LEFT:
