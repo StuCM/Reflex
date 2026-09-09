@@ -2,9 +2,59 @@
 /* playback, the OSD, and what follows an episode */
 module.exports = function (h) {
   const { hasFixture, trace, tracedThat, timelines, shot, press, waitFor, step,
-    menuLabels, menuChoose, controlRow, openMenu, openChapters, openSidebar,
+    menuLabels, menuChoose, controlRow, openSidebar,
     sidebarRows, sidebarPick, backToLibrary, openTitle, openShowPage, playEpisode,
     playToEnd, upNext, waitForOffer, page, titles } = h;
+
+  /* The control row is entered with ▼ and a panel opens on OK, so the row is
+     walked here rather than through the shell's helpers, which press ▲ — ▲ is
+     the trackbar now and opens nothing. */
+  function focusControl(id) {
+    return controlRow()
+      /* A panel that is up owns the d-pad, so it has to go first. */
+      .then(function (row) { return row.open ? press('Backspace').then(controlRow) : row; })
+      .then(function (row) { return row.foc >= 0 ? row : press('ArrowDown').then(controlRow); })
+      .then(function (row) {
+        const want = row.ids.indexOf('osd-ctl-' + id);
+        if (want < 0) throw new Error('no control called ' + id + ': ' + row.ids.join(', '));
+        const by = want - row.foc;
+        return press(by > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(by));
+      });
+  }
+
+  function openMenu(id) {
+    return focusControl(id)
+      .then(function () { return press('Enter'); })
+      .then(function () {
+        return waitFor('!document.getElementById("menu").classList.contains("hidden")',
+                       'the ' + id + ' panel');
+      });
+  }
+
+  function openChapters() {
+    return focusControl('chapters')
+      .then(function () { return press('Enter'); })
+      .then(function () {
+        return waitFor('!document.getElementById("osd-chapters").classList.contains("hidden")',
+                       'the chapter rail');
+      });
+  }
+
+  function barFocused() {
+    return page.evaluate(function () {
+      return document.getElementById('osd-bar').classList.contains('foc');
+    });
+  }
+
+  /* The OSD clock reads where a seek is AIMED, so an assertion on it does not
+     race the 400ms settle. The fixture is thirty seconds and the film is two
+     hours, so every jump below clamps to what the harness can serve — what is
+     checked is that the key still reaches the seek, which is exactly what a new
+     focus mode breaks. */
+  const CLOCK = '(function(){var p=document.getElementById("osd-time").textContent' +
+                '.trim().split(/\\s+/)[0].split(":").map(Number);' +
+                'return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1];})()';
+  function clock(test, what) { return waitFor(CLOCK + test, what); }
 
   return h.ready()
 
@@ -36,10 +86,147 @@ module.exports = function (h) {
     /* Everything the player can do while a film runs. All of it needs something
        actually playing, so it is skipped without a fixture — npm run fixture. */
 
+    /* Three modes, and which one you are in has to be visible without looking
+       anything up: ▲ is the trackbar, ▼ is the row, and a panel opens on OK on
+       its own button and on nothing else. */
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('up takes the trackbar, down the row, and only OK opens a panel', function () {
+        return press('ArrowUp')
+          .then(barFocused)
+          .then(function (on) { if (!on) throw new Error('up did not focus the trackbar'); })
+          .then(controlRow)
+          .then(function (row) {
+            if (row.foc >= 0) throw new Error('up went to the control row, button ' + row.foc);
+          })
+          /* Left scrubs here rather than walking a button — the difference
+             between the two modes, in one press. */
+          .then(function () { return press('ArrowLeft'); })
+          .then(function () {
+            return waitFor('/SEEKING/.test(document.getElementById("osd-time").textContent)',
+                           'the trackbar to scrub');
+          })
+          .then(function () { return press('ArrowDown'); })
+          .then(controlRow)
+          .then(function (row) {
+            if (row.foc < 0) throw new Error('down did not reach the control row');
+            if (row.open) throw new Error('a panel opened without OK: ' + row.open);
+          })
+          /* Back up to the bar, which is the user's actual complaint: up used to
+             open whatever the row was sitting on. */
+          .then(function () { return press('ArrowUp'); })
+          .then(function () {
+            return page.evaluate(function () {
+              return document.getElementById('menu').classList.contains('hidden') &&
+                     document.getElementById('osd-chapters').classList.contains('hidden');
+            });
+          })
+          .then(function (shut) { if (!shut) throw new Error('up opened a panel'); })
+          .then(barFocused)
+          .then(function (on) {
+            if (!on) throw new Error('up from the row did not return to the trackbar');
+          })
+          /* And OK on a button is what opens it. */
+          .then(function () { return openMenu('subs'); })
+          .then(controlRow)
+          .then(function (row) {
+            if (row.open !== 'osd-ctl-subs') throw new Error('OK opened: ' + row.open);
+          })
+          .then(function () { return press('Backspace'); })        // close the panel
+          .then(function () { return press('ArrowDown'); })        // and leave the row
+          .then(controlRow)
+          .then(function (row) {
+            if (row.foc >= 0) throw new Error('down did not leave the control row');
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('every documented key still means what it says unfocused', function () {
+        /* Paused throughout: these jumps land near the end of a thirty-second
+           fixture, and a film that ends here takes the rest of the suite with
+           it. Pausing is itself one of the keys under test. */
+        return press('Enter')
+          .then(function () {
+            return waitFor('/PAUSED/.test(document.getElementById("osd-time").textContent)',
+                           'OK to pause');
+          })
+          .then(function () { return press('0'); })
+          .then(function () { return clock(' === 0', 'the clock back at the start'); })
+          .then(function () { return press('5'); })
+          .then(function () { return clock(' > 10 && ' + CLOCK + ' < 20', 'a digit to jump'); })
+          .then(function () { return press('ArrowLeft'); })
+          .then(function () { return clock(' === 0', 'left to nudge back'); })
+          .then(function () { return press('ArrowRight'); })
+          .then(function () { return clock(' > 20', 'right to nudge on'); })
+          .then(function () { return press('PageDown'); })
+          .then(function () { return clock(' === 0', 'CH− to step back a chapter'); })
+          .then(function () { return press('PageUp'); })
+          .then(function () { return clock(' > 20', 'CH+ to step on a chapter'); })
+          /* None of that may have moved the focus: the arrows only belong to the
+             bar and the row once one of them has been asked for. */
+          .then(barFocused)
+          .then(function (on) { if (on) throw new Error('seeking focused the trackbar'); })
+          .then(controlRow)
+          .then(function (row) {
+            if (row.foc >= 0) throw new Error('seeking focused the control row');
+          })
+          /* Back to the start, and playing again, so what follows has runway. */
+          .then(function () { return press('0'); })
+          .then(function () { return press('Enter'); })
+          .then(function () {
+            return waitFor('!document.getElementById("video").paused',
+                           'OK to start it again');
+          });
+      });
+    })
+
+    .then(function () {
+      if (!hasFixture()) return;
+      return step('the buttons are the design’s size and the panel is opaque', function () {
+        return page.evaluate(function () {
+          function widths(sel) {
+            return Array.prototype.map.call(document.querySelectorAll(sel),
+              function (b) { return b.offsetWidth; });
+          }
+          return { left: widths('#osd-left .osd-btn'), right: widths('#osd-right .osd-btn') };
+        })
+          .then(function (w) {
+            /* 7a: one size for the transport, so Play and the two jumps read as
+               one control, and a size down for the four choices. */
+            if (w.left.join() !== '80,80,80') {
+              throw new Error('the transport buttons are ' + w.left.join(', ') +
+                              ', not three of 80');
+            }
+            if (w.right.join() !== '76,76,76,76') {
+              throw new Error('the choice buttons are ' + w.right.join(', ') +
+                              ', not four of 76');
+            }
+          })
+          .then(function () { return openMenu('quality'); })
+          .then(function () {
+            return page.evaluate(function () {
+              const s = getComputedStyle(document.getElementById('menu'));
+              return [s.backgroundColor, s.borderTopLeftRadius];
+            });
+          })
+          .then(function (style) {
+            const parts = /rgba?\(([^)]+)\)/.exec(style[0])[1].split(',');
+            const alpha = parts.length > 3 ? Number(parts[3]) : 1;
+            if (alpha !== 1) throw new Error('the panel is translucent: ' + style[0]);
+            if (style[1] !== '26px') throw new Error('the panel corner is ' + style[1]);
+          })
+          .then(function () { return press('Backspace'); })        // close the panel
+          .then(function () { return press('ArrowDown'); });       // and leave the row
+      });
+    })
+
     .then(function () {
       if (!hasFixture()) return;
       return step('four captioned buttons, each opening its own panel', function () {
-        return press('ArrowUp')                                    // into the row
+        return press('ArrowDown')                                  // into the row
           .then(controlRow)
           .then(function (row) {
             const named = row.ids.filter(Boolean).join(',');

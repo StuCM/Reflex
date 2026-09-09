@@ -27,6 +27,7 @@ var Player = (function () {
   var osdFill = document.getElementById('osd-fill');
   var osdBuffered = document.getElementById('osd-buffered');
   var osdTicks = document.getElementById('osd-ticks');
+  var osdBar = document.getElementById('osd-bar');
   var osdKnob = document.getElementById('osd-knob');
   var osdLeft = document.getElementById('osd-left');
   var osdRight = document.getElementById('osd-right');
@@ -74,10 +75,12 @@ var Player = (function () {
   /* The skip prompt. The menu is js/menu.js and keeps its own state. */
   var marker = null;
 
-  /* The control row: which button has the focus (-1 for none, which is when the
-     arrows still mean seeking), which panel is open under it, and where the
-     chapter rail is. */
-  var ctl = -1, openPanel = null, chapSel = 0;
+  /* Focus is a mode, and that is the only reason every key CLAUDE.md documents
+     goes on meaning what it says: in 'none' the arrows seek, in 'bar' they
+     scrub the trackbar, in 'row' they walk the buttons — and ctl says which
+     button. Which panel is open under the row, and where the chapter rail is,
+     are separate. */
+  var focus = 'none', ctl = -1, openPanel = null, chapSel = 0;
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
@@ -161,7 +164,7 @@ var Player = (function () {
        so it stays until the seek lands. The menu keeps it up too — it sits
        above the bar and reads as one panel. */
     osdTimer = setTimeout(function () {
-      if (pending !== null || Menu.isOpen() || openPanel || ctl >= 0) { showOsd(); return; }
+      if (pending !== null || Menu.isOpen() || openPanel || focus !== 'none') { showOsd(); return; }
       osd.style.opacity = '0';
       subEl.classList.remove('lifted');
     }, 4000);
@@ -174,12 +177,23 @@ var Player = (function () {
       osdHint.textContent = '◀ ▶ chapter · OK jump there · BACK close';
     } else if (Menu.isOpen()) {
       osdHint.textContent = '▲ ▼ choose · OK select · BACK close';
-    } else if (ctl >= 0) {
-      osdHint.textContent = '◀ ▶ control · ▲ or OK open it · ▼ back to playback';
+    } else if (focus === 'row') {
+      osdHint.textContent = '◀ ▶ control · OK open it · ▲ trackbar · ▼ back to playback';
+    } else if (focus === 'bar') {
+      osdHint.textContent = '◀ ▶ scrub · OK seek there · ▼ controls · BACK back to playback';
     } else {
-      osdHint.textContent = '◀ ▶ ' + NUDGE + 's · ▲ ▼ controls · 0–9 jump · ' +
+      osdHint.textContent = '◀ ▶ ' + NUDGE + 's · ▲ trackbar · ▼ controls · 0–9 jump · ' +
                             'CH± chapter · OK pause';
     }
+  }
+
+  /* Move between the three modes. Leaving for playback forgets which button the
+     row was on; the trackbar says so with the knob's ring. */
+  function setFocus(to) {
+    focus = to;
+    if (to === 'none') ctl = -1;
+    else if (to === 'row' && ctl < 0) ctl = indexOfCtl('audio');
+    osdBar.classList.toggle('foc', to === 'bar');
   }
 
   /* ---------- choosing the audio track ----------
@@ -293,9 +307,12 @@ var Player = (function () {
                   '<polygon points="216,64 216,192 132,128"/>'),
     forward: glyph('<polygon points="132,64 132,192 216,128"/>' +
                    '<polygon points="40,64 40,192 124,128"/>'),
-    play: glyph('<polygon points="76,52 76,204 204,128"/>'),
-    pause: glyph('<line x1="96" y1="60" x2="96" y2="196"/>' +
-                 '<line x1="160" y1="60" x2="160" y2="196"/>'),
+    /* Drawn to the same extent as the two jumps either side of them: the
+       buttons were always one size, and a triangle inset in its own box is
+       what read as a smaller play than forward. */
+    play: glyph('<polygon points="72,48 72,208 208,128"/>'),
+    pause: glyph('<line x1="88" y1="52" x2="88" y2="204"/>' +
+                 '<line x1="168" y1="52" x2="168" y2="204"/>'),
     audio: glyph('<polygon points="36,100 92,100 148,48 148,208 92,156 36,156"/>' +
                  '<path d="M188 92a52 52 0 0 1 0 72"/>'),
     subs: glyph('<rect x="28" y="52" width="200" height="152" rx="18"/>' +
@@ -347,7 +364,7 @@ var Player = (function () {
     var list = controls(), lh = '', rh = '', i, c, html;
     for (i = 0; i < list.length; i++) {
       c = list[i];
-      html = '<div class="osd-ctl' + (i === ctl ? ' foc' : '') +
+      html = '<div class="osd-ctl' + (focus === 'row' && i === ctl ? ' foc' : '') +
              (c.id && c.id === openPanel ? ' on' : '') + '"' +
              (c.id ? ' id="osd-ctl-' + c.id + '"' : '') + '>' +
              '<div class="osd-btn">' + c.glyph + '</div>' +
@@ -921,7 +938,7 @@ var Player = (function () {
     marker = null; skipDismissed = null;
     skipEl.classList.add('hidden');
     Menu.close();
-    ctl = -1; openPanel = null;
+    setFocus('none'); openPanel = null;
     chapEl.classList.add('hidden');
     cues = []; currentSub = null; subNote = '';
     subEl.classList.add('hidden'); subEl.textContent = '';
@@ -1036,7 +1053,7 @@ var Player = (function () {
   function stop(state, quiet) {
     if (!item) return;
     Menu.close();
-    ctl = -1; openPanel = null;
+    setFocus('none'); openPanel = null;
     chapEl.classList.add('hidden');
     UI.debug(summary());
     report(state || 'stopped');
@@ -1074,26 +1091,49 @@ var Player = (function () {
   /* Move the focus onto a button and open it — what a colour key does, so the
      shortcut and the row never disagree about what is on screen. */
   function focusPanel(id) {
+    setFocus('row');
     ctl = indexOfCtl(id);
     openPanelFor(id);
   }
 
+  /* The trackbar has the four arrows once it has the focus. Scrubbing is the
+     same aim-then-seek as a nudge, so holding ◀ still costs one range request;
+     OK is what says "stop aiming and go there". */
+  function barKey(code) {
+    if (code === 37) { seekBy(-NUDGE); return true; }
+    if (code === 39) { seekBy(NUDGE); return true; }
+    if (code === 13 || code === 415 || code === 19) {
+      if (marker) { takeSkip(); return true; }
+      applySeek();
+      return true;
+    }
+    if (code === 40) { setFocus('row'); paintControls(); showOsd(); return true; }
+    if (UI.isBack(code) || code === 413) {
+      if (marker) { dismissSkip(); return true; }
+      setFocus('none'); paintControls(); showOsd();
+      return true;
+    }
+    return false;                      // anything else is still playback's
+  }
+
   /* The control row has the four arrows once it has the focus; everything else
-     on the remote goes on meaning what it means during playback. */
+     on the remote goes on meaning what it means during playback. OK belongs to
+     the button here — the skip offer is taken with OK from playback, and BACK
+     still dismisses it from the row. */
   function controlKey(code) {
     var n = controls().length;
     if (code === 37) { ctl = (ctl + n - 1) % n; paintControls(); showOsd(); return true; }
     if (code === 39) { ctl = (ctl + 1) % n; paintControls(); showOsd(); return true; }
-    if (code === 38 || code === 13) {
-      if (code === 13 && marker) { takeSkip(); return true; }
+    if (code === 13) {
       var c = controls()[ctl];
       if (c.id) openPanelFor(c.id); else c.run();
       return true;
     }
-    if (code === 40) { ctl = -1; paintControls(); showOsd(); return true; }
+    if (code === 38) { setFocus('bar'); paintControls(); showOsd(); return true; }
+    if (code === 40) { setFocus('none'); paintControls(); showOsd(); return true; }
     if (UI.isBack(code) || code === 413) {
       if (marker) { dismissSkip(); return true; }
-      ctl = -1; paintControls(); showOsd();
+      setFocus('none'); paintControls(); showOsd();
       return true;
     }
     return false;                      // anything else is still playback's
@@ -1109,7 +1149,8 @@ var Player = (function () {
     /* Digits jump by tenths — the cheapest way past a first act there is. */
     if (code >= 48 && code <= 57) { jumpToTenth(code - 48); return true; }
 
-    if (ctl >= 0 && controlKey(code)) return true;
+    if (focus === 'bar' && barKey(code)) return true;
+    if (focus === 'row' && controlKey(code)) return true;
 
     switch (code) {
       case 13: case 415: case 19: case 179:      // OK / play / pause
@@ -1131,8 +1172,13 @@ var Player = (function () {
       case 417:                                   // fast forward
         seekBy(JUMP);
         return true;
-      case 38: case 40:                           // up / down — the control row
-        ctl = indexOfCtl('audio');                // where the menu used to open
+      case 38:                                    // up — the trackbar
+        setFocus('bar');
+        paintControls();
+        showOsd();
+        return true;
+      case 40:                                    // down — the control row
+        setFocus('row');
         paintControls();
         showOsd();
         return true;
