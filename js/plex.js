@@ -63,16 +63,7 @@ var Plex = (function () {
     return out;
   }
 
-  function qs(params) {
-    const keys = Object.keys(params);
-    const parts = [];
-    for (let i = 0; i < keys.length; i++) {
-      const v = params[keys[i]];
-      if (v === null || v === undefined) continue;
-      parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(v));
-    }
-    return parts.join('&');
-  }
+  const qs = Http.qs;
 
   function headers() {
     return {
@@ -89,29 +80,20 @@ var Plex = (function () {
     };
   }
 
-  /* opts.token: the token to send, or false for none. */
+  /* opts.token: the token to send, or false for none. A body that is not JSON
+     is an answer here, not a failure: several endpoints reply in plain text. */
   function request(method, url, opts) {
     opts = opts || {};
-    return new Promise(function (resolve, reject) {
-      const xhr = new XMLHttpRequest();
-      xhr.open(method, url, true);
-      xhr.timeout = opts.timeout || 15000;
-      let h = headers();
-      const keys = Object.keys(h);
-      for (let i = 0; i < keys.length; i++) xhr.setRequestHeader(keys[i], h[keys[i]]);
-      if (opts.token) xhr.setRequestHeader('X-Plex-Token', opts.token);
-      xhr.onload = function () {
-        if (xhr.status < 200 || xhr.status >= 300) {
-          reject(new Error(method + ' ' + tidy(url) + ' -> ' + xhr.status + why(xhr)));
-          return;
-        }
-        if (!xhr.responseText) { resolve(null); return; }
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch (e) { resolve(xhr.responseText); }
-      };
-      xhr.ontimeout = function () { reject(new Error('timeout ' + url)); };
-      xhr.onerror = function () { reject(new Error('network ' + url)); };
-      xhr.send(opts.body || null);
+    const h = headers();
+    if (opts.token) h['X-Plex-Token'] = opts.token;
+    return Http.request(url, {
+      method: method,
+      headers: h,
+      timeout: opts.timeout,
+      body: opts.body,
+      text: true,
+      label: method + ' ' + tidy(url),
+      explain: why
     });
   }
 

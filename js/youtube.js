@@ -20,35 +20,9 @@ var Youtube = (function () {
   /* Is there a key at all? Without one the recaps action never appears. */
   function enabled() { return !!KEY; }
 
-  function qs(params) {
-    const keys = Object.keys(params);
-    const parts = [];
-    for (let i = 0; i < keys.length; i++) {
-      const v = params[keys[i]];
-      if (v === null || v === undefined) continue;
-      parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(v));
-    }
-    return parts.join('&');
-  }
-
   function request(path, params) {
     params.key = KEY;
-    return new Promise(function (resolve, reject) {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', API + path + '?' + qs(params), true);
-      xhr.timeout = 15000;
-      xhr.onload = function () {
-        if (xhr.status < 200 || xhr.status >= 300) {
-          reject(new Error('YouTube ' + path + ' -> ' + xhr.status));
-          return;
-        }
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch (e) { reject(new Error('YouTube bad json')); }
-      };
-      xhr.ontimeout = function () { reject(new Error('YouTube timeout')); };
-      xhr.onerror = function () { reject(new Error('YouTube network')); };
-      xhr.send(null);
-    });
+    return Http.request(API + path + '?' + Http.qs(params), { label: 'YouTube ' + path });
   }
 
   /* One request in flight at a time. Two searches racing is 200 units spent to

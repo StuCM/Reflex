@@ -8,7 +8,7 @@
 'use strict';
 
 const assert = require('assert');
-const app = require('./load')(['config', 'panel', 'plex', 'tmdb', 'discovery']);
+const app = require('./load')(['config', 'http', 'panel', 'plex', 'tmdb', 'discovery']);
 const { Tmdb, Discovery, Plex } = app;
 
 /* What TMDB was asked for, and what it answered. The client is XHR, so a fake
