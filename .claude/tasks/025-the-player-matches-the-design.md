@@ -1,7 +1,7 @@
 ---
 id: 025
 slug: the-player-matches-the-design
-status: approved
+status: building
 model: sonnet
 env: laptop
 branch: crew/025-the-player-matches-the-design

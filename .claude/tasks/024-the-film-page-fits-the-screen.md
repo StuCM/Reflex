@@ -1,7 +1,7 @@
 ---
 id: 024
 slug: the-film-page-fits-the-screen
-status: approved
+status: building
 model: sonnet
 env: laptop
 branch: crew/024-the-film-page-fits-the-screen
