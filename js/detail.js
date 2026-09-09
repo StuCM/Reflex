@@ -18,6 +18,7 @@
 var Detail = (function () {
   'use strict';
 
+  var elView = document.getElementById('detail');
   var elArt = document.getElementById('dt-art');
   var elKicker = document.getElementById('dt-kicker');
   var elTitle = document.getElementById('dt-title');
@@ -333,17 +334,24 @@ var Detail = (function () {
     return out;
   }
 
-  /* "1:12" — where a part-watched film would pick up. */
-  function atLabel(ms) {
-    var mins = Math.floor(ms / 60000);
+  /* "1:12", from seconds — where a part-watched film would pick up. */
+  function atLabel(secs) {
+    var mins = Math.floor(secs / 60);
     return Math.floor(mins / 60) + ':' + (mins % 60 < 10 ? '0' : '') + (mins % 60);
+  }
+
+  /* Where Play would pick up, in seconds, and 0 when there is nothing worth
+     resuming — the first ten seconds of a film are not a position. */
+  function resumeAt() {
+    var at = (item && item.viewOffset) || 0;
+    return at > 10000 ? Math.floor(at / 1000) : 0;
   }
 
   /* Play says what it will do and what it will cost, because both are decided
      by the buttons beside it. */
   function playCaption() {
-    var at = (item && item.viewOffset) || 0;
-    return (at > 10000 ? 'resume at ' + atLabel(at) : 'from start') +
+    var at = resumeAt();
+    return (at ? 'resume at ' + atLabel(at) : 'from start') +
            '  ·  ' + (verdict ? Guard.label(verdict) : 'checking…');
   }
 
@@ -365,12 +373,21 @@ var Detail = (function () {
     Browse.clearOne(item, function () { onDeck = false; close(); });
   }
 
-  /* Seven at most: Play, then the extras, then the three things about the copy
-     that can be chosen. Trailer is only here when there is one, and Remove only
-     when the thing is actually on the deck. */
+  /* Eight at most: Play, starting again where there is something to resume,
+     then the extras, then the three things about the copy that can be chosen.
+     Trailer is only here when there is one, and Remove only when the thing is
+     actually on the deck. */
   function actions() {
     var out = [{ act: 'play', label: 'Play', primary: true, caption: playCaption(),
                  run: function () { start(verdict, false); } }];
+    /* Part way through, resuming and starting again are two different things to
+       want. Both are the verdict the buttons already settled — the second only
+       says where to begin. */
+    if (resumeAt()) {
+      out.push({ act: 'start', label: 'From start', primary: true, quiet: true,
+                 caption: verdict ? Guard.label(verdict) : 'checking…',
+                 run: function () { start(verdict, false, 0); } });
+    }
     if (extras.length) {
       out.push({ act: 'trailer', glyph: GLYPHS.trailer, caption: extras[0].title,
                  run: function () { start(extras[0].verdict, true); } });
@@ -395,6 +412,7 @@ var Detail = (function () {
     for (i = 0; i < list.length; i++) {
       a = list[i];
       html += '<div class="dt-act' + (a.primary ? ' primary' : '') +
+              (a.quiet ? ' quiet' : '') +
               (strip === 0 && i === idx ? ' on' : '') + '" data-act="' + a.act + '">' +
               '<div class="dt-act-btn">' + (a.glyph || UI.escapeHtml(a.label)) + '</div>' +
               '<div class="dt-act-cap">' + UI.escapeHtml(a.caption) + '</div>' +
@@ -407,7 +425,7 @@ var Detail = (function () {
      the end of the row does not push it off the screen. */
   function openChooser(tab, onChoose) {
     var btn = elActions.children[idx];
-    elMenu.style.left = UI.clamp(64 + (btn ? btn.offsetLeft : 0), 64, 1000) + 'px';
+    elMenu.style.left = UI.clamp(96 + (btn ? btn.offsetLeft : 0), 96, 964) + 'px';
     Menu.open({ host: elMenu, tabs: [tab], onChoose: onChoose, onClose: render });
   }
 
@@ -489,6 +507,9 @@ var Detail = (function () {
     }
     elExtras.innerHTML = html;
     elExtrasLabel.classList.toggle('hidden', extras.length === 0);
+    /* Stepping into the extras lifts them clear of the bottom edge; the
+       stylesheet owns what else moves out of their way. */
+    elView.classList.toggle('down', strip === 1);
     /* The quality chip names the copy that would play, so it follows the
        Source button. */
     elChips.innerHTML = chipsHtml();
@@ -678,8 +699,9 @@ var Detail = (function () {
 
   /* Hand a verdict to the caller, or say why there is nothing to hand over. A
      refusal is the long form on the message screen: this is the one moment the
-     user has asked for the whole story. */
-  function start(v, isExtra) {
+     user has asked for the whole story. `at` is seconds to begin at, left out
+     to pick up wherever the item says. */
+  function start(v, isExtra, at) {
     if (!v) { UI.toast('Still checking that copy…'); return; }
     if (!v.ok) {
       var why = Guard.refusal(item, v);
@@ -687,7 +709,7 @@ var Detail = (function () {
       return;
     }
     if (opts.onPlay) {
-      opts.onPlay(item, v, isExtra, isExtra ? null : (chosenSub && chosenSub.languageCode));
+      opts.onPlay(item, v, isExtra, isExtra ? null : (chosenSub && chosenSub.languageCode), at);
     }
   }
 
