@@ -7,9 +7,8 @@ Task files are the source of truth; this is the glance view.
 |---|---|---|---|---|
 | 012 | Season recaps on a show, but only when asked for | `pending-tv` | laptop | crew/012-recaps-rail *(gone)* |
 | 015 | Scrolling fast costs nothing until you stop | `pending-tv` | laptop | crew/015-cheap-fast-scrolling *(gone)* |
-| 021 | A tile keeps its picture only while it is the same film | `pending-tv` | laptop | crew/021-tile-keeps-its-own-picture |
+| 021 | A tile keeps its picture only while it is the same film | `pending-tv` | laptop | crew/021-tile-keeps-its-own-picture *(gone)* |
 | 022 | The series theme, on the show page | `pending-tv` | laptop | crew/022-series-theme-music *(gone)* |
-| 023 | Discovery, drawn from TMDB, asking the servers only when it must | `draft` | laptop | crew/023-tmdb-first-discovery *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -28,6 +27,7 @@ Task files are the source of truth; this is the glance view.
 | 018 | Getting things out of Continue watching | `done` | laptop | crew/018-clear-continue-watching *(gone)* |
 | 019 | One suite, many files, and a free port | `done` | laptop | crew/019-split-the-smoke-suite *(gone)* |
 | 020 | One stylesheet per screen, and the tokens they share | `done` | laptop | crew/020-split-the-stylesheet *(gone)* |
+| 023 | Discovery, drawn from TMDB, asking the servers only when it must | `done` | laptop | crew/023-tmdb-first-discovery |
 
 ## Waiting on you
 
@@ -35,7 +35,6 @@ Task files are the source of truth; this is the glance view.
 - **015 Scrolling fast costs nothing until you stop** — code-complete; only the panel can prove it
 - **021 A tile keeps its picture only while it is the same film** — code-complete; only the panel can prove it
 - **022 The series theme, on the show page** — code-complete; only the panel can prove it
-- **023 Discovery, drawn from TMDB, asking the servers only when it must** — spec needs your approval before anyone starts
 
 ## In flight
 
