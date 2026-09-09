@@ -18,7 +18,7 @@ trap 'rm -rf "$STAGE"' EXIT
 # Everything the app needs at runtime, and nothing else. appinfo.json names
 # index.html, icon.png and largeIcon.png; index.html names css/ and js/.
 cp "$ROOT/appinfo.json" "$ROOT/index.html" "$ROOT/icon.png" "$ROOT/largeIcon.png" "$STAGE/"
-cp -r "$ROOT/css" "$ROOT/js" "$STAGE/"
+cp -r "$ROOT/css" "$ROOT/js" "$ROOT/build" "$STAGE/"
 
 # The dev server injects its shim into index.html in memory, never on disk.
 # If one ever lands on disk it would ship to the TV, so check. (js/core/config.js
