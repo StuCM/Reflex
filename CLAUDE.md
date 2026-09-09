@@ -27,7 +27,7 @@ Not available, do not use:
 - **`Array.prototype.sort` is not stable** (V8 got a stable sort in Chrome 70).
   Above ten elements equal items reorder arbitrarily. Where the original order
   matters, sort the *indices* and tie-break on position — `bySeason` in
-  `js/youtube.js` is the pattern. Audited 2026-09-08: every other sort in `js/`
+  `js/api/youtube.js` is the pattern. Audited 2026-09-08: every other sort in `js/`
   keys on something unique (season index, chapter start, cue start, server
   name) or is a small cosmetic ordering, so nothing else needs changing.
 - Animate only `transform` and `opacity`. No shadow, filter, or blur
@@ -62,7 +62,7 @@ Reflex on a B8, so the admin's dashboard shows what it really is.
 Consequence: the server may now apply its Chrome profile and offer direct play
 of something Chrome decodes and this panel does not. `Media.canDecode` refuses
 anything outside H.264/HEVC in MKV/MP4/MPEG-TS before the decision call, and it
-is unit tested. Widen it only alongside `PROFILE` in `js/plex.js`, and only
+is unit tested. Widen it only alongside `PROFILE` in `js/api/plex.js`, and only
 after `probe.py` says the panel really manages it.
 
 With that fixed, 4K HEVC direct plays on these servers.
@@ -87,13 +87,13 @@ else's two remote servers, connecting directly (not via relay).
   someone else's hardware.
 - Codec support is the panel's, but **Plex cannot see the panel** — it obeys
   what the client declares in `X-Plex-Client-Profile-Extra` and transcodes
-  everything else. `js/panel.js` builds that declaration by asking the panel
+  everything else. `js/core/panel.js` builds that declaration by asking the panel
   with `canPlayType`, so widening is a matter of evidence rather than editing
   a string. Only `"probably"` is acted on: `"maybe"` is what a TV says when it
   has not been asked precisely enough, and acting on it is how you get a black
   screen. The `panel` chip shows what was asked and what came back.
 - What the panel can *decode* and what survives *HDMI ARC* are different
-  questions. `js/panel.js` answers the first, `js/media.js` the second, and the
+  questions. `js/core/panel.js` answers the first, `js/rules/media.js` the second, and the
   audio rules below are not affected by any of this.
 - Sync library data incrementally and infrequently. Do not full-crawl a
   server we don't own.
@@ -172,64 +172,101 @@ question you cannot act on until OK.
 
 No bundler. Each file is one global, and `index.html` loads them in dependency
 order — that script list *is* the dependency graph. `npm run check` fails if a
-file in `js/` is missing from it.
+file in `js/` is missing from it, or is loaded from the wrong layer.
 
-Settings and services:
+`js/` is layered, and the layering is enforced rather than suggested: the same
+check fails on a request opened outside `js/api/`, on `Store` addressed outside
+`js/data/`, and on the DOM, a request or the cache reached for from
+`js/rules/`.
 
-- `js/config.js` — the few settings that differ between the TV and a laptop:
-  plex.tv base URL, TMDB key, debug beacon. Nothing else may hardcode these.
-- `js/store.js` — IndexedDB cache. The rail paints from cache before any
+`js/core/` — what this build is, and what this device is.
+
+- `js/core/config.js` — the few settings that differ between the TV and a
+  laptop: plex.tv base URL, TMDB key, debug beacon. Nothing else may hardcode
+  these.
+- `js/core/panel.js` — what this panel claims it can play, and the client
+  profile built from it.
+- `js/core/ui.js` — which view is showing, toast, the debug line, keycodes.
+
+`js/api/` — the only files that make a request.
+
+- `js/api/http.js` — one XHR, for every client that talks to something. The
+  three clients differ in the headers they send, the name an error uses, and
+  whether a non-JSON body is an answer. Those are its options.
+- `js/api/plex.js` — auth (PIN flow), server discovery, library paging, poster
+  URLs, the decision call, timeline reporting. Every call takes a server.
+- `js/api/tmdb.js` — TMDB client for the curated rows. Inert without a key.
+- `js/api/youtube.js` — the recap channel, searched on a keypress and never on
+  a page opening. Inert without a key.
+
+`js/data/` — what we hold: fetched, merged, cached.
+
+- `js/data/store.js` — IndexedDB cache. The rail paints from cache before any
   network call.
-- `js/panel.js` — what this panel claims it can play, and the client profile
-  built from it.
-- `js/media.js` — the rules, as pure functions: audio and subtitle track
+- `js/data/cache.js` — every key the cache holds and how long a hit lasts:
+  kept until replaced, daily on a clock, or a hit kept while a miss is asked
+  again. Nothing outside `js/data/` addresses `Store` directly.
+- `js/data/servers.js` — the servers we can reach, which one an item came
+  from, and which one is preferred.
+- `js/data/merge.js` — one entry per film across servers: folding fetched
+  lists, and the streaming merge behind the All row.
+- `js/data/meta.js` — full metadata for a copy, debounced and cached per
+  server.
+- `js/data/art.js` — a title's picture and its facts from TMDB, queued, cached
+  and published when they land.
+- `js/data/shows.js` — seasons and episodes of a show, merged across servers.
+- `js/data/discovery.js` — turns a TMDB list into rows of what the servers
+  have.
+- `js/data/devices.js` — whose viewing is this; filters Continue watching.
+- `js/data/guard.js` — will this copy play, and at what cost to someone else's
+  server. Everything that reaches Player goes through it first.
+
+`js/rules/` — pure. No DOM, no request, no cache, which is what makes it the
+half worth unit testing.
+
+- `js/rules/media.js` — the rules, as pure functions: audio and subtitle track
   selection, the UHD guard, certificate ages, markers, chapters, quality caps,
   film identity. No network, no DOM. These are the parts that must not be
   wrong, so they are the parts that are unit tested.
-- `js/subs.js` — SRT and WebVTT in, cues out, and what should be on screen at
-  time t. Pure, and unit tested. Subtitles are drawn over the video rather than
-  burned into it, which is what makes them free — see the player, below.
-- `js/servers.js` — the servers we can reach, which one an item came from, and
-  which one is preferred.
-- `js/merge.js` — one entry per film across servers: folding fetched lists, and
-  the streaming merge behind the All row.
-- `js/plex.js` — auth (PIN flow), server discovery, library paging, poster
-  URLs, the decision call, timeline reporting. Every call takes a server.
-- `js/tmdb.js` — TMDB client for the curated rows. Inert without a key.
+- `js/rules/subs.js` — SRT and WebVTT in, cues out, and what should be on
+  screen at time t. Pure, and unit tested. Subtitles are drawn over the video
+  rather than burned into it, which is what makes them free — see the player,
+  below.
+- `js/rules/rows.js` — the row model. A 'list' row holds its items; a 'merge'
+  row is virtual over the servers' own totals and walks them as you scroll.
 
-Screen:
+`js/view/` — draws. Owns no state.
 
-- `js/ui.js` — which view is showing, toast, the debug line, keycodes.
-- `js/rows.js` — the row model. A 'list' row holds its items; a 'merge' row is
-  virtual over the servers' own totals and walks them as you scroll.
-- `js/rail.js` — draws rows from a fixed pool: 4 row elements, 12 tiles each,
-  whatever the library size. Owns no state.
-- `js/meta.js` — full metadata for a copy, debounced and cached per server.
-- `js/guard.js` — will this copy play, and at what cost to someone else's
-  server. Everything that reaches Player goes through it first.
-- `js/masthead.js` — the backdrop, the title, and one line under it.
-- `js/shows.js` — seasons and episodes of a show, merged across servers.
-- `js/menu.js` — the menu shell both the detail page and the player draw with:
-  tabs, rows, the winding transform, and an overlay that swallows every key. It
-  knows nothing about playback or copies; a row carries a `value` and the caller
-  decides what that means.
-- `js/detail.js` — the page OK opens on a film or an episode: cast, ratings,
-  extras, and an action row — Play, then Trailer, Quality, Source, Audio and
-  Subtitles — where playback is actually chosen. Every choice goes back through
-  `Guard.check` before it sticks, and Play's caption carries the verdict for the
-  combination, so the cost is on screen before anything starts.
-- `js/showpage.js` — a show: its series across the top, its episodes down the
-  side, each checked in place so OK means something.
-- `js/devices.js` — whose viewing is this; filters Continue watching.
-- `js/discovery.js` — turns a TMDB list into rows of what the servers have.
-- `js/browse.js` — the state: sections, rows, focus, mode, paging, search.
-- `js/player.js` — playback and everything you can do during it: the trackbar
-  with its chapter ticks and marker bands, seeking, skip intro, and — drawn with
-  `js/menu.js`, the same shell the detail page uses — a menu of audio tracks,
-  subtitle languages, quality and chapters. What the tabs hold and what choosing
-  does live here; the drawing and the d-pad do not.
-  Seeks accumulate: every `currentTime` assignment on a direct-played file is a
-  real range request, so holding a key aims first and seeks once.
+- `js/view/glyphs.js` — the action icons, as inline SVG. The film page and the
+  player draw from the one set.
+- `js/view/menu.js` — the menu shell both the detail page and the player draw
+  with: tabs, rows, the winding transform, and an overlay that swallows every
+  key. It knows nothing about playback or copies; a row carries a `value` and
+  the caller decides what that means.
+- `js/view/rail.js` — draws rows from a fixed pool: 4 row elements, 12 tiles
+  each, whatever the library size. Owns no state.
+- `js/view/masthead.js` — the backdrop, the title, and one line under it.
+- `js/view/sidebar.js` — the section and category list, and select mode.
+
+`js/screen/` — the state, and where each key goes.
+
+- `js/screen/browse.js` — the state: sections, rows, focus, mode, paging,
+  search.
+- `js/screen/detail.js` — the page OK opens on a film or an episode: cast,
+  ratings, extras, and an action row — Play, then Trailer, Quality, Source,
+  Audio and Subtitles — where playback is actually chosen. Every choice goes
+  back through `Guard.check` before it sticks, and Play's caption carries the
+  verdict for the combination, so the cost is on screen before anything
+  starts.
+- `js/screen/showpage.js` — a show: its series across the top, its episodes
+  down the side, each checked in place so OK means something.
+- `js/screen/player.js` — playback and everything you can do during it: the
+  trackbar with its chapter ticks and marker bands, seeking, skip intro, and —
+  drawn with `js/view/menu.js`, the same shell the detail page uses — a menu
+  of audio tracks, subtitle languages, quality and chapters. What the tabs
+  hold and what choosing does live here; the drawing and the d-pad do not.
+  Seeks accumulate: every `currentTime` assignment on a direct-played file is
+  a real range request, so holding a key aims first and seeks once.
 
   **Choosing an audio track is not free, and the reason is worth knowing.** On
   a direct play the server hands over the original file *whole*, with every
@@ -240,8 +277,8 @@ Screen:
   two things actually work:
 
   1. The panel exposes `audioTracks` and we select on it — instant, no restart,
-     no server involvement. `js/panel.js` reports on the `panel` chip whether
-     this pipeline has it.
+     no server involvement. `js/core/panel.js` reports on the `panel` chip
+     whether this pipeline has it.
   2. Failing that, give up direct play (`directPlay=0`) so the server muxes the
      stream itself. That is a real session, and on a 4K file the guard refuses
      it — which is the honest answer, not a bug.
@@ -265,6 +302,7 @@ Screen:
   ▲ has put a focus on the row do the four arrows belong to it. The cost is that
   a panel is two presses rather than one, which is why the colour keys still do
   it in one.
+
 - `js/app.js` — boot, and where each key goes.
 
 Tools:
@@ -346,7 +384,7 @@ The three checks, and what each is for:
   Desktop Chrome will happily run code the TV cannot, and this is the only
   thing standing between that and a black screen. It is a text scan, not a
   parser: a clean run means nothing obviously wrong, not proof.
-- `npm test` — the pure rules in `js/media.js` and the row arithmetic.
+- `npm test` — the pure rules in `js/rules/media.js` and the row arithmetic.
 - `npm run smoke` — drives the whole app in headless Chromium: link, browse,
   paging, kids, discovery, search, devices, the detail page, all three playback
   verdicts, and the player itself — the menu, a subtitle language fetched and

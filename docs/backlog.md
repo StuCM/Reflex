@@ -25,9 +25,9 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   official app.
 - ~~Subtitles~~ — done, and `subtitles=none` stays on the decision call
   deliberately. Burning in is a transcode; the track is fetched as text from
-  `/library/streams/<id>`, parsed by `js/subs.js` and drawn over the video, so
+  `/library/streams/<id>`, parsed by `js/rules/subs.js` and drawn over the video, so
   it costs the server one GET and no session. **TV**: none of it has met the
-  panel, and `js/panel.js` will say on the first deploy whether the pipeline
+  panel, and `js/core/panel.js` will say on the first deploy whether the pipeline
   exposes `textTracks` at all — if it does, handing it a track is worth
   comparing against drawing them ourselves.
 
@@ -53,7 +53,7 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   menus, the sidebar and the player.
 
   **Settled 2026-09-08: the user does have colour buttons.** So the comments in
-  `js/sidebar.js:7`, `js/browse.js:123` and `js/servers.js:93` — all asserting
+  `js/view/sidebar.js:7`, `js/screen/browse.js:123` and `js/data/servers.js:93` — all asserting
   the Magic Remote has none, and citing that as the reason the sidebar exists —
   are wrong as written and should be corrected once 018 releases those files.
   An earlier session recorded that the B8's bundled Magic Remote (AN-MR18BA) has
@@ -90,7 +90,7 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   and a second press opens a panel. Needs the reachability of the buttons
   settling — probably ▼ — before it is specced.
 - **Some subtitles fail with a 501.** The image-track guard is right
-  (`Media.isTextSub` is checked in both `js/player.js` and `js/detail.js`), so
+  (`Media.isTextSub` is checked in both `js/screen/player.js` and `js/screen/detail.js`), so
   this is a *text* track the server will not serve: `Plex.subtitleUrl` falls back
   to `/library/streams/<id>` when a stream has no `key`, which asks the server to
   extract an embedded track, and some answer 501. The app reports a generic
@@ -140,7 +140,7 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   Netflix / Prime / Disney+, recommendations — as the rows shown by default,
   with the server's hubs still reachable but demoted into the sidebar. Also
   wants a say in which TMDB categories exist rather than the four hardcoded in
-  `js/tmdb.js`. Touches `js/browse.js`, `js/discovery.js`, `js/sidebar.js`.
+  `js/api/tmdb.js`. Touches `js/screen/browse.js`, `js/data/discovery.js`, `js/view/sidebar.js`.
 
 - **The film page's layout is wrong in five ways**, all seen on the panel:
   1. `#dt-body` and `#dt-extras` are `width: 1000px` on a 1920px screen — a
@@ -166,7 +166,7 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   server `/library/all?guid=` on open, which is global across sections and so
   finds the 4K-library copy the row never knew about — but the page looks
   nothing like the rest of the app. Blocked behind 008 (which reshapes
-  `js/detail.js`) and 009 (`js/showpage.js`, `css/app.css`).
+  `js/screen/detail.js`) and 009 (`js/screen/showpage.js`, `css/app.css`).
 - ~~Episode stills~~ — task 009. The show page is a wall of text; episodes
   carry a landscape `thumb` we never draw.
 - Cast and crew on the show page, as the film page has.
@@ -180,7 +180,7 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 ### 4. The rail
 
 - **Two Continue watching rows, on a real server only.** `mergeHubs` in
-  `js/browse.js` passes through every hub `/hubs/sections/<key>` returns, and a
+  `js/screen/browse.js` passes through every hub `/hubs/sections/<key>` returns, and a
   real Plex server serves one called `Continue Watching` — so the app shows its
   own onDeck row *and* the server's hub. `dev/mock-plex.js` serves only Recently
   Added, Recently Released, Top Rated and Directors, so no test has ever been
@@ -254,15 +254,30 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
   two UI tasks run in parallel, which is worth more than the tidiness. Do it
   once rather than serialising three more UI tasks behind it. (`dev/smoke.js`,
   the other contended file, is task 019.)
-- **The big `js/` files, in order:** `js/player.js` 1,160 lines,
-  `js/detail.js` 699, `js/plex.js` 667, `js/browse.js` 614. Not blocked by
-  Chromium 53 — the app has no bundler by choice, and a new file is one more
-  global and one more `<script>` in `index.html`, which `npm run check`
-  already enforces. `js/menu.js` was carved out of `js/player.js` in 016 with no
-  behaviour change and is the pattern to follow.
+- **The big `js/` files, in order:** `js/screen/player.js` 1,221 lines,
+  `js/screen/browse.js` 886, `js/screen/detail.js` 727, `js/api/plex.js` 703.
+  The layering pass moved every file into `js/core|api|data|rules|view|screen`
+  and enforced the boundaries in `npm run check`, but it deliberately split no
+  screen file: they are long files of small functions, and the layers had to
+  settle first. Not blocked by Chromium 53 — the app has no bundler by choice,
+  and a new file is one more global and one more `<script>` in `index.html`,
+  which `npm run check` already enforces. `js/view/menu.js` was carved out of
+  `js/screen/player.js` in 016 with no behaviour change and is the pattern to
+  follow.
 
-- `js/browse.js` and `js/plex.js` are both past 550 lines and are the next
-  split candidates — search, kids and the discovery rows would go cleanly.
-- `js/guard.js` has no unit test. It is the most important logic in the app
+- **Each screen file still holds its own decisions next to its own DOM.** The
+  four in `js/screen/` are the only place that is still true, and the split
+  that would pay is per screen rather than per layer: the part of
+  `js/screen/detail.js` that decides which copy and which track (`check`,
+  `adoptDefault`, `defaultAudio`, `needsMux`) has no DOM in it and would move
+  to `js/rules/` with a unit test, and the same shape exists in
+  `js/screen/showpage.js`. `js/screen/player.js` is the exception: its audio
+  decision needs the live `audioTracks` list off the video element, so it
+  cannot be made pure and should stay where it is.
+
+- `js/screen/browse.js` and `js/api/plex.js` are both past 700 lines and are
+  the next split candidates — search, kids and the discovery rows would go
+  cleanly.
+- `js/data/guard.js` has no unit test. It is the most important logic in the app
   and is only covered end to end.
 
