@@ -13,6 +13,80 @@ Newest first. One entry per decision, appended by the orchestrator at
 
 ---
 
+## 2026-09-09 — A night of refactors, and five tests that proved nothing
+
+Two files made every task wait on every other: `dev/smoke.js` at 3,344 lines and
+`css/app.css` at 944. Every UI task declared both, so no two could run at once
+even when they shared no logic. Splitting them bought real parallelism — the
+next pair of feature tasks ran concurrently for the first time, and a worker now
+iterates against one smoke area in 4–50 seconds instead of the full 2m37s.
+
+The stylesheet split carried the design tokens and the palette correction:
+`--ac` to the design's own `#9d93d6`, and the hero gradients to the darker
+`rgba(9,10,17,…)` the design fades to rather than to the background itself. Both
+came from `design/Mantis Screens.dc.html`, which carries **seven palettes as
+data** with `sage` as the export default — the file and the screenshots never
+disagreed, the default simply was not the author's selection.
+
+The lasting finding is about the suite. **Five assertions in one day passed on
+nothing**, each failing differently:
+
+- a lookup counter matching a path the endpoint no longer visited;
+- a request bar set from an assumed cost of one per tile when it is two;
+- `indexOf("0:00 /")` after the clock split into two elements;
+- a step looking for a wrong picture *during* a sweep, when a Playwright round
+  trip is slower than the 160ms settle — it read after the rail had stopped and
+  passed on the broken code;
+- a request counter whose regex wanted a separator the real URL has not got, so
+  "zero lookups" passed on an empty count.
+
+The first three are one mistake: asserting an absence, or indexing into markup
+that moved. The fourth is worse — the right assertion at the wrong moment, which
+re-reading never catches; a transient state must be read page-side, in a listener
+registered after the app's own. The fifth is worse again, because "zero" cannot
+be told from "broken collector": a counting step needs a companion asserting a
+non-zero count, or a run against an implementation that does the wrong thing.
+
+All five are rules in CLAUDE.md now, and one habit caught the last three: run the
+step against `main` and watch it fail before trusting it pass.
+
+Two specs also contradicted themselves. 018's "for a show, scrobble the show's
+rating key" branch was unreachable — `Plex.onDeck` only yields movies and
+episodes — and scrobbling the episode merely advances the deck, so the
+prescribed behaviour would not have fixed the complaint it was written for.
+023's Definition of done demanded zero Plex requests while its own Approach left
+`seedsFromViewing` calling `Plex.onDeck` per server.
+
+---
+
+## 2026-09-08 — What landed between the artwork and the refactors
+
+Recorded late and together, because the entries for these were written with
+string replacements whose anchors silently failed to match — the same shape of
+no-op the tests above kept producing, in the tooling used to write them down.
+
+- **The rail went portrait** (209×314, seven across). A poster is never a
+  backdrop, so "the tile must not repeat the hero" stopped needing a fallback
+  ladder, and Plex hands an episode its show's poster as `grandparentThumb` for
+  nothing. Choosing the right shape deleted the machinery rather than organising
+  it. It also found `Rail.render` holding `firstVisible = rowIdx - 1` — a
+  hand-typed row of context from when two rows fitted.
+- **An episode is never a dead end**: OK on one opens its series at that
+  episode. Resolution runs upward, since episodes rarely carry ids of their own
+  but shows do.
+- **Up next waits by default**, and never counts down across a season boundary —
+  these are someone else's servers, and an unattended chain is load on hardware
+  we do not own.
+- **Recaps are fetched only when asked for.** A search costs 100 of a 10,000/day
+  quota, so a self-filling rail would spend the budget in a hundred page views.
+- **The choosers replaced the copy list**, and the player's menu was shared
+  rather than written twice — `js/menu.js`, with `js/player.js` losing 171 lines.
+- **The player's controls** took the design's shape. Two things in that design
+  were deliberately not built: an "Auto — follows the connection" quality row we
+  do not implement, and chapter thumbnails Plex often has not got.
+
+---
+
 ## 2026-09-07 — The header keeps the picture, and one request carries the film
 
 Stepping off the top row used to throw the screen away: the hero collapsed to a
