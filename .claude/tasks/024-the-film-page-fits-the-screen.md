@@ -1,7 +1,7 @@
 ---
 id: 024
 slug: the-film-page-fits-the-screen
-status: approved
+status: review
 model: sonnet
 env: laptop
 branch: crew/024-the-film-page-fits-the-screen
@@ -163,6 +163,70 @@ session that produced this task. Workers must not go digging for more.
 - [ ] `npm run verify` passes.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
+
+## What changed
+
+- `css/detail.css` — the page relaid out on 6c's numbers: `--sp-edge` margins,
+  1728px body and extras strip, 6c's header sizes and gaps, Play as a
+  content-sized pill, the cast and the extras placed absolutely so the design's
+  order survives index.html's, and the extras as a peek that lifts on `.down`.
+- `js/detail.js` — `resumeAt()`; a second primary action, `From start`, when
+  there is something to resume; `start()` takes a position and passes it on;
+  the `down` class follows the focus into the extras; the chooser anchors on 96.
+- `js/app.js` — `onPlay` carries `resumeAt` through to `playChecked`, and the
+  start position is traced.
+- `dev/smoke/detail.js` — four steps: the width, the pill, the peek, and the
+  two plays.
+
+## Where the design and the old page disagreed
+
+The design won everywhere below except three, each noted because the reviewer
+will look for them:
+
+- **The round buttons.** 6c draws them at 70px, which is *smaller* than the
+  app's 88 — the approach said "grow to the design's size" but the design has
+  no such size to grow to. Shrinking them would have made everything but Play
+  smaller, which is the opposite of the reported fault, so `--c-btn` is
+  untouched at 88 and only Play changed (280 → ~154 laid out, sized by its
+  text). `css/base.css` was therefore not touched at all, which also keeps 025
+  clear of it. **`--c-play` in base.css is now unused** — detail.css overrides
+  the width — and is left for whoever next edits that file.
+- **The cast disc** stays 120px rather than 6c's 88, for the same reason; its
+  column took the design's 176px width so a two-word name has somewhere to go.
+- **Extras cards** stay 240×135 rather than 236×133: a still is 16:9 and the
+  existing numbers are exactly that. Their gap, title and label are 6c's.
+
+Two things the design does not have to say anything about: the page keeps its
+tagline and its names line, each given a 6c-sized gap; and the extras are a
+peek rather than fully drawn, which is fault 3 and the user's instruction over
+the design's layout.
+
+Consequences worth knowing:
+
+- The header is 200px taller, so the chooser no longer fits below the action
+  row. It is anchored to the bottom edge instead (still along from the button
+  that opened it), which is also how the player's menu sits.
+- Stepping down into the extras fades the cast and the key hint out — the
+  extras land where the cast is drawn, and the rail already dims the hero when
+  you step down into it. Transform and opacity only.
+- The hint moved to the right of the Extras label, because the bottom-left is
+  where the extras now peek in.
+
+## Fail-first
+
+Every new step was run against the unfixed code first and watched fail:
+
+- the width — `the body is 1000px and the extras strip 1000px wide`
+- the pill — `Play is still 297px wide`
+- the peek — `fully on screen at rest — it ends at 782`
+- the two plays — `no play-from-start button on a part-watched film`
+
+The pill step failed for a second reason on the first draft: it measured
+`getBoundingClientRect`, which includes the focus scale, so the pill and an
+unfocused round button could never have equal heights. It measures the laid-out
+box now.
+
+`npm run verify`: **89/89**, against 85/85 on main.
 
 ## Review rounds
 
