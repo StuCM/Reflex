@@ -1,7 +1,7 @@
 ---
 id: 025
 slug: the-player-matches-the-design
-status: draft
+status: approved
 model: sonnet
 env: laptop
 branch: crew/025-the-player-matches-the-design
@@ -28,7 +28,13 @@ menu, pressing up should allow you to control the navigation bar."* They later
 confirmed **▼ goes back to the buttons**.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing. Nothing else is
+in flight; main verifies at 85/85.
+
+The stylesheet and the smoke suite were split a few hours ago: iterate with
+`npm run smoke -- detail` or `-- player` (seconds, not the full 2m37s), and the
+mock takes an OS-assigned port so the task running beside you cannot clash.
+`design/Mantis Screens.dc.html` is in the repo — read the numbers out of it.
 
 ## Graph context
 `claude-memory-graph` is not on PATH in this checkout, so this section is from

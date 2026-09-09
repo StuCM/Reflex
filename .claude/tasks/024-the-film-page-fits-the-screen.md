@@ -1,7 +1,7 @@
 ---
 id: 024
 slug: the-film-page-fits-the-screen
-status: draft
+status: approved
 model: sonnet
 env: laptop
 branch: crew/024-the-film-page-fits-the-screen
@@ -26,7 +26,13 @@ while other work went ahead. They are things that are wrong now, which outrank
 anything new.
 
 ## Existing work
-<!-- filled in by preflight before dispatch -->
+`node .claude/crew/bin/preflight.js collisions` printed nothing. Nothing else is
+in flight; main verifies at 85/85.
+
+The stylesheet and the smoke suite were split a few hours ago: iterate with
+`npm run smoke -- detail` or `-- player` (seconds, not the full 2m37s), and the
+mock takes an OS-assigned port so the task running beside you cannot clash.
+`design/Mantis Screens.dc.html` is in the repo — read the numbers out of it.
 
 ## The five, and what is actually wrong
 
