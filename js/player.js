@@ -307,7 +307,7 @@ var Player = (function () {
                   '<polygon points="216,64 216,192 132,128"/>'),
     forward: glyph('<polygon points="132,64 132,192 216,128"/>' +
                    '<polygon points="40,64 40,192 124,128"/>'),
-    /* Drawn to the same extent as the two jumps either side of them: the
+    /* Filling their box the way the two jumps either side of them do: the
        buttons were always one size, and a triangle inset in its own box is
        what read as a smaller play than forward. */
     play: glyph('<polygon points="72,48 72,208 208,128"/>'),

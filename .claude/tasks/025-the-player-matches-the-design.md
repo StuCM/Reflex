@@ -1,7 +1,7 @@
 ---
 id: 025
 slug: the-player-matches-the-design
-status: review
+status: done
 model: sonnet
 env: laptop
 branch: crew/025-the-player-matches-the-design
@@ -203,6 +203,18 @@ Every new assertion was run against the unfixed code and watched to fail:
   is outside `files:` and 024 is in flight.
 
 ## Review rounds
+
+**Round 1 — PASS.** The reviewer re-ran the gate (88/88, `check` clean, in
+scope) and reproduced all four mutation runs itself, matching the failure
+messages recorded above. It read 7a and 7b directly and confirmed 80 / 76 / 26px
+are the design's own numbers, traced the three-mode state machine through
+`key()` / `barKey()` / `controlKey()` and confirmed the unfocused key map, the
+colour keys and the aim-then-seek behaviour are all unchanged, and confirmed
+`index.html`, `css/base.css`, `js/menu.js`, `js/guard.js` and `js/app.js` were
+untouched. Two soft notes, both already disclosed here: `#upnext` left
+translucent, and `dev/smoke.js`'s three now-dead helpers. One was acted on — the
+glyph comment claimed "the same extent" as the two jumps, which is only
+approximately true, and now says what it actually does.
 
 ## Graph writes proposed
 
