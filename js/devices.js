@@ -48,7 +48,8 @@ var Devices = (function () {
         return { server: sv, entries: entries };
       });
     })).then(perServer => {
-      let map = {}, count = 0;
+      const map = {};
+      let count = 0;
       perServer.forEach(res => {
         /* Sorted newest first, so the first entry per item is the latest. */
         res.entries.forEach(e => {
@@ -69,8 +70,8 @@ var Devices = (function () {
   }
 
   function countDevices(map) {
-    let seen = {}, keys = Object.keys(map), i;
-    for (i = 0; i < keys.length; i++) seen[map[keys[i]]] = true;
+    const seen = {}, keys = Object.keys(map);
+    for (let i = 0; i < keys.length; i++) seen[map[keys[i]]] = true;
     return Object.keys(seen).length;
   }
 
@@ -78,8 +79,9 @@ var Devices = (function () {
   function mine(items) {
     if (!claimed || !played) return items;
     return items.filter(entry => {
-      let copies = Merge.sources(entry), i, dev;
-      for (i = 0; i < copies.length; i++) {
+      const copies = Merge.sources(entry);
+      let dev;
+      for (let i = 0; i < copies.length; i++) {
         dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
         if (!dev || claimed[dev]) return true;
       }
@@ -102,11 +104,11 @@ var Devices = (function () {
       }))
     ]).then(res => {
       const map = res[0] || {}, named = res[1] || [];
-      let names = {}, counts = {}, keys = Object.keys(map), i;
+      const names = {}, counts = {}, keys = Object.keys(map);
       named.forEach(n => {
         n.devices.forEach(d => { names[n.server.id + ':' + d.id] = d.name; });
       });
-      for (i = 0; i < keys.length; i++) {
+      for (let i = 0; i < keys.length; i++) {
         counts[map[keys[i]]] = (counts[map[keys[i]]] || 0) + 1;
       }
       list = Object.keys(counts).map(k => {
@@ -125,8 +127,8 @@ var Devices = (function () {
         '<div class="device-row">No device history available on these servers.</div>';
       return;
     }
-    let html = '', i, d;
-    for (i = 0; i < list.length; i++) {
+    let html = '', d;
+    for (let i = 0; i < list.length; i++) {
       d = list[i];
       html += '<div class="device-row' + (i === idx ? ' on' : '') + '">' +
               (d.mine ? '[x] ' : '[ ] ') + UI.escapeHtml(d.name) +
@@ -140,8 +142,8 @@ var Devices = (function () {
   function save() {
     let changed = false;
     if (list.length) {
-      let map = {}, i;
-      for (i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
+      const map = {};
+      for (let i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
       claimed = map;
       lsSet('myDevices', JSON.stringify(map));
       UI.debug(`devices: ${Object.keys(map).length} of ${list.length} claimed`);

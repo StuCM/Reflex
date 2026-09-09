@@ -20,18 +20,20 @@ var Discovery = (function () {
      forty at a remote server at once is rude and slower in practice. */
   function mapLimit(list, max, fn) {
     return new Promise(resolve => {
-      let results = new Array(list.length), i = 0, done = 0, active = 0;
+      const results = new Array(list.length);
+      let i = 0, done = 0, active = 0;
       if (!list.length) { resolve([]); return; }
       function launch() {
         while (active < max && i < list.length) {
           active++;
-          (function (k) {
-            fn(list[k]).then(v => { results[k] = v; }, () => { results[k] = null; })
-              .then(() => {
-                active--; done++;
-                if (done === list.length) resolve(results); else launch();
-              });
-          })(i++);
+          /* k is per-turn, which is the whole reason this is const in the loop
+             body rather than the index itself. */
+          const k = i++;
+          fn(list[k]).then(v => { results[k] = v; }, () => { results[k] = null; })
+            .then(() => {
+              active--; done++;
+              if (done === list.length) resolve(results); else launch();
+            });
         }
       }
       launch();
@@ -57,8 +59,10 @@ var Discovery = (function () {
     return Promise.all(Servers.all().map(sv => {
       return Plex.onDeck(sv);
     })).then(perServer => {
-      let seeds = [], i, id, list = Devices.mine(Merge.lists(perServer));
-      for (i = 0; i < list.length && seeds.length < MAX_SEEDS; i++) {
+      const seeds = [];
+      let id;
+      const list = Devices.mine(Merge.lists(perServer));
+      for (let i = 0; i < list.length && seeds.length < MAX_SEEDS; i++) {
         id = Plex.tmdbId(list[i]);
         if (id) seeds.push(id);
       }

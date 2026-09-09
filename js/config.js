@@ -27,8 +27,8 @@ var Config = (function () {
 
   const over = (typeof window !== 'undefined' && window.REFLEX_CONFIG) || null;
   if (over) {
-    let keys = Object.keys(over), i;
-    for (i = 0; i < keys.length; i++) cfg[keys[i]] = over[keys[i]];
+    const keys = Object.keys(over);
+    for (let i = 0; i < keys.length; i++) cfg[keys[i]] = over[keys[i]];
   }
   return cfg;
 })();

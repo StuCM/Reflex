@@ -82,8 +82,8 @@ var ShowPage = (function () {
   }
 
   function renderSeasons() {
-    let html = '', i, cls;
-    for (i = 0; i < seasons.length; i++) {
+    let html = '', cls;
+    for (let i = 0; i < seasons.length; i++) {
       cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
             (zone === 'seasons' && i === seasonIdx ? ' on' : '');
       html += '<span class="' + cls + '">' + UI.escapeHtml(seasons[i].title || ('Series ' + (i + 1))) +
@@ -110,8 +110,8 @@ var ShowPage = (function () {
     /* A window, not the lot: a 24-episode series is common and drawing all of
        them costs more than it is worth. */
     const first = UI.clamp(epIdx - 4, 0, Math.max(0, episodes.length - EPISODE_POOL));
-    let html = '', i, ep, on, watched;
-    for (i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
+    let html = '', ep, on, watched;
+    for (let i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
       ep = episodes[i];
       on = (i === epIdx && zone === 'episodes');
       watched = ep.viewOffset && ep.duration
@@ -145,8 +145,7 @@ var ShowPage = (function () {
       episodes = list;
       /* Land on the first unfinished episode: what you want is almost always
          the next one, not the first. */
-      let i;
-      for (i = 0; i < list.length; i++) {
+      for (let i = 0; i < list.length; i++) {
         if (list[i].viewOffset || !list[i].viewCount) { epIdx = i; break; }
       }
       renderEpisodes();
@@ -163,7 +162,7 @@ var ShowPage = (function () {
      server a query per episode you rest on and opens no sessions. */
   function scheduleCheck() {
     clearTimeout(checkTimer);
-    let ep = episodes[epIdx];
+    const ep = episodes[epIdx];
     if (!ep || verdicts[verdictKey(ep)]) return;
     const gen = generation;
     checkTimer = setTimeout(() => {
@@ -178,7 +177,7 @@ var ShowPage = (function () {
   /* ---------- keys ---------- */
 
   function playFocused() {
-    let ep = episodes[epIdx];
+    const ep = episodes[epIdx];
     if (!ep) return;
     const v = verdicts[verdictKey(ep)];
     /* Not checked yet, or the preferred copy will not play: the detail page is
@@ -188,7 +187,7 @@ var ShowPage = (function () {
   }
 
   function openCopies() {
-    let ep = episodes[epIdx];
+    const ep = episodes[epIdx];
     if (ep && opts.onChoose) opts.onChoose(ep);
   }
 

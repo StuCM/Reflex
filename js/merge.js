@@ -39,12 +39,12 @@ var Merge = (function () {
      make the row a cycle, and these get written to IndexedDB. Read it through
      sources(), which puts the shown copy back at the front. */
   function combine(primary, item) {
-    let extras = primary._sources || [], i;
+    const extras = primary._sources || [];
     /* One copy per server. A film listed twice by the same server (two
        editions in one library) is not what this is for — versions within one
        item are, and those live in Media[], not here. */
     if (primary._server === item._server) return primary;
-    for (i = 0; i < extras.length; i++) {
+    for (let i = 0; i < extras.length; i++) {
       if (extras[i]._server === item._server) return primary;
     }
 
@@ -72,16 +72,16 @@ var Merge = (function () {
      longer carries the ids they were derived from. */
   function push(idx, item, keys) {
     if (!item) return false;
-    let i, at = -1;
+    let at = -1;
     keys = keys || Media.identities(item);
-    for (i = 0; i < keys.length; i++) {
+    for (let i = 0; i < keys.length; i++) {
       if (idx.map[keys[i]] !== undefined) { at = idx.map[keys[i]]; break; }
     }
     if (at >= 0) {
       idx.out[at] = combine(idx.out[at], item);
       /* Register this copy's other ids too, so a third copy matching on any of
          them lands in the same place. */
-      for (i = 0; i < keys.length; i++) {
+      for (let i = 0; i < keys.length; i++) {
         if (idx.map[keys[i]] === undefined) idx.map[keys[i]] = at;
       }
       idx.dupes++;
@@ -89,7 +89,7 @@ var Merge = (function () {
     }
     idx.out.push(item);
     at = idx.out.length - 1;
-    for (i = 0; i < keys.length; i++) idx.map[keys[i]] = at;
+    for (let i = 0; i < keys.length; i++) idx.map[keys[i]] = at;
     return true;
   }
 
@@ -97,10 +97,11 @@ var Merge = (function () {
      in its own order, with anything only the others have appended where it
      first appears. */
   function lists(arrays) {
-    let idx = index(), i, j, arr;
-    for (i = 0; i < arrays.length; i++) {
+    const idx = index();
+    let arr;
+    for (let i = 0; i < arrays.length; i++) {
       arr = arrays[i] || [];
-      for (j = 0; j < arr.length; j++) push(idx, arr[j]);
+      for (let j = 0; j < arr.length; j++) push(idx, arr[j]);
     }
     return idx.out;
   }
@@ -164,8 +165,8 @@ var Merge = (function () {
   /* An upper bound until the walk finishes: every copy on every server, less
      the duplicates found so far. It only ever gets more accurate. */
   function estimate(st) {
-    let total = 0, i;
-    for (i = 0; i < st.streams.length; i++) total += st.streams[i].total;
+    let total = 0;
+    for (let i = 0; i < st.streams.length; i++) total += st.streams[i].total;
     return Math.max(st.idx.out.length, total - st.idx.dupes);
   }
 
@@ -173,10 +174,10 @@ var Merge = (function () {
 
   function fetchInto(st, s) {
     return st.fetch(s.part, s.offset).then(res => {
-      let got = (res && res.items) || [], i;
+      const got = (res && res.items) || [];
       if (res && res.total) s.total = res.total;
       s.offset += got.length;
-      for (i = 0; i < got.length; i++) s.buffer.push(got[i]);
+      for (let i = 0; i < got.length; i++) s.buffer.push(got[i]);
       if (!got.length || (s.total && s.offset >= s.total)) s.done = true;
       return s;
     }, () => {
@@ -198,12 +199,12 @@ var Merge = (function () {
   }
 
   function fill(st, upTo) {
-    let i, needs, live, pick;
+    let needs, live, pick;
     /* A loop, not recursion: walking deep into a big library would otherwise
        build a stack frame per film. */
     while (st.idx.out.length <= upTo) {
       needs = [];
-      for (i = 0; i < st.streams.length; i++) {
+      for (let i = 0; i < st.streams.length; i++) {
         if (!st.streams[i].done && !st.streams[i].buffer.length) needs.push(st.streams[i]);
       }
       if (needs.length) {
@@ -211,13 +212,13 @@ var Merge = (function () {
           .then(() => fill(st, upTo));
       }
       live = [];
-      for (i = 0; i < st.streams.length; i++) {
+      for (let i = 0; i < st.streams.length; i++) {
         if (st.streams[i].buffer.length) live.push(st.streams[i]);
       }
       if (!live.length) { st.exhausted = true; break; }
 
       pick = live[0];
-      for (i = 1; i < live.length; i++) {
+      for (let i = 1; i < live.length; i++) {
         if (before(live[i].buffer[0], pick.buffer[0])) pick = live[i];
       }
       /* Identities come off the full item — slimming drops the Guid array they

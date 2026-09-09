@@ -77,10 +77,14 @@ var Browse = (function () {
      section only one of them has still gets a chip of its own. */
 
   function setSections(perServer) {
-    let byTitle = {}, order = [], i, j, list, sec, key;
-    for (i = 0; i < perServer.length; i++) {
+    const byTitle = {};
+    const order = [];
+    let list;
+    let sec;
+    let key;
+    for (let i = 0; i < perServer.length; i++) {
       list = perServer[i].sections || [];
-      for (j = 0; j < list.length; j++) {
+      for (let j = 0; j < list.length; j++) {
         sec = list[j];
         /* Title and type: a "Films" section and a "Films" show section would be
            two different things, however unlikely that is. */
@@ -97,13 +101,15 @@ var Browse = (function () {
     const currentTitle = sections[secIdx] && sections[secIdx].title;
     sections = merged;
     let at = 0;
-    for (i = 0; i < merged.length; i++) if (merged[i].title === currentTitle) at = i;
+    for (let i = 0; i < merged.length; i++) if (merged[i].title === currentTitle) at = i;
     return at;
   }
 
   function serversOf(sec) {
-    let out = [], seen = {}, i, id;
-    for (i = 0; i < sec.parts.length; i++) {
+    const out = [];
+    const seen = {};
+    let id;
+    for (let i = 0; i < sec.parts.length; i++) {
       id = sec.parts[i].server.id;
       if (seen[id]) continue;
       seen[id] = true;
@@ -118,8 +124,8 @@ var Browse = (function () {
      with the d-pad. Up from the top row lands here. */
 
   function chips() {
-    let out = [], i;
-    for (i = 0; i < sections.length; i++) {
+    const out = [];
+    for (let i = 0; i < sections.length; i++) {
       out.push({ label: sections[i].title, kind: 'section', index: i,
                  current: mode === 'library' && i === secIdx });
     }
@@ -146,8 +152,10 @@ var Browse = (function () {
              '<span class="chip">' + searchCount + ' ' + searchNoun +
              '</span><span class="chip">back to library</span>';
     }
-    let list = chips(), html = '', i, cls;
-    for (i = 0; i < list.length; i++) {
+    const list = chips();
+    let html = '';
+    let cls;
+    for (let i = 0; i < list.length; i++) {
       cls = 'chip' + (list[i].current ? ' cur' : '') +
             (headerFocus && i === chipIdx ? ' on' : '');
       html += `<span class="${cls}">${UI.escapeHtml(list[i].label)}</span>`;
@@ -156,7 +164,7 @@ var Browse = (function () {
   }
 
   function renderChips() {
-    let html = chipHtml();
+    const html = chipHtml();
     if (html === lastChips) return;      // rebuilding this on every keypress is not free
     lastChips = html;
     elSections.innerHTML = html;
@@ -169,7 +177,7 @@ var Browse = (function () {
     if (chip.kind === 'kids') { loadKids(); return; }
     if (chip.kind === 'discover') { loadDiscover(); return; }
     if (chip.kind === 'prefer') {
-      let at = chipIdx;
+      const at = chipIdx;
       const now = Servers.get(Servers.cyclePreferred());
       UI.debug(`preferring ${now ? now.name : '?'} where both servers have a film`);
       /* Rebuild the rows: which copy of a shared film is shown changes with
@@ -220,8 +228,8 @@ var Browse = (function () {
     /* type 2 asks a show section for shows rather than every episode in it. */
     const base = { type: sec.type === 'show' ? 2 : 1 };
     if (filter) {
-      let keys = Object.keys(filter), i;
-      for (i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
+      const keys = Object.keys(filter);
+      for (let i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
     }
     const parts = sec.parts.map(p => {
       return { server: p.server, key: p.key, updatedAt: p.updatedAt,
@@ -264,7 +272,7 @@ var Browse = (function () {
     secIdx = i;
     reset('library');
     const isCurrent = generationGuard();
-    let sec = sections[i];
+    const sec = sections[i];
     const cacheKey = 'rows:' + sec.title;
 
     Store.get(cacheKey).then(cached => {
@@ -322,10 +330,12 @@ var Browse = (function () {
      Order within it is first-seen, which keeps each server's own ordering
      intact rather than inventing a ranking across them. */
   function mergeHubs(perPart) {
-    let byTitle = {}, order = [], i, j, list;
-    for (i = 0; i < perPart.length; i++) {
+    const byTitle = {};
+    const order = [];
+    let list;
+    for (let i = 0; i < perPart.length; i++) {
       list = perPart[i] || [];
-      for (j = 0; j < list.length; j++) {
+      for (let j = 0; j < list.length; j++) {
         if (!byTitle[list[j].title]) { byTitle[list[j].title] = []; order.push(list[j].title); }
         byTitle[list[j].title].push(list[j].items);
       }
@@ -365,7 +375,7 @@ var Browse = (function () {
   /* ---------- kids ---------- */
 
   function loadKids() {
-    let sec = sections[secIdx];
+    const sec = sections[secIdx];
     reset('kids');
     const isCurrent = generationGuard();
 
@@ -506,8 +516,8 @@ var Browse = (function () {
      list that is half shows is the kind of small lie that makes a screen feel
      untrustworthy. */
   function countNoun(found) {
-    let films = 0, shows = 0, i;
-    for (i = 0; i < found.length; i++) {
+    let films = 0, shows = 0;
+    for (let i = 0; i < found.length; i++) {
       if (found[i].type === 'show') shows++; else films++;
     }
     if (shows && films) return 'results';

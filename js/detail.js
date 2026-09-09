@@ -88,8 +88,8 @@ var Detail = (function () {
     /* Keep the user's choice pinned across a rebuild. */
     idx = 0;
     if (chosen) {
-      let all = lines(), i;
-      for (i = 0; i < all.length; i++) {
+      const all = lines();
+      for (let i = 0; i < all.length; i++) {
         if (all[i].copy === chosen.copy && all[i].mediaIndex === chosen.mediaIndex) {
           idx = i;
           break;
@@ -212,12 +212,12 @@ var Detail = (function () {
   }
 
   function renderSources() {
-    let html = '', i;
-    for (i = 0; i < sources.length; i++) html += sourceLine(sources[i], i === idx);
+    let html = '';
+    for (let i = 0; i < sources.length; i++) html += sourceLine(sources[i], i === idx);
     elSources.innerHTML = html;
 
     html = '';
-    for (i = 0; i < extras.length; i++) {
+    for (let i = 0; i < extras.length; i++) {
       html += extraLine(extras[i], sources.length + i === idx);
     }
     elExtras.innerHTML = html;
@@ -294,9 +294,12 @@ var Detail = (function () {
   }
 
   function castHtml(md) {
-    let roles = (md.Role || []).slice(0, 8), html = '', i, r, url;
+    const roles = (md.Role || []).slice(0, 8);
+    let html = '';
+    let r;
+    let url;
     if (!roles.length) return '';
-    for (i = 0; i < roles.length; i++) {
+    for (let i = 0; i < roles.length; i++) {
       r = roles[i];
       url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
       html += '<div class="dt-actor">' +

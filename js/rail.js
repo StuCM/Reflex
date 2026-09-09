@@ -21,14 +21,14 @@ var Rail = (function () {
   const rowEls = [];
 
   function translate(el, x, y) {
-    let t = `translate(${x}px,${y}px)`;
+    const t = `translate(${x}px,${y}px)`;
     el.style.transform = t;
     el.style.webkitTransform = t;
   }
 
   function build() {
-    let r, i, rowEl, label, strip, tile, inner, img, fb, prog;
-    for (r = 0; r < ROW_POOL; r++) {
+    let rowEl, label, strip, tile, inner, img, fb, prog;
+    for (let r = 0; r < ROW_POOL; r++) {
       rowEl = document.createElement('div');
       rowEl.className = 'row hidden';
       label = document.createElement('div');
@@ -39,7 +39,7 @@ var Rail = (function () {
       rowEl.appendChild(strip);
       rowEl._label = label; rowEl._strip = strip; rowEl._row = -1; rowEl._tiles = [];
 
-      for (i = 0; i < TILE_POOL; i++) {
+      for (let i = 0; i < TILE_POOL; i++) {
         tile = document.createElement('div');
         /* Hidden until something is in it — otherwise the pool shows as a
            stack of empty cards for as long as the first rows take to arrive. */
@@ -69,9 +69,9 @@ var Rail = (function () {
   /* A tile showing a placeholder must re-render once its page lands. One that
      already shows a poster must not, or we reassign src for nothing. */
   function invalidateEmpty() {
-    let r, i, t;
-    for (r = 0; r < ROW_POOL; r++) {
-      for (i = 0; i < TILE_POOL; i++) {
+    let t;
+    for (let r = 0; r < ROW_POOL; r++) {
+      for (let i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
         if (!t._filled || t._deferred) t._idx = -1;
       }
@@ -80,7 +80,7 @@ var Rail = (function () {
 
   function drawRow(rowEl, rows, r, rowIdx, onScreen) {
     const row = rows[r], reused = rowEl._row !== r;
-    let i, idx, tile, item, url, firstVisible, start;
+    let idx, tile, item, url, firstVisible, start;
 
     rowEl.classList.remove('hidden');
     translate(rowEl, 0, r * ROW_H);
@@ -89,7 +89,7 @@ var Rail = (function () {
     if (reused) {
       rowEl._row = r;
       rowEl._label.textContent = row.title;
-      for (i = 0; i < TILE_POOL; i++) { rowEl._tiles[i]._idx = -1; rowEl._tiles[i]._filled = false; }
+      for (let i = 0; i < TILE_POOL; i++) { rowEl._tiles[i]._idx = -1; rowEl._tiles[i]._filled = false; }
     }
     /* A merged row's length is an estimate until it has been walked, so the
        count is re-read on every paint rather than only when the row is reused. */
@@ -101,7 +101,7 @@ var Rail = (function () {
     start = UI.clamp(firstVisible - 2, 0, Math.max(0, row.total - TILE_POOL));
     translate(rowEl._strip, -firstVisible * STRIDE, 0);
 
-    for (i = 0; i < TILE_POOL; i++) {
+    for (let i = 0; i < TILE_POOL; i++) {
       tile = rowEl._tiles[i];
       idx = start + i;
       if (idx >= row.total) { tile.classList.add('hidden'); tile._idx = -1; continue; }
@@ -139,11 +139,11 @@ var Rail = (function () {
   }
 
   function render(rows, rowIdx) {
-    let firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
-    let start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
-    let i, r;
+    const firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
+    const start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
+    let r;
     translate(elRows, 0, -firstVisible * ROW_H);
-    for (i = 0; i < ROW_POOL; i++) {
+    for (let i = 0; i < ROW_POOL; i++) {
       r = start + i;
       if (r >= rows.length) { rowEls[i].classList.add('hidden'); rowEls[i]._row = -1; continue; }
       drawRow(rowEls[i], rows, r, rowIdx, r < firstVisible + ROWS_VISIBLE);

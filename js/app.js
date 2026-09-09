@@ -64,7 +64,7 @@
   function playChecked(item, verdict, isExtra, resumeAt, back, subLang) {
     if (!verdict || !verdict.ok) return;
     const md = verdict.md;
-    let server = Servers.of(md);
+    const server = Servers.of(md);
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0
       : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
@@ -122,7 +122,8 @@
   /* ---------- keys ---------- */
 
   function onKey(e) {
-    let code = e.keyCode, handled;
+    const code = e.keyCode;
+    let handled;
 
     if (Player.playing()) {
       if (Player.key(code)) e.preventDefault();
@@ -213,8 +214,9 @@
   /* Cached sections name their server by id; turn them back into the server
      objects discovery handed us. A server that has since gone is dropped. */
   function rehydrate(cached) {
-    let out = [], i, server;
-    for (i = 0; i < cached.length; i++) {
+    const out = [];
+    let server;
+    for (let i = 0; i < cached.length; i++) {
       server = Servers.get(cached[i].serverId);
       if (server) out.push({ server: server, sections: cached[i].sections });
     }

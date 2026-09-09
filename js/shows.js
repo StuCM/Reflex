@@ -58,8 +58,7 @@ var Shows = (function () {
      unwatched, else the first. Somebody part way through series three does not
      want to land on series one every time. */
   function openAt(list) {
-    let i;
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if ((list[i].leafCount || 0) > (list[i].viewedLeafCount || 0)) return i;
     }
     return 0;

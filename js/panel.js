@@ -69,16 +69,17 @@ var Panel = (function () {
     caps = {
       container: {}, video: {}, audio: {}
     };
-    let kinds = ['container', 'video', 'audio'], i, k;
-    for (i = 0; i < kinds.length; i++) {
+    const kinds = ['container', 'video', 'audio'];
+    let k;
+    for (let i = 0; i < kinds.length; i++) {
       k = kinds[i];
-      let keys = Object.keys(BASE[k]), n;
-      for (n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
+      const keys = Object.keys(BASE[k]);
+      for (let n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
     }
 
-    for (i = 0; i < CANDIDATES.length; i++) {
+    for (let i = 0; i < CANDIDATES.length; i++) {
       const c = CANDIDATES[i];
-      let said = ask(c.mime);
+      const said = ask(c.mime);
       answers.push({ kind: c.kind, name: c.name, mime: c.mime, said: said });
       /* "maybe" is what a TV says when it has not been asked precisely enough,
          and acting on it is how you get a black screen. */
@@ -131,8 +132,8 @@ var Panel = (function () {
   function clientProfile() {
     if (!caps) probe();
     const containers = list('container'), video = list('video').join(','), audio = list('audio').join(',');
-    let out = [], i;
-    for (i = 0; i < containers.length; i++) {
+    const out = [];
+    for (let i = 0; i < containers.length; i++) {
       out.push('add-direct-play-profile(type=videoProfile&container=' + containers[i] +
                '&codec=' + video + '&audioCodec=' + audio + ')');
     }
@@ -146,16 +147,19 @@ var Panel = (function () {
   /* For the panel chip: what was asked and what came back, so widening is a
      decision made on evidence. */
   function report() {
-    let rows = probe(), lines = [], kinds = ['video', 'container', 'audio'], i, k, said;
+    const rows = probe();
+    const lines = [];
+    const kinds = ['video', 'container', 'audio'];
+    let said;
     lines.push('DECLARED TO THE SERVER');
     lines.push('containers   ' + list('container').join(', '));
     lines.push('video        ' + list('video').join(', '));
     lines.push('audio        ' + list('audio').join(', '));
     lines.push('');
     lines.push('PANEL ANSWERED  (only "probably" is acted on)');
-    for (k = 0; k < kinds.length; k++) {
+    for (let k = 0; k < kinds.length; k++) {
       said = [];
-      for (i = 0; i < rows.length; i++) {
+      for (let i = 0; i < rows.length; i++) {
         if (rows[i].kind === kinds[k]) said.push(rows[i].name + '=' + (rows[i].said || 'no'));
       }
       lines.push(kinds[k] + (kinds[k] === 'video' ? '        ' : (kinds[k] === 'audio' ? '        ' : '    ')) +

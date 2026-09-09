@@ -50,7 +50,8 @@ var Media = (function () {
     if (isCommentary(st)) return -1;
     if (!passesArc(st)) return -1;
     const rank = AUDIO_RANK[codec];
-    let ch = st.channels || 2, bonus;
+    const ch = st.channels || 2;
+    let bonus;
     if (rank >= 4) bonus = Math.min(ch, 6);          // AC3/E-AC3: 5.1 preferred
     else bonus = (ch <= 2 ? 6 : 1);                  // AAC and below: stereo preferred
     return rank * 100 + bonus * 2 + (st.selected ? 1 : 0);
@@ -59,8 +60,11 @@ var Media = (function () {
   /* Returns the best passable audio stream on a part, or null if every track
      would force an audio transcode. */
   function pickAudio(part) {
-    let streams = (part && part.Stream) || [], best = null, bestScore = -1, i, sc;
-    for (i = 0; i < streams.length; i++) {
+    const streams = (part && part.Stream) || [];
+    let best = null;
+    let bestScore = -1;
+    let sc;
+    for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType !== 2) continue;
       sc = audioScore(streams[i]);
       if (sc > bestScore) { bestScore = sc; best = streams[i]; }
@@ -73,8 +77,12 @@ var Media = (function () {
      what the link can carry. Channel count wins here because the server is
      going to re-encode it anyway, so we may as well start from the good one. */
   function bestAudio(part) {
-    let streams = (part && part.Stream) || [], best = null, bestScore = -1, i, st, sc;
-    for (i = 0; i < streams.length; i++) {
+    const streams = (part && part.Stream) || [];
+    let best = null;
+    let bestScore = -1;
+    let st;
+    let sc;
+    for (let i = 0; i < streams.length; i++) {
       st = streams[i];
       if (st.streamType !== 2 || isCommentary(st)) continue;
       sc = Math.min(st.channels || 2, 8) * 10 + (st.selected ? 5 : 0) +
@@ -110,16 +118,16 @@ var Media = (function () {
   /* Every audio track on a part, in file order — what the player cycles
      through. */
   function audioTracks(part) {
-    let streams = (part && part.Stream) || [], out = [], i;
-    for (i = 0; i < streams.length; i++) {
+    const streams = (part && part.Stream) || [], out = [];
+    for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType === 2) out.push(streams[i]);
     }
     return out;
   }
 
   function streamById(part, id) {
-    let list = (part && part.Stream) || [], i;
-    for (i = 0; i < list.length; i++) {
+    const list = (part && part.Stream) || [];
+    for (let i = 0; i < list.length; i++) {
       if (String(list[i].id) === String(id)) return list[i];
     }
     return null;
@@ -129,8 +137,10 @@ var Media = (function () {
      "only TrueHD or DTS-HD MA" was a lie the moment commentary tracks started
      being excluded too. */
   function audioSummary(part) {
-    let streams = (part && part.Stream) || [], out = [], i, st;
-    for (i = 0; i < streams.length; i++) {
+    const streams = (part && part.Stream) || [];
+    const out = [];
+    let st;
+    for (let i = 0; i < streams.length; i++) {
       st = streams[i];
       if (st.streamType !== 2) continue;
       out.push(audioLabel(st) + (isCommentary(st) ? ' (commentary)' : ''));
@@ -191,8 +201,8 @@ var Media = (function () {
   }
 
   function subtitleTracks(part) {
-    let streams = (part && part.Stream) || [], out = [], i;
-    for (i = 0; i < streams.length; i++) {
+    const streams = (part && part.Stream) || [], out = [];
+    for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType === 3) out.push(streams[i]);
     }
     return out;
@@ -215,20 +225,23 @@ var Media = (function () {
      (a foreign-dialogue caption on an English film), else the first text one.
      Never an image track — it cannot be drawn — and never a commentary. */
   function pickSubtitle(part, languageCode) {
-    let list = subtitleTracks(part), usable = [], i, st, want;
-    for (i = 0; i < list.length; i++) {
+    const list = subtitleTracks(part);
+    const usable = [];
+    let st;
+    let want;
+    for (let i = 0; i < list.length; i++) {
       st = list[i];
       if (isTextSub(st) && !isCommentary(st)) usable.push(st);
     }
     if (!usable.length) return null;
     want = String(languageCode || '').toLowerCase();
     if (want) {
-      for (i = 0; i < usable.length; i++) {
+      for (let i = 0; i < usable.length; i++) {
         if (String(usable[i].languageCode || '').toLowerCase() === want) return usable[i];
       }
     }
-    for (i = 0; i < usable.length; i++) if (usable[i].selected) return usable[i];
-    for (i = 0; i < usable.length; i++) if (usable[i].forced) return usable[i];
+    for (let i = 0; i < usable.length; i++) if (usable[i].selected) return usable[i];
+    for (let i = 0; i < usable.length; i++) if (usable[i].forced) return usable[i];
     return usable[0];
   }
 
@@ -241,8 +254,10 @@ var Media = (function () {
      ticks are drawn from. */
 
   function markerAt(item, seconds) {
-    let list = (item && item.Marker) || [], t = seconds * 1000, i, m;
-    for (i = 0; i < list.length; i++) {
+    const list = (item && item.Marker) || [];
+    const t = seconds * 1000;
+    let m;
+    for (let i = 0; i < list.length; i++) {
       m = list[i];
       if (t >= (m.startTimeOffset || 0) && t < (m.endTimeOffset || 0)) return m;
     }
@@ -260,8 +275,10 @@ var Media = (function () {
   /* [{ title, start, end }] in seconds, in order. Both Marker and Chapter use
      the same offsets, so the trackbar can draw either. */
   function chapters(item) {
-    let list = (item && item.Chapter) || [], out = [], i, c;
-    for (i = 0; i < list.length; i++) {
+    const list = (item && item.Chapter) || [];
+    const out = [];
+    let c;
+    for (let i = 0; i < list.length; i++) {
       c = list[i];
       out.push({
         title: c.tag || c.title || ('Chapter ' + (c.index || i + 1)),
@@ -301,9 +318,9 @@ var Media = (function () {
 
   /* [{ label, bitrate }] — bitrate null means the file as it is. */
   function qualities(media) {
-    let source = (media && media.bitrate) || 0, out = [], i;
+    const source = (media && media.bitrate) || 0, out = [];
     out.push({ label: `Original (${versionLabel(media)})`, bitrate: null });
-    for (i = 0; i < BITRATES.length; i++) {
+    for (let i = 0; i < BITRATES.length; i++) {
       if (!source || BITRATES[i] < source) {
         out.push({ label: bitrateLabel(BITRATES[i]) + ' — server converts',
                    bitrate: BITRATES[i] });
@@ -365,7 +382,7 @@ var Media = (function () {
     let r = String(rating).toLowerCase().replace(/\s/g, '');
     const slash = r.lastIndexOf('/');
     if (slash >= 0) r = r.substring(slash + 1);      // strip "gb/", "us/"
-    let m = r.match(/^(\d{1,2})/);                    // 12, 12a, 15, 18, 6, 7
+    const m = r.match(/^(\d{1,2})/);                    // 12, 12a, 15, 18, 6, 7
     if (m) return parseInt(m[1], 10);
     return RATING_AGE[r] === undefined ? null : RATING_AGE[r];
   }
@@ -394,15 +411,17 @@ var Media = (function () {
      match because one server has no external id is not. */
 
   function externalIds(item) {
-    let out = [], g = (item && item.Guid) || [], i, id;
-    for (i = 0; i < g.length; i++) {
+    const out = [];
+    const g = (item && item.Guid) || [];
+    let id;
+    for (let i = 0; i < g.length; i++) {
       id = String(g[i].id || '').toLowerCase();
       if (id.indexOf('imdb://') === 0 || id.indexOf('tmdb://') === 0 ||
           id.indexOf('tvdb://') === 0) out.push(id);
     }
     /* The legacy agent form: com.plexapp.agents.imdb://tt0133093?lang=en */
     const legacy = String((item && item.guid) || '');
-    let m = legacy.match(/agents\.(imdb|themoviedb|thetvdb):\/\/([^?/]+)/);
+    const m = legacy.match(/agents\.(imdb|themoviedb|thetvdb):\/\/([^?/]+)/);
     if (m) {
       out.push((m[1] === 'themoviedb' ? 'tmdb' : (m[1] === 'thetvdb' ? 'tvdb' : 'imdb')) +
                '://' + m[2].toLowerCase());
@@ -431,7 +450,7 @@ var Media = (function () {
 
   /* Every key this item could be recognised by, best first. */
   function identities(item) {
-    let out = externalIds(item);
+    const out = externalIds(item);
     const guid = String((item && item.guid) || '');
     if (guid.indexOf('plex://') === 0) out.push(guid.toLowerCase());
     if (item && item.type === 'episode') {

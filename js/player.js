@@ -97,7 +97,7 @@ var Player = (function () {
      OSD would never go away once playback started. */
 
   function paintOsd() {
-    let at = target(), dur = duration();
+    const at = target(), dur = duration();
     const left = dur ? Math.max(0, dur - at) : 0;
 
     osdTime.textContent = fmt(at) + ' / ' + fmt(dur) +
@@ -124,16 +124,18 @@ var Player = (function () {
   function paintTicks() {
     const dur = duration();
     if (!dur) { osdTicks.innerHTML = ''; return; }
-    let html = '', list = Media.chapters(item), i, at;
+    let html = '';
+    const list = Media.chapters(item);
+    let at;
 
     const markers = (item && item.Marker) || [];
-    for (i = 0; i < markers.length; i++) {
+    for (let i = 0; i < markers.length; i++) {
       at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
       const wide = Math.max(2, Math.round(BAR_W *
         (((markers[i].endTimeOffset || 0) - (markers[i].startTimeOffset || 0)) / 1000) / dur));
       html += `<i class="osd-band" style="left:${at}px;width:${wide}px"></i>`;
     }
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if (list[i].start <= 0) continue;
       html += '<i class="osd-tick" style="left:' +
               Math.round(BAR_W * list[i].start / dur) + 'px"></i>';
@@ -199,18 +201,18 @@ var Player = (function () {
      know what we are looking at, and guessing would select the wrong track
      silently, which is the bug this whole section exists to fix. */
   function panelIndexOf(st) {
-    let tracks = Media.audioTracks(currentPart), list = panelTracks(), i;
+    const tracks = Media.audioTracks(currentPart), list = panelTracks();
     if (!list || list.length !== tracks.length) return -1;
-    for (i = 0; i < tracks.length; i++) {
+    for (let i = 0; i < tracks.length; i++) {
       if (String(tracks[i].id) === String(st.id)) return i;
     }
     return -1;
   }
 
   function selectPanelTrack(n) {
-    let list = panelTracks(), i;
+    const list = panelTracks();
     if (!list || n < 0 || n >= list.length) return false;
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if (list[i]) list[i].enabled = (i === n);
     }
     /* Trust nothing: read it back. A pipeline that exposes the list read-only
@@ -292,7 +294,7 @@ var Player = (function () {
 
   function applySeek() {
     if (pending === null) return;
-    let to = pending;
+    const to = pending;
     pending = null;
     try { v.currentTime = to; } catch (e) { /* not seekable yet */ }
     report(v.paused ? 'paused' : 'playing');
@@ -311,17 +313,19 @@ var Player = (function () {
   /* Chapter skip, falling back to a fixed jump on a file with no chapters —
      the button should always do something. */
   function chapterStep(dir) {
-    let list = Media.chapters(item), at = target(), i, to = null;
+    const list = Media.chapters(item);
+    const at = target();
+    let to = null;
     if (!list.length) { seekBy(dir * JUMP); return; }
     if (dir > 0) {
-      for (i = 0; i < list.length; i++) {
+      for (let i = 0; i < list.length; i++) {
         if (list[i].start > at + 1) { to = list[i].start; break; }
       }
       if (to === null) to = Math.max(0, duration() - 5);
     } else {
       /* Back once goes to the start of this chapter, again to the one before —
          which is how every disc player has behaved for twenty years. */
-      for (i = list.length - 1; i >= 0; i--) {
+      for (let i = list.length - 1; i >= 0; i--) {
         if (list[i].start < at - 3) { to = list[i].start; break; }
       }
       if (to === null) to = 0;
@@ -360,7 +364,7 @@ var Player = (function () {
   }
 
   function takeSkip() {
-    let to = (marker.endTimeOffset || 0) / 1000;
+    const to = (marker.endTimeOffset || 0) / 1000;
     skipDismissed = marker;
     marker = null;
     skipEl.classList.add('hidden');
@@ -448,8 +452,8 @@ var Player = (function () {
   }
 
   function buildAudioRows() {
-    let tracks = Media.audioTracks(currentPart), i;
-    for (i = 0; i < tracks.length; i++) {
+    const tracks = Media.audioTracks(currentPart);
+    for (let i = 0; i < tracks.length; i++) {
       rows.push(audioRow(tracks[i]));
     }
   }
@@ -469,12 +473,12 @@ var Player = (function () {
   }
 
   function buildSubRows() {
-    let list = Media.subtitleTracks(currentPart), i;
+    const list = Media.subtitleTracks(currentPart);
     rows.push({
       label: 'Off', on: !currentSub,
       act: () => { setSub(null); closeMenu(); }
     });
-    for (i = 0; i < list.length; i++) rows.push(subRow(list[i]));
+    for (let i = 0; i < list.length; i++) rows.push(subRow(list[i]));
   }
 
   function subRow(st) {
@@ -492,12 +496,12 @@ var Player = (function () {
      what the user means by "make this play properly", and both go through the
      guard, so the 4K rule refuses the cap and offers the other version. */
   function buildQualityRows() {
-    let versions = (item && item.Media) || [], i;
+    const versions = (item && item.Media) || [];
     if (versions.length > 1) {
-      for (i = 0; i < versions.length; i++) rows.push(versionRow(versions[i], i));
+      for (let i = 0; i < versions.length; i++) rows.push(versionRow(versions[i], i));
     }
     const list = Media.qualities(currentMedia);
-    for (i = 0; i < list.length; i++) rows.push(qualityRow(list[i]));
+    for (let i = 0; i < list.length; i++) rows.push(qualityRow(list[i]));
   }
 
   function versionRow(media, n) {
@@ -525,12 +529,12 @@ var Player = (function () {
   }
 
   function buildChapterRows() {
-    let list = Media.chapters(item), i;
+    const list = Media.chapters(item);
     rows.push({
       label: 'Play from the beginning',
       act: () => { seekTo(0); closeMenu(); }
     });
-    for (i = 0; i < list.length; i++) rows.push(chapterRow(list[i]));
+    for (let i = 0; i < list.length; i++) rows.push(chapterRow(list[i]));
   }
 
   function chapterRow(c) {
@@ -542,15 +546,15 @@ var Player = (function () {
   }
 
   function paintMenu() {
-    let html = '', i, r;
-    for (i = 0; i < TABS.length; i++) {
+    let html = '', r;
+    for (let i = 0; i < TABS.length; i++) {
       html += '<span class="menu-tab' + (i === tab ? ' on' : '') + '">' +
               UI.escapeHtml(TABS[i]) + '</span>';
     }
     menuTabsEl.innerHTML = html;
 
     html = '';
-    for (i = 0; i < rows.length; i++) {
+    for (let i = 0; i < rows.length; i++) {
       r = rows[i];
       html += '<div class="menu-row' + (i === sel ? ' sel' : '') +
               (r.on ? ' on' : '') + (r.off ? ' off' : '') + '">' +
@@ -577,8 +581,7 @@ var Player = (function () {
     buildRows();
     /* Land on what is currently in use, so OK on the first press is a no-op
        rather than a surprise. */
-    let i;
-    for (i = 0; i < rows.length; i++) if (rows[i].on) { sel = i; break; }
+    for (let i = 0; i < rows.length; i++) if (rows[i].on) { sel = i; break; }
     menuEl.classList.remove('hidden');
     paintMenu();
     hint();
@@ -601,7 +604,7 @@ var Player = (function () {
       return true;
     }
     if (code === 13 || code === 415 || code === 19) {
-      let r = rows[sel];
+      const r = rows[sel];
       if (r && r.act) r.act(); else closeMenu();
       return true;
     }

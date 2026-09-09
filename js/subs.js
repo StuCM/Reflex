@@ -37,9 +37,14 @@ var Subs = (function () {
   /* Cues, in time order: [{ start, end, text }] in seconds. */
   function parse(text) {
     const lines = String(text || '').replace(/\r/g, '').split('\n');
-    let cues = [], i, arrow, start, end, body, line;
+    const cues = [];
+    let arrow;
+    let start;
+    let end;
+    let body;
+    let line;
 
-    for (i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
       arrow = lines[i].indexOf('-->');
       if (arrow < 0) continue;
       start = seconds(lines[i].substring(0, arrow));
@@ -82,8 +87,8 @@ var Subs = (function () {
 
   function textAt(cues, t) {
     if (!cues || !cues.length) return '';
-    let out = [], i = after(cues, t), stop = Math.max(0, i - OVERLAP), j;
-    for (j = i - 1; j >= stop; j--) {
+    const out = [], i = after(cues, t), stop = Math.max(0, i - OVERLAP);
+    for (let j = i - 1; j >= stop; j--) {
       if (cues[j].end > t) out.unshift(cues[j].text);
     }
     return out.join('\n');
