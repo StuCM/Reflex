@@ -303,3 +303,37 @@ Desktop Chrome exposes no `audioTracks` at all, so which path the B8 takes is
 unknown until it runs there. The task is merged and **pending-tv**: the code is
 reviewed and the suite is green, but the behaviour this change exists for has
 never been observed.
+
+
+## 024/025 — a design file can contradict the report that motivated it
+
+*2026-09-09.* Two tasks fixing faults reported from the panel, run in parallel
+now that 020 had split the stylesheet and 019 the smoke suite.
+
+The ordering was the real fault. Both lists had been recorded in
+`docs/backlog.md` and left there while refactors and new features went ahead. A
+backlog entry is not a task and nothing dispatches from one, so a thing the user
+had already said was wrong sat still while new work shipped past it. Faults the
+user has reported outrank anything new.
+
+**Screen 6c draws the film page's round buttons at 70px — smaller than the app's
+88.** The spec, derived from the design file, told the worker to grow them to
+"the design's size"; obeying it would have made everything-but-Play smaller,
+which is the opposite of the complaint that produced the task ("the buttons are
+too big for play and everything else is too small"). Only Play changed, from a
+280px slab to a pill sized by its own text. Where the design and the report
+disagree, the report is the one with a person behind it.
+
+The same shape appeared in the player: **nothing there was ever two sizes.**
+Every `.osd-btn` was the shared 88px, so "the play button and navigate next
+buttons are different sizes" can only have been the *glyphs* — the play triangle
+sat inset in its box where the double triangles did not. Reading the complaint as
+being about the boxes would have produced a real change that fixed nothing.
+
+Two files were owned by neither task by design — `css/base.css` and
+`index.html` — with both specs told to stop and report rather than reach for
+them. Both did. The consequences (`--c-play` dead once Play became a pill, and
+the harness's three ▲-pressing control helpers dead once the player area
+shadowed them) were cleared here, at the merge, which is where a shared file
+belongs. That is the fix for the deadlock 019 and 020 hit, where two tasks each
+needed one line in a file neither could write.
