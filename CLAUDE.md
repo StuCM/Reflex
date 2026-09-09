@@ -12,15 +12,37 @@ back to the official app to play something defeats the purpose.
 ## Hard constraints — do not violate these
 
 **webOS 4.0 ships Chromium 53, permanently.** LG does not update Chromium
-within a major webOS version. Therefore:
+within a major webOS version. So there is a line, and it is worth knowing
+which side of it things are on — this list used to say only what was banned,
+and the code came out written in ES5 as a result, which nothing here asks for.
+
+Not available, do not use:
 
 - No `async`/`await` (Chrome 55). Use Promises with `.then()`.
-- No CSS Grid (Chrome 57). Flexbox and inline-block only.
-- No object spread, no `Object.entries` (Chrome 54).
-- No `position: sticky` (Chrome 56).
+- No object spread or rest (Chrome 60), no `Object.entries` (Chrome 54).
+- No optional chaining or `??` (Chrome 80), no `padStart` (57), no `flat` (69),
+  no `Promise.prototype.finally` (63).
+- No CSS Grid (Chrome 57), no `position: sticky` (Chrome 56), no flexbox `gap`
+  (Chrome 84).
 - Animate only `transform` and `opacity`. No shadow, filter, or blur
   transitions — they force layout and paint on a 2018 SoC.
 - Build target `es2015` if a bundler is introduced. Prefer no bundler.
+
+Available, and preferred — Chromium 53 is ES2015 apart from the above:
+
+- `const` and `let` (Chrome 49). Not `var`: `npm run check` rejects it
+  anywhere but column 0, where a module's own binding lives. That one has to
+  be `var`, because only `var` puts a property on the global object for
+  `index.html`'s next script tag and for `test/load.js`.
+- Arrow functions (Chrome 45), and concise bodies. Nothing in `js/` uses
+  `this` or `arguments`, so there is no binding to preserve.
+- Template literals (Chrome 41). Prefer them to `+` chains once there is more
+  than one thing being joined.
+- Destructuring, default and rest *parameters*, shorthand and computed keys
+  (Chrome 49), `for...of`, `Map` and `Set` (Chrome 38).
+
+`tools/check-es5.js` is the arbiter, not this list. It is a text scan, so it
+proves nothing — but if it and this file disagree, fix both.
 
 **Never send `X-Plex-Platform: webOS`.** Measured against both servers on
 2026-08-13: `/video/:/transcode/universal/decision` answers `400 Bad Request`
