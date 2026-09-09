@@ -1,7 +1,7 @@
 ---
 id: 024
 slug: the-film-page-fits-the-screen
-status: review
+status: done
 model: sonnet
 env: laptop
 branch: crew/024-the-film-page-fits-the-screen
@@ -230,4 +230,42 @@ box now.
 
 ## Review rounds
 
+**Round 1 — PASS.** The reviewer re-ran `check`, `verify` (89/89) and
+`scope-check` itself rather than taking the numbers on trust, spot-checked four
+6c values against the design file, confirmed `--c-play` is now dead in
+base.css, and confirmed the round-button deviation is recorded with a rationale
+tied to the original report. No changes asked for.
+
 ## Graph writes proposed
+
+- **Decision — the film page's round buttons stay at 88px.** Screen 6c draws
+  the detail page's icon buttons at 70px and the app has drawn them at 88 since
+  base.css was written. Task 024's approach said to grow them "to the design's
+  size", which the design does not have: 70 is smaller. The user's report was
+  that Play was too big and everything else too small, so the fault was the
+  ratio, and it was fixed by shrinking Play (280px slab → a pill sized by its
+  own text) rather than by shrinking everything else. Supersedes the base.css
+  note that says the single 88px "stands until the player's own layout task" —
+  it now stands on purpose.
+
+- **Pattern — a peek is a transform, and something has to give way.** The rail's
+  peek works because the whole row container slides. A single strip peeking at
+  the bottom of a page cannot slide without landing on whatever is above it: on
+  the film page the extras land on the cast, so the cast fades on the same
+  class. `#detail.down` drives all of it from `render()`, transform and opacity
+  only, no layout. The hint moved out of the bottom-left for the same reason.
+
+- **Pattern — assert the laid-out box, not the painted one.** A focused control
+  on this app is `transform: scale(1.06)`, so `getBoundingClientRect` in a
+  Playwright step compares a scaled thing with an unscaled one and an equality
+  assertion can never hold. `offsetWidth`/`offsetHeight` is the measurement a
+  layout assertion wants. This is the sixth assertion this week that would have
+  passed or failed on the wrong thing.
+
+- **Pattern — a smoke step needs a hook the app already writes.** Play-from-start
+  could not be proved through the video element: the dev fixture is 30 seconds
+  and the player refuses to resume into anything that short, so both plays start
+  at 0 on the laptop whatever the code does. One `UI.debug('starting at Ns')` in
+  `playChecked` — useful on the TV in its own right — made the difference
+  observable, read from `trace.slice(mark)` rather than `tracedThat`, which
+  scans the whole session and would have matched an earlier step's play.
