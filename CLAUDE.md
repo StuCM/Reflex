@@ -363,6 +363,14 @@ The three checks, and what each is for:
   element is leaving. The row matters too: Continue watching is short enough
   that the strip stops winding, so a sweep there never recycles a tile.
 
+  **A counting step needs a control.** Task 023's request counter matched
+  nothing — `/library/all\?.*[?&]guid=` wants a separator the real
+  `/library/all?guid=…` has not got — so "zero lookups" passed on an empty
+  count. It was caught only because a sibling step asserted *exactly one* and
+  failed at zero. Any step that counts should have a companion asserting a
+  non-zero count on the same collector, or a deliberate run against an
+  implementation that does the wrong thing.
+
 **Never judge playback on the laptop.** A desktop browser decodes far less than
 this panel: Firefox has no AC3/E-AC3 and no HEVC at all, Chrome has no
 Matroska. A silent film or a decode error there is the browser, not the app —
