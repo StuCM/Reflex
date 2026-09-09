@@ -37,7 +37,13 @@ var Subs = (function () {
   /* Cues, in time order: [{ start, end, text }] in seconds. */
   function parse(text) {
     const lines = String(text || '').replace(/\r/g, '').split('\n');
-    let cues = [], i, arrow, start, end, body, line;
+    const cues = [];
+    let i;
+    let arrow;
+    let start;
+    let end;
+    let body;
+    let line;
 
     for (i = 0; i < lines.length; i++) {
       arrow = lines[i].indexOf('-->');
@@ -67,7 +73,9 @@ var Subs = (function () {
   /* First cue index starting after t. Binary, because a two-hour film has a
      couple of thousand cues and this runs on every timeupdate. */
   function after(cues, t) {
-    let lo = 0, hi = cues.length, mid;
+    let lo = 0;
+    let hi = cues.length;
+    let mid;
     while (lo < hi) {
       mid = (lo + hi) >> 1;
       if (cues[mid].start <= t) lo = mid + 1; else hi = mid;
@@ -82,7 +90,10 @@ var Subs = (function () {
 
   function textAt(cues, t) {
     if (!cues || !cues.length) return '';
-    let out = [], i = after(cues, t), stop = Math.max(0, i - OVERLAP), j;
+    const out = [];
+    let i = after(cues, t);
+    const stop = Math.max(0, i - OVERLAP);
+    let j;
     for (j = i - 1; j >= stop; j--) {
       if (cues[j].end > t) out.unshift(cues[j].text);
     }

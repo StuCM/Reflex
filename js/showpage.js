@@ -25,8 +25,10 @@ var ShowPage = (function () {
   const RECAP_LEAD = 2;
 
   let show = null;
-  let seasons = [], seasonIdx = 0;
-  let episodes = [], epIdx = 0;
+  let seasons = [];
+  let seasonIdx = 0;
+  let episodes = [];
+  let epIdx = 0;
   let zone = 'episodes';         // 'seasons' | 'episodes' | 'recaps'
   let recaps = null;             // null until searched, then the list, empty or not
   let recapIdx = 0;
@@ -78,7 +80,8 @@ var ShowPage = (function () {
   }
 
   function openSeason(list) {
-    let want = opts.at && opts.at.season, i;
+    const want = opts.at && opts.at.season;
+    let i;
     if (want !== undefined && want !== null) {
       for (i = 0; i < list.length; i++) if (list[i].index === want) return i;
     }
@@ -109,7 +112,9 @@ var ShowPage = (function () {
   }
 
   function renderSeasons() {
-    let html = '', i, cls;
+    let html = '';
+    let i;
+    let cls;
     for (i = 0; i < seasons.length; i++) {
       cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
             (zone === 'seasons' && i === seasonIdx ? ' on' : '');
@@ -137,7 +142,12 @@ var ShowPage = (function () {
     /* A window, not the lot: a 24-episode series is common and drawing all of
        them costs more than it is worth. */
     const first = UI.clamp(epIdx - EPISODE_LEAD, 0, Math.max(0, episodes.length - EPISODE_POOL));
-    let html = '', i, ep, on, watched, still;
+    let html = '';
+    let i;
+    let ep;
+    let on;
+    let watched;
+    let still;
     for (i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
       ep = episodes[i];
       on = (i === epIdx && zone === 'episodes');
@@ -190,7 +200,9 @@ var ShowPage = (function () {
       return;
     }
     const first = UI.clamp(recapIdx - RECAP_LEAD, 0, Math.max(0, recaps.length - RECAP_POOL));
-    let html = '', i, r;
+    let html = '';
+    let i;
+    let r;
     for (i = first; i < Math.min(first + RECAP_POOL, recaps.length); i++) {
       r = recaps[i];
       html += '<div class="sh-recap' + (on && i === recapIdx ? ' on' : '') + '">' +
@@ -211,7 +223,8 @@ var ShowPage = (function () {
     if (searching || recaps) return;
     searching = true;
     renderRecaps();
-    const gen = generation, title = show.title || '';
+    const gen = generation;
+    const title = show.title || '';
     const key = 'recaps:' + Media.identity(show);
     Store.get(key).then(function (cached) {
       if (cached) return cached;
@@ -329,7 +342,8 @@ var ShowPage = (function () {
       episodes = list;
       /* Land on the episode we were opened at, or failing that the first
          unfinished one: what you want is almost always the next one. */
-      let i, hit;
+      let i;
+      let hit;
       for (i = 0; i < list.length; i++) {
         hit = want === null ? (list[i].viewOffset || !list[i].viewCount)
                             : list[i].index === want;

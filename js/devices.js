@@ -21,7 +21,8 @@ var Devices = (function () {
 
   let played = null;             // 'serverId:ratingKey' -> 'serverId:deviceID'
   let claimed = null;            // null = never configured, so don't filter
-  let list = [], idx = 0;
+  let list = [];
+  let idx = 0;
   let onClose = null;
 
   const elList = document.getElementById('device-list');
@@ -48,7 +49,8 @@ var Devices = (function () {
         return { server: sv, entries: entries };
       });
     })).then(function (perServer) {
-      let map = {}, count = 0;
+      const map = {};
+      let count = 0;
       perServer.forEach(function (res) {
         /* Sorted newest first, so the first entry per item is the latest. */
         res.entries.forEach(function (e) {
@@ -69,7 +71,9 @@ var Devices = (function () {
   }
 
   function countDevices(map) {
-    let seen = {}, keys = Object.keys(map), i;
+    const seen = {};
+    const keys = Object.keys(map);
+    let i;
     for (i = 0; i < keys.length; i++) seen[map[keys[i]]] = true;
     return Object.keys(seen).length;
   }
@@ -78,7 +82,9 @@ var Devices = (function () {
   function mine(items) {
     if (!claimed || !played) return items;
     return items.filter(function (entry) {
-      let copies = Merge.sources(entry), i, dev;
+      const copies = Merge.sources(entry);
+      let i;
+      let dev;
       for (i = 0; i < copies.length; i++) {
         dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
         if (!dev || claimed[dev]) return true;
@@ -101,8 +107,12 @@ var Devices = (function () {
         return Plex.devices(sv).then(function (d) { return { server: sv, devices: d }; });
       }))
     ]).then(function (res) {
-      const map = res[0] || {}, named = res[1] || [];
-      let names = {}, counts = {}, keys = Object.keys(map), i;
+      const map = res[0] || {};
+      const named = res[1] || [];
+      const names = {};
+      const counts = {};
+      const keys = Object.keys(map);
+      let i;
       named.forEach(function (n) {
         n.devices.forEach(function (d) { names[n.server.id + ':' + d.id] = d.name; });
       });
@@ -125,7 +135,9 @@ var Devices = (function () {
         '<div class="device-row">No device history available on these servers.</div>';
       return;
     }
-    let html = '', i, d;
+    let html = '';
+    let i;
+    let d;
     for (i = 0; i < list.length; i++) {
       d = list[i];
       html += '<div class="device-row' + (i === idx ? ' on' : '') + '">' +
@@ -140,7 +152,8 @@ var Devices = (function () {
   function save() {
     let changed = false;
     if (list.length) {
-      let map = {}, i;
+      const map = {};
+      let i;
       for (i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
       claimed = map;
       lsSet('myDevices', JSON.stringify(map));

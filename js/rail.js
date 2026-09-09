@@ -11,7 +11,10 @@ var Rail = (function () {
   'use strict';
 
   /* 2:3, so seven fit across at 1920: 96 left margin + 7×209 + 6×44 = 1823. */
-  const TILE_W = 209, TILE_H = 314, GAP = 44, STRIDE = TILE_W + GAP;
+  const TILE_W = 209;
+  const TILE_H = 314;
+  const GAP = 44;
+  const STRIDE = TILE_W + GAP;
   const ROW_H = 466;               // 44 header + 314 art + 74 two lines + 34 below
   const VIEWPORT_H = 580;          // css #viewport, well below the 264px header
   const TILE_POOL = 12;            // tiles per row element
@@ -63,7 +66,17 @@ var Rail = (function () {
   }
 
   function build() {
-    let r, i, rowEl, label, strip, tile, inner, img, name, sub, prog;
+    let r;
+    let i;
+    let rowEl;
+    let label;
+    let strip;
+    let tile;
+    let inner;
+    let img;
+    let name;
+    let sub;
+    let prog;
     for (r = 0; r < ROW_POOL; r++) {
       rowEl = document.createElement('div');
       rowEl.className = 'row hidden';
@@ -113,7 +126,10 @@ var Rail = (function () {
      for them is reassigned in place. A whole-rail render per image would be far
      more work than one picture is worth. */
   function repaint(tmdbId) {
-    let r, i, t, url;
+    let r;
+    let i;
+    let t;
+    let url;
     for (r = 0; r < ROW_POOL; r++) {
       for (i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
@@ -127,7 +143,9 @@ var Rail = (function () {
   /* A tile showing a placeholder must re-render once its page lands. One that
      already shows a poster must not, or we reassign src for nothing. */
   function invalidateEmpty() {
-    let r, i, t;
+    let r;
+    let i;
+    let t;
     for (r = 0; r < ROW_POOL; r++) {
       for (i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
@@ -148,7 +166,9 @@ var Rail = (function () {
   /* The rail has stopped moving, so the tiles still on it can have their
      pictures. Off-screen rows keep waiting — they have their own reason to. */
   function settled() {
-    let r, i, t;
+    let r;
+    let i;
+    let t;
     for (r = 0; r < ROW_POOL; r++) {
       if (!rowEls[r]._onScreen) continue;
       for (i = 0; i < TILE_POOL; i++) {
@@ -162,8 +182,16 @@ var Rail = (function () {
     /* Position alone does not identify a row: search results replace the rows
        in place and keep rowIdx 0, so a pool element holding row 0 went on
        showing the library's row 0 — right title over the wrong tiles. */
-    const row = rows[r], reused = rowEl._row !== r || rowEl._rowRef !== row;
-    let i, idx, tile, item, held, focused, firstVisible, start;
+    const row = rows[r];
+    const reused = rowEl._row !== r || rowEl._rowRef !== row;
+    let i;
+    let idx;
+    let tile;
+    let item;
+    let held;
+    let focused;
+    let firstVisible;
+    let start;
 
     rowEl._onScreen = onScreen;
     rowEl.classList.remove('hidden');
@@ -250,7 +278,8 @@ var Rail = (function () {
        the row you just moved to half below the fold. */
     const firstVisible = UI.clamp(rowIdx - (ROWS_FIT - 1), 0, Math.max(0, rows.length - ROWS_FIT));
     const start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
-    let i, r;
+    let i;
+    let r;
     /* Row 0 sits under the tall hero; everything below it sits under the band.
        Both states are one translate on this element, so the collapse animates
        for free on the transform that was moving anyway. */

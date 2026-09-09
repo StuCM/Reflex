@@ -15,7 +15,9 @@ var Meta = (function () {
   const CAP = 500;                 // metadata payloads kept in RAM
   const HOLD = 280;                // ms of stillness before asking a server
 
-  let cache = {}, count = 0, timer = null;
+  let cache = {};
+  let count = 0;
+  let timer = null;
 
   function keyOf(item) {
     return (item && item._server ? item._server : '?') + ':' + (item && item.ratingKey);

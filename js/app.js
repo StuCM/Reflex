@@ -251,7 +251,8 @@
   /* ---------- keys ---------- */
 
   function onKey(e) {
-    let code = e.keyCode, handled;
+    const code = e.keyCode;
+    let handled;
 
     if (Player.playing()) {
       if (Player.key(code)) e.preventDefault();
@@ -358,7 +359,9 @@
   /* Cached sections name their server by id; turn them back into the server
      objects discovery handed us. A server that has since gone is dropped. */
   function rehydrate(cached) {
-    let out = [], i, server;
+    const out = [];
+    let i;
+    let server;
     for (i = 0; i < cached.length; i++) {
       server = Servers.get(cached[i].serverId);
       if (server) out.push({ server: server, sections: cached[i].sections });

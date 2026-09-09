@@ -43,7 +43,8 @@ var Discovery = (function () {
     return Promise.all(Servers.all().map(function (sv) {
       return Plex.findByGuid(sv, 'tmdb://' + id).catch(function () { return null; });
     })).then(function (perServer) {
-      let hits = [], i;
+      const hits = [];
+      let i;
       for (i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
       return hits.length ? Merge.lists([hits])[0] : null;
     });
@@ -79,7 +80,8 @@ var Discovery = (function () {
      watched, which the caller already holds — asking a server for them would
      cost the page the very thing it exists to avoid. */
   function load(ctx) {
-    let cats = Config.categories || [], i = 0;
+    const cats = Config.categories || [];
+    let i = 0;
     function step() {
       if (!ctx.isCurrent() || i >= cats.length) return Promise.resolve();
       return one(ctx, cats[i++]).then(step);

@@ -55,7 +55,8 @@ var Plex = (function () {
   }
 
   function uuid() {
-    let out = '', i;
+    let out = '';
+    let i;
     for (i = 0; i < 32; i++) {
       if (i === 8 || i === 12 || i === 16 || i === 20) out += '-';
       out += Math.floor(Math.random() * 16).toString(16);
@@ -64,7 +65,10 @@ var Plex = (function () {
   }
 
   function qs(params) {
-    let keys = Object.keys(params), parts = [], i, v;
+    const keys = Object.keys(params);
+    const parts = [];
+    let i;
+    let v;
     for (i = 0; i < keys.length; i++) {
       v = params[keys[i]];
       if (v === null || v === undefined) continue;
@@ -95,7 +99,9 @@ var Plex = (function () {
       const xhr = new XMLHttpRequest();
       xhr.open(method, url, true);
       xhr.timeout = opts.timeout || 15000;
-      let h = headers(), keys = Object.keys(h), i;
+      let h = headers();
+      const keys = Object.keys(h);
+      let i;
       for (i = 0; i < keys.length; i++) xhr.setRequestHeader(keys[i], h[keys[i]]);
       if (opts.token) xhr.setRequestHeader('X-Plex-Token', opts.token);
       xhr.onload = function () {
@@ -211,7 +217,8 @@ var Plex = (function () {
   /* Promise.any doesn't exist in Chromium 53. */
   function raceOk(promises) {
     return new Promise(function (resolve, reject) {
-      let left = promises.length, settled = false;
+      let left = promises.length;
+      let settled = false;
       if (!left) { reject(new Error('nothing to race')); return; }
       promises.forEach(function (p) {
         p.then(function (v) {
@@ -243,7 +250,9 @@ var Plex = (function () {
 
     return tv('GET', '/api/v2/resources?' + qs({ includeHttps: 1, includeRelay: 0 }))
       .then(function (resources) {
-        let jobs = [], i, r;
+        const jobs = [];
+        let i;
+        let r;
         for (i = 0; i < resources.length; i++) {
           r = resources[i];
           if (!r.provides || r.provides.indexOf('server') < 0) continue;
@@ -264,7 +273,9 @@ var Plex = (function () {
 
   function reach(resource) {
     const token = resource.accessToken || s.token;
-    let uris = [], j, c;
+    const uris = [];
+    let j;
+    let c;
     for (j = 0; j < (resource.connections || []).length; j++) {
       c = resource.connections[j];
       if (c.relay) continue;
@@ -281,7 +292,9 @@ var Plex = (function () {
 
   function sections(server) {
     return ask(server, '/library/sections').then(function (res) {
-      let dirs = (res.MediaContainer && res.MediaContainer.Directory) || [], out = [], i;
+      const dirs = (res.MediaContainer && res.MediaContainer.Directory) || [];
+      let out = [];
+      let i;
       for (i = 0; i < dirs.length; i++) {
         /* Movies and shows. Music and photos are not something this app has any
            business drawing. */
@@ -308,7 +321,8 @@ var Plex = (function () {
     /* Filters (e.g. contentRating) are applied server side — never pull a
        section down to sieve it here. */
     if (extra) {
-      let keys = Object.keys(extra), i;
+      const keys = Object.keys(extra);
+      let i;
       for (i = 0; i < keys.length; i++) params[keys[i]] = extra[keys[i]];
     }
     return ask(server, '/library/sections/' + sectionKey + '/all?' + qs(params),
@@ -325,7 +339,9 @@ var Plex = (function () {
   function contentRatings(server, sectionKey) {
     return ask(server, '/library/sections/' + sectionKey + '/contentRating')
       .then(function (res) {
-        let dirs = (res.MediaContainer && res.MediaContainer.Directory) || [], out = [], i;
+        const dirs = (res.MediaContainer && res.MediaContainer.Directory) || [];
+        let out = [];
+        let i;
         for (i = 0; i < dirs.length; i++) out.push(dirs[i].title || dirs[i].key);
         return out;
       }).catch(function () { return []; });
@@ -397,7 +413,10 @@ var Plex = (function () {
     return ask(server, '/hubs/sections/' + sectionKey + '?' +
                qs({ count: HUB_COUNT, includeGuids: 1 }),
                { timeout: 20000 }).then(function (res) {
-      let list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, h;
+      const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
+      let out = [];
+      let i;
+      let h;
       for (i = 0; i < list.length; i++) {
         h = list[i];
         if (!h.Metadata || !h.Metadata.length) continue;
@@ -413,7 +432,11 @@ var Plex = (function () {
   function search(server, query) {
     return ask(server, '/hubs/search?' + qs({ query: query, limit: 40 }), { timeout: 20000 })
       .then(function (res) {
-        let list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, j, h;
+        const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
+        let out = [];
+        let i;
+        let j;
+        let h;
         for (i = 0; i < list.length; i++) {
           h = list[i];
           if (!h.Metadata) continue;
@@ -442,7 +465,9 @@ var Plex = (function () {
 
   function devices(server) {
     return ask(server, '/devices').then(function (res) {
-      let d = (res.MediaContainer && res.MediaContainer.Device) || [], out = [], i;
+      const d = (res.MediaContainer && res.MediaContainer.Device) || [];
+      let out = [];
+      let i;
       for (i = 0; i < d.length; i++) {
         out.push({ id: String(d[i].id),
                    name: d[i].name || d[i].clientIdentifier || ('device ' + d[i].id),
@@ -473,7 +498,9 @@ var Plex = (function () {
      other version is not another entry in Media[] — it is a different library
      item under a different chip, and only a guid lookup finds it. */
   function allVersions(server, item) {
-    let ids = [], g = (item && item.Guid) || [], i;
+    const ids = [];
+    const g = (item && item.Guid) || [];
+    let i;
     if (item && item.guid && String(item.guid).indexOf('plex://') === 0) ids.push(item.guid);
     for (i = 0; i < g.length; i++) if (g[i].id) ids.push(g[i].id);
     if (!ids.length) return Promise.resolve([]);
@@ -492,7 +519,9 @@ var Plex = (function () {
   /* TMDB id off an item, handling both the modern Guid array and the legacy
      agent form (com.plexapp.agents.themoviedb://123?lang=en). */
   function tmdbId(item) {
-    let g = (item && item.Guid) || [], i, id;
+    const g = (item && item.Guid) || [];
+    let i;
+    let id;
     for (i = 0; i < g.length; i++) {
       id = g[i].id || '';
       if (id.indexOf('tmdb://') === 0) return id.substring(7);
@@ -618,7 +647,10 @@ var Plex = (function () {
       const mc = res.MediaContainer || {};
       const md = (mc.Metadata && mc.Metadata[0]) || null;
       const part = md && md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
-      let streams = (part && part.Stream) || [], i, video = '', audio = '';
+      const streams = (part && part.Stream) || [];
+      let i;
+      let video = '';
+      let audio = '';
       /* Per stream, so "the audio needs re-encoding" can be told apart from
          "the whole thing does" — one of those is acceptable here and the other
          is what gets a 4K session killed. */

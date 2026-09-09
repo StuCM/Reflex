@@ -81,8 +81,11 @@ var Detail = (function () {
 
   /* The combination Play would start: the guard's verdict for it, and the three
      things the buttons can change about it. */
-  let verdict = null, chosenAudio = null, chosenSub = null;
-  let maxBitrate = null, forceStream = false;
+  let verdict = null;
+  let chosenAudio = null;
+  let chosenSub = null;
+  let maxBitrate = null;
+  let forceStream = false;
 
   function open(entry, options) {
     if (!entry) return;
@@ -408,7 +411,10 @@ var Detail = (function () {
   }
 
   function renderActions() {
-    let list = actions(), html = '', i, a;
+    const list = actions();
+    let html = '';
+    let i;
+    let a;
     for (i = 0; i < list.length; i++) {
       a = list[i];
       html += '<div class="dt-act' + (a.primary ? ' primary' : '') +
@@ -501,7 +507,8 @@ var Detail = (function () {
     adoptDefault();
     renderActions();
 
-    let html = '', i;
+    let html = '';
+    let i;
     for (i = 0; i < extras.length; i++) {
       html += extraCard(extras[i], strip === 1 && i === idx);
     }
@@ -672,7 +679,9 @@ var Detail = (function () {
 
   /* The first letters of the first two words: "Ada Lovelace" is AL. */
   function initials(name) {
-    let words = String(name || '').trim().split(/\s+/), out = '', i;
+    const words = String(name || '').trim().split(/\s+/);
+    let out = '';
+    let i;
     for (i = 0; i < words.length && out.length < 2; i++) {
       if (words[i]) out += words[i].charAt(0).toUpperCase();
     }
@@ -680,7 +689,11 @@ var Detail = (function () {
   }
 
   function castHtml(md) {
-    let roles = (md.Role || []).slice(0, 8), html = '', i, r, url;
+    const roles = (md.Role || []).slice(0, 8);
+    let html = '';
+    let i;
+    let r;
+    let url;
     if (!roles.length) return '';
     for (i = 0; i < roles.length; i++) {
       r = roles[i];

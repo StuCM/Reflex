@@ -18,7 +18,8 @@ var Art = (function () {
 
   /* The tile is 209 wide, so w342 is the next size up — w500 was for a tile
      nearly twice as wide and is now a third of a megabyte per poster wasted. */
-  const POSTER_SIZE = 'w342', HERO_SIZE = 'w1280';
+  const POSTER_SIZE = 'w342';
+  const HERO_SIZE = 'w1280';
   const MAX_IN_FLIGHT = 4;
   const CAST = 4;          // names in the header's key actors line
 
@@ -30,7 +31,8 @@ var Art = (function () {
 
   /* The best-voted path out of one of TMDB's image lists, or null. */
   function bestOf(list) {
-    let usable = [], i;
+    const usable = [];
+    let i;
     if (!Array.isArray(list)) return null;
     for (i = 0; i < list.length; i++) {
       if (list[i] && list[i].file_path) usable.push(list[i]);
@@ -56,7 +58,8 @@ var Art = (function () {
   function facts(payload) {
     const credits = (payload && payload.credits) || {};
     const billing = Array.isArray(credits.cast) ? credits.cast : [];
-    let cast = [], i;
+    const cast = [];
+    let i;
     for (i = 0; i < billing.length && cast.length < CAST; i++) {
       if (billing[i] && billing[i].name) cast.push(billing[i].name);
     }

@@ -13,9 +13,16 @@ var Menu = (function () {
   const ROW_H = 56;                  // .menu-row, in CSS pixels
   const ROWS_SHOWN = 7;
 
-  let host = null, tabs = [], tab = 0, sel = 0, built = [];
-  let onChoose = null, onClose = null;
-  let elTabs = null, elInner = null, elNote = null;
+  let host = null;
+  let tabs = [];
+  let tab = 0;
+  let sel = 0;
+  let built = [];
+  let onChoose = null;
+  let onClose = null;
+  let elTabs = null;
+  let elInner = null;
+  let elNote = null;
 
   /* A tab's rows are asked for when the tab is shown, not when the menu opens:
      what is on offer depends on where playback has got to, and a list built
@@ -30,13 +37,17 @@ var Menu = (function () {
   /* Land on what is already in use, so OK on the first press is a no-op rather
      than a surprise. */
   function land() {
-    let list = rows(), i;
+    const list = rows();
+    let i;
     sel = 0;
     for (i = 0; i < list.length; i++) if (list[i].on) { sel = i; return; }
   }
 
   function paint() {
-    let list = rows(), html = '', i, r;
+    const list = rows();
+    let html = '';
+    let i;
+    let r;
     for (i = 0; i < tabs.length; i++) {
       html += '<span class="menu-tab' + (i === tab ? ' on' : '') + '">' +
               UI.escapeHtml(tabs[i].label) + '</span>';
@@ -100,7 +111,8 @@ var Menu = (function () {
   /* Closed before the choice is acted on, so a screen that reopens the menu or
      tears itself down in response is not fighting an overlay that is still up. */
   function choose() {
-    const r = rows()[sel], go = onChoose;
+    let r = rows()[sel];
+    const go = onChoose;
     close();
     if (r && !r.off && go) go(r.value, r);
   }

@@ -69,10 +69,13 @@ var Panel = (function () {
     caps = {
       container: {}, video: {}, audio: {}
     };
-    let kinds = ['container', 'video', 'audio'], i, k;
+    const kinds = ['container', 'video', 'audio'];
+    let i;
+    let k;
     for (i = 0; i < kinds.length; i++) {
       k = kinds[i];
-      let keys = Object.keys(BASE[k]), n;
+      const keys = Object.keys(BASE[k]);
+      let n;
       for (n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
     }
 
@@ -130,8 +133,11 @@ var Panel = (function () {
      differently — not of editing a string and hoping. */
   function clientProfile() {
     if (!caps) probe();
-    const containers = list('container'), video = list('video').join(','), audio = list('audio').join(',');
-    let out = [], i;
+    const containers = list('container');
+    const video = list('video').join(',');
+    const audio = list('audio').join(',');
+    const out = [];
+    let i;
     for (i = 0; i < containers.length; i++) {
       out.push('add-direct-play-profile(type=videoProfile&container=' + containers[i] +
                '&codec=' + video + '&audioCodec=' + audio + ')');
@@ -146,7 +152,12 @@ var Panel = (function () {
   /* For the panel chip: what was asked and what came back, so widening is a
      decision made on evidence. */
   function report() {
-    let rows = probe(), lines = [], kinds = ['video', 'container', 'audio'], i, k, said;
+    const rows = probe();
+    const lines = [];
+    const kinds = ['video', 'container', 'audio'];
+    let i;
+    let k;
+    let said;
     lines.push('DECLARED TO THE SERVER');
     lines.push('containers   ' + list('container').join(', '));
     lines.push('video        ' + list('video').join(', '));

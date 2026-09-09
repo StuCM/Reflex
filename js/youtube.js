@@ -21,7 +21,10 @@ var Youtube = (function () {
   function enabled() { return !!KEY; }
 
   function qs(params) {
-    let keys = Object.keys(params), parts = [], i, v;
+    const keys = Object.keys(params);
+    const parts = [];
+    let i;
+    let v;
     for (i = 0; i < keys.length; i++) {
       v = params[keys[i]];
       if (v === null || v === undefined) continue;
@@ -96,14 +99,18 @@ var Youtube = (function () {
      hundred the search already cost. A missing length is a missing caption, not
      a missing rail, so a failure here keeps the items. */
   function withLengths(items) {
-    let ids = [], i, id;
+    const ids = [];
+    let i;
+    let id;
     for (i = 0; i < items.length; i++) {
       id = items[i].id && items[i].id.videoId;
       if (id) ids.push(id);
     }
     if (!ids.length) return Promise.resolve(items);
     return get('/videos', { part: 'contentDetails', id: ids.join(',') }).then(function (r) {
-      let by = {}, k, list = (r && r.items) || [];
+      const by = {};
+      let k;
+      const list = (r && r.items) || [];
       for (k = 0; k < list.length; k++) by[list[k].id] = list[k].contentDetails;
       for (k = 0; k < items.length; k++) {
         id = items[k].id && items[k].id.videoId;
@@ -124,7 +131,9 @@ var Youtube = (function () {
   function lengthOf(iso) {
     const m = /^P(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)$/.exec(iso || '');
     if (!m) return '';
-    const h = Number(m[1] || 0), mins = Number(m[2] || 0), secs = Number(m[3] || 0);
+    const h = Number(m[1] || 0);
+    const mins = Number(m[2] || 0);
+    const secs = Number(m[3] || 0);
     return h ? h + ':' + pad(mins) + ':' + pad(secs) : mins + ':' + pad(secs);
   }
 
@@ -137,7 +146,12 @@ var Youtube = (function () {
   /* The API payload as the rail wants it, in season order with the unnumbered
      ones last. Never throws: a malformed item is simply not a recap. */
   function parse(items) {
-    let list = items || [], out = [], i, it, id, title;
+    const list = items || [];
+    const out = [];
+    let i;
+    let it;
+    let id;
+    let title;
     for (i = 0; i < list.length; i++) {
       it = list[i] || {};
       id = it.id && it.id.videoId;
@@ -157,10 +171,13 @@ var Youtube = (function () {
   /* Sorting the positions rather than the list: Chromium 53's sort is not
      stable, and within a season the order the API chose is the one to keep. */
   function bySeason(list) {
-    let order = [], out = [], i;
+    const order = [];
+    const out = [];
+    let i;
     for (i = 0; i < list.length; i++) order.push(i);
     order.sort(function (a, b) {
-      const x = list[a].season, y = list[b].season;
+      const x = list[a].season;
+      const y = list[b].season;
       if (x === y) return a - b;
       if (x === null) return 1;
       if (y === null) return -1;
@@ -177,7 +194,9 @@ var Youtube = (function () {
   /* Only the videos that name this show. The channel covers everything, and a
      search for a one-word title brings back most of it. */
   function pickForShow(parsed, showTitle) {
-    let want = normalise(showTitle), out = [], i;
+    const want = normalise(showTitle);
+    const out = [];
+    let i;
     if (want.length < 3) return [];               // no title left to match on
     for (i = 0; i < (parsed || []).length; i++) {
       if (normalise(parsed[i].title).indexOf(want) >= 0) out.push(parsed[i]);

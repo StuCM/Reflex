@@ -7,7 +7,9 @@
 var Store = (function () {
   'use strict';
 
-  let NAME = 'reflex', STORE = 'kv', dbp = null;
+  const NAME = 'reflex';
+  const STORE = 'kv';
+  let dbp = null;
   const mem = {};          // fallback if IndexedDB is unavailable or blocked
 
   function open() {

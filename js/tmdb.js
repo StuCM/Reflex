@@ -21,7 +21,10 @@ var Tmdb = (function () {
   function enabled() { return !!KEY; }
 
   function qs(params) {
-    let keys = Object.keys(params), parts = [], i, v;
+    const keys = Object.keys(params);
+    const parts = [];
+    let i;
+    let v;
     for (i = 0; i < keys.length; i++) {
       v = params[keys[i]];
       if (v === null || v === undefined) continue;
@@ -66,7 +69,8 @@ var Tmdb = (function () {
   }
 
   function films(results) {
-    let out = [], i;
+    const out = [];
+    let i;
     for (i = 0; i < (results || []).length; i++) {
       if (goodEnough(results[i])) out.push(film(results[i]));
     }
@@ -102,10 +106,13 @@ var Tmdb = (function () {
   function recommendedFrom(seedTmdbIds) {
     const seeds = (seedTmdbIds || []).slice(0, 8);
     if (!seeds.length) return Promise.resolve([]);
-    const score = {}, seen = {};
+    const score = {};
+    const seen = {};
     return serial(seeds, function (id) {
       return get('/movie/' + id + '/recommendations').then(function (r) {
-        let list = films(r.results), i, m;
+        const list = films(r.results);
+        let i;
+        let m;
         for (i = 0; i < list.length; i++) {
           m = list[i];
           if (seeds.indexOf(m.id) >= 0) continue;              // don't suggest the seed

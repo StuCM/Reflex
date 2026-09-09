@@ -21,7 +21,9 @@ var Masthead = (function () {
   /* Long enough that sweeping a row never starts a full-screen image, short
      enough that a deliberate step still feels answered. */
   const HOLD = 420;                // ms of stillness before asking for a backdrop
-  let artTimer = null, artWant = null, lastArt = '';
+  let artTimer = null;
+  let artWant = null;
+  let lastArt = '';
 
   /* The backdrop, debounced: only the last item asked for is drawn, so sweeping
      a row costs one full-screen image rather than one per key. */

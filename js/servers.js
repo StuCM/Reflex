@@ -94,7 +94,9 @@ var Servers = (function () {
      is: the chip says which server is preferred and OK moves to the next. */
   function cyclePreferred() {
     if (list.length < 2) return preferred();
-    let at = 0, i, cur = preferred();
+    let at = 0;
+    let i;
+    const cur = preferred();
     for (i = 0; i < list.length; i++) if (list[i].id === cur) at = i;
     setPreferred(list[(at + 1) % list.length].id);
     return preferred();

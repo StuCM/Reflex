@@ -71,7 +71,8 @@ var Shows = (function () {
      every copy, because the episode playing is one server's and the merged
      entry may lead with the other's. */
   function isCopyOf(entry, episode) {
-    let copies = Merge.sources(entry), i;
+    const copies = Merge.sources(entry);
+    let i;
     for (i = 0; i < copies.length; i++) {
       if (String(copies[i].ratingKey) === String(episode.ratingKey)) return true;
     }
@@ -97,7 +98,8 @@ var Shows = (function () {
     return entryFor(episode).then(function (entry) {
       if (!entry) return null;
       return seasons(entry).then(function (list) {
-        let at = -1, i;
+        let at = -1;
+        let i;
         for (i = 0; i < list.length; i++) {
           if (list[i].index === episode.parentIndex) { at = i; break; }
         }

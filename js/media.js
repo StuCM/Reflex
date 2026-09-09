@@ -50,7 +50,8 @@ var Media = (function () {
     if (isCommentary(st)) return -1;
     if (!passesArc(st)) return -1;
     const rank = AUDIO_RANK[codec];
-    let ch = st.channels || 2, bonus;
+    const ch = st.channels || 2;
+    let bonus;
     if (rank >= 4) bonus = Math.min(ch, 6);          // AC3/E-AC3: 5.1 preferred
     else bonus = (ch <= 2 ? 6 : 1);                  // AAC and below: stereo preferred
     return rank * 100 + bonus * 2 + (st.selected ? 1 : 0);
@@ -59,7 +60,11 @@ var Media = (function () {
   /* Returns the best passable audio stream on a part, or null if every track
      would force an audio transcode. */
   function pickAudio(part) {
-    let streams = (part && part.Stream) || [], best = null, bestScore = -1, i, sc;
+    const streams = (part && part.Stream) || [];
+    let best = null;
+    let bestScore = -1;
+    let i;
+    let sc;
     for (i = 0; i < streams.length; i++) {
       if (streams[i].streamType !== 2) continue;
       sc = audioScore(streams[i]);
@@ -73,7 +78,12 @@ var Media = (function () {
      what the link can carry. Channel count wins here because the server is
      going to re-encode it anyway, so we may as well start from the good one. */
   function bestAudio(part) {
-    let streams = (part && part.Stream) || [], best = null, bestScore = -1, i, st, sc;
+    const streams = (part && part.Stream) || [];
+    let best = null;
+    let bestScore = -1;
+    let i;
+    let st;
+    let sc;
     for (i = 0; i < streams.length; i++) {
       st = streams[i];
       if (st.streamType !== 2 || isCommentary(st)) continue;
@@ -110,7 +120,9 @@ var Media = (function () {
   /* Every audio track on a part, in file order — what the player cycles
      through. */
   function audioTracks(part) {
-    let streams = (part && part.Stream) || [], out = [], i;
+    const streams = (part && part.Stream) || [];
+    let out = [];
+    let i;
     for (i = 0; i < streams.length; i++) {
       if (streams[i].streamType === 2) out.push(streams[i]);
     }
@@ -118,7 +130,8 @@ var Media = (function () {
   }
 
   function streamById(part, id) {
-    let list = (part && part.Stream) || [], i;
+    const list = (part && part.Stream) || [];
+    let i;
     for (i = 0; i < list.length; i++) {
       if (String(list[i].id) === String(id)) return list[i];
     }
@@ -129,7 +142,10 @@ var Media = (function () {
      "only TrueHD or DTS-HD MA" was a lie the moment commentary tracks started
      being excluded too. */
   function audioSummary(part) {
-    let streams = (part && part.Stream) || [], out = [], i, st;
+    const streams = (part && part.Stream) || [];
+    let out = [];
+    let i;
+    let st;
     for (i = 0; i < streams.length; i++) {
       st = streams[i];
       if (st.streamType !== 2) continue;
@@ -191,7 +207,9 @@ var Media = (function () {
   }
 
   function subtitleTracks(part) {
-    let streams = (part && part.Stream) || [], out = [], i;
+    const streams = (part && part.Stream) || [];
+    let out = [];
+    let i;
     for (i = 0; i < streams.length; i++) {
       if (streams[i].streamType === 3) out.push(streams[i]);
     }
@@ -215,7 +233,11 @@ var Media = (function () {
      (a foreign-dialogue caption on an English film), else the first text one.
      Never an image track — it cannot be drawn — and never a commentary. */
   function pickSubtitle(part, languageCode) {
-    let list = subtitleTracks(part), usable = [], i, st, want;
+    const list = subtitleTracks(part);
+    const usable = [];
+    let i;
+    let st;
+    let want;
     for (i = 0; i < list.length; i++) {
       st = list[i];
       if (isTextSub(st) && !isCommentary(st)) usable.push(st);
@@ -241,7 +263,10 @@ var Media = (function () {
      ticks are drawn from. */
 
   function markerAt(item, seconds) {
-    let list = (item && item.Marker) || [], t = seconds * 1000, i, m;
+    const list = (item && item.Marker) || [];
+    const t = seconds * 1000;
+    let i;
+    let m;
     for (i = 0; i < list.length; i++) {
       m = list[i];
       if (t >= (m.startTimeOffset || 0) && t < (m.endTimeOffset || 0)) return m;
@@ -261,7 +286,10 @@ var Media = (function () {
      use the same offsets, so the trackbar can draw either. thumb is null far
      more often than not — Plex only carries one where it indexed the file. */
   function chapters(item) {
-    let list = (item && item.Chapter) || [], out = [], i, c;
+    const list = (item && item.Chapter) || [];
+    let out = [];
+    let i;
+    let c;
     for (i = 0; i < list.length; i++) {
       c = list[i];
       out.push({
@@ -303,7 +331,9 @@ var Media = (function () {
 
   /* [{ label, bitrate }] — bitrate null means the file as it is. */
   function qualities(media) {
-    let source = (media && media.bitrate) || 0, out = [], i;
+    const source = (media && media.bitrate) || 0;
+    let out = [];
+    let i;
     out.push({ label: 'Original (' + versionLabel(media) + ')', bitrate: null });
     for (i = 0; i < BITRATES.length; i++) {
       if (!source || BITRATES[i] < source) {
@@ -396,7 +426,10 @@ var Media = (function () {
      match because one server has no external id is not. */
 
   function externalIds(item) {
-    let out = [], g = (item && item.Guid) || [], i, id;
+    let out = [];
+    const g = (item && item.Guid) || [];
+    let i;
+    let id;
     for (i = 0; i < g.length; i++) {
       id = String(g[i].id || '').toLowerCase();
       if (id.indexOf('imdb://') === 0 || id.indexOf('tmdb://') === 0 ||
@@ -447,7 +480,8 @@ var Media = (function () {
   /* "Adventure Time · S2E7" — an episode's title alone says nothing. */
   function episodeLabel(item) {
     if (!item || item.type !== 'episode') return '';
-    const s = item.parentIndex, e = item.index;
+    const s = item.parentIndex;
+    const e = item.index;
     if (s === undefined && e === undefined) return item.grandparentTitle || '';
     return (item.grandparentTitle || '') +
            '  ·  S' + (s === undefined ? '?' : s) +
@@ -469,7 +503,9 @@ var Media = (function () {
   function railSub(item) {
     if (!item) return '';
     if (item.type === 'episode') {
-      let s = item.parentIndex, e = item.index, at = '';
+      const s = item.parentIndex;
+      const e = item.index;
+      let at = '';
       if (s !== undefined) at = 'S' + s;
       if (e !== undefined) at += (at ? ' ' : '') + 'E' + e;
       if (!at) return item.title || '';

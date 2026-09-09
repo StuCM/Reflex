@@ -50,27 +50,46 @@ var Player = (function () {
   const NUDGE = 30;                  // left / right, seconds
   const JUMP = 300;                  // rewind / fast forward, seconds
 
-  let item = null, server = null, onExit = null, onError = null, onSwitch = null;
-  let onNext = null, onPlayNext = null;
-  let currentPart = null, currentAudio = null, currentMedia = null;
-  let mediaIndex = 0, maxBitrate = null, transcoding = false, forceStream = false;
-  let ticker = null, osdTimer = null, resumeMs = 0;
+  let item = null;
+  let server = null;
+  let onExit = null;
+  let onError = null;
+  let onSwitch = null;
+  let onNext = null;
+  let onPlayNext = null;
+  let currentPart = null;
+  let currentAudio = null;
+  let currentMedia = null;
+  let mediaIndex = 0;
+  let maxBitrate = null;
+  let transcoding = false;
+  let forceStream = false;
+  let ticker = null;
+  let osdTimer = null;
+  let resumeMs = 0;
 
   /* A stall is the thing you actually see as a blip, and it is over before the
      ten-second sample comes round. Count them instead. */
-  let stalls = 0, lowest = 999, startedAt = 0;
+  let stalls = 0;
+  let lowest = 999;
+  let startedAt = 0;
 
   /* Where a run of seek presses is heading. Every currentTime assignment on a
      direct-played file is a real seek — a range request, a decoder flush — so
      holding the key would otherwise fire one per press and fight the network
      the whole way. Accumulate, show where you are going, apply once you stop. */
-  let pending = null, seekTimer = null;
+  let pending = null;
+  let seekTimer = null;
 
   /* Subtitles: the parsed cues, which track they came from, and the language
      the user asked for. The language is what survives a restart — after a
      switch to another version the stream ids are different, but "French" still
      means the same thing. */
-  let cues = [], currentSub = null, wantedLang = null, subToken = 0, subNote = '';
+  let cues = [];
+  let currentSub = null;
+  let wantedLang = null;
+  let subToken = 0;
+  let subNote = '';
 
   /* The skip prompt. The menu is js/menu.js and keeps its own state. */
   let marker = null;
@@ -80,12 +99,18 @@ var Player = (function () {
      scrub the trackbar, in 'row' they walk the buttons — and ctl says which
      button. Which panel is open under the row, and where the chapter rail is,
      are separate. */
-  let focus = 'none', ctl = -1, openPanel = null, chapSel = 0;
+  let focus = 'none';
+  let ctl = -1;
+  let openPanel = null;
+  let chapSel = 0;
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
-    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
-    const mm = (m < 10 ? '0' : '') + m, ss = (s < 10 ? '0' : '') + s;
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor(sec / 60) % 60;
+    const s = sec % 60;
+    const mm = (m < 10 ? '0' : '') + m;
+    const ss = (s < 10 ? '0' : '') + s;
     return h ? (h + ':' + mm + ':' + ss) : (m + ':' + ss);
   }
 
@@ -110,7 +135,8 @@ var Player = (function () {
      OSD would never go away once playback started. */
 
   function paintOsd() {
-    const at = target(), dur = duration();
+    let at = target();
+    const dur = duration();
     const left = dur ? Math.max(0, dur - at) : 0;
 
     osdTime.textContent = fmt(at) +
@@ -137,7 +163,10 @@ var Player = (function () {
   function paintTicks() {
     const dur = duration();
     if (!dur) { osdTicks.innerHTML = ''; return; }
-    let html = '', list = Media.chapters(item), i, at;
+    let html = '';
+    const list = Media.chapters(item);
+    let i;
+    let at;
 
     const markers = (item && item.Marker) || [];
     for (i = 0; i < markers.length; i++) {
@@ -230,7 +259,9 @@ var Player = (function () {
      know what we are looking at, and guessing would select the wrong track
      silently, which is the bug this whole section exists to fix. */
   function panelIndexOf(st) {
-    let tracks = Media.audioTracks(currentPart), list = panelTracks(), i;
+    const tracks = Media.audioTracks(currentPart);
+    const list = panelTracks();
+    let i;
     if (!list || list.length !== tracks.length) return -1;
     for (i = 0; i < tracks.length; i++) {
       if (String(tracks[i].id) === String(st.id)) return i;
@@ -239,7 +270,8 @@ var Player = (function () {
   }
 
   function selectPanelTrack(n) {
-    let list = panelTracks(), i;
+    const list = panelTracks();
+    let i;
     if (!list || n < 0 || n >= list.length) return false;
     for (i = 0; i < list.length; i++) {
       if (list[i]) list[i].enabled = (i === n);
@@ -361,7 +393,12 @@ var Player = (function () {
   }
 
   function paintControls() {
-    let list = controls(), lh = '', rh = '', i, c, html;
+    const list = controls();
+    let lh = '';
+    let rh = '';
+    let i;
+    let c;
+    let html;
     for (i = 0; i < list.length; i++) {
       c = list[i];
       html = '<div class="osd-ctl' + (focus === 'row' && i === ctl ? ' foc' : '') +
@@ -421,7 +458,10 @@ var Player = (function () {
   /* Chapter skip, falling back to a fixed jump on a file with no chapters —
      the button should always do something. */
   function chapterStep(dir) {
-    let list = Media.chapters(item), at = target(), i, to = null;
+    const list = Media.chapters(item);
+    let at = target();
+    let i;
+    let to = null;
     if (!list.length) { seekBy(dir * JUMP); return; }
     if (dir > 0) {
       for (i = 0; i < list.length; i++) {
@@ -492,7 +532,9 @@ var Player = (function () {
 
   const AUTOPLAY = [0, 5, 10, 15, 30];        // seconds; 0 is "wait for OK"
   let autoplay = null;                      // read from storage once, then cached
-  let next = null, nextTimer = null, nextLeft = 0;
+  let next = null;
+  let nextTimer = null;
+  let nextLeft = 0;
 
   /* How long an ended episode waits before playing the next, in seconds, or 0
      for not at all. Storage that refuses us falls back to 0, the safe way. */
@@ -580,7 +622,8 @@ var Player = (function () {
   }
 
   function takeNext() {
-    const ep = next && next.episode, go = onPlayNext;
+    const ep = next && next.episode;
+    const go = onPlayNext;
     clearNext();
     if (!ep || !go) { stop('stopped'); return; }
     /* The finished episode is reported stopped before the next one starts — a
@@ -660,7 +703,9 @@ var Player = (function () {
      button you pressed is about. */
 
   function audioRows() {
-    let tracks = Media.audioTracks(currentPart), out = [], i;
+    const tracks = Media.audioTracks(currentPart);
+    const out = [];
+    let i;
     for (i = 0; i < tracks.length; i++) out.push(audioRow(tracks[i]));
     return out;
   }
@@ -680,7 +725,8 @@ var Player = (function () {
   }
 
   function subRows() {
-    let list = Media.subtitleTracks(currentPart), i;
+    const list = Media.subtitleTracks(currentPart);
+    let i;
     const out = [{ label: 'Off', on: !currentSub, value: function () { setSub(null); } }];
     for (i = 0; i < list.length; i++) out.push(subRow(list[i]));
     return out;
@@ -701,7 +747,9 @@ var Player = (function () {
      what the user means by "make this play properly", and both go through the
      guard, so the 4K rule refuses the cap and offers the other version. */
   function qualityRows() {
-    let versions = (item && item.Media) || [], out = [], i;
+    const versions = (item && item.Media) || [];
+    const out = [];
+    let i;
     if (versions.length > 1) {
       for (i = 0; i < versions.length; i++) out.push(versionRow(versions[i], i));
     }
@@ -813,7 +861,11 @@ var Player = (function () {
   }
 
   function paintChapters() {
-    let list = Media.chapters(item), html = '', i, c, shot;
+    const list = Media.chapters(item);
+    let html = '';
+    let i;
+    let c;
+    let shot;
     for (i = 0; i < list.length; i++) {
       c = list[i];
       shot = c.thumb ? Plex.photoUrl(server, c.thumb, 240, 135) : '';
@@ -1023,7 +1075,8 @@ var Player = (function () {
       }
     } catch (e) { ahead = -1; }
 
-    let dropped = v.webkitDroppedFrameCount, decoded = v.webkitDecodedFrameCount;
+    let dropped = v.webkitDroppedFrameCount;
+    let decoded = v.webkitDecodedFrameCount;
     if (dropped === undefined && v.getVideoPlaybackQuality) {
       const q = v.getVideoPlaybackQuality();
       dropped = q.droppedVideoFrames;
@@ -1083,7 +1136,8 @@ var Player = (function () {
   function playing() { return !!item; }
 
   function indexOfCtl(id) {
-    let list = controls(), i;
+    const list = controls();
+    let i;
     for (i = 0; i < list.length; i++) if (list[i].id === id) return i;
     return 0;
   }

@@ -66,7 +66,10 @@ var Sidebar = (function () {
   }
 
   function build() {
-    let out = watchingRows(), i, j, cats;
+    const out = watchingRows();
+    let i;
+    let j;
+    let cats;
     for (i = 0; i < secs.length; i++) {
       cats = secs[i].categories || [];
       out.push({ label: secs[i].title, kind: 'section', index: i,
@@ -83,7 +86,9 @@ var Sidebar = (function () {
   }
 
   function render() {
-    let html = '', i, r;
+    let html = '';
+    let i;
+    let r;
     for (i = 0; i < rows.length; i++) {
       r = rows[i];
       html += '<div class="sb-row' + (r.sub ? ' sub' : '') +
@@ -102,7 +107,8 @@ var Sidebar = (function () {
   function reveal() {
     const row = el.children[idx];
     if (!row) return;
-    const top = row.offsetTop, bottom = top + row.offsetHeight;
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
     if (bottom > offset + VIEW_H) offset = bottom - VIEW_H;
     if (top < offset) offset = top;
     if (offset < 0) offset = 0;
@@ -154,7 +160,8 @@ var Sidebar = (function () {
   /* True for every key: an overlay that lets some keys through to the rail
      behind it would move a selection you cannot see. */
   function key(code) {
-    const K = UI.KEY, r = rows[idx];
+    const K = UI.KEY;
+    let r = rows[idx];
 
     if (UI.isBack(code) || code === K.LEFT) { close(); return true; }
     if (code === K.UP) { idx = UI.clamp(idx - 1, 0, rows.length - 1); render(); return true; }
