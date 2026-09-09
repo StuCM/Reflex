@@ -136,7 +136,7 @@ var Panel = (function () {
     const audio = list('audio').join(',');
     const out = [];
     for (let i = 0; i < containers.length; i++) {
-      out.push('add-direct-play-profile(type=videoProfile&container=' + containers[i] +
+      out.push(`add-direct-play-profile(type=videoProfile&container=${containers[i]}` +
                '&codec=' + video + '&audioCodec=' + audio + ')');
     }
     /* The two limits that are about this panel rather than about codecs: H.264
@@ -153,9 +153,9 @@ var Panel = (function () {
     const lines = [];
     const kinds = ['video', 'container', 'audio'];
     lines.push('DECLARED TO THE SERVER');
-    lines.push('containers   ' + list('container').join(', '));
-    lines.push('video        ' + list('video').join(', '));
-    lines.push('audio        ' + list('audio').join(', '));
+    lines.push(`containers   ${list('container').join(', ')}`);
+    lines.push(`video        ${list('video').join(', ')}`);
+    lines.push(`audio        ${list('audio').join(', ')}`);
     lines.push('');
     lines.push('PANEL ANSWERED  (only "probably" is acted on)');
     for (let k = 0; k < kinds.length; k++) {
@@ -169,9 +169,9 @@ var Panel = (function () {
     const f = probeFeatures();
     lines.push('');
     lines.push('PIPELINE');
-    lines.push('audioTracks  ' + f.audioTracks + '    textTracks ' + f.textTracks +
+    lines.push(`audioTracks  ${f.audioTracks}    textTracks ${f.textTracks}` +
                '    MediaSource ' + (f.mediaSource ? 'yes' : 'no'));
-    lines.push('webOS ' + (f.webOS ? f.webOSVersion : 'no') +
+    lines.push(`webOS ${f.webOS ? f.webOSVersion : 'no'}` +
                '    frame stats ' + (f.playbackQuality ? 'yes' : 'no'));
     lines.push('');
     lines.push('Audio over ARC is a separate question: TrueHD and DTS-HD MA never');

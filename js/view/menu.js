@@ -47,7 +47,7 @@ var Menu = (function () {
     let html = '';
     let i;
     for (i = 0; i < tabs.length; i++) {
-      html += '<span class="menu-tab' + (i === tab ? ' on' : '') + '">' +
+      html += `<span class="menu-tab${i === tab ? ' on' : ''}">` +
               UI.escapeHtml(tabs[i].label) + '</span>';
     }
     elTabs.innerHTML = html;
@@ -55,11 +55,11 @@ var Menu = (function () {
     html = '';
     for (i = 0; i < list.length; i++) {
       const r = list[i];
-      html += '<div class="menu-row' + (i === sel ? ' sel' : '') +
+      html += `<div class="menu-row${i === sel ? ' sel' : ''}` +
               (r.on ? ' on' : '') + (r.off ? ' off' : '') + '">' +
               '<span class="menu-mark">' + (r.on ? '●' : '') + '</span>' +
               '<span class="menu-label">' + UI.escapeHtml(r.label) + '</span>' +
-              (r.note ? '<span class="menu-note-inline">' + UI.escapeHtml(r.note) + '</span>' : '') +
+              (r.note ? `<span class="menu-note-inline">${UI.escapeHtml(r.note)}</span>` : '') +
               '</div>';
     }
     elInner.innerHTML = html;
@@ -67,7 +67,7 @@ var Menu = (function () {
     /* Keep the selection in view without a scrollbar the remote cannot use. */
     const top = UI.clamp(sel - 3, 0, Math.max(0, list.length - ROWS_SHOWN));
     elInner.style.webkitTransform = elInner.style.transform =
-      'translateY(' + (-top * ROW_H) + 'px)';
+      `translateY(${-top * ROW_H}px)`;
     elNote.textContent = (tabs[tab] && tabs[tab].note) || '';
   }
 

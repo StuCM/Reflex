@@ -34,7 +34,7 @@ var Sidebar = (function () {
                { label: 'Search', kind: 'search' }];
     if (Servers.count() > 1) {
       const pref = Servers.get(Servers.preferred());
-      out.push({ label: 'Prefer ' + (pref ? pref.name : '?'), kind: 'prefer' });
+      out.push({ label: `Prefer ${pref ? pref.name : '?'}`, kind: 'prefer' });
     }
     /* An action on Continue watching rather than a mode, but this remote has no
        colour buttons at all, so green is the shortcut and this is the route.
@@ -44,8 +44,8 @@ var Sidebar = (function () {
     }
     out.push({ label: 'Devices', kind: 'devices' });
     out.push({ label: 'Panel', kind: 'panel' });
-    out.push({ label: 'Autoplay next: ' + Player.autoplayLabel(), kind: 'autoplay' });
-    out.push({ label: 'Theme music: ' + ShowPage.themeLabel(), kind: 'theme' });
+    out.push({ label: `Autoplay next: ${Player.autoplayLabel()}`, kind: 'autoplay' });
+    out.push({ label: `Theme music: ${ShowPage.themeLabel()}`, kind: 'theme' });
     return out;
   }
 
@@ -86,7 +86,7 @@ var Sidebar = (function () {
     let html = '';
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      html += '<div class="sb-row' + (r.sub ? ' sub' : '') +
+      html += `<div class="sb-row${r.sub ? ' sub' : ''}` +
               (r.current ? ' cur' : '') + (i === idx ? ' on' : '') + '">' +
               UI.escapeHtml(r.label) + '</div>';
     }
@@ -107,7 +107,7 @@ var Sidebar = (function () {
     if (bottom > offset + VIEW_H) offset = bottom - VIEW_H;
     if (top < offset) offset = top;
     if (offset < 0) offset = 0;
-    const t = 'translateY(' + (-offset) + 'px)';
+    const t = `translateY(${-offset}px)`;
     el.style.transform = t;
     el.style.webkitTransform = t;
   }

@@ -53,7 +53,7 @@ var Meta = (function () {
       }
       return md;
     }).catch((e) => {
-      UI.debug('meta: ' + e.message);
+      UI.debug(`meta: ${e.message}`);
       return null;
     });
   }

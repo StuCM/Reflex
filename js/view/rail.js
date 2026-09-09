@@ -44,7 +44,7 @@ var Rail = (function () {
   let settleTimer = null;
 
   function translate(el, x, y) {
-    const t = 'translate(' + x + 'px,' + y + 'px)';
+    const t = `translate(${x}px,${y}px)`;
     el.style.transform = t;
     el.style.webkitTransform = t;
   }
@@ -193,7 +193,7 @@ var Rail = (function () {
     /* A merged row's length is an estimate until it has been walked, so the
        count is re-read on every paint rather than only when the row is reused. */
     if (row.kind === 'merge') {
-      rowEl._label.textContent = row.title + (row.total ? '  (' + row.total + ')' : '');
+      rowEl._label.textContent = row.title + (row.total ? `  (${row.total})` : '');
     }
 
     firstVisible = UI.clamp(row.focus - LEAD, 0, Math.max(0, row.total - TILES_VISIBLE));

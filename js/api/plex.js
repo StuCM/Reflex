@@ -112,8 +112,8 @@ var Plex = (function () {
     if (!body) return '';
     const m = body.match(/status="([^"]+)"/) ||        // <Response status="..."/>
             body.match(/"status"\s*:\s*"([^"]+)"/);
-    if (m) return '  ·  ' + m[1];
-    return '  ·  ' + body.replace(/\s+/g, ' ').substring(0, 220);
+    if (m) return `  ·  ${m[1]}`;
+    return `  ·  ${body.replace(/\s+/g, ' ').substring(0, 220)}`;
   }
 
   function tv(method, path, opts) {
@@ -155,7 +155,7 @@ var Plex = (function () {
 
     function attempt() {
       tries++;
-      return tv('GET', '/api/v2/pins/' + pinId, { token: false })
+      return tv('GET', `/api/v2/pins/${pinId}`, { token: false })
         .then((pin) => {
           if (pin && pin.authToken) {
             s.token = pin.authToken;
@@ -163,11 +163,11 @@ var Plex = (function () {
             if (onStatus) onStatus('linked, token stored');
             return s.token;
           }
-          if (onStatus) onStatus('pin ' + pinId + ' · poll ' + tries + ' · not claimed yet');
+          if (onStatus) onStatus(`pin ${pinId} · poll ${tries} · not claimed yet`);
           if (Date.now() > deadline) return null;
           return wait(2000).then(attempt);
         }, (err) => {
-          if (onStatus) onStatus('pin ' + pinId + ' · poll ' + tries + ' FAILED: ' + err.message);
+          if (onStatus) onStatus(`pin ${pinId} · poll ${tries} FAILED: ${err.message}`);
           if (Date.now() > deadline) return null;
           return wait(3000).then(attempt);
         });
@@ -226,7 +226,7 @@ var Plex = (function () {
       });
     }
 
-    return tv('GET', '/api/v2/resources?' + qs({ includeHttps: 1, includeRelay: 0 }))
+    return tv('GET', `/api/v2/resources?${qs({ includeHttps: 1, includeRelay: 0 })}`)
       .then((resources) => {
         const jobs = [];
         for (let i = 0; i < resources.length; i++) {
@@ -297,7 +297,7 @@ var Plex = (function () {
       const keys = Object.keys(extra);
       for (let i = 0; i < keys.length; i++) params[keys[i]] = extra[keys[i]];
     }
-    return ask(server, '/library/sections/' + sectionKey + '/all?' + qs(params),
+    return ask(server, `/library/sections/${sectionKey}/all?${qs(params)}`,
                { timeout: 20000 }).then((res) => {
       const mc = res.MediaContainer || {};
       return { total: mc.totalSize || mc.size || 0,
@@ -309,7 +309,7 @@ var Plex = (function () {
      the server may label things BBFC (U, PG, 12A, 15, 18) or MPAA (G, PG-13,
      R), or prefix them by region ("gb/12A"). */
   function contentRatings(server, sectionKey) {
-    return ask(server, '/library/sections/' + sectionKey + '/contentRating')
+    return ask(server, `/library/sections/${sectionKey}/contentRating`)
       .then((res) => {
         const dirs = (res.MediaContainer && res.MediaContainer.Directory) || [];
         const out = [];
@@ -323,7 +323,7 @@ var Plex = (function () {
   /* Films and episodes both turn up here, and an episode is the more common
      case on a real server. */
   function onDeck(server) {
-    return ask(server, '/library/onDeck?' + qs({ includeGuids: 1 })).then((res) => {
+    return ask(server, `/library/onDeck?${qs({ includeGuids: 1 })}`).then((res) => {
       const md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
       return Servers.stamp(md.filter((m) => {
         return m.type === 'movie' || m.type === 'episode';
@@ -370,7 +370,7 @@ var Plex = (function () {
      a season's are its episodes. Never /allLeaves on a library we don't own —
      one show at a time is the whole point. */
   function children(server, ratingKey) {
-    return ask(server, '/library/metadata/' + ratingKey + '/children?' +
+    return ask(server, `/library/metadata/${ratingKey}/children?` +
                qs({ includeGuids: 1 }), { timeout: 20000 }).then((res) => {
       const md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
       return Servers.stamp(md, server);
@@ -381,7 +381,7 @@ var Plex = (function () {
      One request returns every hub with its items, which is how the stock app
      shows a huge library without listing it. */
   function hubs(server, sectionKey) {
-    return ask(server, '/hubs/sections/' + sectionKey + '?' +
+    return ask(server, `/hubs/sections/${sectionKey}?` +
                qs({ count: HUB_COUNT, includeGuids: 1 }),
                { timeout: 20000 }).then((res) => {
       const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
@@ -399,7 +399,7 @@ var Plex = (function () {
   /* ponytail: movies only, because show drill-down doesn't exist yet (task 3).
      Widen the type filter when it does. */
   function search(server, query) {
-    return ask(server, '/hubs/search?' + qs({ query: query, limit: 40 }), { timeout: 20000 })
+    return ask(server, `/hubs/search?${qs({ query: query, limit: 40 })}`, { timeout: 20000 })
       .then((res) => {
         const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
         const out = [];
@@ -435,7 +435,7 @@ var Plex = (function () {
       const out = [];
       for (let i = 0; i < d.length; i++) {
         out.push({ id: String(d[i].id),
-                   name: d[i].name || d[i].clientIdentifier || ('device ' + d[i].id),
+                   name: d[i].name || d[i].clientIdentifier || (`device ${d[i].id}`),
                    platform: d[i].platform || '' });
       }
       return out;
@@ -446,7 +446,7 @@ var Plex = (function () {
      that lets us start from a curated external list and ask what the server
      has, instead of crawling the library. */
   function copiesByGuid(server, guid) {
-    return ask(server, '/library/all?' + qs({ guid: guid, includeGuids: 1 }), { timeout: 15000 })
+    return ask(server, `/library/all?${qs({ guid: guid, includeGuids: 1 })}`, { timeout: 15000 })
       .then((res) => {
         const m = (res.MediaContainer && res.MediaContainer.Metadata) || [];
         return Servers.stamp(m, server);
@@ -498,7 +498,7 @@ var Plex = (function () {
      right moment. includeChapters gives the trackbar its ticks. Both are part
      of the same payload the app already fetches, so neither costs a request. */
   function metadata(server, ratingKey) {
-    return ask(server, '/library/metadata/' + ratingKey + '?' +
+    return ask(server, `/library/metadata/${ratingKey}?` +
                qs({ includeGuids: 1, includeExtras: 1,
                     includeMarkers: 1, includeChapters: 1 })).then((res) => {
       const m = res.MediaContainer && res.MediaContainer.Metadata;
@@ -566,7 +566,7 @@ var Plex = (function () {
     opts = opts || {};
     return {
       hasMDE: 1,
-      path: '/library/metadata/' + item.ratingKey,
+      path: `/library/metadata/${item.ratingKey}`,
       mediaIndex: mediaIndex,
       partIndex: partIndex,
       protocol: 'http',
@@ -604,7 +604,7 @@ var Plex = (function () {
 
   function decide(server, item, mediaIndex, partIndex, audioStreamId, opts) {
     const params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts);
-    return ask(server, '/video/:/transcode/universal/decision?' + qs(params),
+    return ask(server, `/video/:/transcode/universal/decision?${qs(params)}`,
                { timeout: 20000 }).then((res) => {
       const mc = res.MediaContainer || {};
       const md = (mc.Metadata && mc.Metadata[0]) || null;
@@ -654,7 +654,7 @@ var Plex = (function () {
      js/subs.js parses. */
 
   function subtitleUrl(server, stream) {
-    const path = (stream && stream.key) || ('/library/streams/' + (stream && stream.id));
+    const path = (stream && stream.key) || (`/library/streams/${stream && stream.id}`);
     return server.base + path + '?' + qs({ encoding: 'utf-8', 'X-Plex-Token': server.token });
   }
 
@@ -677,7 +677,7 @@ var Plex = (function () {
   function timeline(server, item, state, timeMs, durationMs) {
     return ask(server, '/:/timeline?' + qs({
       ratingKey: item.ratingKey,
-      key: '/library/metadata/' + item.ratingKey,
+      key: `/library/metadata/${item.ratingKey}`,
       state: state,
       time: Math.floor(timeMs),
       duration: Math.floor(durationMs),

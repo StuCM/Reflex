@@ -214,7 +214,7 @@ var Browse = (function () {
     const row = rows[pickAt];
     /* A new row object rather than a renamed one: the rail repaints a label
        only when the row it is handed changes identity. */
-    rows[pickAt] = Rows.list(picking ? 'Select to remove — ' + picks.length + ' picked'
+    rows[pickAt] = Rows.list(picking ? `Select to remove — ${picks.length} picked`
                                      : WATCHING, row.items);
     rows[pickAt].focus = row.focus;
     elHint.textContent = '◀ ▶ move  ·  OK picks one  ·  green removes what is picked  ·  ' +
@@ -257,8 +257,8 @@ var Browse = (function () {
     Menu.open({
       host: elConfirm,
       tabs: [{
-        label: hide ? 'Remove ' + count + ' from Continue watching'
-                    : 'Mark ' + count + ' watched',
+        label: hide ? `Remove ${count} from Continue watching`
+                    : `Mark ${count} watched`,
         note: hide ? 'They stay part-watched.'
                    : 'This server cannot hide them. Marking a show watched marks ' +
                      'every episode.',
@@ -317,7 +317,7 @@ var Browse = (function () {
       dropFromDeck(job.entry);
       return { ok: true };
     }, (e) => {
-      UI.debug('clear: ' + e.message);
+      UI.debug(`clear: ${e.message}`);
       return { ok: false };
     });
   }
@@ -398,7 +398,7 @@ var Browse = (function () {
     if (choice.kind === 'discover') { loadDiscover(); return; }
     if (choice.kind === 'prefer') {
       const now = Servers.get(Servers.cyclePreferred());
-      UI.debug('preferring ' + (now ? now.name : '?') + ' where both servers have a film');
+      UI.debug(`preferring ${now ? now.name : '?'} where both servers have a film`);
       /* Rebuild the rows: which copy of a shared film is shown changes with
          the preference. */
       loadSection(secIdx, true);
@@ -406,13 +406,13 @@ var Browse = (function () {
     }
     if (choice.kind === 'autoplay') {
       Player.cycleAutoplay();
-      UI.toast('Autoplay next: ' + Player.autoplayLabel());
+      UI.toast(`Autoplay next: ${Player.autoplayLabel()}`);
       render();
       return;
     }
     if (choice.kind === 'theme') {
       ShowPage.cycleTheme();
-      UI.toast('Theme music: ' + ShowPage.themeLabel());
+      UI.toast(`Theme music: ${ShowPage.themeLabel()}`);
       render();
       return;
     }
@@ -513,7 +513,7 @@ var Browse = (function () {
           s.total = res.total;
           Cache.total.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
         });
-      }).catch((e) => { UI.debug('count: ' + e.message); });
+      }).catch((e) => { UI.debug(`count: ${e.message}`); });
     });
     Promise.all(jobs).then(() => {
       if (!isCurrent()) return;
@@ -581,7 +581,7 @@ var Browse = (function () {
       });
     }).catch((e) => {
       if (!isCurrent()) return;
-      UI.debug('rows: ' + e.message);
+      UI.debug(`rows: ${e.message}`);
       if (!rows.length) UI.toast('Could not reach the servers');
     });
   }
@@ -627,7 +627,7 @@ var Browse = (function () {
         render();
       }).catch((e) => {
         if (!isCurrent()) return;
-        UI.debug('walk: ' + e.message);
+        UI.debug(`walk: ${e.message}`);
       });
     }, 150);
   }
@@ -652,7 +652,7 @@ var Browse = (function () {
           if (!seen[r]) { seen[r] = true; kid.push(r); }
         });
       });
-      UI.debug('kids certificates: ' + (kid.join(', ') || 'none'));
+      UI.debug(`kids certificates: ${kid.join(', ') || 'none'}`);
 
       const servers = serversOf(sec);
       return Promise.all([
@@ -669,7 +669,7 @@ var Browse = (function () {
 
         if (kid.length) {
           const row = allRow(sec, 'Kids · all films',
-                           { contentRating: kid.join(',') }, 'kids' + Media.KIDS_MAX_AGE);
+                           { contentRating: kid.join(',') }, `kids${Media.KIDS_MAX_AGE}`);
           rows.push(row);
           render();
           primeTotals(row, isCurrent);
@@ -683,7 +683,7 @@ var Browse = (function () {
       });
     }).catch((e) => {
       if (!isCurrent()) return;
-      UI.debug('kids: ' + e.message);
+      UI.debug(`kids: ${e.message}`);
       UI.toast('Could not load the kids list');
     });
   }
@@ -794,7 +794,7 @@ var Browse = (function () {
       if (!rows.length) rows = [Rows.list(header, [])];
       rowIdx = 0;
       render();
-      UI.debug('search "' + q + '": ' + found.length + ' ' + noun);
+      UI.debug(`search "${q}": ${found.length} ${noun}`);
     }).catch((e) => {
       UI.message('Search failed', e.message);
     });
@@ -810,8 +810,8 @@ var Browse = (function () {
       if (found[i].type === 'show') shows++; else films++;
     }
     if (shows && films) return 'results';
-    if (shows) return 'show' + (shows === 1 ? '' : 's');
-    return 'film' + (films === 1 ? '' : 's');
+    if (shows) return `show${shows === 1 ? '' : 's'}`;
+    return `film${films === 1 ? '' : 's'}`;
   }
 
   /* Back out of a results list to the rows we parked. */

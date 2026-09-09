@@ -74,7 +74,7 @@ var ShowPage = (function () {
       loadEpisodes();
     }).catch((e) => {
       if (gen !== generation) return;
-      UI.debug('seasons: ' + e.message);
+      UI.debug(`seasons: ${e.message}`);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the series list.</div>';
     });
   }
@@ -104,18 +104,18 @@ var ShowPage = (function () {
     const counts = Shows.summary(show);
     if (counts) bits.push(counts);
     if (show.contentRating) bits.push(show.contentRating);
-    if (Merge.isShared(show)) bits.push('on ' + Merge.sources(show).length + ' servers');
+    if (Merge.isShared(show)) bits.push(`on ${Merge.sources(show).length} servers`);
     elMeta.textContent = bits.join('   ·   ');
     const art = Plex.artUrl(show, 960, 540);
-    elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
+    elArt.style.backgroundImage = art ? `url("${art}")` : 'none';
   }
 
   function renderSeasons() {
     let html = '';
     for (let i = 0; i < seasons.length; i++) {
-      const cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
+      const cls = `chip${i === seasonIdx ? ' cur' : ''}` +
             (zone === 'seasons' && i === seasonIdx ? ' on' : '');
-      html += '<span class="' + cls + '">' + UI.escapeHtml(seasons[i].title || ('Series ' + (i + 1))) +
+      html += `<span class="${cls}">${UI.escapeHtml(seasons[i].title || ('Series ' + (i + 1)))}` +
               '</span>';
     }
     elSeasons.innerHTML = html;
@@ -125,7 +125,7 @@ var ShowPage = (function () {
     const v = verdicts[verdictKey(ep)];
     if (!v) return '';
     const state = v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn');
-    return '<span class="badge ' + state + ' sh-verdict">' +
+    return `<span class="badge ${state} sh-verdict">` +
            UI.escapeHtml(Guard.label(v)) + '</span>';
   }
 
@@ -151,9 +151,9 @@ var ShowPage = (function () {
         : (ep.viewCount ? 'watched' : '');
       /* An episode's thumb *is* its still, so the picture is already paid for. */
       still = Plex.posterUrl(ep, 160, 90);
-      html += '<div class="sh-episode' + (on ? ' on' : '') + '">' +
+      html += `<div class="sh-episode${on ? ' on' : ''}">` +
               '<span class="sh-ep-still"' +
-              (still ? ' style="background-image:url(' + UI.escapeHtml(still) + ')"' : '') +
+              (still ? ` style="background-image:url(${UI.escapeHtml(still)})"` : '') +
               '></span>' +
               '<span class="sh-ep-num">' + (ep.index === undefined ? '·' : ep.index) + '</span>' +
               '<span class="sh-ep-title">' + UI.escapeHtml(ep.title || '') + '</span>' +
@@ -190,7 +190,7 @@ var ShowPage = (function () {
     elSeasons.classList.toggle('lifted', on);
     elEpisodes.classList.toggle('lifted', on);
     if (!recaps || !recaps.length) {
-      elRecaps.innerHTML = '<div class="sh-recap sh-recap-action' + (on ? ' on' : '') + '">' +
+      elRecaps.innerHTML = `<div class="sh-recap sh-recap-action${on ? ' on' : ''}">` +
         (searching ? 'Searching…' : (recaps ? 'No recaps found' : 'Find recaps')) + '</div>';
       return;
     }
@@ -198,9 +198,9 @@ var ShowPage = (function () {
     let html = '';
     for (let i = first; i < Math.min(first + RECAP_POOL, recaps.length); i++) {
       const r = recaps[i];
-      html += '<div class="sh-recap' + (on && i === recapIdx ? ' on' : '') + '">' +
+      html += `<div class="sh-recap${on && i === recapIdx ? ' on' : ''}">` +
               '<span class="sh-recap-thumb"' +
-              (r.thumb ? ' style="background-image:url(' + UI.escapeHtml(r.thumb) + ')"' : '') +
+              (r.thumb ? ` style="background-image:url(${UI.escapeHtml(r.thumb)})"` : '') +
               '></span>' +
               '<span class="sh-recap-title">' + UI.escapeHtml(r.title) + '</span>' +
               '<span class="sh-recap-len">' + UI.escapeHtml(r.length) + '</span>' +
@@ -234,7 +234,7 @@ var ShowPage = (function () {
       renderRecaps();
     }, (e) => {
       if (gen !== generation) return;
-      UI.debug('recaps: ' + e.message);
+      UI.debug(`recaps: ${e.message}`);
       /* Nothing was learnt, so the action goes back to being untried rather
          than claiming this show has no recaps. */
       searching = false;
@@ -286,7 +286,7 @@ var ShowPage = (function () {
     /* The platform may refuse to start audio nobody asked for. That is an
        answer, not a fault: say so once and stay silent. */
     if (started && started.catch) {
-      started.catch((e) => { UI.debug('theme: ' + e.message); });
+      started.catch((e) => { UI.debug(`theme: ${e.message}`); });
     }
     fadeIn();
   }
@@ -344,7 +344,7 @@ var ShowPage = (function () {
       scheduleCheck();
     }).catch((e) => {
       if (gen !== generation) return;
-      UI.debug('episodes: ' + e.message);
+      UI.debug(`episodes: ${e.message}`);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the episode list.</div>';
     });
   }

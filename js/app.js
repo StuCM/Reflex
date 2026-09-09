@@ -35,7 +35,7 @@
     Discovery.resolve(item).then((found) => {
       if (found) { openItem(found); return; }
       UI.message('Not in your library',
-        item.title + (item.year ? ' (' + item.year + ')' : '') +
+        item.title + (item.year ? ` (${item.year})` : '') +
         ' is on neither server.  ·  BACK to the rows');
     });
   }
@@ -94,7 +94,7 @@
     if (!video) return;
     closeRecap();
     recapOffer = video;
-    UI.message('This panel ' + why, video.title +
+    UI.message(`This panel ${why}`, video.title +
                '  ·  OK opens it in the YouTube app  ·  BACK to the recaps');
   }
 
@@ -103,7 +103,7 @@
     if (!window.webOS || !window.webOS.service) return;
     window.webOS.service.request('luna://com.webos.applicationManager', {
       method: 'launch',
-      parameters: { id: 'youtube.leanback.v4', params: { contentTarget: 'v=' + id } }
+      parameters: { id: 'youtube.leanback.v4', params: { contentTarget: `v=${id}` } }
     });
   }
 
@@ -112,16 +112,16 @@
      hence the toast — and if it cannot be resolved, its own page is better than
      nothing happening. */
   function openEpisode(item) {
-    UI.toast('Opening ' + (item.grandparentTitle || 'series') + '…');
+    UI.toast(`Opening ${item.grandparentTitle || 'series'}…`);
     Shows.entryFor(item).then((entry) => {
       if (!entry) {
-        UI.debug('no series for ' + (item.grandparentTitle || item.ratingKey));
+        UI.debug(`no series for ${item.grandparentTitle || item.ratingKey}`);
         openDetail(item, toBrowse);
         return;
       }
       openShow(entry, { season: item.parentIndex, episode: item.index });
     }, (e) => {
-      UI.debug('series: ' + e.message);
+      UI.debug(`series: ${e.message}`);
       openDetail(item, toBrowse);
     });
   }
@@ -175,7 +175,7 @@
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0
       : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
-    UI.debug('starting at ' + Math.round(md.viewOffset / 1000) + 's');
+    UI.debug(`starting at ${Math.round(md.viewOffset / 1000)}s`);
     UI.show('player');
     Player.play({
       server: server,
@@ -205,8 +205,8 @@
                  leave what is already playing alone — the full explanation is
                  on the detail page, and stopping playback to deliver it is a
                  worse answer than not switching. */
-              UI.toast('Kept as it was — ' + Guard.label(v2));
-              UI.debug('switch refused: ' + Guard.refusal(item, v2)[1]);
+              UI.toast(`Kept as it was — ${Guard.label(v2)}`);
+              UI.debug(`switch refused: ${Guard.refusal(item, v2)[1]}`);
               return;
             }
             Player.stop('stopped', true);
@@ -239,8 +239,8 @@
   function playNext(episode, back) {
     Guard.check(episode).then((v) => {
       if (!v.ok) {
-        UI.toast('Not playing ' + (episode.title || 'the next one') + ' — ' + Guard.label(v));
-        UI.debug('next refused: ' + Guard.refusal(episode, v)[1]);
+        UI.toast(`Not playing ${episode.title || 'the next one'} — ${Guard.label(v)}`);
+        UI.debug(`next refused: ${Guard.refusal(episode, v)[1]}`);
         back();
         return;
       }
@@ -310,7 +310,7 @@
     UI.debug('requesting a pin from plex.tv…');
     Plex.linkStart().then((pin) => {
       document.getElementById('link-code').textContent = pin.code;
-      UI.debug('pin ' + pin.id + ' · client ' + String(Plex.state.clientId).substring(0, 8) +
+      UI.debug(`pin ${pin.id} · client ${String(Plex.state.clientId).substring(0, 8)}` +
                ' · code ' + pin.code);
       return Plex.linkPoll(pin.id, Date.now() + 15 * 60 * 1000, UI.debug);
     }).then((token) => {
@@ -335,7 +335,7 @@
       }
       return Plex.discover();
     }).then((servers) => {
-      UI.debug('servers: ' + servers.map((sv) => { return sv.name; }).join(', '));
+      UI.debug(`servers: ${servers.map((sv) => { return sv.name; }).join(', ')}`);
       /* Each server's own section list. They may not agree on what exists —
          Browse folds them by type into one Movies and one TV Shows. */
       return Promise.all(servers.map((sv) => {
@@ -368,7 +368,7 @@
   }
 
   function startFailed(e) {
-    UI.debug('start failed: ' + e.message);
+    UI.debug(`start failed: ${e.message}`);
     /* Match the status precisely — a bare '401' also appears inside URLs, and
        signing out on a false positive dumps the user back to a fresh code with
        no explanation, which looks exactly like a login loop. */
@@ -401,16 +401,16 @@
       ok = localStorage.getItem('selftest') === 'y';
       localStorage.removeItem('selftest');
     } catch (e) {
-      UI.debug('localStorage THROWS: ' + e.message);
+      UI.debug(`localStorage THROWS: ${e.message}`);
       return;
     }
-    UI.debug('localStorage ' + (ok ? 'ok' : 'SILENTLY DROPS WRITES') +
+    UI.debug(`localStorage ${ok ? 'ok' : 'SILENTLY DROPS WRITES'}` +
              ' · token ' + (Plex.hasToken() ? 'present' : 'absent') +
              (Config.dev ? ' · dev server' : ''));
   }
 
   window.onerror = (msg, url, line) => {
-    UI.debug('JS ERROR ' + msg + ' @' + String(url).split('/').pop() + ':' + line);
+    UI.debug(`JS ERROR ${msg} @${String(url).split('/').pop()}:${line}`);
     return false;
   };
 

@@ -48,7 +48,7 @@ var UI = (function () {
   function debug(msg) {
     const stamped = (Date.now() - bootedAt) + 'ms  ' + msg;
     elDebug.textContent = stamped;
-    if (window.console && console.log) console.log('REFLEX ' + stamped);
+    if (window.console && console.log) console.log(`REFLEX ${stamped}`);
     if (!Config.beacon) return;
     /* Never let logging break the app: the answer is thrown away, and so is
        any failure to deliver it. */

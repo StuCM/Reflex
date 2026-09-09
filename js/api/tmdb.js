@@ -23,7 +23,7 @@ var Tmdb = (function () {
   function get(path, params) {
     params = params || {};
     params.api_key = KEY;
-    return Http.request(API + path + '?' + Http.qs(params), { label: 'TMDB ' + path });
+    return Http.request(API + path + '?' + Http.qs(params), { label: `TMDB ${path}` });
   }
 
   function goodEnough(m) {
@@ -80,7 +80,7 @@ var Tmdb = (function () {
     const score = {};
     const seen = {};
     return serial(seeds, (id) => {
-      return get('/movie/' + id + '/recommendations').then((r) => {
+      return get(`/movie/${id}/recommendations`).then((r) => {
         const list = films(r.results);
         for (let i = 0; i < list.length; i++) {
           const m = list[i];
@@ -112,7 +112,7 @@ var Tmdb = (function () {
      matters — without it the appended images are filtered to the request
      language and most backdrops disappear. */
   function details(tmdbId) {
-    return get('/movie/' + tmdbId, {
+    return get(`/movie/${tmdbId}`, {
       append_to_response: 'images,credits',
       include_image_language: 'en,null'
     });

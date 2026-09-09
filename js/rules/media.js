@@ -98,7 +98,7 @@ var Media = (function () {
   function audioLabel(st) {
     if (!st) return 'no passable track';
     const codec = (st.codec || '?').toUpperCase();
-    const lang = st.languageCode ? ' ' + st.languageCode.toUpperCase() : '';
+    const lang = st.languageCode ? ` ${st.languageCode.toUpperCase()}` : '';
     return codec + ' ' + channelLabel(st) + lang;
   }
 
@@ -217,7 +217,7 @@ var Media = (function () {
     if (st.hearingImpaired || /sdh/i.test(String(st.title || ''))) bits.push('SDH');
     if (!isTextSub(st)) bits.push(String(st.codec || '?').toUpperCase() + ', image');
     else if (st.title && String(st.title).length < 24) bits.push(String(st.title));
-    return name + (bits.length ? ' · ' + bits.join(' · ') : '');
+    return name + (bits.length ? ` · ${bits.join(' · ')}` : '');
   }
 
   /* Which track to start with when the user asks for subtitles and has not
@@ -280,7 +280,7 @@ var Media = (function () {
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
       out.push({
-        title: c.tag || c.title || ('Chapter ' + (c.index || i + 1)),
+        title: c.tag || c.title || (`Chapter ${c.index || i + 1}`),
         start: (c.startTimeOffset || 0) / 1000,
         end: (c.endTimeOffset || 0) / 1000,
         thumb: c.thumb || null
@@ -312,7 +312,7 @@ var Media = (function () {
     const res = String(media.videoResolution || '').toLowerCase();
     const name = res === '4k' ? '4K' : (res ? res + 'p' : (media.height || '?') + 'p');
     let out = name + ' ' + String(media.videoCodec || '?').toUpperCase();
-    if (media.bitrate) out += ' · ' + bitrateLabel(media.bitrate);
+    if (media.bitrate) out += ` · ${bitrateLabel(media.bitrate)}`;
     return out;
   }
 
@@ -320,7 +320,7 @@ var Media = (function () {
   function qualities(media) {
     const source = (media && media.bitrate) || 0;
     const out = [];
-    out.push({ label: 'Original (' + versionLabel(media) + ')', bitrate: null });
+    out.push({ label: `Original (${versionLabel(media)})`, bitrate: null });
     for (let i = 0; i < BITRATES.length; i++) {
       if (!source || BITRATES[i] < source) {
         out.push({ label: bitrateLabel(BITRATES[i]) + ' — server converts',
@@ -433,7 +433,7 @@ var Media = (function () {
     const t = String((item && (item.titleSort || item.title)) || '').toLowerCase()
       .replace(/^(the|a|an)\s+/, '')
       .replace(/[^a-z0-9]+/g, '');
-    return 'title://' + t + '/' + ((item && item.year) || '');
+    return `title://${t}/${(item && item.year) || ''}`;
   }
 
   /* An episode is identified by which show it belongs to and where it sits in
@@ -445,7 +445,7 @@ var Media = (function () {
       .toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/[^a-z0-9:/.]+/g, '');
     const season = item.parentIndex === undefined ? '?' : item.parentIndex;
     const number = item.index === undefined ? '?' : item.index;
-    return 'episode://' + show + '/' + season + '/' + number;
+    return `episode://${show}/${season}/${number}`;
   }
 
   /* Every key this item could be recognised by, best first. */
@@ -469,7 +469,7 @@ var Media = (function () {
     if (s === undefined && e === undefined) return item.grandparentTitle || '';
     return (item.grandparentTitle || '') +
            '  ·  S' + (s === undefined ? '?' : s) +
-           'E' + (e === undefined ? '?' : (e < 10 ? '0' + e : e));
+           'E' + (e === undefined ? '?' : (e < 10 ? `0${e}` : e));
   }
 
   /* The name of the thing, for the rail tile and the hero over it. An episode
@@ -490,7 +490,7 @@ var Media = (function () {
       const s = item.parentIndex;
       const e = item.index;
       let at = '';
-      if (s !== undefined) at = 'S' + s;
+      if (s !== undefined) at = `S${s}`;
       if (e !== undefined) at += (at ? ' ' : '') + 'E' + e;
       if (!at) return item.title || '';
       return item.title ? at + '  ·  ' + item.title : at;

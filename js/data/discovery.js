@@ -17,7 +17,7 @@ var Discovery = (function () {
      undefined until someone asks whether we hold it. */
   function entry(result) {
     return { type: 'movie', title: result.title, year: result.year,
-             Guid: [{ id: 'tmdb://' + result.id }],
+             Guid: [{ id: `tmdb://${result.id}` }],
              _tmdb: result,
              _resolved: undefined };
   }
@@ -31,12 +31,12 @@ var Discovery = (function () {
     const sub = found ? Media.railSub(found) : '';
     item._resolved = found || null;
     item._availability = !found ? 'Not in your library'
-      : (sub ? 'In your library  ·  ' + sub : 'In your library');
+      : (sub ? `In your library  ·  ${sub}` : 'In your library');
   }
 
   function ask(id) {
     return Promise.all(Servers.all().map((sv) => {
-      return Plex.findByGuid(sv, 'tmdb://' + id).catch(() => { return null; });
+      return Plex.findByGuid(sv, `tmdb://${id}`).catch(() => { return null; });
     })).then((perServer) => {
       const hits = [];
       for (let i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
@@ -61,7 +61,7 @@ var Discovery = (function () {
       return item._resolved;
     }, (e) => {
       item._asking = null;                    // a failed lookup is worth retrying
-      UI.debug('resolve ' + item.title + ': ' + e.message);
+      UI.debug(`resolve ${item.title}: ${e.message}`);
       return null;
     });
     return item._asking;

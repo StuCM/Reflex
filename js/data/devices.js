@@ -60,11 +60,11 @@ var Devices = (function () {
         });
       });
       played = map;
-      UI.debug('history: ' + count + ' items across ' + servers.length + ' server' +
+      UI.debug(`history: ${count} items across ${servers.length} server` +
                (servers.length === 1 ? '' : 's') + ', ' + countDevices(map) + ' devices');
       return map;
     }).catch((e) => {
-      UI.debug('history unavailable: ' + e.message);
+      UI.debug(`history unavailable: ${e.message}`);
       played = {};                 // don't retry all session; filtering just stays off
       return played;
     });
@@ -117,7 +117,7 @@ var Devices = (function () {
       }
       list = Object.keys(counts).map((k) => {
         const server = Servers.get(k.split(':')[0]);
-        return { key: k, name: names[k] || ('device ' + k.split(':')[1]),
+        return { key: k, name: names[k] || (`device ${k.split(':')[1]}`),
                  server: Servers.label(server), count: counts[k],
                  mine: claimed ? !!claimed[k] : true };
       }).sort((a, b) => { return b.count - a.count; });
@@ -134,9 +134,9 @@ var Devices = (function () {
     let html = '';
     for (let i = 0; i < list.length; i++) {
       const d = list[i];
-      html += '<div class="device-row' + (i === idx ? ' on' : '') + '">' +
+      html += `<div class="device-row${i === idx ? ' on' : ''}">` +
               (d.mine ? '[x] ' : '[ ] ') + UI.escapeHtml(d.name) +
-              (d.server ? ' <span class="device-count">on ' + UI.escapeHtml(d.server) +
+              (d.server ? ` <span class="device-count">on ${UI.escapeHtml(d.server)}` +
                           '</span>' : '') +
               ' <span class="device-count">' + d.count + ' items</span></div>';
     }
@@ -150,7 +150,7 @@ var Devices = (function () {
       for (let i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
       claimed = map;
       lsSet('myDevices', JSON.stringify(map));
-      UI.debug('devices: ' + Object.keys(map).length + ' of ' + list.length + ' claimed');
+      UI.debug(`devices: ${Object.keys(map).length} of ${list.length} claimed`);
       changed = true;
     }
     const done = onClose;

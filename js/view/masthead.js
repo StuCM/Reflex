@@ -46,7 +46,7 @@ var Masthead = (function () {
     const pre = new Image();
     pre.onload = pre.onerror = () => {
       if (lastArt !== url) return;
-      next.style.backgroundImage = 'url("' + url + '")';
+      next.style.backgroundImage = `url("${url}")`;
       artLayers[shown].classList.remove('on');
       next.classList.add('on');
       shown = shown ? 0 : 1;

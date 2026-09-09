@@ -21,7 +21,7 @@ var Youtube = (function () {
 
   function request(path, params) {
     params.key = KEY;
-    return Http.request(API + path + '?' + Http.qs(params), { label: 'YouTube ' + path });
+    return Http.request(API + path + '?' + Http.qs(params), { label: `YouTube ${path}` });
   }
 
   /* One request in flight at a time. Two searches racing is 200 units spent to
@@ -40,7 +40,7 @@ var Youtube = (function () {
       return get('/channels', { part: 'id', forHandle: HANDLE }).then((r) => {
         const items = r && r.items;
         if (!items || !items.length || !items[0].id) {
-          throw new Error('no channel for ' + HANDLE);
+          throw new Error(`no channel for ${HANDLE}`);
         }
         Cache.ytChannel.put(HANDLE, items[0].id);
         return items[0].id;
@@ -61,7 +61,7 @@ var Youtube = (function () {
       return withLengths((r && r.items) || []);
     }).catch((e) => {
       if (!/-> 403$/.test(e.message)) throw e;
-      UI.debug('youtube: ' + e.message + ' (quota)');
+      UI.debug(`youtube: ${e.message} (quota)`);
       return [];
     });
   }
@@ -156,7 +156,7 @@ var Youtube = (function () {
   }
 
   function normalise(s) {
-    return ' ' + String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '') + ' ';
+    return ` ${String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '')} `;
   }
 
   /* Only the videos that name this show. The channel covers everything, and a

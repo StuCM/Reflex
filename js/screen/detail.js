@@ -159,7 +159,7 @@ var Detail = (function () {
           });
         });
         if (added) {
-          UI.debug('found ' + added + ' more version' + (added === 1 ? '' : 's') +
+          UI.debug(`found ${added} more version${added === 1 ? '' : 's'}` +
                    ' of ' + md.title + ' on ' + sv.name);
           rebuild();
           render();
@@ -231,8 +231,8 @@ var Detail = (function () {
       .then((v) => {
         if (gen !== generation) return;
         if (!v.ok) {
-          UI.toast('Kept as it was — ' + Guard.label(v));
-          UI.debug('choice refused: ' + Guard.refusal(item, v)[1]);
+          UI.toast(`Kept as it was — ${Guard.label(v)}`);
+          UI.debug(`choice refused: ${Guard.refusal(item, v)[1]}`);
           return;
         }
         /* By stream id on the copy we came from, so a subtitle language chosen
@@ -333,7 +333,7 @@ var Detail = (function () {
      by the buttons beside it. */
   function playCaption() {
     const at = resumeAt();
-    return (at ? 'resume at ' + atLabel(at) : 'from start') +
+    return (at ? `resume at ${atLabel(at)}` : 'from start') +
            '  ·  ' + (verdict ? Guard.label(verdict) : 'checking…');
   }
 
@@ -394,7 +394,7 @@ var Detail = (function () {
     let html = '';
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
-      html += '<div class="dt-act' + (a.primary ? ' primary' : '') +
+      html += `<div class="dt-act${a.primary ? ' primary' : ''}` +
               (a.quiet ? ' quiet' : '') +
               (strip === 0 && i === idx ? ' on' : '') + '" data-act="' + a.act + '">' +
               '<div class="dt-act-btn">' + (a.glyph || UI.escapeHtml(a.label)) + '</div>' +
@@ -468,11 +468,11 @@ var Detail = (function () {
     const mins = clip.duration
       ? Math.max(1, Math.round(clip.duration / 60000)) + ' min' : '';
     const shot = Plex.photoUrl(src.server, clip.thumb, 320, 180);
-    return '<div class="dt-extra' + (on ? ' on' : '') + '">' +
+    return `<div class="dt-extra${on ? ' on' : ''}">` +
            '<div class="dt-extra-shot"' +
-           (shot ? ' style="background-image: url(\'' + shot + '\')"' : '') + '>' +
+           (shot ? ` style="background-image: url('${shot}')"` : '') + '>' +
            PLAY_GLYPH +
-           (mins ? '<div class="dt-extra-len">' + UI.escapeHtml(mins) + '</div>' : '') +
+           (mins ? `<div class="dt-extra-len">${UI.escapeHtml(mins)}</div>` : '') +
            '</div>' +
            '<div class="dt-extra-title">' + UI.escapeHtml(src.title) + '</div>' +
            '<div class="dt-extra-verdict badge ' + state + '">' +
@@ -513,7 +513,7 @@ var Detail = (function () {
     renderHead();
 
     const art = Plex.artUrl(item, 960, 540);
-    elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
+    elArt.style.backgroundImage = art ? `url("${art}")` : 'none';
   }
 
   /* The kicker, the chips and the ratings, from whatever we have so far. Called
@@ -587,7 +587,7 @@ var Detail = (function () {
     const out = [];
     function add(text, outlined) {
       if (!text) return;
-      out.push('<span class="dt-chip' + (outlined ? ' out' : '') + '">' +
+      out.push(`<span class="dt-chip${outlined ? ' out' : ''}">` +
                UI.escapeHtml(String(text)) + '</span>');
     }
     add(item.contentRating, true);
@@ -605,7 +605,7 @@ var Detail = (function () {
     const got = Art.factsFor(item);
     const out = [];
     function add(text) {
-      out.push('<span class="dt-rating">' + STAR_GLYPH +
+      out.push(`<span class="dt-rating">${STAR_GLYPH}` +
                '<span class="dt-rating-text">' + UI.escapeHtml(text) + '</span></span>');
     }
     if (headMd && headMd.rating) add(Math.round(headMd.rating * 10) + '% Critics');
@@ -647,9 +647,9 @@ var Detail = (function () {
     function names(list) {
       return (list || []).map((x) => { return UI.escapeHtml(x.tag); }).join(', ');
     }
-    if (md.Director && md.Director.length) bits.push('<b>Director</b> ' + names(md.Director));
-    if (md.Writer && md.Writer.length) bits.push('<b>Writer</b> ' + names(md.Writer));
-    if (md.studio) bits.push('<b>Studio</b> ' + UI.escapeHtml(md.studio));
+    if (md.Director && md.Director.length) bits.push(`<b>Director</b> ${names(md.Director)}`);
+    if (md.Writer && md.Writer.length) bits.push(`<b>Writer</b> ${names(md.Writer)}`);
+    if (md.studio) bits.push(`<b>Studio</b> ${UI.escapeHtml(md.studio)}`);
     return bits.join('<span class="dt-gap"></span>');
   }
 
@@ -672,8 +672,8 @@ var Detail = (function () {
       const r = roles[i];
       url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
       html += '<div class="dt-actor">' +
-              (url ? '<img src="' + url + '" alt="">'
-                   : '<div class="dt-actor-blank">' + UI.escapeHtml(initials(r.tag)) + '</div>') +
+              (url ? `<img src="${url}" alt="">`
+                   : `<div class="dt-actor-blank">${UI.escapeHtml(initials(r.tag))}</div>`) +
               '<div class="dt-actor-name">' + UI.escapeHtml(r.tag) + '</div>' +
               '<div class="dt-actor-role">' + UI.escapeHtml(r.role || '') + '</div>' +
               '</div>';

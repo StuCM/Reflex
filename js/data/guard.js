@@ -77,10 +77,10 @@ var Guard = (function () {
            here, not before the decision. */
         const undecodable = direct && !Media.canDecode(media);
         const willing = Media.allows(media, direct);
-        UI.debug('decision: ' + v.decision + ' · ' + md.title +
-                 (Servers.count() > 1 ? ' on ' + server.name : '') +
+        UI.debug(`decision: ${v.decision} · ${md.title}` +
+                 (Servers.count() > 1 ? ` on ${server.name}` : '') +
                  ' · ' + Media.audioLabel(audio) +
-                 (v.video || v.audio ? ' · v:' + (v.video || '?') + ' a:' + (v.audio || '?') : '') +
+                 (v.video || v.audio ? ` · v:${v.video || '?'} a:${v.audio || '?'}` : '') +
                  ' ' + v.text);
         return {
           /* 4K must direct play or not play. Anything else may transcode. */
@@ -127,7 +127,7 @@ var Guard = (function () {
       /* The server answering with a refusal is a different problem from it not
          answering, and saying the wrong one sends you looking at the network. */
       const status = /-> (\d{3})/.exec(v.text || '');
-      return status ? 'server said ' + status[1] : 'check failed';
+      return status ? `server said ${status[1]}` : 'check failed';
     }
     return 'would transcode';
   }
@@ -151,7 +151,7 @@ var Guard = (function () {
     if (v.state === 'nometa') return ['No metadata', 'The server returned nothing for this copy.'];
     if (v.state === 'error') return ['Could not check playback', v.text];
 
-    const why = v.text || ('the server returned "' + v.state + '"');
+    const why = v.text || (`the server returned "${v.state}"`);
     /* The only thing still refused outright. */
     return ['4K transcode refused', item.title + ' will not direct play — ' + why +
       '. Starting it would register a 4K transcode on the server, which gets ' +
