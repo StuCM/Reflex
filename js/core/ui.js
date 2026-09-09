@@ -53,14 +53,14 @@ var UI = (function () {
     /* Never let logging break the app: the answer is thrown away, and so is
        any failure to deliver it. */
     Http.request(Config.beacon + '?m=' + encodeURIComponent(msg), { label: 'beacon' })
-      .then(null, function () {});
+      .then(null, () => {});
   }
 
   function toast(msg) {
     elToast.textContent = msg;
     elToast.classList.remove('hidden');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { elToast.classList.add('hidden'); }, 4000);
+    toastTimer = setTimeout(() => { elToast.classList.add('hidden'); }, 4000);
   }
 
   function message(title, body) {

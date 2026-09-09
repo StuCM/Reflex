@@ -35,9 +35,9 @@ var Discovery = (function () {
   }
 
   function ask(id) {
-    return Promise.all(Servers.all().map(function (sv) {
-      return Plex.findByGuid(sv, 'tmdb://' + id).catch(function () { return null; });
-    })).then(function (perServer) {
+    return Promise.all(Servers.all().map((sv) => {
+      return Plex.findByGuid(sv, 'tmdb://' + id).catch(() => { return null; });
+    })).then((perServer) => {
       const hits = [];
       for (let i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
       return hits.length ? Merge.lists([hits])[0] : null;
@@ -50,16 +50,16 @@ var Discovery = (function () {
   function resolve(item) {
     if (item._resolved !== undefined) return Promise.resolve(item._resolved);
     if (item._asking) return item._asking;
-    item._asking = Cache.lookup.get(item._tmdb.id).then(function (hit) {
+    item._asking = Cache.lookup.get(item._tmdb.id).then((hit) => {
       if (hit !== undefined) return hit;
-      return ask(item._tmdb.id).then(function (found) {
+      return ask(item._tmdb.id).then((found) => {
         Cache.lookup.put(item._tmdb.id, found);
         return found;
       });
-    }).then(function (found) {
+    }).then((found) => {
       settle(item, found);
       return item._resolved;
-    }, function (e) {
+    }, (e) => {
       item._asking = null;                    // a failed lookup is worth retrying
       UI.debug('resolve ' + item.title + ': ' + e.message);
       return null;
@@ -85,18 +85,18 @@ var Discovery = (function () {
   function one(ctx, cat) {
     const seeds = ctx.seeds || [];
     const key = cat.kind + ':' + (cat.id || seeds.join('-'));
-    return Cache.catalogue.get(key).then(function (hit) {
+    return Cache.catalogue.get(key).then((hit) => {
       if (hit && hit.length) return hit;
-      return Tmdb.catalogue(cat, seeds).then(function (found) {
+      return Tmdb.catalogue(cat, seeds).then((found) => {
         Cache.catalogue.put(key, found);
         return found;
       });
-    }).then(function (found) {
+    }).then((found) => {
       if (!ctx.isCurrent()) return;
       if (!found.length) { UI.debug(cat.title + ': TMDB returned nothing'); return; }
       ctx.add(cat.title, found.map(entry));
       UI.debug(cat.title + ': ' + found.length + ' from TMDB');
-    }, function (e) {
+    }, (e) => {
       UI.debug(cat.title + ' failed: ' + e.message);
     });
   }

@@ -44,7 +44,7 @@ var Masthead = (function () {
        a swap the next backdrop has already overtaken is dropped. */
     const next = artLayers[shown ? 0 : 1];
     const pre = new Image();
-    pre.onload = pre.onerror = function () {
+    pre.onload = pre.onerror = () => {
       if (lastArt !== url) return;
       next.style.backgroundImage = 'url("' + url + '")';
       artLayers[shown].classList.remove('on');
@@ -56,7 +56,7 @@ var Masthead = (function () {
 
   /* A backdrop that lands after the debounce fired belongs on screen only if
      the item it belongs to is still the one being rested on. */
-  Art.onReady(function (tmdbId) {
+  Art.onReady((tmdbId) => {
     if (!artWant || Plex.tmdbId(artWant) !== tmdbId) return;
     paintArt();
     paintFacts(artWant);

@@ -32,7 +32,7 @@
      already; a title we do not hold reaches no guard and no player, so it says
      so rather than opening a page about nothing. */
   function openDiscovered(item) {
-    Discovery.resolve(item).then(function (found) {
+    Discovery.resolve(item).then((found) => {
       if (found) { openItem(found); return; }
       UI.message('Not in your library',
         item.title + (item.year ? ' (' + item.year + ')' : '') +
@@ -44,15 +44,15 @@
     ShowPage.open(entry, {
       at: at,
       onExit: toBrowse,
-      onPlay: function (episode, verdict) {
+      onPlay: (episode, verdict) => {
         playChecked(episode, verdict, false, undefined, toShow);
       },
       /* Leaving the page by any route stops its theme. One call per route
          rather than a listener, because the failure mode is two sources on one
          ARC link — BACK goes through ShowPage's own close, and playback stops
          it in playChecked. */
-      onChoose: function (episode) { ShowPage.silence(); openDetail(episode, toShow); },
-      onRecap: function (video) { ShowPage.silence(); openRecap(video); }
+      onChoose: (episode) => { ShowPage.silence(); openDetail(episode, toShow); },
+      onRecap: (video) => { ShowPage.silence(); openRecap(video); }
     });
   }
 
@@ -72,9 +72,9 @@
     const frame = document.getElementById('recap-frame');
     recapVideo = video;
     clearTimeout(recapTimer);
-    recapTimer = setTimeout(function () { recapFailed('did not load'); }, 8000);
-    frame.onload = function () { clearTimeout(recapTimer); };
-    frame.onerror = function () { recapFailed('would not load'); };
+    recapTimer = setTimeout(() => { recapFailed('did not load'); }, 8000);
+    frame.onload = () => { clearTimeout(recapTimer); };
+    frame.onerror = () => { recapFailed('would not load'); };
     frame.src = Config.youtubeEmbedBase + video.id + '?autoplay=1';
     document.getElementById('recap').classList.remove('hidden');
   }
@@ -113,14 +113,14 @@
      nothing happening. */
   function openEpisode(item) {
     UI.toast('Opening ' + (item.grandparentTitle || 'series') + '…');
-    Shows.entryFor(item).then(function (entry) {
+    Shows.entryFor(item).then((entry) => {
       if (!entry) {
         UI.debug('no series for ' + (item.grandparentTitle || item.ratingKey));
         openDetail(item, toBrowse);
         return;
       }
       openShow(entry, { season: item.parentIndex, episode: item.index });
-    }, function (e) {
+    }, (e) => {
       UI.debug('series: ' + e.message);
       openDetail(item, toBrowse);
     });
@@ -142,9 +142,9 @@
          resumeAt is 0 when the page's second play was pressed and undefined
          when Play was, which is the difference between starting again and
          picking up. */
-      onPlay: function (entry, verdict, isExtra, subLang, resumeAt) {
+      onPlay: (entry, verdict, isExtra, subLang, resumeAt) => {
         playChecked(entry, verdict, isExtra, resumeAt,
-                    function () { openDetail(item, back); }, subLang);
+                    () => { openDetail(item, back); }, subLang);
       },
       onExit: back || toBrowse
     });
@@ -171,7 +171,7 @@
     /* Only an episode has a next. A film does not, and a trailer or an extra is
        not the thing you sat down to watch. */
     const hasNext = !isExtra && md.type === 'episode';
-    const goBack = back || function () { openDetail(item, toBrowse); };
+    const goBack = back || (() => { openDetail(item, toBrowse); });
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0
       : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
@@ -196,10 +196,10 @@
          panel picks its own track out of a direct-played file, so there is
          nothing to switch client-side. Subtitles are not here — they are drawn
          over the video and never restart anything. */
-      onSwitch: function (change) {
+      onSwitch: (change) => {
         Guard.check(verdict.md, change.mediaIndex, change.audioId,
                     { maxBitrate: change.maxBitrate, forceStream: change.forceStream })
-          .then(function (v2) {
+          .then((v2) => {
             if (!v2.ok) {
               /* Refusing a switch must not end the film. Say why in a line and
                  leave what is already playing alone — the full explanation is
@@ -226,9 +226,9 @@
          offer is taken. Kept apart because finding the next episode costs a
          request or two and playing it has to go through the guard. */
       onNext: hasNext ? Shows.nextAfter : null,
-      onPlayNext: hasNext ? function (episode) { playNext(episode, goBack); } : null,
+      onPlayNext: hasNext ? ((episode) => { playNext(episode, goBack); }) : null,
       onExit: goBack,
-      onError: function (msg) { UI.message('Playback failed', msg); }
+      onError: (msg) => { UI.message('Playback failed', msg); }
     });
   }
 
@@ -237,7 +237,7 @@
      the guard exists to prevent. A refusal says why and goes back to the
      series rather than leaving a black screen. */
   function playNext(episode, back) {
-    Guard.check(episode).then(function (v) {
+    Guard.check(episode).then((v) => {
       if (!v.ok) {
         UI.toast('Not playing ' + (episode.title || 'the next one') + ' — ' + Guard.label(v));
         UI.debug('next refused: ' + Guard.refusal(episode, v)[1]);
@@ -308,12 +308,12 @@
   function doLink() {
     UI.show('link');
     UI.debug('requesting a pin from plex.tv…');
-    Plex.linkStart().then(function (pin) {
+    Plex.linkStart().then((pin) => {
       document.getElementById('link-code').textContent = pin.code;
       UI.debug('pin ' + pin.id + ' · client ' + String(Plex.state.clientId).substring(0, 8) +
                ' · code ' + pin.code);
       return Plex.linkPoll(pin.id, Date.now() + 15 * 60 * 1000, UI.debug);
-    }).then(function (token) {
+    }).then((token) => {
       if (!token) {                          // pin expired, issue a fresh one
         UI.debug('pin expired after 15 min, requesting another');
         doLink();
@@ -321,7 +321,7 @@
       }
       UI.show('browse');
       start();
-    }).catch(function (e) {
+    }).catch((e) => {
       UI.message('Could not reach plex.tv', e.message + '  ·  BACK to retry');
     });
   }
@@ -329,27 +329,27 @@
   function start() {
     UI.show('browse');
     /* Paint from cache before any network work — the whole point of the app. */
-    Cache.sections.get().then(function (cached) {
+    Cache.sections.get().then((cached) => {
       if (cached && cached.length && Servers.count()) {
         Browse.loadSection(Browse.setSections(rehydrate(cached)), false);
       }
       return Plex.discover();
-    }).then(function (servers) {
-      UI.debug('servers: ' + servers.map(function (sv) { return sv.name; }).join(', '));
+    }).then((servers) => {
+      UI.debug('servers: ' + servers.map((sv) => { return sv.name; }).join(', '));
       /* Each server's own section list. They may not agree on what exists —
          Browse folds them by type into one Movies and one TV Shows. */
-      return Promise.all(servers.map(function (sv) {
-        return Plex.sections(sv).then(function (secs) {
+      return Promise.all(servers.map((sv) => {
+        return Plex.sections(sv).then((secs) => {
           return { server: sv, sections: secs };
         });
       }));
-    }).then(function (perServer) {
-      const any = perServer.filter(function (r) { return r.sections.length; });
+    }).then((perServer) => {
+      const any = perServer.filter((r) => { return r.sections.length; });
       if (!any.length) {
         UI.message('No libraries', 'Neither server shares a film or show section.');
         return;
       }
-      Cache.sections.put(perServer.map(function (r) {
+      Cache.sections.put(perServer.map((r) => {
         return { serverId: r.server.id, sections: r.sections };
       }));
       Browse.loadSection(Browse.setSections(perServer), true);
@@ -409,7 +409,7 @@
              (Config.dev ? ' · dev server' : ''));
   }
 
-  window.onerror = function (msg, url, line) {
+  window.onerror = (msg, url, line) => {
     UI.debug('JS ERROR ' + msg + ' @' + String(url).split('/').pop() + ':' + line);
     return false;
   };

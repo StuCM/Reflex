@@ -40,19 +40,19 @@ var Meta = (function () {
     const server = Servers.of(item);
     if (!server) return Promise.resolve(null);
 
-    return Cache.meta.get(key).then(function (cached) {
+    return Cache.meta.get(key).then((cached) => {
       if (cached) return cached;
-      return Plex.metadata(server, item.ratingKey).then(function (md) {
+      return Plex.metadata(server, item.ratingKey).then((md) => {
         if (md) Cache.meta.put(key, md);
         return md;
       });
-    }).then(function (md) {
+    }).then((md) => {
       if (md) {
         md._server = item._server;          // survives the round trip through Store
         remember(key, md);
       }
       return md;
-    }).catch(function (e) {
+    }).catch((e) => {
       UI.debug('meta: ' + e.message);
       return null;
     });
@@ -68,8 +68,8 @@ var Meta = (function () {
        there is nothing to fetch and nothing to repaint. */
     if (cache[keyOf(item)]) return;
     const ratingKey = item.ratingKey;
-    timer = setTimeout(function () {
-      load(item).then(function (md) { if (md) onLoaded(ratingKey, md); });
+    timer = setTimeout(() => {
+      load(item).then((md) => { if (md) onLoaded(ratingKey, md); });
     }, HOLD);
   }
 

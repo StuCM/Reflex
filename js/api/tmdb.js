@@ -49,7 +49,7 @@ var Tmdb = (function () {
   }
 
   function trending() {
-    return get('/trending/movie/week').then(function (r) { return films(r.results); });
+    return get('/trending/movie/week').then((r) => { return films(r.results); });
   }
 
   /* What's on a streaming service right now, in this region. */
@@ -59,7 +59,7 @@ var Tmdb = (function () {
       watch_region: REGION,
       sort_by: 'popularity.desc',
       'vote_count.gte': MIN_VOTES
-    }).then(function (r) { return films(r.results); });
+    }).then((r) => { return films(r.results); });
   }
 
   /* One genre, most popular first. Ids come from /genre/movie/list. */
@@ -68,7 +68,7 @@ var Tmdb = (function () {
       with_genres: genreId,
       sort_by: 'popularity.desc',
       'vote_count.gte': MIN_VOTES
-    }).then(function (r) { return films(r.results); });
+    }).then((r) => { return films(r.results); });
   }
 
   /* Content-based recommendations: ask TMDB what resembles each thing recently
@@ -79,8 +79,8 @@ var Tmdb = (function () {
     if (!seeds.length) return Promise.resolve([]);
     const score = {};
     const seen = {};
-    return serial(seeds, function (id) {
-      return get('/movie/' + id + '/recommendations').then(function (r) {
+    return serial(seeds, (id) => {
+      return get('/movie/' + id + '/recommendations').then((r) => {
         const list = films(r.results);
         for (let i = 0; i < list.length; i++) {
           const m = list[i];
@@ -88,10 +88,10 @@ var Tmdb = (function () {
           seen[m.id] = m;
           score[m.id] = (score[m.id] || 0) + 1;
         }
-      }, function () { /* one bad seed shouldn't sink the row */ });
-    }).then(function () {
-      return Object.keys(score).sort(function (a, b) { return score[b] - score[a]; })
-        .map(function (id) { return seen[id]; });
+      }, () => { /* one bad seed shouldn't sink the row */ });
+    }).then(() => {
+      return Object.keys(score).sort((a, b) => { return score[b] - score[a]; })
+        .map((id) => { return seen[id]; });
     });
   }
 

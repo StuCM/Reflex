@@ -44,16 +44,16 @@ var Devices = (function () {
   function ensureHistory() {
     if (played) return Promise.resolve(played);
     const servers = Servers.all();
-    return Promise.all(servers.map(function (sv) {
-      return Plex.history(sv, HISTORY).then(function (entries) {
+    return Promise.all(servers.map((sv) => {
+      return Plex.history(sv, HISTORY).then((entries) => {
         return { server: sv, entries: entries };
       });
-    })).then(function (perServer) {
+    })).then((perServer) => {
       const map = {};
       let count = 0;
-      perServer.forEach(function (res) {
+      perServer.forEach((res) => {
         /* Sorted newest first, so the first entry per item is the latest. */
-        res.entries.forEach(function (e) {
+        res.entries.forEach((e) => {
           if (!e.ratingKey || e.deviceID === undefined) return;
           const k = itemKey(res.server, e.ratingKey);
           if (map[k] === undefined) { map[k] = res.server.id + ':' + e.deviceID; count++; }
@@ -63,7 +63,7 @@ var Devices = (function () {
       UI.debug('history: ' + count + ' items across ' + servers.length + ' server' +
                (servers.length === 1 ? '' : 's') + ', ' + countDevices(map) + ' devices');
       return map;
-    }).catch(function (e) {
+    }).catch((e) => {
       UI.debug('history unavailable: ' + e.message);
       played = {};                 // don't retry all session; filtering just stays off
       return played;
@@ -80,7 +80,7 @@ var Devices = (function () {
   /* A merged entry survives if any copy of it does. */
   function mine(items) {
     if (!claimed || !played) return items;
-    return items.filter(function (entry) {
+    return items.filter((entry) => {
       const copies = Merge.sources(entry);
       for (let i = 0; i < copies.length; i++) {
         const dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
@@ -100,27 +100,27 @@ var Devices = (function () {
     const servers = Servers.all();
     Promise.all([
       ensureHistory(),
-      Promise.all(servers.map(function (sv) {
-        return Plex.devices(sv).then(function (d) { return { server: sv, devices: d }; });
+      Promise.all(servers.map((sv) => {
+        return Plex.devices(sv).then((d) => { return { server: sv, devices: d }; });
       }))
-    ]).then(function (res) {
+    ]).then((res) => {
       const map = res[0] || {};
       const named = res[1] || [];
       const names = {};
       const counts = {};
       const keys = Object.keys(map);
-      named.forEach(function (n) {
-        n.devices.forEach(function (d) { names[n.server.id + ':' + d.id] = d.name; });
+      named.forEach((n) => {
+        n.devices.forEach((d) => { names[n.server.id + ':' + d.id] = d.name; });
       });
       for (let i = 0; i < keys.length; i++) {
         counts[map[keys[i]]] = (counts[map[keys[i]]] || 0) + 1;
       }
-      list = Object.keys(counts).map(function (k) {
+      list = Object.keys(counts).map((k) => {
         const server = Servers.get(k.split(':')[0]);
         return { key: k, name: names[k] || ('device ' + k.split(':')[1]),
                  server: Servers.label(server), count: counts[k],
                  mine: claimed ? !!claimed[k] : true };
-      }).sort(function (a, b) { return b.count - a.count; });
+      }).sort((a, b) => { return b.count - a.count; });
       render();
     });
   }

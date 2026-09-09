@@ -286,7 +286,7 @@ var Media = (function () {
         thumb: c.thumb || null
       });
     }
-    out.sort(function (a, b) { return a.start - b.start; });
+    out.sort((a, b) => { return a.start - b.start; });
     return out;
   }
 

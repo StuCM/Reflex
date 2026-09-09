@@ -36,7 +36,7 @@ var Art = (function () {
     for (let i = 0; i < list.length; i++) {
       if (list[i] && list[i].file_path) usable.push(list[i]);
     }
-    usable.sort(function (a, b) {
+    usable.sort((a, b) => {
       const byScore = (b.vote_average || 0) - (a.vote_average || 0);
       return byScore || (b.vote_count || 0) - (a.vote_count || 0);
     });
@@ -135,18 +135,18 @@ var Art = (function () {
   }
 
   function fetchOne(id) {
-    Cache.art.get(id).then(function (hit) {
+    Cache.art.get(id).then((hit) => {
       /* An entry cached before the facts or the poster existed is a miss for
          them, or an old cache would leave a title short of one for ever. */
       if (hit && hit.facts && hit.poster !== undefined) return hit;
-      return Tmdb.details(id).then(function (payload) {
+      return Tmdb.details(id).then((payload) => {
         const got = pick(payload);
         got.facts = facts(payload);
         Cache.art.put(id, got);
         return got;
       });
-    }).then(function (got) { landed(id, got); },
-            function () { landed(id, { hero: null, poster: null }); });
+    }).then((got) => { landed(id, got); },
+            () => { landed(id, { hero: null, poster: null }); });
   }
 
   /* A title with no usable backdrops is cached too, or an obscure one costs a

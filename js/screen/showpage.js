@@ -61,7 +61,7 @@ var ShowPage = (function () {
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
 
     const gen = generation;
-    Shows.seasons(entry).then(function (list) {
+    Shows.seasons(entry).then((list) => {
       if (gen !== generation) return;
       seasons = list;
       seasonIdx = openSeason(list);
@@ -72,7 +72,7 @@ var ShowPage = (function () {
         return;
       }
       loadEpisodes();
-    }).catch(function (e) {
+    }).catch((e) => {
       if (gen !== generation) return;
       UI.debug('seasons: ' + e.message);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the series list.</div>';
@@ -219,20 +219,20 @@ var ShowPage = (function () {
     const gen = generation;
     const title = show.title || '';
     const id = Media.identity(show);
-    Cache.recaps.get(id).then(function (cached) {
+    Cache.recaps.get(id).then((cached) => {
       if (cached) return cached;
-      return Youtube.recaps(title).then(function (items) {
+      return Youtube.recaps(title).then((items) => {
         const list = Youtube.pickForShow(Youtube.parse(items), title);
         Cache.recaps.put(id, list);
         return list;
       });
-    }).then(function (list) {
+    }).then((list) => {
       if (gen !== generation) return;
       searching = false;
       recaps = list;
       recapIdx = 0;
       renderRecaps();
-    }, function (e) {
+    }, (e) => {
       if (gen !== generation) return;
       UI.debug('recaps: ' + e.message);
       /* Nothing was learnt, so the action goes back to being untried rather
@@ -286,7 +286,7 @@ var ShowPage = (function () {
     /* The platform may refuse to start audio nobody asked for. That is an
        answer, not a fault: say so once and stay silent. */
     if (started && started.catch) {
-      started.catch(function (e) { UI.debug('theme: ' + e.message); });
+      started.catch((e) => { UI.debug('theme: ' + e.message); });
     }
     fadeIn();
   }
@@ -296,7 +296,7 @@ var ShowPage = (function () {
                             .getPropertyValue('--t-move')) || 340;
     const step = THEME_VOL / Math.max(1, Math.round(span / FADE_STEP));
     clearInterval(fadeTimer);
-    fadeTimer = setInterval(function () {
+    fadeTimer = setInterval(() => {
       const v = elTheme.volume + step;
       if (v < THEME_VOL) { elTheme.volume = v; return; }
       elTheme.volume = THEME_VOL;
@@ -330,7 +330,7 @@ var ShowPage = (function () {
     episodes = [];
     epIdx = 0;
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
-    Shows.episodes(season).then(function (list) {
+    Shows.episodes(season).then((list) => {
       if (gen !== generation) return;
       episodes = list;
       /* Land on the episode we were opened at, or failing that the first
@@ -342,7 +342,7 @@ var ShowPage = (function () {
       }
       renderEpisodes();
       scheduleCheck();
-    }).catch(function (e) {
+    }).catch((e) => {
       if (gen !== generation) return;
       UI.debug('episodes: ' + e.message);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the episode list.</div>';
@@ -357,8 +357,8 @@ var ShowPage = (function () {
     const ep = episodes[epIdx];
     if (!ep || verdicts[verdictKey(ep)]) return;
     const gen = generation;
-    checkTimer = setTimeout(function () {
-      Guard.check(ep, 0).then(function (v) {
+    checkTimer = setTimeout(() => {
+      Guard.check(ep, 0).then((v) => {
         if (gen !== generation) return;
         verdicts[verdictKey(ep)] = v;
         renderEpisodes();

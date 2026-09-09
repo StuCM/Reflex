@@ -75,7 +75,7 @@ var Detail = (function () {
 
     /* Merge already put the preferred server's copy first, so source 0 is the
        one the preference asks for. */
-    copies = Merge.sources(entry).map(function (copy) {
+    copies = Merge.sources(entry).map((copy) => {
       return { item: copy, server: Servers.of(copy), versions: null };
     });
     extras = [];
@@ -113,9 +113,9 @@ var Detail = (function () {
   function rebuild() {
     const chosen = sources[sel] || null;
     sources = [];
-    copies.forEach(function (copy) {
+    copies.forEach((copy) => {
       if (copy.versions) {
-        copy.versions.forEach(function (v) { sources.push(v); });
+        copy.versions.forEach((v) => { sources.push(v); });
         return;
       }
       sources.push({ copy: copy, server: copy.server, mediaIndex: 0,
@@ -141,21 +141,21 @@ var Detail = (function () {
   function addOtherVersions(md) {
     const gen = generation;
     const known = {};
-    copies.forEach(function (c) { known[c.item._server + ':' + c.item.ratingKey] = true; });
+    copies.forEach((c) => { known[c.item._server + ':' + c.item.ratingKey] = true; });
 
-    Servers.all().forEach(function (sv) {
-      Plex.allVersions(sv, md).then(function (found) {
+    Servers.all().forEach((sv) => {
+      Plex.allVersions(sv, md).then((found) => {
         if (gen !== generation || !found.length) return;
         let added = 0;
-        found.forEach(function (other) {
+        found.forEach((other) => {
           const key = other._server + ':' + other.ratingKey;
           if (known[key]) return;
           known[key] = true;
           added++;
           copies.push({ item: other, server: Servers.of(other), versions: null });
-          Meta.load(other).then(function (omd) {
+          Meta.load(other).then((omd) => {
             if (gen !== generation || !omd) return;
-            expand(copies.find(function (c) { return c.item === other; }), omd);
+            expand(copies.find((c) => { return c.item === other; }), omd);
           });
         });
         if (added) {
@@ -174,7 +174,7 @@ var Detail = (function () {
      is still a transcode on someone else's hardware. */
   function addExtras(md) {
     if (extras.length || !md.Extras || !md.Extras.Metadata) return;
-    extras = md.Extras.Metadata.slice(0, 6).map(function (x) {
+    extras = md.Extras.Metadata.slice(0, 6).map((x) => {
       return { copy: { item: x }, server: Servers.of(x), mediaIndex: 0,
                media: (x.Media && x.Media[0]) || {},
                title: x.title || 'Extra', kind: x.subtype || x.extraType || '',
@@ -186,7 +186,7 @@ var Detail = (function () {
 
   function expand(copy, md) {
     const list = (md.Media && md.Media.length ? md.Media : [null]);
-    copy.versions = list.map(function (media, n) {
+    copy.versions = list.map((media, n) => {
       return { copy: copy, server: copy.server, mediaIndex: n, media: media || {},
                verdict: null, provisional: false };
     });
@@ -200,7 +200,7 @@ var Detail = (function () {
      nothing else. */
   function check(src) {
     const gen = generation;
-    Guard.check(src.copy.item, src.mediaIndex).then(function (v) {
+    Guard.check(src.copy.item, src.mediaIndex).then((v) => {
       if (gen !== generation) return;
       src.verdict = v;
       render();
@@ -228,7 +228,7 @@ var Detail = (function () {
     if (!src) return;
     Guard.check(src.copy.item, src.mediaIndex, next.audio && next.audio.id,
                 { maxBitrate: next.maxBitrate, forceStream: next.forceStream })
-      .then(function (v) {
+      .then((v) => {
         if (gen !== generation) return;
         if (!v.ok) {
           UI.toast('Kept as it was — ' + Guard.label(v));
@@ -265,7 +265,7 @@ var Detail = (function () {
   function part() { return verdict && verdict.part; }
 
   function sourceRows() {
-    return sources.map(function (src, n) {
+    return sources.map((src, n) => {
       let name = (src.server && src.server.name) || 'server';
       if (Servers.count() > 1 && Servers.isPreferred(src.server)) name += ' · preferred';
       return { label: Media.versionLabel(src.media) + ' · ' + name,
@@ -276,7 +276,7 @@ var Detail = (function () {
 
   function qualityRows() {
     const media = sources[sel] && sources[sel].media;
-    return Media.qualities(media).map(function (q) {
+    return Media.qualities(media).map((q) => {
       return { label: q.label,
                note: q.bitrate && Media.isUHD(media)
                  ? 'a 4K transcode is what gets the stream killed — this will be refused' : '',
@@ -296,7 +296,7 @@ var Detail = (function () {
   }
 
   function audioRows() {
-    return Media.audioTracks(part()).map(function (st) {
+    return Media.audioTracks(part()).map((st) => {
       const on = !!(chosenAudio && String(chosenAudio.id) === String(st.id));
       return { label: Media.audioMenuLabel(st),
                note: on ? '' : (needsMux(st) ? 'costs direct play — the server would mux it'
@@ -307,7 +307,7 @@ var Detail = (function () {
 
   function subRows() {
     const out = [{ label: 'Off', on: !chosenSub, value: null }];
-    Media.subtitleTracks(part()).forEach(function (st) {
+    Media.subtitleTracks(part()).forEach((st) => {
       out.push({ label: Media.subLabel(st),
                  note: Media.isTextSub(st) ? '' : 'image track — it would have to be burnt in',
                  on: !!(chosenSub && String(chosenSub.id) === String(st.id)),
@@ -352,7 +352,7 @@ var Detail = (function () {
      it here, so the page closes onto the rail it has already been dropped
      from. */
   function removeFromDeck() {
-    Browse.clearOne(item, function () { onDeck = false; close(); });
+    Browse.clearOne(item, () => { onDeck = false; close(); });
   }
 
   /* Eight at most: Play, starting again where there is something to resume,
@@ -361,18 +361,18 @@ var Detail = (function () {
      actually on the deck. */
   function actions() {
     const out = [{ act: 'play', label: 'Play', primary: true, caption: playCaption(),
-                 run: function () { start(verdict, false); } }];
+                 run: () => { start(verdict, false); } }];
     /* Part way through, resuming and starting again are two different things to
        want. Both are the verdict the buttons already settled — the second only
        says where to begin. */
     if (resumeAt()) {
       out.push({ act: 'start', label: 'From start', primary: true, quiet: true,
                  caption: verdict ? Guard.label(verdict) : 'checking…',
-                 run: function () { start(verdict, false, 0); } });
+                 run: () => { start(verdict, false, 0); } });
     }
     if (extras.length) {
       out.push({ act: 'trailer', glyph: Glyphs.trailer, caption: extras[0].title,
-                 run: function () { start(extras[0].verdict, true); } });
+                 run: () => { start(extras[0].verdict, true); } });
     }
     out.push({ act: 'quality', glyph: Glyphs.quality, caption: qualityCaption(),
                run: openQuality });
@@ -415,7 +415,7 @@ var Detail = (function () {
   function openSource() {
     openChooser({ label: 'Play from', rows: sourceRows,
                   note: 'Every copy on every server, each already checked.' },
-      function (n) {
+      (n) => {
         if (n === sel) return;
         choose({ sel: n, audio: null, maxBitrate: null, forceStream: false });
       });
@@ -424,14 +424,14 @@ var Detail = (function () {
   function openQuality() {
     openChooser({ label: 'Quality', rows: qualityRows,
                   note: 'Anything but Original asks the server to re-encode.' },
-      function (kbps) {
+      (kbps) => {
         if ((kbps || null) === maxBitrate) return;
         choose({ sel: sel, audio: chosenAudio, maxBitrate: kbps, forceStream: forceStream });
       });
   }
 
   function openAudio() {
-    openChooser({ label: 'Audio', rows: audioRows }, function (st) {
+    openChooser({ label: 'Audio', rows: audioRows }, (st) => {
       if (chosenAudio && String(chosenAudio.id) === String(st.id)) return;
       /* A direct play hands the panel the whole file and the panel picks its own
          track, so a choice it cannot make itself means asking the server to mux
@@ -447,7 +447,7 @@ var Detail = (function () {
   function openSubs() {
     openChooser({ label: 'Subtitles', rows: subRows,
                   note: 'Drawn over the video as text, so they cost the server nothing.' },
-      function (st) {
+      (st) => {
         if (st && !Media.isTextSub(st)) {
           UI.toast('Kept as it was — an image track would have to be burnt in');
           return;
@@ -538,7 +538,7 @@ var Detail = (function () {
   function namesLine(md) {
     const got = Art.factsFor(item);
     const names = (got && got.cast.length) ? got.cast
-      : (md && md.Role ? md.Role.slice(0, 4).map(function (r) { return r.tag; }) : []);
+      : (md && md.Role ? md.Role.slice(0, 4).map((r) => { return r.tag; }) : []);
     return names.join('  ·  ');
   }
 
@@ -622,8 +622,8 @@ var Detail = (function () {
   function loadDetails() {
     const gen = generation;
     let filled = false;
-    copies.forEach(function (copy) {
-      Meta.load(copy.item).then(function (md) {
+    copies.forEach((copy) => {
+      Meta.load(copy.item).then((md) => {
         if (gen !== generation || !md) return;
         copy.md = md;
         expand(copy, md);
@@ -645,7 +645,7 @@ var Detail = (function () {
   function crewHtml(md) {
     const bits = [];
     function names(list) {
-      return (list || []).map(function (x) { return UI.escapeHtml(x.tag); }).join(', ');
+      return (list || []).map((x) => { return UI.escapeHtml(x.tag); }).join(', ');
     }
     if (md.Director && md.Director.length) bits.push('<b>Director</b> ' + names(md.Director));
     if (md.Writer && md.Writer.length) bits.push('<b>Writer</b> ' + names(md.Writer));

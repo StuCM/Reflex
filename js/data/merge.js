@@ -168,7 +168,7 @@ var Merge = (function () {
   function stream(parts, fetch) {
     return {
       fetch: fetch,
-      streams: parts.map(function (p) {
+      streams: parts.map((p) => {
         return { part: p, offset: 0, buffer: [], total: 0, done: false, counted: false };
       }),
       idx: index(),
@@ -188,7 +188,7 @@ var Merge = (function () {
   function items(st) { return st.idx.out; }
 
   function fetchInto(st, s) {
-    return st.fetch(s.part, s.offset).then(function (res) {
+    return st.fetch(s.part, s.offset).then((res) => {
       const got = (res && res.items) || [];
       if (res && res.total) s.total = res.total;
       s.offset += got.length;
@@ -200,7 +200,7 @@ var Merge = (function () {
       }
       if (!got.length || (s.total && s.offset >= s.total)) s.done = true;
       return s;
-    }, function () {
+    }, () => {
       /* A server that stops answering drops out of the merge rather than
          stalling the row. */
       s.done = true;
@@ -213,8 +213,8 @@ var Merge = (function () {
   function advance(st, upTo) {
     if (st.idx.out.length > upTo || st.exhausted) return Promise.resolve(st.idx.out);
     if (st.busy) return st.busy;
-    st.busy = fill(st, upTo).then(function (out) { st.busy = null; return out; },
-                                  function (e) { st.busy = null; throw e; });
+    st.busy = fill(st, upTo).then((out) => { st.busy = null; return out; },
+                                  (e) => { st.busy = null; throw e; });
     return st.busy;
   }
 
@@ -230,8 +230,8 @@ var Merge = (function () {
         if (!st.streams[i].done && !st.streams[i].buffer.length) needs.push(st.streams[i]);
       }
       if (needs.length) {
-        return Promise.all(needs.map(function (s) { return fetchInto(st, s); }))
-          .then(function () { return fill(st, upTo); });
+        return Promise.all(needs.map((s) => { return fetchInto(st, s); }))
+          .then(() => { return fill(st, upTo); });
       }
       live = [];
       for (i = 0; i < st.streams.length; i++) {

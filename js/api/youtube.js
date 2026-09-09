@@ -35,9 +35,9 @@ var Youtube = (function () {
 
   /* The channel id behind the handle, resolved once and kept for good. */
   function channelId() {
-    return Cache.ytChannel.get(HANDLE).then(function (cached) {
+    return Cache.ytChannel.get(HANDLE).then((cached) => {
       if (cached) return cached;
-      return get('/channels', { part: 'id', forHandle: HANDLE }).then(function (r) {
+      return get('/channels', { part: 'id', forHandle: HANDLE }).then((r) => {
         const items = r && r.items;
         if (!items || !items.length || !items[0].id) {
           throw new Error('no channel for ' + HANDLE);
@@ -52,14 +52,14 @@ var Youtube = (function () {
      called from a keypress; a quota refusal answers with nothing rather than an
      error, because "none today" is the truth the screen has to show. */
   function recaps(showTitle) {
-    return channelId().then(function (id) {
+    return channelId().then((id) => {
       return get('/search', {
         part: 'snippet', channelId: id, q: showTitle + ' recap',
         maxResults: 25, type: 'video'
       });
-    }).then(function (r) {
+    }).then((r) => {
       return withLengths((r && r.items) || []);
-    }).catch(function (e) {
+    }).catch((e) => {
       if (!/-> 403$/.test(e.message)) throw e;
       UI.debug('youtube: ' + e.message + ' (quota)');
       return [];
@@ -77,7 +77,7 @@ var Youtube = (function () {
       if (id) ids.push(id);
     }
     if (!ids.length) return Promise.resolve(items);
-    return get('/videos', { part: 'contentDetails', id: ids.join(',') }).then(function (r) {
+    return get('/videos', { part: 'contentDetails', id: ids.join(',') }).then((r) => {
       const by = {};
       let k;
       const list = (r && r.items) || [];
@@ -87,7 +87,7 @@ var Youtube = (function () {
         if (by[id]) items[k].contentDetails = by[id];
       }
       return items;
-    }, function () { return items; });
+    }, () => { return items; });
   }
 
   function seasonOf(title) {
@@ -143,7 +143,7 @@ var Youtube = (function () {
     const out = [];
     let i;
     for (i = 0; i < list.length; i++) order.push(i);
-    order.sort(function (a, b) {
+    order.sort((a, b) => {
       const x = list[a].season;
       const y = list[b].season;
       if (x === y) return a - b;

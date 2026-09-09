@@ -45,7 +45,7 @@ var Guard = (function () {
   function check(item, mediaIndex, forceAudioId, opts) {
     const n = mediaIndex || 0;
     opts = opts || {};
-    return Meta.load(item).then(function (md) {
+    return Meta.load(item).then((md) => {
       if (!md) return { ok: false, state: 'nometa', text: 'No metadata for this copy.' };
 
       const media = md.Media && md.Media[n];
@@ -69,7 +69,7 @@ var Guard = (function () {
       }
 
       const server = Servers.of(md);
-      return Plex.decide(server, md, n, 0, audio.id, opts).then(function (v) {
+      return Plex.decide(server, md, n, 0, audio.id, opts).then((v) => {
         const direct = v.decision === 'directplay';
         const uhd = Media.isUHD(media);
         /* Only direct play hands the panel the original file. A re-encode
@@ -94,11 +94,11 @@ var Guard = (function () {
           md: md, media: media, part: part, mediaIndex: n,
           text: v.text || ''
         };
-      }, function (e) {
+      }, (e) => {
         return { ok: false, state: 'error', md: md, media: media, part: part,
                  mediaIndex: n, audio: audio, text: e.message };
       });
-    }, function (e) {
+    }, (e) => {
       return { ok: false, state: 'error', text: e.message };
     });
   }
