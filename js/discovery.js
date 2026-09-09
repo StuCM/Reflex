@@ -1,109 +1,110 @@
-/* Curated rows: take a small external list and ask the server which of it we
-   already have.
+/* The Discovery page: your own categories, drawn from TMDB.
 
-   The direction matters. Indexing 30,000 library items against TMDB would mean
-   a full crawl of a server we do not own, plus somewhere to keep the index.
-   Starting from twenty curated titles and asking "do you have this one?" is
-   forty small requests and no crawl at all.
+   A tile only needs a title and a picture, and TMDB has both — so a row here
+   costs one TMDB request and not a single one against a server we do not own.
+   Everything Plex-shaped (a ratingKey, media, a guard verdict) is needed only
+   when acting on a title, so it is fetched when you rest on one and not before.
 
-   js/tmdb.js fetches the lists; this turns them into rows. */
+   js/config.js holds the categories, js/tmdb.js fetches them, this turns them
+   into rows and answers "do we actually have this?" one title at a time. */
 var Discovery = (function () {
   'use strict';
 
-  var MAX_LOOKUPS = 40;          // titles per row we will ask the server about
-  var CONCURRENCY = 4;
-  var MAX_SEEDS = 8;
+  var DAY = 24 * 60 * 60 * 1000;
+  /* A film can be added to a library but is rarely taken out, so a hit stands
+     and only a miss is ever asked again. */
+  var MISS_AGAIN_AFTER = 7 * DAY;
 
   function enabled() { return Tmdb.enabled(); }
 
-  /* Bounded concurrency: guid lookups are one small request each, but firing
-     forty at a remote server at once is rude and slower in practice. */
-  function mapLimit(list, max, fn) {
-    return new Promise(function (resolve) {
-      var results = new Array(list.length), i = 0, done = 0, active = 0;
-      if (!list.length) { resolve([]); return; }
-      function launch() {
-        while (active < max && i < list.length) {
-          active++;
-          (function (k) {
-            fn(list[k]).then(function (v) { results[k] = v; }, function () { results[k] = null; })
-              .then(function () {
-                active--; done++;
-                if (done === list.length) resolve(results); else launch();
-              });
-          })(i++);
-        }
-      }
-      launch();
+  /* A TMDB result as something the rail can draw with no Plex request at all:
+     the synthetic Guid is what js/art.js keys the poster on, and _resolved is
+     undefined until someone asks whether we hold it. */
+  function entry(result) {
+    return { type: 'movie', title: result.title, year: result.year,
+             Guid: [{ id: 'tmdb://' + result.id }],
+             _tmdb: result,
+             _resolved: undefined };
+  }
+
+  /* Is this a title drawn from TMDB rather than out of a library? */
+  function isEntry(item) { return !!(item && item._tmdb); }
+
+  /* The line the masthead shows under the name — the honest answer before OK
+     is pressed. */
+  function settle(item, found) {
+    var sub = found ? Media.railSub(found) : '';
+    item._resolved = found || null;
+    item._availability = !found ? 'Not in your library'
+      : (sub ? 'In your library  ·  ' + sub : 'In your library');
+  }
+
+  function ask(id) {
+    return Promise.all(Servers.all().map(function (sv) {
+      return Plex.findByGuid(sv, 'tmdb://' + id).catch(function () { return null; });
+    })).then(function (perServer) {
+      var hits = [], i;
+      for (i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
+      return hits.length ? Merge.lists([hits])[0] : null;
     });
   }
 
-  /* TMDB ids -> the items we actually hold, on any server, order preserved and
-     one entry per film however many servers have it. */
-  function matchToLibrary(tmdbIds) {
-    return mapLimit(tmdbIds.slice(0, MAX_LOOKUPS), CONCURRENCY, function (id) {
-      return Promise.all(Servers.all().map(function (sv) {
-        return Plex.findByGuid(sv, 'tmdb://' + id);
-      })).then(function (perServer) {
-        var hits = perServer.filter(function (m) { return !!m; });
-        return hits.length ? Merge.lists([hits])[0] : null;
+  /* The copy we hold of a TMDB title, or null for one we do not. Call it for
+     the focused tile and on OK — never for a tile that is merely drawn, which
+     is the whole difference between this page and crawling the library. */
+  function resolve(item) {
+    if (item._resolved !== undefined) return Promise.resolve(item._resolved);
+    if (item._asking) return item._asking;
+    var key = 'tmdb:' + item._tmdb.id;
+    item._asking = Store.get(key).then(function (hit) {
+      if (hit && (hit.item || Date.now() - hit.at < MISS_AGAIN_AFTER)) return hit.item || null;
+      return ask(item._tmdb.id).then(function (found) {
+        Store.put(key, { at: Date.now(), item: found });
+        return found;
       });
     }).then(function (found) {
-      return found.filter(function (m) { return !!m; });
+      settle(item, found);
+      return item._resolved;
+    }, function (e) {
+      item._asking = null;                    // a failed lookup is worth retrying
+      UI.debug('resolve ' + item.title + ': ' + e.message);
+      return null;
     });
+    return item._asking;
   }
 
-  function seedsFromViewing() {
-    return Promise.all(Servers.all().map(function (sv) {
-      return Plex.onDeck(sv);
-    })).then(function (perServer) {
-      var seeds = [], i, id, list = Devices.mine(Merge.lists(perServer));
-      for (i = 0; i < list.length && seeds.length < MAX_SEEDS; i++) {
-        id = Plex.tmdbId(list[i]);
-        if (id) seeds.push(id);
-      }
-      return seeds;
-    }).catch(function () { return []; });
-  }
-
-  /* ctx.isCurrent() guards against a section switch mid-flight; ctx.add(title,
-     items) puts a row on screen the moment it resolves, rather than making the
-     user wait for the slowest one. */
+  /* One row per category in js/config.js, each one TMDB request cached for the
+     day and published the moment it lands. ctx.isCurrent() guards against a
+     section switch mid-flight; ctx.seeds are the TMDB ids of what has been
+     watched, which the caller already holds — asking a server for them would
+     cost the page the very thing it exists to avoid. */
   function load(ctx) {
-    var tasks = [{ title: 'Trending this week', get: Tmdb.trending }];
-    Tmdb.providers.forEach(function (p) {
-      tasks.push({ title: 'On ' + p.name,
-                   get: function () { return Tmdb.onProvider(p.id); } });
-    });
-
-    function runTask(t) {
-      return t.get().then(matchToLibrary).then(function (items) {
-        if (!ctx.isCurrent()) return;
-        if (!items.length) { UI.debug(t.title + ': nothing on this server'); return; }
-        ctx.add(t.title, items);
-        UI.debug(t.title + ': ' + items.length + ' on this server');
-      }, function (e) {
-        UI.debug(t.title + ' failed: ' + e.message);
-      });
-    }
-
-    var i = 0;
+    var cats = Config.categories || [], i = 0;
     function step() {
-      if (!ctx.isCurrent() || i >= tasks.length) return Promise.resolve();
-      return runTask(tasks[i++]).then(step);
+      if (!ctx.isCurrent() || i >= cats.length) return Promise.resolve();
+      return one(ctx, cats[i++]).then(step);
     }
+    return step();
+  }
 
-    return step().then(function () {
-      if (!ctx.isCurrent()) return;
-      return seedsFromViewing().then(function (seeds) {
-        if (!ctx.isCurrent() || !seeds.length) return;
-        return Tmdb.recommendedFrom(seeds).then(matchToLibrary).then(function (items) {
-          if (!ctx.isCurrent() || !items.length) return;
-          ctx.add('Because of what you have been watching', items);
-        });
+  function one(ctx, cat) {
+    var seeds = ctx.seeds || [];
+    var key = 'disc:' + cat.kind + ':' + (cat.id || seeds.join('-'));
+    return Store.get(key).then(function (hit) {
+      if (hit && hit.films.length && Date.now() - hit.at < DAY) return hit.films;
+      return Tmdb.catalogue(cat, seeds).then(function (found) {
+        Store.put(key, { at: Date.now(), films: found });
+        return found;
       });
+    }).then(function (found) {
+      if (!ctx.isCurrent()) return;
+      if (!found.length) { UI.debug(cat.title + ': TMDB returned nothing'); return; }
+      ctx.add(cat.title, found.map(entry));
+      UI.debug(cat.title + ': ' + found.length + ' from TMDB');
+    }, function (e) {
+      UI.debug(cat.title + ' failed: ' + e.message);
     });
   }
 
-  return { enabled: enabled, load: load };
+  return { enabled: enabled, load: load, entry: entry, isEntry: isEntry, resolve: resolve };
 })();

@@ -14,13 +14,6 @@ var Tmdb = (function () {
   var API = Config.tmdbBase;                     // see js/config.js
   var REGION = 'GB';
 
-  /* JustWatch provider ids as TMDB exposes them. */
-  var PROVIDERS = [
-    { id: 8,   name: 'Netflix' },
-    { id: 9,   name: 'Prime Video' },
-    { id: 337, name: 'Disney+' }
-  ];
-
   /* The rubbish filter. Junk has almost no votes, so a floor removes most of it
      without any taste modelling at all. */
   var MIN_VOTES = 500;
@@ -62,16 +55,26 @@ var Tmdb = (function () {
     return m && m.id && (m.vote_count || 0) >= MIN_VOTES;
   }
 
-  function ids(results) {
+  /* Enough to draw a tile with and nothing more: the rest of a TMDB result is
+     never shown, and a discovery row holds a dozen of these per category. */
+  function film(m) {
+    return { id: String(m.id), title: m.title || '',
+             year: Number(String(m.release_date || '').slice(0, 4)) || null,
+             poster_path: m.poster_path || null,
+             backdrop_path: m.backdrop_path || null,
+             vote_average: m.vote_average || 0 };
+  }
+
+  function films(results) {
     var out = [], i;
     for (i = 0; i < (results || []).length; i++) {
-      if (goodEnough(results[i])) out.push(String(results[i].id));
+      if (goodEnough(results[i])) out.push(film(results[i]));
     }
     return out;
   }
 
   function trending() {
-    return get('/trending/movie/week').then(function (r) { return ids(r.results); });
+    return get('/trending/movie/week').then(function (r) { return films(r.results); });
   }
 
   /* What's on a streaming service right now, in this region. */
@@ -81,7 +84,16 @@ var Tmdb = (function () {
       watch_region: REGION,
       sort_by: 'popularity.desc',
       'vote_count.gte': MIN_VOTES
-    }).then(function (r) { return ids(r.results); });
+    }).then(function (r) { return films(r.results); });
+  }
+
+  /* One genre, most popular first. Ids come from /genre/movie/list. */
+  function byGenre(genreId) {
+    return get('/discover/movie', {
+      with_genres: genreId,
+      sort_by: 'popularity.desc',
+      'vote_count.gte': MIN_VOTES
+    }).then(function (r) { return films(r.results); });
   }
 
   /* Content-based recommendations: ask TMDB what resembles each thing recently
@@ -90,20 +102,33 @@ var Tmdb = (function () {
   function recommendedFrom(seedTmdbIds) {
     var seeds = (seedTmdbIds || []).slice(0, 8);
     if (!seeds.length) return Promise.resolve([]);
-    var score = {};
+    var score = {}, seen = {};
     return serial(seeds, function (id) {
       return get('/movie/' + id + '/recommendations').then(function (r) {
-        var list = r.results || [], i, m;
+        var list = films(r.results), i, m;
         for (i = 0; i < list.length; i++) {
           m = list[i];
-          if (!goodEnough(m)) continue;
-          if (seeds.indexOf(String(m.id)) >= 0) continue;      // don't suggest the seed
+          if (seeds.indexOf(m.id) >= 0) continue;              // don't suggest the seed
+          seen[m.id] = m;
           score[m.id] = (score[m.id] || 0) + 1;
         }
       }, function () { /* one bad seed shouldn't sink the row */ });
     }).then(function () {
-      return Object.keys(score).sort(function (a, b) { return score[b] - score[a]; });
+      return Object.keys(score).sort(function (a, b) { return score[b] - score[a]; })
+        .map(function (id) { return seen[id]; });
     });
+  }
+
+  /* One category from Config.categories to its films. An unknown kind is a typo
+     in the config rather than a crash: it gives an empty row. `seeds` are TMDB
+     ids of what has been watched, and only the recommended kind uses them. */
+  function catalogue(category, seeds) {
+    var kind = category && category.kind;
+    if (kind === 'trending') return trending();
+    if (kind === 'provider') return onProvider(category.id);
+    if (kind === 'genre') return byGenre(category.id);
+    if (kind === 'recommended') return recommendedFrom(seeds);
+    return Promise.resolve([]);
   }
 
   /* Everything js/art.js keeps about a film in one request: the backdrops, the
@@ -129,10 +154,11 @@ var Tmdb = (function () {
 
   return {
     enabled: enabled,
-    providers: PROVIDERS,
     trending: trending,
     onProvider: onProvider,
+    byGenre: byGenre,
     recommendedFrom: recommendedFrom,
+    catalogue: catalogue,
     details: details
   };
 })();

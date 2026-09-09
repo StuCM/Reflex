@@ -84,7 +84,10 @@ var Masthead = (function () {
     /* The same two rules the tile under it uses, so the hero names the show and
        the line beneath says which episode — not the other way round. */
     elTitle.textContent = Media.railTitle(item);
-    elMeta.textContent = Media.railSub(item);
+    /* A Discovery title says whether we hold it instead: it has no run time to
+       show until it has been resolved, and whether we have it is the fact you
+       need before pressing OK. */
+    elMeta.textContent = item._availability || Media.railSub(item);
     paintFacts(item);
   }
 

@@ -1,7 +1,7 @@
 ---
 id: 023
 slug: tmdb-first-discovery
-status: building
+status: done
 model: opus
 env: laptop
 branch: crew/023-tmdb-first-discovery
@@ -10,6 +10,7 @@ files:
   - js/tmdb.js
   - js/discovery.js
   - js/browse.js
+  - js/masthead.js
   - js/app.js
   - dev/mock-tmdb.js
   - dev/smoke/discovery.js
@@ -219,6 +220,73 @@ Workers must not go digging for more.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `js/config.js` — `categories`, the five rows in screen order, as data.
+- `js/tmdb.js` — the list calls keep the whole result rather than the id;
+  `byGenre`, and `catalogue(category, seeds)` dispatching on `kind`. The
+  hardcoded `PROVIDERS` list went with the config change.
+- `js/discovery.js` — rewritten. `entry()` builds a TMDB-shaped item with a
+  synthetic `tmdb://` Guid; `resolve()` answers from `Store` under `tmdb:<id>`
+  and only then asks both servers; `load()` walks `Config.categories`, one TMDB
+  request each, cached for the day.
+- `js/browse.js` — `loadDiscover` builds from the config and passes seeds taken
+  from the Continue watching row already in memory; `scheduleResolve` resolves
+  the focused Discovery tile after the same 420ms stillness the backdrop uses.
+- `js/masthead.js` — the meta line prefers `item._availability`.
+- `js/app.js` — OK on a Discovery tile resolves first, then opens the ordinary
+  page or says the film is on neither server.
+- `dev/mock-tmdb.js` — `/discover/movie` answers `with_genres` with ids the fake
+  servers deliberately do not hold, so the not-held path is walked.
+- `dev/smoke/discovery.js` — five steps, counting guid lookups off the wire.
+- `test/tmdb.test.js` — `catalogue` dispatch per kind, an unknown kind asking
+  nothing, the vote floor, and an entry `Plex.tmdbId` can read.
+
+## What the spec got wrong
+
+- **`files:` omitted `js/masthead.js`.** Approach step 6 requires the masthead to
+  say `not in your library`, and no declared file owns that render path — the
+  meta line is `Media.railSub(item)` inside `js/masthead.js`, and `js/media.js`
+  is out of scope. Added it to `files:` (one line changed) rather than writing
+  into `#mh-meta` from `js/browse.js`, which would have been a layering
+  violation to avoid a one-line file-list fix.
+- **Seeds for the recommended row.** The spec kept `seedsFromViewing`, which
+  calls `Plex.onDeck` per server — Plex requests to paint the page, against the
+  Definition of done's first line. The seeds now come from `deckItems`, which
+  `js/browse.js` already holds from the library section, so the page costs
+  nothing.
+- **The held-title smoke step does not press Play.** It asserts the ordinary
+  detail page opens with a real verdict and a captioned Play button. Gating an
+  actual play on `h.playable(verdict)` would be an assertion that passes on
+  nothing whenever the mock gives that title an unplayable copy, and
+  `dev/smoke/player.js` covers playback. Reviewer accepted.
+
 ## Review rounds
 
+1. **PASS** (crew-reviewer). Confirmed the masthead amendment was right rather
+   than a block, re-ran `npm run smoke -- discovery` (6/6) and `npm run verify`
+   (85/85), and accepted the held-title deviation.
+
 ## Graph writes proposed
+
+- **Decision — a Discovery tile is TMDB-shaped until it is acted on.** A tile
+  needs only a title and a picture, and TMDB has both. Giving the entry a
+  synthetic `Guid: [{ id: 'tmdb://<id>' }]` makes `js/art.js` and
+  `Media.railTitle` work unchanged, so the page paints with zero Plex requests;
+  a ratingKey is fetched when you rest on a title or press OK. Cost went from
+  ~480 guid lookups to one per title rested on.
+- **Pattern — a request-count assertion must be seen to fail.** The first
+  version of the counting regex in `dev/smoke/discovery.js`
+  (`/\/library\/all\?.*[?&]guid=/`) required a separator before `guid`, which
+  the real URL (`/library/all?guid=...`) has not, so it matched nothing and the
+  "zero lookups" step passed on nothing. Caught only because a sibling step
+  asserts a count of *exactly one* — a bound that fails both ways is what keeps
+  the counter honest. The negative test then showed 122 lookups against an
+  implementation resolving up front.
+- **Gotcha — a guid lookup costs one request per server.** `Discovery.resolve`
+  asks every server, so "one title" is two requests here. A smoke assertion
+  about lookups has to count distinct guids, not requests, or it reads as a
+  double.
+- **Gotcha — the rail pool is four rows.** A smoke step cannot find a row that
+  has scrolled out of the pool; walk to it by its index in the configured list
+  (`el._row` is the true row number) rather than by searching the drawn labels.
