@@ -46,26 +46,6 @@ var Detail = (function () {
     'stroke="currentColor" stroke-width="16" stroke-linejoin="round">' +
     '<circle cx="128" cy="128" r="100"/><polygon points="106,84 178,128 106,172"/></svg>';
 
-  function glyph(inner) {
-    return '<svg width="46" height="46" viewBox="0 0 256 256" fill="none" ' +
-           'stroke="currentColor" stroke-width="16" stroke-linecap="round" ' +
-           'stroke-linejoin="round">' + inner + '</svg>';
-  }
-  const GLYPHS = {
-    trailer: glyph('<circle cx="128" cy="128" r="100"/><polygon points="106,84 178,128 106,172"/>'),
-    quality: glyph('<line x1="56" y1="196" x2="56" y2="140"/>' +
-                   '<line x1="128" y1="196" x2="128" y2="96"/>' +
-                   '<line x1="200" y1="196" x2="200" y2="52"/>'),
-    source: glyph('<rect x="36" y="44" width="184" height="72" rx="14"/>' +
-                  '<rect x="36" y="140" width="184" height="72" rx="14"/>'),
-    audio: glyph('<polygon points="36,100 92,100 148,48 148,208 92,156 36,156"/>' +
-                 '<path d="M188 92a52 52 0 0 1 0 72"/>'),
-    subs: glyph('<rect x="28" y="52" width="200" height="152" rx="18"/>' +
-                '<line x1="64" y1="124" x2="140" y2="124"/>' +
-                '<line x1="64" y1="164" x2="192" y2="164"/>'),
-    remove: glyph('<circle cx="128" cy="128" r="100"/>' +
-                  '<line x1="84" y1="128" x2="172" y2="128"/>')
-  };
 
   let item = null;                 // the merged entry
   let copies = [];                 // one per server that has it
@@ -391,19 +371,19 @@ var Detail = (function () {
                  run: function () { start(verdict, false, 0); } });
     }
     if (extras.length) {
-      out.push({ act: 'trailer', glyph: GLYPHS.trailer, caption: extras[0].title,
+      out.push({ act: 'trailer', glyph: Glyphs.trailer, caption: extras[0].title,
                  run: function () { start(extras[0].verdict, true); } });
     }
-    out.push({ act: 'quality', glyph: GLYPHS.quality, caption: qualityCaption(),
+    out.push({ act: 'quality', glyph: Glyphs.quality, caption: qualityCaption(),
                run: openQuality });
-    out.push({ act: 'source', glyph: GLYPHS.source, caption: sourceCaption(),
+    out.push({ act: 'source', glyph: Glyphs.source, caption: sourceCaption(),
                run: openSource });
-    out.push({ act: 'audio', glyph: GLYPHS.audio, run: openAudio,
+    out.push({ act: 'audio', glyph: Glyphs.audio, run: openAudio,
                caption: chosenAudio ? Media.audioLabel(chosenAudio) : 'checking…' });
-    out.push({ act: 'subtitles', glyph: GLYPHS.subs, caption: Media.subLabel(chosenSub),
+    out.push({ act: 'subtitles', glyph: Glyphs.subs, caption: Media.subLabel(chosenSub),
                run: openSubs });
     if (onDeck) {
-      out.push({ act: 'remove', glyph: GLYPHS.remove, run: removeFromDeck,
+      out.push({ act: 'remove', glyph: Glyphs.remove, run: removeFromDeck,
                  caption: 'Remove from Continue watching' });
     }
     return out;
