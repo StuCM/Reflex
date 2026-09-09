@@ -53,6 +53,10 @@
   position: absolute; top: -4px; left: 0; width: 6px; height: 18px;
   background: #fff; border-radius: var(--r-pill);
 }
+/* The trackbar has the focus, and 7a's ring round the knob is what says so —
+   scrubbing has to look like a mode rather than another nudge. Toggled, never
+   transitioned: a shadow that animated would repaint over the video. */
+#osd-bar.foc #osd-knob { box-shadow: 0 0 0 8px rgba(157, 147, 214, .28); }
 
 /* Wide enough for a three-part clock and the SEEKING marker beside it: the
    elapsed wrapping onto a second line pushes the bar off centre. */
@@ -67,13 +71,21 @@
 #osd-controls {
   display: -webkit-flex; display: flex;
   -webkit-justify-content: space-between; justify-content: space-between;
-  height: 148px; margin-top: 22px;
+  height: 140px; margin-top: 22px;
 }
 #osd-left, #osd-right { white-space: nowrap; }
 .osd-ctl {
   display: inline-block; vertical-align: top; width: var(--c-ctl);
   text-align: center; white-space: normal;
 }
+
+/* 7a's sizes, smaller than the 88px button base.css shares with the film page:
+   the transport is one size, so Play and the two jumps read as one control,
+   and the four choices are a size down from it. */
+#osd-left .osd-btn { width: 80px; height: 80px; }
+#osd-left .osd-btn svg { margin-top: 17px; }
+#osd-right .osd-btn { width: 76px; height: 76px; }
+#osd-right .osd-btn svg { margin-top: 15px; }
 
 #osd-hint { font-size: 20px; color: var(--dim2); margin-top: 10px; }
 
@@ -160,17 +172,22 @@
 }
 /* Clear of the control row, which is the tallest thing the OSD has ever been.
    A line of dialogue behind a button is the one thing this screen must not do. */
-#subtitle.lifted { bottom: 400px; }
+#subtitle.lifted { bottom: 392px; }
 
 /* ---- the in-player menu ---- */
 
 /* One section at a time, over the button that opened it — left is set by
    js/player.js, as it is on the film page. Both this and the chapter rail sit
-   on the same shelf, clear of the trackbar and the title below them. */
+   on the same shelf, clear of the trackbar and the title below them.
+
+   Opaque, and rounded to 7b's 26px: a list of choices read over moving picture
+   is the one place translucency costs more than it buys. The radius is a
+   literal because no token in css/base.css carries it, and that file belongs to
+   every screen rather than this one. */
 #menu {
   position: absolute; left: var(--sp-page); bottom: 330px; width: 860px;
-  padding: 22px 26px 18px; border-radius: var(--r-panel);
-  background: rgba(22, 24, 38, 0.94);
+  padding: 22px 26px 18px; border-radius: 26px;
+  background: var(--surface);
 }
 #menu .menu-list { height: auto; max-height: 392px; }
 
