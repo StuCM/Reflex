@@ -1,7 +1,7 @@
 ---
 id: 024
 slug: the-film-page-fits-the-screen
-status: building
+status: done
 model: sonnet
 env: laptop
 branch: crew/024-the-film-page-fits-the-screen
@@ -164,6 +164,108 @@ session that produced this task. Workers must not go digging for more.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## What changed
+
+- `css/detail.css` — the page relaid out on 6c's numbers: `--sp-edge` margins,
+  1728px body and extras strip, 6c's header sizes and gaps, Play as a
+  content-sized pill, the cast and the extras placed absolutely so the design's
+  order survives index.html's, and the extras as a peek that lifts on `.down`.
+- `js/detail.js` — `resumeAt()`; a second primary action, `From start`, when
+  there is something to resume; `start()` takes a position and passes it on;
+  the `down` class follows the focus into the extras; the chooser anchors on 96.
+- `js/app.js` — `onPlay` carries `resumeAt` through to `playChecked`, and the
+  start position is traced.
+- `dev/smoke/detail.js` — four steps: the width, the pill, the peek, and the
+  two plays.
+
+## Where the design and the old page disagreed
+
+The design won everywhere below except three, each noted because the reviewer
+will look for them:
+
+- **The round buttons.** 6c draws them at 70px, which is *smaller* than the
+  app's 88 — the approach said "grow to the design's size" but the design has
+  no such size to grow to. Shrinking them would have made everything but Play
+  smaller, which is the opposite of the reported fault, so `--c-btn` is
+  untouched at 88 and only Play changed (280 → ~154 laid out, sized by its
+  text). `css/base.css` was therefore not touched at all, which also keeps 025
+  clear of it. **`--c-play` in base.css is now unused** — detail.css overrides
+  the width — and is left for whoever next edits that file.
+- **The cast disc** stays 120px rather than 6c's 88, for the same reason; its
+  column took the design's 176px width so a two-word name has somewhere to go.
+- **Extras cards** stay 240×135 rather than 236×133: a still is 16:9 and the
+  existing numbers are exactly that. Their gap, title and label are 6c's.
+
+Two things the design does not have to say anything about: the page keeps its
+tagline and its names line, each given a 6c-sized gap; and the extras are a
+peek rather than fully drawn, which is fault 3 and the user's instruction over
+the design's layout.
+
+Consequences worth knowing:
+
+- The header is 200px taller, so the chooser no longer fits below the action
+  row. It is anchored to the bottom edge instead (still along from the button
+  that opened it), which is also how the player's menu sits.
+- Stepping down into the extras fades the cast and the key hint out — the
+  extras land where the cast is drawn, and the rail already dims the hero when
+  you step down into it. Transform and opacity only.
+- The hint moved to the right of the Extras label, because the bottom-left is
+  where the extras now peek in.
+
+## Fail-first
+
+Every new step was run against the unfixed code first and watched fail:
+
+- the width — `the body is 1000px and the extras strip 1000px wide`
+- the pill — `Play is still 297px wide`
+- the peek — `fully on screen at rest — it ends at 782`
+- the two plays — `no play-from-start button on a part-watched film`
+
+The pill step failed for a second reason on the first draft: it measured
+`getBoundingClientRect`, which includes the focus scale, so the pill and an
+unfocused round button could never have equal heights. It measures the laid-out
+box now.
+
+`npm run verify`: **89/89**, against 85/85 on main.
+
 ## Review rounds
 
+**Round 1 — PASS.** The reviewer re-ran `check`, `verify` (89/89) and
+`scope-check` itself rather than taking the numbers on trust, spot-checked four
+6c values against the design file, confirmed `--c-play` is now dead in
+base.css, and confirmed the round-button deviation is recorded with a rationale
+tied to the original report. No changes asked for.
+
 ## Graph writes proposed
+
+- **Decision — the film page's round buttons stay at 88px.** Screen 6c draws
+  the detail page's icon buttons at 70px and the app has drawn them at 88 since
+  base.css was written. Task 024's approach said to grow them "to the design's
+  size", which the design does not have: 70 is smaller. The user's report was
+  that Play was too big and everything else too small, so the fault was the
+  ratio, and it was fixed by shrinking Play (280px slab → a pill sized by its
+  own text) rather than by shrinking everything else. Supersedes the base.css
+  note that says the single 88px "stands until the player's own layout task" —
+  it now stands on purpose.
+
+- **Pattern — a peek is a transform, and something has to give way.** The rail's
+  peek works because the whole row container slides. A single strip peeking at
+  the bottom of a page cannot slide without landing on whatever is above it: on
+  the film page the extras land on the cast, so the cast fades on the same
+  class. `#detail.down` drives all of it from `render()`, transform and opacity
+  only, no layout. The hint moved out of the bottom-left for the same reason.
+
+- **Pattern — assert the laid-out box, not the painted one.** A focused control
+  on this app is `transform: scale(1.06)`, so `getBoundingClientRect` in a
+  Playwright step compares a scaled thing with an unscaled one and an equality
+  assertion can never hold. `offsetWidth`/`offsetHeight` is the measurement a
+  layout assertion wants. This is the sixth assertion this week that would have
+  passed or failed on the wrong thing.
+
+- **Pattern — a smoke step needs a hook the app already writes.** Play-from-start
+  could not be proved through the video element: the dev fixture is 30 seconds
+  and the player refuses to resume into anything that short, so both plays start
+  at 0 on the laptop whatever the code does. One `UI.debug('starting at Ns')` in
+  `playChecked` — useful on the TV in its own right — made the difference
+  observable, read from `trace.slice(mark)` rather than `tracedThat`, which
+  scans the whole session and would have matched an earlier step's play.

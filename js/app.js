@@ -137,9 +137,13 @@
 
          The verdict is the one the page's buttons already put through the
          guard, and subLang is the subtitle language they chose, so playback
-         starts on exactly what those buttons said it would. */
-      onPlay: function (entry, verdict, isExtra, subLang) {
-        playChecked(entry, verdict, isExtra, undefined,
+         starts on exactly what those buttons said it would.
+
+         resumeAt is 0 when the page's second play was pressed and undefined
+         when Play was, which is the difference between starting again and
+         picking up. */
+      onPlay: function (entry, verdict, isExtra, subLang, resumeAt) {
+        playChecked(entry, verdict, isExtra, resumeAt,
                     function () { openDetail(item, back); }, subLang);
       },
       onExit: back || toBrowse
@@ -171,6 +175,7 @@
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0
       : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
+    UI.debug('starting at ' + Math.round(md.viewOffset / 1000) + 's');
     UI.show('player');
     Player.play({
       server: server,

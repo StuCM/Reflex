@@ -22,73 +22,88 @@
 /* Everything the film is, down the left of the art rather than beside it: the
    kicker, the title, the chips, the ratings and the description, each on its
    own line. No grid on Chromium 53, so every line is placed absolutely and
-   nothing below it can be pushed about by a missing one. */
-#dt-header { position: absolute; top: 0; left: 0; width: 1920px; height: 300px; }
+   nothing below it can be pushed about by a missing one.
 
-#dt-body { position: absolute; top: 324px; left: var(--sp-page); width: 1000px; }
+   Every size and gap below is screen 6c's, which is authored at 1920 — the one
+   deliberate difference is that the page keeps its tagline and its names line,
+   which the design does not have, and they take a 6c gap each. The margin is
+   --sp-edge, the browse screen's: the two disagreeing is what read as cramped
+   more than any single gap did. */
+#dt-header { position: absolute; top: 0; left: 0; width: 1920px; height: 500px; }
+
+#dt-body { position: absolute; top: 506px; left: var(--sp-edge); width: 1728px; }
 
 #dt-kicker {
-  position: absolute; top: 26px; left: var(--sp-page); width: 760px;
-  font-size: 21px; line-height: 1.2; letter-spacing: 0.2em;
+  position: absolute; top: 96px; left: var(--sp-edge); width: 1048px;
+  font-size: 23px; line-height: 1.2; letter-spacing: 0.24em;
   text-transform: uppercase; color: var(--ac2);
   white-space: nowrap; overflow: hidden;
 }
 
 #dt-title {
-  position: absolute; top: 54px; left: var(--sp-page); width: 760px;
-  font-size: 46px; font-weight: 500; line-height: 1.08; letter-spacing: -0.02em;
+  position: absolute; top: 136px; left: var(--sp-edge); width: 1048px;
+  font-size: 72px; font-weight: 500; line-height: 1.04; letter-spacing: -0.03em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 #dt-chips {
-  position: absolute; top: 108px; left: var(--sp-page); width: 760px;
-  height: 34px; white-space: nowrap; overflow: hidden;
+  position: absolute; top: 229px; left: var(--sp-edge); width: 1048px;
+  height: 36px; white-space: nowrap; overflow: hidden;
 }
 
 .dt-chip {
-  display: inline-block; vertical-align: middle; margin-right: 16px;
-  font-size: 21px; line-height: 30px; color: var(--dim);
+  display: inline-block; vertical-align: middle; margin-right: 24px;
+  font-size: 25px; line-height: 32px; color: var(--dim);
 }
 .dt-chip.out {
-  padding: 0 12px; border: 1px solid var(--soft); border-radius: var(--r-tag);
-  color: var(--fg);
+  padding: 0 10px; border: 1px solid var(--soft); border-radius: var(--r-tag);
+  font-size: 21px; color: var(--fg);
 }
 
 #dt-ratings {
-  position: absolute; top: 146px; left: var(--sp-page); width: 760px;
-  height: 28px; white-space: nowrap; overflow: hidden;
+  position: absolute; top: 281px; left: var(--sp-edge); width: 1048px;
+  height: 32px; white-space: nowrap; overflow: hidden;
 }
 
-.dt-rating { display: inline-block; vertical-align: top; margin-right: 26px; }
+.dt-rating { display: inline-block; vertical-align: top; margin-right: 40px; }
 .dt-rating .dt-glyph { vertical-align: -4px; color: var(--ac2); }
 .dt-rating-text {
-  margin-left: 8px; font-size: 21px; line-height: 22px; color: var(--fg);
+  margin-left: 10px; font-size: 25px; line-height: 24px; color: var(--fg);
 }
 
 #dt-tagline {
-  position: absolute; top: 178px; left: var(--sp-page); width: 760px;
-  font-size: 21px; color: var(--dim); font-style: italic;
+  position: absolute; top: 329px; left: var(--sp-edge); width: 1048px;
+  font-size: 23px; color: var(--dim); font-style: italic;
   white-space: nowrap; overflow: hidden;
 }
 
 #dt-summary {
-  position: absolute; top: 206px; left: var(--sp-page); width: 760px;
-  font-size: 21px; line-height: 1.44; color: var(--dim);
-  max-height: 62px; overflow: hidden;
+  position: absolute; top: 373px; left: var(--sp-edge); width: 1048px;
+  font-size: 25px; line-height: 1.45; color: var(--dim);
+  max-height: 74px; overflow: hidden;
 }
 #dt-names {
-  position: absolute; top: 274px; left: var(--sp-page); width: 760px;
-  font-size: 19px; color: var(--dim2); white-space: nowrap; overflow: hidden;
+  position: absolute; top: 457px; left: var(--sp-edge); width: 1048px;
+  font-size: 20px; color: var(--dim2); white-space: nowrap; overflow: hidden;
 }
 
-#dt-crew { margin-top: 14px; font-size: 20px; color: var(--dim); }
+/* ---- the body ----
+   Everything under the header, placed absolutely rather than stacked: the
+   design puts the cast above the extras and index.html has them the other way
+   round, and a top apiece settles that without touching the markup. */
+
+#dt-crew {
+  position: absolute; top: 172px; left: 0; width: 1728px;
+  font-size: 20px; color: var(--dim);
+  white-space: nowrap; overflow: hidden;
+}
 #dt-crew b { color: var(--dim2); font-weight: normal; text-transform: uppercase;
              letter-spacing: 0.06em; font-size: 18px; margin-right: 8px; }
 .dt-gap { display: inline-block; width: 34px; }
 
 .dt-label {
-  margin-top: 22px; font-size: 20px; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--dim2);
+  font-size: 22px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--dim);
 }
 
 /* ---- the action row ----
@@ -98,37 +113,77 @@
    shifts nothing; the lift is a scale, which is the one thing this panel can
    animate for free. */
 
-#dt-actions { width: 1500px; height: 160px; white-space: nowrap; }
+#dt-actions {
+  position: absolute; top: 0; left: 0; width: 1728px; height: 148px;
+  white-space: nowrap;
+}
 
 .dt-act {
   display: inline-block; vertical-align: top; width: var(--c-ctl); margin-right: 20px;
   text-align: center; white-space: normal;
 }
-.dt-act.primary { width: var(--c-play); }
 
-/* The chooser, anchored under the button that opened it. Same .menu-* shell as
-   the player's, so both screens read as one control. */
+/* Play is a pill sized by what it says — 6c's 27px in 44px of padding — rather
+   than the 280px slab that made every button beside it read as an afterthought.
+   Its height is still the round buttons', so one row means one baseline and the
+   captions line up. The column shrinks to whichever is wider, the pill or a
+   caption held to two lines. */
+.dt-act.primary { width: auto; }
+.dt-act.primary .dt-act-btn {
+  display: inline-block; width: auto; padding: 0 44px;
+  font-size: 27px; line-height: 82px; letter-spacing: 0; text-transform: none;
+}
+.dt-act.primary .dt-act-cap { max-width: 180px; }
+
+/* The second play, where there is something to resume: the same pill in the
+   quiet colour, so the row still has one thing leading it. */
+.dt-act.quiet .dt-act-btn { background: var(--surface); color: var(--fg); }
+.dt-act.quiet.on .dt-act-btn { border-color: var(--ac); color: var(--fg); }
+
+/* The chooser, under the row that opened it and along from the button that did,
+   held to the bottom of the screen so its own height never runs off. Same
+   .menu-* shell as the player's, so both screens read as one control. */
 #dt-menu {
-  position: absolute; top: 500px; width: 860px;
+  position: absolute; bottom: 48px; width: 860px;
   padding: 22px 26px 18px; border-radius: var(--r-panel);
   background: rgba(22, 24, 38, 0.94);
 }
-/* The player's menu is anchored to the bottom of the screen and holds its
-   height so the tabs never move; this one hangs off a button and can be three
-   rows long, so it shrinks to what it holds. */
+/* The player's menu holds its height so its tabs never move; this one can be
+   three rows long, so it shrinks to what it holds and grows upward from the
+   bottom edge. */
 #dt-menu .menu-list { height: auto; max-height: 392px; }
 
 /* ---- extras ----
    Cards in the rail's language: the same --r-card corner and the same violet
    ring, so a trailer reads as something to press rather than another copy. */
 
-/* Tall enough for the whole card — the still, the title and the verdict under
-   it — because the cast row is laid out straight after it. */
-#dt-extras { margin-top: 10px; width: 1000px; height: 206px;
-             white-space: nowrap; overflow: hidden; }
+/* A row you step down to, showing its label and the top of its cards until you
+   reach it — the rail's peek, where one row shows and the next says it is
+   there. Reaching it lifts it clear of the bottom edge and takes the cast, which
+   is what it would land on, out of the way; nothing here animates anything but
+   transform and opacity. */
+#dt-extras-label { position: absolute; top: 474px; left: 0; }
+
+#dt-extras {
+  position: absolute; top: 514px; left: 0; width: 1728px; height: 210px;
+  white-space: nowrap; overflow: hidden;
+}
+
+#dt-extras-label, #dt-extras, #dt-cast, .dt-hint {
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease),
+                      opacity var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease), opacity var(--t-move) var(--ease);
+}
+#detail.down #dt-extras-label, #detail.down #dt-extras {
+  -webkit-transform: translateY(-170px); transform: translateY(-170px);
+}
+#detail.down #dt-cast { opacity: 0; }
+/* The key hint is about the action row, and the extras come up over where it
+   sits. */
+#detail.down .dt-hint { opacity: 0; }
 
 .dt-extra {
-  display: inline-block; vertical-align: top; width: 240px; margin-right: 20px;
+  display: inline-block; vertical-align: top; width: 240px; margin-right: 24px;
   white-space: normal;
 }
 
@@ -151,7 +206,7 @@
 }
 
 .dt-extra-title {
-  margin-top: 6px; font-size: 18px; line-height: 1.2; color: var(--dim);
+  margin-top: 10px; font-size: 22px; line-height: 1.2; color: var(--dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .dt-extra.on .dt-extra-title { color: var(--fg); }
@@ -159,14 +214,20 @@
 
 /* ---- cast ---- */
 
-#dt-cast { margin-top: 22px; height: 190px; white-space: nowrap; overflow: hidden; }
+#dt-cast {
+  position: absolute; top: 220px; left: 0; width: 1728px; height: 190px;
+  white-space: nowrap; overflow: hidden;
+}
 
+/* The column is the design's 176, wider than the disc it holds, so a two-word
+   name has somewhere to go rather than wrapping under its own photograph. */
 .dt-actor {
-  display: inline-block; vertical-align: top; width: 120px; margin-right: 22px;
-  white-space: normal;
+  display: inline-block; vertical-align: top; width: 176px; margin-right: 24px;
+  text-align: center; white-space: normal;
 }
 .dt-actor img, .dt-actor-blank {
-  display: block; width: 120px; height: 120px; border-radius: var(--r-pill);
+  display: block; width: 120px; height: 120px; margin: 0 auto;
+  border-radius: var(--r-pill);
   background: var(--surface); overflow: hidden;
 }
 /* Initials rather than an empty disc: plenty of a library has no photographs. */
@@ -174,8 +235,16 @@
   text-align: center; font-size: 40px; line-height: 120px;
   letter-spacing: 0.04em; color: var(--dim);
 }
-.dt-actor-name { margin-top: 8px; font-size: 18px; line-height: 1.2; color: var(--fg); }
-.dt-actor-role { font-size: 16px; line-height: 1.2; color: var(--dim2); }
+.dt-actor-name, .dt-actor-role {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dt-actor-name { margin-top: 10px; font-size: 19px; line-height: 1.3; color: var(--fg); }
+.dt-actor-role { margin-top: 3px; font-size: 18px; line-height: 1.3; color: var(--dim2); }
 
-.dt-hint { position: absolute; left: var(--sp-page); bottom: 40px; margin-top: 0; }
+/* Opposite the Extras label rather than along the bottom, which is where the
+   extras themselves now peek in. */
+.dt-hint {
+  position: absolute; left: auto; right: var(--sp-edge); bottom: 64px;
+  margin-top: 0;
+}
 

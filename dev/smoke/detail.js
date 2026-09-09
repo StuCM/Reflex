@@ -3,7 +3,7 @@
 module.exports = function (h) {
   const { hasFixture, trace, tracedThat, shot, press, waitFor, step, menuLabels,
     menuChoose, shown, backToLibrary, openTitle, actionRow, pressButton,
-    openChooser, sourceRows, playable, page, titles } = h;
+    openChooser, sourceRows, playable, sidebarPick, page, titles } = h;
 
   return h.ready()
 
@@ -295,5 +295,240 @@ module.exports = function (h) {
           .then(function () { return shot('detail-subtitles'); })
           .then(backToLibrary);
       });
+    })
+
+    /* ---- the page's own shape ----
+
+       Read off the live page rather than off the stylesheet: what is asserted
+       is where things actually land on a 1920 screen. */
+
+    .then(function () {
+      return step('the page uses the whole 1920 rather than half of it', function () {
+        return openTitle(titles.directPlays.title)
+          .then(boxes)
+          .then(function (b) {
+            if (b.body.width < 1600 || b.extras.width < 1600) {
+              throw new Error('the body is ' + b.body.width + 'px and the extras strip ' +
+                              b.extras.width + 'px wide on a 1920 screen');
+            }
+            /* The one margin the browse screen and this page used to disagree
+               about, which is most of what read as cramped. */
+            if (b.body.left !== 96 || b.title.left !== 96) {
+              throw new Error('the page margin is ' + b.body.left + '/' + b.title.left +
+                              'px, not the 96 the browse screen uses');
+            }
+            if (b.body.left + b.body.width > 1920) {
+              throw new Error('the body runs ' + (b.body.left + b.body.width - 1920) +
+                              'px off the screen');
+            }
+          })
+          .then(function () { return shot('detail-width'); });
+      });
+    })
+
+    .then(function () {
+      return step('Play is a pill sized by what it says, not a slab', function () {
+        return buttonSizes()
+          .then(function (s) {
+            /* 280×88 was the fault: three round buttons wide, and the reason
+               everything beside it read as too small. A pill of the design's
+               27px in 44px of padding lands near 150. */
+            if (s.play.width > 200) {
+              throw new Error('Play is still ' + s.play.width + 'px wide');
+            }
+            if (s.play.width <= s.round.width) {
+              throw new Error('Play is ' + s.play.width + 'px and a round button ' +
+                              s.round.width + 'px — the primary has to lead');
+            }
+            /* One row, one height: the pill and the round buttons share a
+               baseline, so the captions under them line up. */
+            if (s.play.height !== s.round.height) {
+              throw new Error('Play is ' + s.play.height + 'px tall and a round button ' +
+                              s.round.height + 'px');
+            }
+            if (s.round.width !== s.round.height) {
+              throw new Error('the round buttons are ' + s.round.width + '×' +
+                              s.round.height + ' — the pill rules have leaked into them');
+            }
+          });
+      });
+    })
+
+    .then(function () {
+      return step('the extras are a row you step down to, and step back up from', function () {
+        let peek;
+        return waitFor('(function(){var e=document.querySelectorAll("#dt-extras .dt-extra");' +
+                       'return e.length > 0;})()', 'the extras strip', 15000)
+          .then(extrasBox)
+          .then(function (r) {
+            peek = r;
+            /* Only its top: the label and a slice of the cards, exactly as the
+               rail shows the row after the one you are on. */
+            if (r.top > 1080) throw new Error('the extras strip is off the screen entirely');
+            if (r.bottom <= 1080) {
+              throw new Error('the extras strip is fully on screen at rest — it ends at ' +
+                              r.bottom + ', so there is nothing to step down to');
+            }
+            if (1080 - r.top > 160) {
+              throw new Error((1080 - r.top) + 'px of the extras strip shows before it is ' +
+                              'reached; the rail shows a label and a sliver');
+            }
+          })
+          .then(function () { return press('ArrowDown'); })
+          .then(function () {
+            return waitFor('!!document.querySelector("#dt-extras .dt-extra.on")',
+                           'focus to reach the extras');
+          })
+          .then(function () {
+            return waitFor('document.getElementById("dt-extras").getBoundingClientRect().bottom' +
+                           ' <= 1080', 'the extras strip to come up whole', 5000);
+          })
+          .then(extrasBox)
+          .then(function (r) {
+            if (r.top >= peek.top) {
+              throw new Error('stepping down moved the extras strip to ' + r.top +
+                              ', which is no higher than the ' + peek.top + ' it was at');
+            }
+          })
+          .then(function () { return shot('detail-extras-down'); })
+          .then(function () { return press('ArrowUp'); })
+          .then(function () {
+            return waitFor('!!document.querySelector("#dt-actions .dt-act.on") &&' +
+                           ' !document.querySelector("#dt-extras .dt-extra.on")',
+                           'the focus to return to the action row');
+          })
+          .then(function () {
+            return waitFor('document.getElementById("dt-extras").getBoundingClientRect().bottom' +
+                           ' > 1080', 'the extras strip to drop back to its peek', 5000);
+          })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('a part-watched film offers play from the start, and it starts at 0',
+        function () {
+        let mark;
+        return backToLibrary()
+          .then(function () { return sidebarPick('Continue watching'); })
+          .then(focusResumableFilm)
+          .then(function () { return page.keyboard.press('Enter'); })
+          .then(function () {
+            return waitFor('(function(){var c=document.querySelector("#dt-actions .dt-act-cap");' +
+                           'return !document.getElementById("detail").classList.contains("hidden")' +
+                           ' && c && !/checking/.test(c.textContent);})()',
+                           'the film page for a part-watched film', 20000);
+          })
+          .then(actionRow)
+          .then(function (row) {
+            const acts = row.map(function (a) { return a.act; });
+            if (acts.indexOf('start') < 0) {
+              throw new Error('no play-from-start button on a part-watched film: ' +
+                              acts.join(', '));
+            }
+            if (!/resume at \d+:\d\d/.test(row[0].caption)) {
+              throw new Error('Play does not offer to resume: ' + row[0].caption);
+            }
+          })
+          /* The position the player is handed, not merely that something
+             played: the fixture is 30 seconds long, far too short to resume
+             into, so the video element itself cannot tell the two plays
+             apart. */
+          .then(function () { mark = trace.length; })
+          .then(function () { return pressButton('play'); })
+          .then(function () { return startedAt(mark); })
+          .then(function (at) {
+            if (at === '0s') {
+              throw new Error('Play started a part-watched film from the beginning');
+            }
+          })
+          .then(function () { return press('Backspace'); })
+          .then(function () {
+            return waitFor('(function(){var c=document.querySelector("#dt-actions .dt-act-cap");' +
+                           'return !document.getElementById("detail").classList.contains("hidden")' +
+                           ' && c && !/checking/.test(c.textContent);})()',
+                           'the film page back after stopping', 20000);
+          })
+          .then(function () { mark = trace.length; })
+          .then(function () { return pressButton('start'); })
+          .then(function () { return startedAt(mark); })
+          .then(function (at) {
+            if (at !== '0s') throw new Error('play from start began at ' + at);
+          })
+          .then(function () { return shot('detail-from-start'); })
+          .then(backToLibrary);
+      });
     });
+
+  /* ---- what the page measures ---- */
+
+  function boxes() {
+    return page.evaluate(function () {
+      function box(id) {
+        const r = document.getElementById(id).getBoundingClientRect();
+        return { left: Math.round(r.left), width: Math.round(r.width) };
+      }
+      return { body: box('dt-body'), extras: box('dt-extras'), title: box('dt-title') };
+    });
+  }
+
+  function extrasBox() {
+    return page.evaluate(function () {
+      const r = document.getElementById('dt-extras').getBoundingClientRect();
+      return { top: Math.round(r.top), bottom: Math.round(r.bottom) };
+    });
+  }
+
+  /* The primary and the first round button beside it. Their laid-out size, not
+     their painted one: the focused button is scaled up, and comparing a scaled
+     pill with an unscaled circle proves nothing about either. */
+  function buttonSizes() {
+    return page.evaluate(function () {
+      function size(sel) {
+        const el = document.querySelector(sel);
+        return { width: el.offsetWidth, height: el.offsetHeight };
+      }
+      return { play: size('#dt-actions .dt-act.primary .dt-act-btn'),
+               round: size('#dt-actions .dt-act:not(.primary) .dt-act-btn') };
+    });
+  }
+
+  /* Where the app says it started playing, out of the trace it has written
+     since `mark`. One line or it is not an answer: two plays would mean the
+     step cannot say which of them it is reading. */
+  function startedAt(mark) {
+    const said = trace.slice(mark)
+      .filter(function (l) { return /starting at \d+s/.test(l); })
+      .map(function (l) { return l.replace(/^.*starting at /, ''); });
+    if (said.length !== 1) {
+      throw new Error('the app reported ' + said.length + ' start positions: ' +
+                      (said.join(' | ') || 'none'));
+    }
+    return said[0];
+  }
+
+  /* A film in Continue watching that is part way through and is not 4K, so the
+     guard has something to say yes to and Play has something to resume. */
+  function focusResumableFilm() {
+    return page.evaluate(function () {
+      const el = document.querySelector('#rows .row.on');
+      const row = el && el._rowRef;
+      if (!row || !row.items) return null;
+      let to = -1;
+      for (let i = 0; i < row.items.length; i++) {
+        const m = row.items[i];
+        const media = (m.Media && m.Media[0]) || {};
+        if (to < 0 && m.type === 'movie' && m.viewOffset > 10000 &&
+            String(media.videoResolution || '').toLowerCase() !== '4k') to = i;
+      }
+      return { focus: row.focus, to: to, n: row.items.length };
+    }).then(function (row) {
+      if (!row) throw new Error('the Continue watching row is not the focused one');
+      if (row.to < 0) {
+        throw new Error('nothing part-watched and playable in the ' + row.n + ' entries');
+      }
+      return press(row.to > row.focus ? 'ArrowRight' : 'ArrowLeft',
+                   Math.abs(row.to - row.focus));
+    });
+  }
 };
