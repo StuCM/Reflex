@@ -441,41 +441,6 @@ function drive(page, titles, port) {
     });
   }
 
-  /* Walk the focus onto a named button from wherever the row happens to be, so
-     a step never has to know what the one before it left focused. */
-  function focusControl(id) {
-    return controlRow()
-      /* A panel that is up owns the d-pad, so it has to go before the row can
-         be walked at all. */
-      .then(function (row) { return row.open ? press('Backspace').then(controlRow) : row; })
-      .then(function (row) { return row.foc >= 0 ? row : press('ArrowUp').then(controlRow); })
-      .then(function (row) {
-        const want = row.ids.indexOf('osd-ctl-' + id);
-        if (want < 0) throw new Error('no control called ' + id + ': ' + row.ids.join(', '));
-        const by = want - row.foc;
-        return press(by > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(by));
-      });
-  }
-
-  function openMenu(id) {
-    return focusControl(id)
-      .then(function () { return press('ArrowUp'); })
-      .then(function () {
-        return waitFor('!document.getElementById("menu").classList.contains("hidden")',
-                       'the ' + id + ' panel');
-      });
-  }
-
-  /* Chapters is the one that is a rail rather than a list. */
-  function openChapters() {
-    return focusControl('chapters')
-      .then(function () { return press('ArrowUp'); })
-      .then(function () {
-        return waitFor('!document.getElementById("osd-chapters").classList.contains("hidden")',
-                       'the chapter rail');
-      });
-  }
-
   /* ---- the sidebar ----
 
      What the chip row used to be. Left off the front of a row opens it, so
@@ -1067,7 +1032,7 @@ function drive(page, titles, port) {
     page, titles, ready, FILMS, hasFixture,
     step, press, waitFor, shot, visible, debugLine, trace, tracedThat,
     artLookups, tilePosters, timelines, ytCalls, ytSearches, deckWrites,
-    menuLabels, menuChoose, controlRow, openMenu, openChapters,
+    menuLabels, menuChoose, controlRow,
     openSidebar, sidebarRows, sidebarPick, watchingPick,
     deckRow, focusDeck, onMain, onBackup, onBoth,
     waitForConfirm, takeConfirm, cachedRows, reloadDeck, focusedRowTypes,
