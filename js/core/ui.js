@@ -50,11 +50,10 @@ var UI = (function () {
     elDebug.textContent = stamped;
     if (window.console && console.log) console.log('REFLEX ' + stamped);
     if (!Config.beacon) return;
-    try {
-      const x = new XMLHttpRequest();
-      x.open('GET', Config.beacon + '?m=' + encodeURIComponent(msg), true);
-      x.send(null);
-    } catch (e) { /* never let logging break the app */ }
+    /* Never let logging break the app: the answer is thrown away, and so is
+       any failure to deliver it. */
+    Http.request(Config.beacon + '?m=' + encodeURIComponent(msg), { label: 'beacon' })
+      .then(null, function () {});
   }
 
   function toast(msg) {

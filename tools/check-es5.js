@@ -111,8 +111,52 @@ function listFiles(dir, ext) {
   return out.sort();
 }
 
+/* What each layer is allowed to touch. Without this the directories are a
+   suggestion, and a suggestion is what a screen file reaches past at 1am when
+   it wants one more field off the server.
+
+   The rule is per layer, and it is about what a file may *reach for*, not what
+   it may know: api/ is the only place an XHR is opened, data/ the only place
+   the key/value store is addressed, and rules/ is the pure half — no DOM, no
+   request, no cache — which is what makes it the half worth unit testing. */
+const LAYER_RULES = {
+  'js/rules': [
+    [/\bdocument\./, 'the DOM in rules/', 'rules/ is pure: no DOM, no request, no cache'],
+    [/\bXMLHttpRequest\b/, 'a request in rules/', 'rules/ is pure: call it from data/'],
+    [/\b(Store|Cache)\./, 'the cache in rules/', 'rules/ is pure: read it in data/']
+  ],
+  'js/api': [
+    [/\bdocument\./, 'the DOM in api/', 'api/ speaks to servers, not to the screen']
+  ],
+  'js/view': [
+    [/\bXMLHttpRequest\b/, 'a raw request in view/', 'go through api/'],
+    [/\bStore\./, 'the store in view/', 'go through Cache, in data/']
+  ],
+  'js/screen': [
+    [/\bXMLHttpRequest\b/, 'a raw request in screen/', 'go through api/'],
+    [/\bStore\./, 'the store in screen/', 'go through Cache, in data/']
+  ],
+  'js/core': [
+    [/\bXMLHttpRequest\b/, 'a raw request in core/', 'go through api/']
+  ]
+};
+
+/* http.js is the one file whose whole job is the thing api/ owns. */
+const LAYER_EXEMPT = { 'js/api/http.js': 1, 'js/data/store.js': 1 };
+
+function layerOf(rel) {
+  const parts = rel.split('/');
+  return parts.length > 2 ? parts[0] + '/' + parts[1] : null;
+}
+
 const jsFiles = listFiles(path.join(ROOT, 'js'), '.js');
-jsFiles.forEach(function (f) { scan(f, JS_RULES); });
+jsFiles.forEach(function (f) {
+  const rel = path.relative(ROOT, f).split(path.sep).join('/');
+  scan(f, JS_RULES);
+  if (LAYER_EXEMPT[rel]) return;
+  const extra = LAYER_RULES[layerOf(rel)];
+  if (extra) scan(f, extra);
+});
 const cssFiles = listFiles(path.join(ROOT, 'css'), '.css');
 cssFiles.forEach(function (f) { scan(f, CSS_RULES); });
 
