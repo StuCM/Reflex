@@ -40,22 +40,25 @@ var Meta = (function () {
     const server = Servers.of(item);
     if (!server) return Promise.resolve(null);
 
-    return Cached.meta.get(key).then((cached) => {
-      if (cached) return cached;
-      return Plex.metadata(server, item.ratingKey).then((md) => {
+    return fetchOne(key, server, item);
+  }
+
+  async function fetchOne(key, server, item) {
+    try {
+      let md = await Cached.meta.get(key);
+      if (!md) {
+        md = await Plex.metadata(server, item.ratingKey);
         if (md) Cached.meta.put(key, md);
-        return md;
-      });
-    }).then((md) => {
+      }
       if (md) {
         md._server = item._server;          // survives the round trip through Store
         remember(key, md);
       }
       return md;
-    }).catch((e) => {
+    } catch (e) {
       UI.debug(`meta: ${e.message}`);
       return null;
-    });
+    }
   }
 
   /* Fetch for whatever is focused now, once the user stops moving. onLoaded is
