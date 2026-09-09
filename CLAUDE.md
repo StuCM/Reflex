@@ -334,6 +334,13 @@ Through the crew loop — see `.claude/crew/README.md`. Spec approved by the
 user, then worker, then a deterministic gate, then review. Two rounds and a
 human decides.
 
+**Feature freeze, 2026-09-10.** No new features until section 0 of
+`docs/backlog.md` is empty. `js/` is mid-refactor: the layering landed at
+0.0.2, a bundler and then real modules follow. A feature written against the
+tree as it stands now is a feature that gets written twice. Bugs and the
+refactor itself are the only work taken. If asked for a feature, say this and
+point at section 0.
+
 ### Commits
 
 Conventional commits, enforced by `.claude/crew/bin/commit-msg.js`:
@@ -446,6 +453,19 @@ the remote server, not the panel.
 
 `ares-inspect --device <tv> --app com.stu.plexlite` gives a real Network tab
 and console on the TV. Use a Chromium build close to 53; newer DevTools won't
-attach cleanly.
+attach cleanly. Two things about it are worth knowing before you conclude
+anything from what you see:
 
-Developer Mode expires after 1000 hours and removes sideloaded apps with it.
+- **`ares-package` minifies every file in `js/`, and there is no flag to stop
+  it.** `js/rules/media.js` ships as 7.5KB of `function n(e)` from 22KB of
+  named functions and comments. The panel has never run the source in this
+  repo, so a stack trace names nothing, and a source map cannot survive the
+  pipeline — whatever you hand `ares-package`, it re-minifies. This is also why
+  bundling costs nothing in debuggability: it is already at the floor.
+- **The inspector does not emit `Runtime.consoleAPICalled`.** It speaks the
+  legacy `Console` domain, so a CDP client that only enables `Runtime` and
+  `Log` sees an empty console on a perfectly healthy app. Enable
+  `Console.enable` and read `Console.messageAdded`.
+
+The TV is rooted, so Developer Mode and its 1000-hour expiry do not apply —
+the ares device profile is `ose` against `root@<tv>:22`.

@@ -7,6 +7,57 @@ Ordered so that the thing closest to the screen comes first: if playback is
 wrong, nothing further out matters. Take one group at a time. Anything marked
 **TV** cannot be answered on the laptop.
 
+Section 0 is the exception to that ordering and outranks all of it: while the
+refactor is open, nothing else is taken.
+
+### 0. The refactor — and nothing else until it lands
+
+**Feature freeze, decided 2026-09-10.** No new features are taken until this
+section is empty. The layering merged at 0.0.2; what follows is the rest of the
+same job. A feature added on top of a tree that is about to become modules is a
+feature that has to be written twice.
+
+Ordered. Each step is green before the next starts.
+
+- **Stage 1 — bundle with esbuild, keep the globals.** No source changes: the
+  file list already exists as `index.html`'s script order. `esbuild
+  --target=chrome53` is a *real* check where `tools/check-es5.js` is a text
+  scan its own header calls "not proof", and it downlevels `async`/`await` and
+  object rest, so the syntax bans in CLAUDE.md can go. Proven end to end on the
+  B8: 30 files → one bundle, 92/92 smoke on the laptop, browse painting at 3.0s
+  on the panel. Spike: branch `spike/bundle`.
+  - Blocked on the key-baking bug below. Fix that first or the build ships with
+    TMDB and YouTube dead.
+  - `npm run check` keeps its CSS rules and its layer rules; its JS syntax
+    rules and its `index.html` manifest check retire.
+- **Stage 2 — real `.ts` and ES modules.** Only reachable with a bundler:
+  Chromium 53 has no `<script type="module">` (Chrome 61), so `import`/`export`
+  needs one. The script order becomes an import graph the compiler enforces,
+  the layer rules become import lint, and the data-structure models become real
+  types rather than JSDoc. Bigger than stage 1 — it rewrites `test/load.js`,
+  which today runs raw files through `vm.runInContext` and cannot load a
+  module. Spike of the JSDoc half: branch `spike/ts-typecheck`, 254 → 94
+  errors, models in `types/plex.d.ts`.
+- **Split the four screen files.** Deferred from the layering pass on purpose —
+  they are long files of small functions and the layers had to settle first.
+  See the entry under Housekeeping for what moves and what cannot.
+
+### 0b. Bugs found deploying 0.0.2 to the panel
+
+- **`tools/package.sh` bakes keys into the file that no longer ships.** It
+  `sed`s `TMDB_KEY`/`YOUTUBE_KEY` into the *staged* `js/core/config.js`, then
+  verifies the patch against that same file — so its guard passes while a
+  bundled build compiled from the unbaked source ships with both keys empty.
+  Confirmed on the TV: `Config.tmdbKey` was `false` on the bundled build and
+  `true` on the normal one. **Blocks stage 1.** The fix is to build the bundle
+  inside `package.sh`, after the bake, and to verify the artifact that actually
+  ships rather than the one that was patched.
+- **The All films line calls library parts "servers".**
+  `js/screen/browse.js:522` reports `row.state.streams.length`, which is one
+  stream per server × section × tag, as a server count. Two servers with
+  several libraries each reads as "across 12 servers" on the panel. Cosmetic,
+  one line, but it is the only number on that screen and it is wrong.
+
 ### 1. Playback itself
 
 - **TV** Does an MKV direct play through the HTML5 video element on webOS 4 at
