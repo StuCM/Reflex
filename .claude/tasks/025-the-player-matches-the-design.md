@@ -1,7 +1,7 @@
 ---
 id: 025
 slug: the-player-matches-the-design
-status: approved
+status: review
 model: sonnet
 env: laptop
 branch: crew/025-the-player-matches-the-design
@@ -137,21 +137,94 @@ session that produced this task. Workers must not go digging for more.
   genuinely needed, stop and say so; 024 may need it too.
 
 ## Definition of done
-- [ ] ▲ focuses the trackbar and scrubs it; ▼ reaches the control row; a panel
+- [x] ▲ focuses the trackbar and scrubs it; ▼ reaches the control row; a panel
       opens only on OK on its button.
-- [ ] Every key CLAUDE.md documents still means what it says while nothing is
+- [x] Every key CLAUDE.md documents still means what it says while nothing is
       focused, asserted for at least a nudge and a chapter step.
-- [ ] Option panels are opaque and rounded to the design's radius.
-- [ ] Play and the transport controls are the same size, at the design's
+- [x] Option panels are opaque and rounded to the design's radius.
+- [x] Play and the transport controls are the same size, at the design's
       numbers, and the buttons are smaller than they are today.
-- [ ] Subtitles are never behind the controls.
-- [ ] The existing player steps pass with their behaviour unchanged.
-- [ ] Each new step was seen to fail before it was trusted to pass, and the task
+- [x] Subtitles are never behind the controls.
+- [x] The existing player steps pass with their behaviour unchanged.
+- [x] Each new step was seen to fail before it was trusted to pass, and the task
       file says so.
-- [ ] `npm run verify` passes.
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] `npm run verify` passes.
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
+
+## What changed
+
+- `js/player.js` — focus is a three-valued mode (`none` / `bar` / `row`) instead
+  of `ctl >= 0`; ▲ takes the trackbar, ▼ the control row, OK on a button opens
+  its panel and ▲ no longer does; the play and pause glyphs were redrawn to the
+  same extent as the two jumps either side of them.
+- `css/player.css` — the transport at 80px and the four choices at 76px (7a),
+  the row 8px shorter, the subtitle lift following it, the knob's focus ring,
+  and `#menu` opaque on `--surface` at 7b's 26px corner.
+- `dev/smoke/player.js` — three new steps, and local `focusControl` / `openMenu`
+  / `openChapters` that enter the row with ▼ and open with OK.
+
+## Seen to fail first
+
+Every new assertion was run against the unfixed code and watched to fail:
+
+- Stashing `js/player.js` and `css/player.css`: *up did not focus the
+  trackbar*, and *the transport buttons are 88, 88, 88, not three of 80*.
+- The unfocused key map is a regression guard, so it passes on `main` by
+  construction. It was proved non-vacuous by mutation instead: neutering
+  `case 37` gave *timed out waiting for left to nudge back*, and neutering
+  `case 34` gave *timed out waiting for CH− to step back a chapter*.
+- The panel assertions likewise: `background` back to `rgba(…, .94)` gave *the
+  panel is translucent*, and the corner back to `var(--r-panel)` gave *the panel
+  corner is 8px*.
+
+`npm run verify` — 88/88, against main's 85/85 (the three new steps).
+
+## What the spec got wrong, and what it left open
+
+- **7a does not have Play and the transport at one size** — 80px for the two
+  jumps, 104px for Play. The DoD's "same size … and smaller than they are today"
+  only resolves at 80, so all three are 80 and the four choices are 76.
+- **Nothing in the player was ever two sizes.** Every `.osd-btn` was the shared
+  88px, so "the play button and navigate next buttons are different sizes" can
+  only have been the *glyphs*: the play triangle was inset in its box where the
+  double triangles either side of it were not. That is fixed, and the smoke step
+  asserts the button widths so a regression is caught.
+- **No token carries 7b's 26px corner.** `--r-panel` is 8px and lives in
+  `css/base.css`, which this task does not own — so `#menu` names 26px directly
+  with a comment saying why. Moving it into the token is a base.css change that
+  would take `#confirm` and `#dt-menu` with it.
+- **`#upnext` is still `rgba(22, 24, 38, 0.94)`.** It is the ended-episode offer
+  rather than an option panel, so it was left alone; if the intent was "no
+  translucent box anywhere in the player", it and `#confirm` are the two left.
+- **`dev/smoke.js`'s `focusControl` / `openMenu` / `openChapters` are now dead.**
+  They press ▲, which no longer opens anything. Only `dev/smoke/player.js` used
+  them, so they are shadowed there rather than fixed in place — `dev/smoke.js`
+  is outside `files:` and 024 is in flight.
 
 ## Review rounds
 
 ## Graph writes proposed
+
+- **Decision — the player's focus is a mode with three values, not a button
+  index.** `ctl >= 0` conflated "the row has the focus" with "which button", so
+  a third state had nowhere to live. `focus` ∈ `none` / `bar` / `row` keeps the
+  documented key map true by construction: only the mode's own handler sees the
+  arrows, and everything else falls through to playback's switch unchanged.
+- **Decision — OK opens a panel; ▲ never does.** The old `code === 38 || code
+  === 13` meant the key that should have reached the trackbar was consumed by
+  whichever button the row sat on. With OK owning the button, the skip offer's
+  claim on OK is dropped *inside the row only* — it is still taken with OK from
+  playback and still dismissed with BACK from the row.
+- **Pattern — a regression guard cannot be proved by stashing the change.** The
+  unfocused key map passes before and after by design, so "watch it fail first"
+  has to mean mutating the behaviour it guards. Two one-line mutations in
+  `js/player.js` (`case 37`, `case 34`) were enough, and both failed with the
+  step's own message.
+- **Pattern — assert a seek on the OSD clock, never on `currentTime`.** The
+  clock reads `target()`, which is the *aimed* position, so an assertion on it
+  does not race the 400ms settle timer — the exact shape of the assertion that
+  passed on nothing this week. The dev fixture is 30s against a two-hour film,
+  so every jump clamps to `dur - 2`: assert that the key still reaches the seek,
+  not the magnitude, and pause the video first so a clamped jump cannot end the
+  film and take the rest of the suite with it.
