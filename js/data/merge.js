@@ -259,4 +259,3 @@ var Merge = (function () {
   };
 })();
 
-if (typeof module !== 'undefined') module.exports = Merge;

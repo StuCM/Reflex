@@ -35,14 +35,14 @@ var Youtube = (function () {
 
   /* The channel id behind the handle, resolved once and kept for good. */
   function channelId() {
-    return Cache.ytChannel.get(HANDLE).then((cached) => {
+    return Cached.ytChannel.get(HANDLE).then((cached) => {
       if (cached) return cached;
       return get('/channels', { part: 'id', forHandle: HANDLE }).then((r) => {
         const items = r && r.items;
         if (!items || !items.length || !items[0].id) {
           throw new Error(`no channel for ${HANDLE}`);
         }
-        Cache.ytChannel.put(HANDLE, items[0].id);
+        Cached.ytChannel.put(HANDLE, items[0].id);
         return items[0].id;
       });
     });
@@ -180,4 +180,3 @@ var Youtube = (function () {
   };
 })();
 
-if (typeof module !== 'undefined') module.exports = Youtube;   // for the unit tests

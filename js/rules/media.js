@@ -27,6 +27,7 @@ var Media = (function () {
   const NOT_THE_FILM =
     /commentar|descriptive|description|narrat|audio ?desc|\bdvs\b|\bad\b sign|karaoke/i;
 
+  /** @param {PlexStream} st */
   function isCommentary(st) {
     if (!st) return false;
     const text = [st.title, st.displayTitle, st.extendedDisplayTitle].join(' ');
@@ -37,6 +38,7 @@ var Media = (function () {
      cross plain ARC at all, and anything the ranking does not know about is
      assumed not to. Says nothing about whether the track is worth playing —
      that is isCommentary's job. */
+  /** @param {PlexStream} st */
   function passesArc(st) {
     const codec = ((st && st.codec) || '').toLowerCase();
     const profile = ((st && st.profile) || '').toLowerCase();
@@ -45,6 +47,7 @@ var Media = (function () {
     return AUDIO_RANK[codec] !== undefined;
   }
 
+  /** @param {PlexStream} st */
   function audioScore(st) {
     const codec = (st.codec || '').toLowerCase();
     if (isCommentary(st)) return -1;
@@ -59,6 +62,7 @@ var Media = (function () {
 
   /* Returns the best passable audio stream on a part, or null if every track
      would force an audio transcode. */
+  /** @param {PlexPart} part @returns {PlexStream|null} */
   function pickAudio(part) {
     const streams = (part && part.Stream) || [];
     let best = null;
@@ -76,6 +80,7 @@ var Media = (function () {
      Still never a commentary: that is about playing the right thing, not about
      what the link can carry. Channel count wins here because the server is
      going to re-encode it anyway, so we may as well start from the good one. */
+  /** @param {PlexPart} part @returns {PlexStream|null} */
   function bestAudio(part) {
     const streams = (part && part.Stream) || [];
     let best = null;
@@ -116,6 +121,7 @@ var Media = (function () {
 
   /* Every audio track on a part, in file order — what the player cycles
      through. */
+  /** @param {PlexPart} part @returns {PlexStream[]} */
   function audioTracks(part) {
     const streams = (part && part.Stream) || [];
     const out = [];
@@ -199,6 +205,7 @@ var Media = (function () {
     return !!(st && TEXT_SUBS[String(st.codec || '').toLowerCase()]);
   }
 
+  /** @param {PlexPart} part @returns {PlexStream[]} */
   function subtitleTracks(part) {
     const streams = (part && part.Stream) || [];
     const out = [];
@@ -317,6 +324,7 @@ var Media = (function () {
   }
 
   /* [{ label, bitrate }] — bitrate null means the file as it is. */
+  /** @param {PlexMedia} media */
   function qualities(media) {
     const source = (media && media.bitrate) || 0;
     const out = [];
@@ -348,6 +356,7 @@ var Media = (function () {
 
   /* ---------- resolution ---------- */
 
+  /** @param {PlexMedia} media */
   function isUHD(media) {
     return ((media && media.width) || 0) >= 2500 || ((media && media.height) || 0) >= 1400;
   }
@@ -362,6 +371,7 @@ var Media = (function () {
 
      Direct play is also the only path that hands the panel the original file,
      so that is where the decode check applies; a re-encode arrives as H.264. */
+  /** @param {PlexMedia} media @param {boolean} direct */
   function allows(media, direct) {
     return direct ? canDecode(media) : !isUHD(media);
   }
@@ -411,6 +421,7 @@ var Media = (function () {
      films sharing both is rare enough to accept; the same film failing to
      match because one server has no external id is not. */
 
+  /** @param {PlexItem} item @returns {string[]} */
   function externalIds(item) {
     const out = [];
     const g = (item && item.Guid) || [];
@@ -449,6 +460,7 @@ var Media = (function () {
   }
 
   /* Every key this item could be recognised by, best first. */
+  /** @param {PlexItem} item @returns {string[]} */
   function identities(item) {
     const out = externalIds(item);
     const guid = String((item && item.guid) || '');
@@ -521,4 +533,3 @@ var Media = (function () {
   };
 })();
 
-if (typeof module !== 'undefined') module.exports = Media;   // for the unit tests

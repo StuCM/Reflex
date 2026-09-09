@@ -47,4 +47,3 @@ var Rows = (function () {
            needsUpTo: needsUpTo, haveUpTo: haveUpTo, LOOKAHEAD: LOOKAHEAD };
 })();
 
-if (typeof module !== 'undefined') module.exports = Rows;   // for test/rows.test.js

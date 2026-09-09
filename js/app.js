@@ -329,7 +329,7 @@
   function start() {
     UI.show('browse');
     /* Paint from cache before any network work — the whole point of the app. */
-    Cache.sections.get().then((cached) => {
+    Cached.sections.get().then((cached) => {
       if (cached && cached.length && Servers.count()) {
         Browse.loadSection(Browse.setSections(rehydrate(cached)), false);
       }
@@ -349,7 +349,7 @@
         UI.message('No libraries', 'Neither server shares a film or show section.');
         return;
       }
-      Cache.sections.put(perServer.map((r) => {
+      Cached.sections.put(perServer.map((r) => {
         return { serverId: r.server.id, sections: r.sections };
       }));
       Browse.loadSection(Browse.setSections(perServer), true);

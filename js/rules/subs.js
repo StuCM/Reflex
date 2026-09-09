@@ -99,4 +99,3 @@ var Subs = (function () {
   return { parse: parse, textAt: textAt, seconds: seconds };
 })();
 
-if (typeof module !== 'undefined') module.exports = Subs;   // for the unit tests

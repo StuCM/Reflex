@@ -74,7 +74,7 @@ var Rail = (function () {
     let sub;
     let prog;
     for (let r = 0; r < ROW_POOL; r++) {
-      const rowEl = document.createElement('div');
+      const rowEl = /** @type {RailRowElement} */ (document.createElement('div'));
       rowEl.className = 'row hidden';
       label = document.createElement('div');
       label.className = 'row-label';
@@ -86,7 +86,7 @@ var Rail = (function () {
       rowEl._rowRef = null; rowEl._tiles = []; rowEl._onScreen = false;
 
       for (let i = 0; i < TILE_POOL; i++) {
-        const tile = document.createElement('div');
+        const tile = /** @type {RailTileElement} */ (document.createElement('div'));
         /* Hidden until something is in it — otherwise the pool shows as a
            stack of empty cards for as long as the first rows take to arrive. */
         tile.className = 'tile hidden';
