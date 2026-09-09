@@ -144,7 +144,7 @@ var Devices = (function () {
       for (i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
       claimed = map;
       lsSet('myDevices', JSON.stringify(map));
-      UI.debug('devices: ' + Object.keys(map).length + ' of ' + list.length + ' claimed');
+      UI.debug(`devices: ${Object.keys(map).length} of ${list.length} claimed`);
       changed = true;
     }
     const done = onClose;

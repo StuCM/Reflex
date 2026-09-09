@@ -264,7 +264,7 @@
   }
 
   window.onerror = (msg, url, line) => {
-    UI.debug('JS ERROR ' + msg + ' @' + String(url).split('/').pop() + ':' + line);
+    UI.debug(`JS ERROR ${msg} @${String(url).split('/').pop()}:${line}`);
     return false;
   };
 

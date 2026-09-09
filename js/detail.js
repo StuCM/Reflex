@@ -237,7 +237,7 @@ var Detail = (function () {
     elMeta.textContent = metaLine(item, null);
 
     const art = Plex.artUrl(item, 960, 540);
-    elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
+    elArt.style.backgroundImage = art ? `url("${art}")` : 'none';
   }
 
   function metaLine(entry, md) {
@@ -300,7 +300,7 @@ var Detail = (function () {
       r = roles[i];
       url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
       html += '<div class="dt-actor">' +
-              (url ? '<img src="' + url + '" alt="">' : '<div class="dt-actor-blank"></div>') +
+              (url ? `<img src="${url}" alt="">` : '<div class="dt-actor-blank"></div>') +
               '<div class="dt-actor-name">' + UI.escapeHtml(r.tag) + '</div>' +
               '<div class="dt-actor-role">' + UI.escapeHtml(r.role || '') + '</div>' +
               '</div>';

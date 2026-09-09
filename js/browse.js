@@ -150,7 +150,7 @@ var Browse = (function () {
     for (i = 0; i < list.length; i++) {
       cls = 'chip' + (list[i].current ? ' cur' : '') +
             (headerFocus && i === chipIdx ? ' on' : '');
-      html += '<span class="' + cls + '">' + UI.escapeHtml(list[i].label) + '</span>';
+      html += `<span class="${cls}">${UI.escapeHtml(list[i].label)}</span>`;
     }
     return html;
   }
@@ -171,7 +171,7 @@ var Browse = (function () {
     if (chip.kind === 'prefer') {
       let at = chipIdx;
       const now = Servers.get(Servers.cyclePreferred());
-      UI.debug('preferring ' + (now ? now.name : '?') + ' where both servers have a film');
+      UI.debug(`preferring ${now ? now.name : '?'} where both servers have a film`);
       /* Rebuild the rows: which copy of a shared film is shown changes with
          the preference. */
       loadSection(secIdx, true);
@@ -238,7 +238,7 @@ var Browse = (function () {
     if (!row || row.kind !== 'merge') return;
     const jobs = row.state.streams.map(s => {
       if (s.total) return Promise.resolve();
-      const ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
+      const ck = `total:${s.part.server.id}:${s.part.key}:${s.part.tag}`;
       return Store.get(ck).then(cached => {
         if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
           s.total = cached.total;
@@ -496,7 +496,7 @@ var Browse = (function () {
       if (!rows.length) rows = [Rows.list('No matches', [])];
       rowIdx = 0;
       render();
-      UI.debug('search "' + q + '": ' + found.length + ' ' + searchNoun);
+      UI.debug(`search "${q}": ${found.length} ${searchNoun}`);
     }).catch(e => {
       UI.message('Search failed', e.message);
     });

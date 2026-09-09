@@ -75,10 +75,10 @@ var ShowPage = (function () {
     const counts = Shows.summary(show);
     if (counts) bits.push(counts);
     if (show.contentRating) bits.push(show.contentRating);
-    if (Merge.isShared(show)) bits.push('on ' + Merge.sources(show).length + ' servers');
+    if (Merge.isShared(show)) bits.push(`on ${Merge.sources(show).length} servers`);
     elMeta.textContent = bits.join('   ·   ');
     const art = Plex.artUrl(show, 960, 540);
-    elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
+    elArt.style.backgroundImage = art ? `url("${art}")` : 'none';
   }
 
   function renderSeasons() {

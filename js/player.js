@@ -101,7 +101,7 @@ var Player = (function () {
     const left = dur ? Math.max(0, dur - at) : 0;
 
     osdTime.textContent = fmt(at) + ' / ' + fmt(dur) +
-      (dur ? '   ·   ' + fmt(left) + ' left' : '') +
+      (dur ? `   ·   ${fmt(left)} left` : '') +
       (pending !== null ? '   SEEKING' : (v.paused ? '   PAUSED' : ''));
 
     const x = dur ? Math.round(BAR_W * Math.min(at, dur) / dur) : 0;
@@ -109,7 +109,7 @@ var Player = (function () {
     /* transform, not left: the knob moves on every timeupdate and this is the
        one property the panel can move without a layout pass. */
     osdKnob.style.webkitTransform = osdKnob.style.transform =
-      'translateX(' + Math.min(x, BAR_W - 6) + 'px)';
+      `translateX(${Math.min(x, BAR_W - 6)}px)`;
 
     let ahead = 0;
     try {
@@ -131,7 +131,7 @@ var Player = (function () {
       at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
       const wide = Math.max(2, Math.round(BAR_W *
         (((markers[i].endTimeOffset || 0) - (markers[i].startTimeOffset || 0)) / 1000) / dur));
-      html += '<i class="osd-band" style="left:' + at + 'px;width:' + wide + 'px"></i>';
+      html += `<i class="osd-band" style="left:${at}px;width:${wide}px"></i>`;
     }
     for (i = 0; i < list.length; i++) {
       if (list[i].start <= 0) continue;
@@ -162,7 +162,7 @@ var Player = (function () {
   function hint() {
     osdHint.textContent = menuOn
       ? '◀ ▶ section · ▲ ▼ choose · OK select · BACK close'
-      : '◀ ▶ ' + NUDGE + 's · ▲ ▼ menu · 0–9 jump · CH± chapter · OK pause';
+      : `◀ ▶ ${NUDGE}s · ▲ ▼ menu · 0–9 jump · CH± chapter · OK pause`;
   }
 
   /* ---------- choosing the audio track ----------
@@ -237,7 +237,7 @@ var Player = (function () {
     const list = panelTracks();
     if (list[n] && list[n].enabled) return;          // already right, say nothing
     if (selectPanelTrack(n)) {
-      UI.debug('audio set on the panel (track ' + n + '): ' + Media.audioLabel(currentAudio));
+      UI.debug(`audio set on the panel (track ${n}): ${Media.audioLabel(currentAudio)}`);
     }
     paintTracks();
   }
@@ -249,7 +249,7 @@ var Player = (function () {
       /* The good case: the panel switched it, nothing restarted, the server
          was not asked for anything. */
       currentAudio = st;
-      UI.debug('audio switched on the panel (track ' + n + '): ' + Media.audioLabel(st));
+      UI.debug(`audio switched on the panel (track ${n}): ${Media.audioLabel(st)}`);
       paintTracks();
       closeMenu();
       showOsd();
@@ -265,7 +265,7 @@ var Player = (function () {
     const bits = [];
     const tracks = Media.audioTracks(currentPart);
     bits.push('Audio: ' + Media.audioMenuLabel(currentAudio) +
-              (tracks.length > 1 ? ' (' + tracks.length + ')' : '') +
+              (tracks.length > 1 ? ` (${tracks.length})` : '') +
               (audioIsOurs() ? '' : ' — panel’s choice'));
     bits.push('Subtitles: ' + (currentSub ? Media.subLabel(currentSub) : 'off') +
               (subNote ? ' — ' + subNote : ''));
@@ -410,13 +410,13 @@ var Player = (function () {
       if (token !== subToken) return;
       cues = Subs.parse(text);
       subNote = cues.length ? '' : 'the track came back empty';
-      UI.debug('subtitles: ' + Media.subLabel(stream) + ' · ' + cues.length + ' cues');
+      UI.debug(`subtitles: ${Media.subLabel(stream)} · ${cues.length} cues`);
       paintTracks();
       paintSub();
     }, e => {
       if (token !== subToken) return;
       currentSub = null;
-      subNote = 'could not be fetched (' + e.message.split(' -> ').pop() + ')';
+      subNote = `could not be fetched (${e.message.split(' -> ').pop()})`;
       paintTracks();
     });
   }
@@ -556,7 +556,7 @@ var Player = (function () {
               (r.on ? ' on' : '') + (r.off ? ' off' : '') + '">' +
               '<span class="menu-mark">' + (r.on ? '●' : '') + '</span>' +
               '<span class="menu-label">' + UI.escapeHtml(r.label) + '</span>' +
-              (r.note ? '<span class="menu-note-inline">' + UI.escapeHtml(r.note) + '</span>' : '') +
+              (r.note ? `<span class="menu-note-inline">${UI.escapeHtml(r.note)}</span>` : '') +
               '</div>';
     }
     menuListEl.innerHTML = html;
@@ -564,7 +564,7 @@ var Player = (function () {
     /* Keep the selection in view without a scrollbar the remote cannot use. */
     const top = UI.clamp(sel - 3, 0, Math.max(0, rows.length - ROWS_SHOWN));
     menuInnerEl.style.webkitTransform = menuInnerEl.style.transform =
-      'translateY(' + (-top * ROW_H) + 'px)';
+      `translateY(${-top * ROW_H}px)`;
     menuNoteEl.textContent = tab === 1
       ? 'Subtitles are fetched as text and drawn here, so they cost the server nothing.'
       : (tab === 2 ? 'Anything but Original asks the server to re-encode.' : '');
@@ -624,7 +624,7 @@ var Player = (function () {
        and lose the track the user chose. */
     if (change.forceStream === undefined) change.forceStream = forceStream;
     closeMenu();
-    osdTracks.textContent = 'Switching to ' + what + '…';
+    osdTracks.textContent = `Switching to ${what}…`;
     showOsd();
     onSwitch(change);
   }
@@ -651,7 +651,7 @@ var Player = (function () {
     if (code === 4) return 'The stream would not open (media error 4) — the server ' +
                            'refused the request, or the container is one the panel ' +
                            'will not accept at all.' + detail;
-    return 'The stream failed (media error ' + code + ').' + detail;
+    return `The stream failed (media error ${code}).${detail}`;
   }
 
   /* A desktop browser is not this panel, and its codec support is much
@@ -789,7 +789,7 @@ var Player = (function () {
       decoded = q.totalVideoFrames;
     }
     const frames = (decoded === undefined) ? 'frames n/a'
-      : ('dropped ' + dropped + '/' + decoded);
+      : `dropped ${dropped}/${decoded}`;
 
     if (ahead >= 0 && ahead < lowest) lowest = ahead;
 

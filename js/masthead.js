@@ -64,7 +64,7 @@ var Masthead = (function () {
     if (item.type === 'show') {
       let sb = '';
       if (Merge.isShared(item)) {
-        sb += badge('ON ' + Merge.sources(item).length + ' SERVERS');
+        sb += badge(`ON ${Merge.sources(item).length} SERVERS`);
       }
       elBadges.innerHTML = sb;
       return;
@@ -81,7 +81,7 @@ var Masthead = (function () {
     /* One entry, more than one copy: the badges above describe the copy we
        would default to, and OK opens the page where you can pick another. */
     if (Merge.isShared(item)) {
-      b += badge('ON ' + Merge.sources(item).length + ' SERVERS');
+      b += badge(`ON ${Merge.sources(item).length} SERVERS`);
     }
     elBadges.innerHTML = b;
   }

@@ -80,7 +80,7 @@ var Guard = (function () {
         UI.debug('decision: ' + v.decision + ' · ' + md.title +
                  (Servers.count() > 1 ? ' on ' + server.name : '') +
                  ' · ' + Media.audioLabel(audio) +
-                 (v.video || v.audio ? ' · v:' + (v.video || '?') + ' a:' + (v.audio || '?') : '') +
+                 (v.video || v.audio ? ` · v:${v.video || '?'} a:${v.audio || '?'}` : '') +
                  ' ' + v.text);
         return {
           /* 4K must direct play or not play. Anything else may transcode. */
@@ -151,7 +151,7 @@ var Guard = (function () {
     if (v.state === 'nometa') return ['No metadata', 'The server returned nothing for this copy.'];
     if (v.state === 'error') return ['Could not check playback', v.text];
 
-    const why = v.text || ('the server returned "' + v.state + '"');
+    const why = v.text || `the server returned "${v.state}"`;
     /* The only thing still refused outright. */
     return ['4K transcode refused', item.title + ' will not direct play — ' + why +
       '. Starting it would register a 4K transcode on the server, which gets ' +

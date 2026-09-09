@@ -302,7 +302,7 @@ var Media = (function () {
   /* [{ label, bitrate }] — bitrate null means the file as it is. */
   function qualities(media) {
     let source = (media && media.bitrate) || 0, out = [], i;
-    out.push({ label: 'Original (' + versionLabel(media) + ')', bitrate: null });
+    out.push({ label: `Original (${versionLabel(media)})`, bitrate: null });
     for (i = 0; i < BITRATES.length; i++) {
       if (!source || BITRATES[i] < source) {
         out.push({ label: bitrateLabel(BITRATES[i]) + ' — server converts',
@@ -414,7 +414,7 @@ var Media = (function () {
     const t = String((item && (item.titleSort || item.title)) || '').toLowerCase()
       .replace(/^(the|a|an)\s+/, '')
       .replace(/[^a-z0-9]+/g, '');
-    return 'title://' + t + '/' + ((item && item.year) || '');
+    return `title://${t}/${(item && item.year) || ''}`;
   }
 
   /* An episode is identified by which show it belongs to and where it sits in
@@ -426,7 +426,7 @@ var Media = (function () {
       .toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/[^a-z0-9:/.]+/g, '');
     const season = item.parentIndex === undefined ? '?' : item.parentIndex;
     const number = item.index === undefined ? '?' : item.index;
-    return 'episode://' + show + '/' + season + '/' + number;
+    return `episode://${show}/${season}/${number}`;
   }
 
   /* Every key this item could be recognised by, best first. */

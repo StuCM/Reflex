@@ -46,7 +46,7 @@ var Tmdb = (function () {
       xhr.timeout = 15000;
       xhr.onload = () => {
         if (xhr.status < 200 || xhr.status >= 300) {
-          reject(new Error('TMDB ' + path + ' -> ' + xhr.status));
+          reject(new Error(`TMDB ${path} -> ${xhr.status}`));
           return;
         }
         try { resolve(JSON.parse(xhr.responseText)); }
@@ -92,7 +92,7 @@ var Tmdb = (function () {
     if (!seeds.length) return Promise.resolve([]);
     const score = {};
     return serial(seeds, id => {
-      return get('/movie/' + id + '/recommendations').then(r => {
+      return get(`/movie/${id}/recommendations`).then(r => {
         let list = r.results || [], i, m;
         for (i = 0; i < list.length; i++) {
           m = list[i];

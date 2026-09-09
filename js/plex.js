@@ -179,11 +179,11 @@ var Plex = (function () {
             if (onStatus) onStatus('linked, token stored');
             return s.token;
           }
-          if (onStatus) onStatus('pin ' + pinId + ' · poll ' + tries + ' · not claimed yet');
+          if (onStatus) onStatus(`pin ${pinId} · poll ${tries} · not claimed yet`);
           if (Date.now() > deadline) return null;
           return wait(2000).then(attempt);
         }, err => {
-          if (onStatus) onStatus('pin ' + pinId + ' · poll ' + tries + ' FAILED: ' + err.message);
+          if (onStatus) onStatus(`pin ${pinId} · poll ${tries} FAILED: ${err.message}`);
           if (Date.now() > deadline) return null;
           return wait(3000).then(attempt);
         });
@@ -311,7 +311,7 @@ var Plex = (function () {
       let keys = Object.keys(extra), i;
       for (i = 0; i < keys.length; i++) params[keys[i]] = extra[keys[i]];
     }
-    return ask(server, '/library/sections/' + sectionKey + '/all?' + qs(params),
+    return ask(server, `/library/sections/${sectionKey}/all?${qs(params)}`,
                { timeout: 20000 }).then(res => {
       const mc = res.MediaContainer || {};
       return { total: mc.totalSize || mc.size || 0,
@@ -323,7 +323,7 @@ var Plex = (function () {
      the server may label things BBFC (U, PG, 12A, 15, 18) or MPAA (G, PG-13,
      R), or prefix them by region ("gb/12A"). */
   function contentRatings(server, sectionKey) {
-    return ask(server, '/library/sections/' + sectionKey + '/contentRating')
+    return ask(server, `/library/sections/${sectionKey}/contentRating`)
       .then(res => {
         let dirs = (res.MediaContainer && res.MediaContainer.Directory) || [], out = [], i;
         for (i = 0; i < dirs.length; i++) out.push(dirs[i].title || dirs[i].key);
@@ -359,7 +359,7 @@ var Plex = (function () {
      One request returns every hub with its items, which is how the stock app
      shows a huge library without listing it. */
   function hubs(server, sectionKey) {
-    return ask(server, '/hubs/sections/' + sectionKey + '?' + qs({ count: HUB_COUNT }),
+    return ask(server, `/hubs/sections/${sectionKey}?${qs({ count: HUB_COUNT })}`,
                { timeout: 20000 }).then(res => {
       let list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, h;
       for (i = 0; i < list.length; i++) {
