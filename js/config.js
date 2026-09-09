@@ -51,8 +51,7 @@ var Config = (function () {
   const over = (typeof window !== 'undefined' && window.REFLEX_CONFIG) || null;
   if (over) {
     const keys = Object.keys(over);
-    let i;
-    for (i = 0; i < keys.length; i++) cfg[keys[i]] = over[keys[i]];
+    for (let i = 0; i < keys.length; i++) cfg[keys[i]] = over[keys[i]];
   }
   return cfg;
 })();

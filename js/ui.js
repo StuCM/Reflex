@@ -17,8 +17,7 @@ var UI = (function () {
   };
 
   const els = {};
-  let i;
-  for (i = 0; i < VIEWS.length; i++) els[VIEWS[i]] = document.getElementById(VIEWS[i]);
+  for (let i = 0; i < VIEWS.length; i++) els[VIEWS[i]] = document.getElementById(VIEWS[i]);
 
   const elToast = document.getElementById('toast');
   const elDebug = document.getElementById('debug');
@@ -33,8 +32,7 @@ var UI = (function () {
 
   function show(name) {
     current = name;
-    let n;
-    for (n = 0; n < VIEWS.length; n++) {
+    for (let n = 0; n < VIEWS.length; n++) {
       els[VIEWS[n]].classList.toggle('hidden', VIEWS[n] !== name);
     }
   }

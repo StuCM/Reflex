@@ -72,8 +72,7 @@ var Shows = (function () {
      entry may lead with the other's. */
   function isCopyOf(entry, episode) {
     const copies = Merge.sources(entry);
-    let i;
-    for (i = 0; i < copies.length; i++) {
+    for (let i = 0; i < copies.length; i++) {
       if (String(copies[i].ratingKey) === String(episode.ratingKey)) return true;
     }
     return false;
@@ -83,8 +82,7 @@ var Shows = (function () {
      when `current` is not in the list at all. Pure, so it is unit tested. */
   function nextInList(episodes, current) {
     if (!episodes || !current) return null;
-    let i;
-    for (i = 0; i < episodes.length; i++) {
+    for (let i = 0; i < episodes.length; i++) {
       if (isCopyOf(episodes[i], current)) return episodes[i + 1] || null;
     }
     return null;
@@ -99,8 +97,7 @@ var Shows = (function () {
       if (!entry) return null;
       return seasons(entry).then(function (list) {
         let at = -1;
-        let i;
-        for (i = 0; i < list.length; i++) {
+        for (let i = 0; i < list.length; i++) {
           if (list[i].index === episode.parentIndex) { at = i; break; }
         }
         if (at < 0) return null;
@@ -136,8 +133,7 @@ var Shows = (function () {
      unwatched, else the first. Somebody part way through series three does not
      want to land on series one every time. */
   function openAt(list) {
-    let i;
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if ((list[i].leafCount || 0) > (list[i].viewedLeafCount || 0)) return i;
     }
     return 0;

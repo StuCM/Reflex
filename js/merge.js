@@ -47,13 +47,12 @@ var Merge = (function () {
      sources(), which puts the shown copy back at the front. */
   function combine(primary, item) {
     const extras = primary._sources || [];
-    let i;
     const key = copyKey(item);
     /* One copy per library. A film listed twice by the same library (two
        editions in one) is not what this is for — versions within one item are,
        and those live in Media[], not here. */
     if (copyKey(primary) === key) return primary;
-    for (i = 0; i < extras.length; i++) {
+    for (let i = 0; i < extras.length; i++) {
       if (copyKey(extras[i]) === key) return primary;
     }
 
@@ -108,12 +107,9 @@ var Merge = (function () {
      first appears. */
   function lists(arrays) {
     const idx = index();
-    let i;
-    let j;
-    let arr;
-    for (i = 0; i < arrays.length; i++) {
-      arr = arrays[i] || [];
-      for (j = 0; j < arr.length; j++) push(idx, arr[j]);
+    for (let i = 0; i < arrays.length; i++) {
+      const arr = arrays[i] || [];
+      for (let j = 0; j < arr.length; j++) push(idx, arr[j]);
     }
     return idx.out;
   }
@@ -185,8 +181,7 @@ var Merge = (function () {
      the duplicates found so far. It only ever gets more accurate. */
   function estimate(st) {
     let total = 0;
-    let i;
-    for (i = 0; i < st.streams.length; i++) total += st.streams[i].total;
+    for (let i = 0; i < st.streams.length; i++) total += st.streams[i].total;
     return Math.max(st.idx.out.length, total - st.idx.dupes);
   }
 
@@ -195,10 +190,9 @@ var Merge = (function () {
   function fetchInto(st, s) {
     return st.fetch(s.part, s.offset).then(function (res) {
       const got = (res && res.items) || [];
-      let i;
       if (res && res.total) s.total = res.total;
       s.offset += got.length;
-      for (i = 0; i < got.length; i++) {
+      for (let i = 0; i < got.length; i++) {
         /* Which library it came from: one section now spans several, and two
            of them can hold the same film in different shapes. */
         got[i]._part = s.part.key;
@@ -226,13 +220,12 @@ var Merge = (function () {
 
   function fill(st, upTo) {
     let i;
-    let needs;
     let live;
     let pick;
     /* A loop, not recursion: walking deep into a big library would otherwise
        build a stack frame per film. */
     while (st.idx.out.length <= upTo) {
-      needs = [];
+      const needs = [];
       for (i = 0; i < st.streams.length; i++) {
         if (!st.streams[i].done && !st.streams[i].buffer.length) needs.push(st.streams[i]);
       }

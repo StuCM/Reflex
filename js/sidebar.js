@@ -67,15 +67,12 @@ var Sidebar = (function () {
 
   function build() {
     const out = watchingRows();
-    let i;
-    let j;
-    let cats;
-    for (i = 0; i < secs.length; i++) {
-      cats = secs[i].categories || [];
+    for (let i = 0; i < secs.length; i++) {
+      const cats = secs[i].categories || [];
       out.push({ label: secs[i].title, kind: 'section', index: i,
                  opens: cats.length > 0, current: !!secs[i].current });
       if (i !== expanded) continue;
-      for (j = 0; j < cats.length; j++) {
+      for (let j = 0; j < cats.length; j++) {
         /* Continue watching has its own entry above, and every section builds
            one — listing them all is the duplication this is rid of. */
         if (cats[j] === 'Continue watching') continue;
@@ -87,10 +84,8 @@ var Sidebar = (function () {
 
   function render() {
     let html = '';
-    let i;
-    let r;
-    for (i = 0; i < rows.length; i++) {
-      r = rows[i];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
       html += '<div class="sb-row' + (r.sub ? ' sub' : '') +
               (r.current ? ' cur' : '') + (i === idx ? ' on' : '') + '">' +
               UI.escapeHtml(r.label) + '</div>';
@@ -118,8 +113,7 @@ var Sidebar = (function () {
   }
 
   function at(kind, index) {
-    let i;
-    for (i = 0; i < rows.length; i++) {
+    for (let i = 0; i < rows.length; i++) {
       if (rows[i].kind === kind && rows[i].index === index) return i;
     }
     return 0;
@@ -137,8 +131,7 @@ var Sidebar = (function () {
     onPick = pick;
     atMode = mode || '';
     expanded = NONE;
-    let i;
-    for (i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;
+    for (let i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;
     /* The section is current too whenever Continue watching is, so this comes
        second: the list opens on where the focus actually is, not a level up. */
     if (watching && watching.current) expanded = -1;
@@ -161,7 +154,7 @@ var Sidebar = (function () {
      behind it would move a selection you cannot see. */
   function key(code) {
     const K = UI.KEY;
-    let r = rows[idx];
+    const r = rows[idx];
 
     if (UI.isBack(code) || code === K.LEFT) { close(); return true; }
     if (code === K.UP) { idx = UI.clamp(idx - 1, 0, rows.length - 1); render(); return true; }

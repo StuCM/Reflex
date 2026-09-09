@@ -73,8 +73,7 @@ var Devices = (function () {
   function countDevices(map) {
     const seen = {};
     const keys = Object.keys(map);
-    let i;
-    for (i = 0; i < keys.length; i++) seen[map[keys[i]]] = true;
+    for (let i = 0; i < keys.length; i++) seen[map[keys[i]]] = true;
     return Object.keys(seen).length;
   }
 
@@ -83,10 +82,8 @@ var Devices = (function () {
     if (!claimed || !played) return items;
     return items.filter(function (entry) {
       const copies = Merge.sources(entry);
-      let i;
-      let dev;
-      for (i = 0; i < copies.length; i++) {
-        dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
+      for (let i = 0; i < copies.length; i++) {
+        const dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
         if (!dev || claimed[dev]) return true;
       }
       return false;
@@ -112,11 +109,10 @@ var Devices = (function () {
       const names = {};
       const counts = {};
       const keys = Object.keys(map);
-      let i;
       named.forEach(function (n) {
         n.devices.forEach(function (d) { names[n.server.id + ':' + d.id] = d.name; });
       });
-      for (i = 0; i < keys.length; i++) {
+      for (let i = 0; i < keys.length; i++) {
         counts[map[keys[i]]] = (counts[map[keys[i]]] || 0) + 1;
       }
       list = Object.keys(counts).map(function (k) {
@@ -136,10 +132,8 @@ var Devices = (function () {
       return;
     }
     let html = '';
-    let i;
-    let d;
-    for (i = 0; i < list.length; i++) {
-      d = list[i];
+    for (let i = 0; i < list.length; i++) {
+      const d = list[i];
       html += '<div class="device-row' + (i === idx ? ' on' : '') + '">' +
               (d.mine ? '[x] ' : '[ ] ') + UI.escapeHtml(d.name) +
               (d.server ? ' <span class="device-count">on ' + UI.escapeHtml(d.server) +
@@ -153,8 +147,7 @@ var Devices = (function () {
     let changed = false;
     if (list.length) {
       const map = {};
-      let i;
-      for (i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
+      for (let i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
       claimed = map;
       lsSet('myDevices', JSON.stringify(map));
       UI.debug('devices: ' + Object.keys(map).length + ' of ' + list.length + ' claimed');

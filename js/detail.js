@@ -145,8 +145,7 @@ var Detail = (function () {
     /* Keep the user's choice pinned across a rebuild. */
     sel = 0;
     if (chosen) {
-      let i;
-      for (i = 0; i < sources.length; i++) {
+      for (let i = 0; i < sources.length; i++) {
         if (sources[i].copy === chosen.copy && sources[i].mediaIndex === chosen.mediaIndex) {
           sel = i;
           break;
@@ -413,10 +412,8 @@ var Detail = (function () {
   function renderActions() {
     const list = actions();
     let html = '';
-    let i;
-    let a;
-    for (i = 0; i < list.length; i++) {
-      a = list[i];
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
       html += '<div class="dt-act' + (a.primary ? ' primary' : '') +
               (a.quiet ? ' quiet' : '') +
               (strip === 0 && i === idx ? ' on' : '') + '" data-act="' + a.act + '">' +
@@ -508,8 +505,7 @@ var Detail = (function () {
     renderActions();
 
     let html = '';
-    let i;
-    for (i = 0; i < extras.length; i++) {
+    for (let i = 0; i < extras.length; i++) {
       html += extraCard(extras[i], strip === 1 && i === idx);
     }
     elExtras.innerHTML = html;
@@ -681,8 +677,7 @@ var Detail = (function () {
   function initials(name) {
     const words = String(name || '').trim().split(/\s+/);
     let out = '';
-    let i;
-    for (i = 0; i < words.length && out.length < 2; i++) {
+    for (let i = 0; i < words.length && out.length < 2; i++) {
       if (words[i]) out += words[i].charAt(0).toUpperCase();
     }
     return out;
@@ -691,12 +686,10 @@ var Detail = (function () {
   function castHtml(md) {
     const roles = (md.Role || []).slice(0, 8);
     let html = '';
-    let i;
-    let r;
     let url;
     if (!roles.length) return '';
-    for (i = 0; i < roles.length; i++) {
-      r = roles[i];
+    for (let i = 0; i < roles.length; i++) {
+      const r = roles[i];
       url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
       html += '<div class="dt-actor">' +
               (url ? '<img src="' + url + '" alt="">'

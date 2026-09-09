@@ -166,11 +166,10 @@ var Player = (function () {
     let html = '';
     const list = Media.chapters(item);
     let i;
-    let at;
 
     const markers = (item && item.Marker) || [];
     for (i = 0; i < markers.length; i++) {
-      at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
+      const at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
       const wide = Math.max(2, Math.round(BAR_W *
         (((markers[i].endTimeOffset || 0) - (markers[i].startTimeOffset || 0)) / 1000) / dur));
       html += '<i class="osd-band" style="left:' + at + 'px;width:' + wide + 'px"></i>';
@@ -261,9 +260,8 @@ var Player = (function () {
   function panelIndexOf(st) {
     const tracks = Media.audioTracks(currentPart);
     const list = panelTracks();
-    let i;
     if (!list || list.length !== tracks.length) return -1;
-    for (i = 0; i < tracks.length; i++) {
+    for (let i = 0; i < tracks.length; i++) {
       if (String(tracks[i].id) === String(st.id)) return i;
     }
     return -1;
@@ -271,9 +269,8 @@ var Player = (function () {
 
   function selectPanelTrack(n) {
     const list = panelTracks();
-    let i;
     if (!list || n < 0 || n >= list.length) return false;
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if (list[i]) list[i].enabled = (i === n);
     }
     /* Trust nothing: read it back. A pipeline that exposes the list read-only
@@ -396,11 +393,9 @@ var Player = (function () {
     const list = controls();
     let lh = '';
     let rh = '';
-    let i;
-    let c;
     let html;
-    for (i = 0; i < list.length; i++) {
-      c = list[i];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
       html = '<div class="osd-ctl' + (focus === 'row' && i === ctl ? ' foc' : '') +
              (c.id && c.id === openPanel ? ' on' : '') + '"' +
              (c.id ? ' id="osd-ctl-' + c.id + '"' : '') + '>' +
@@ -705,8 +700,7 @@ var Player = (function () {
   function audioRows() {
     const tracks = Media.audioTracks(currentPart);
     const out = [];
-    let i;
-    for (i = 0; i < tracks.length; i++) out.push(audioRow(tracks[i]));
+    for (let i = 0; i < tracks.length; i++) out.push(audioRow(tracks[i]));
     return out;
   }
 
@@ -726,9 +720,8 @@ var Player = (function () {
 
   function subRows() {
     const list = Media.subtitleTracks(currentPart);
-    let i;
     const out = [{ label: 'Off', on: !currentSub, value: function () { setSub(null); } }];
-    for (i = 0; i < list.length; i++) out.push(subRow(list[i]));
+    for (let i = 0; i < list.length; i++) out.push(subRow(list[i]));
     return out;
   }
 
@@ -796,10 +789,9 @@ var Player = (function () {
   /* The chapter the playhead is in, or null. The rail rings it and the caption
      names it, so both have to agree. */
   function chapterAt(list, at) {
-    let i;
     /* Backwards: a chapter Plex gave no end offset for would otherwise swallow
        the whole film from its start onwards. */
-    for (i = list.length - 1; i >= 0; i--) {
+    for (let i = list.length - 1; i >= 0; i--) {
       if (at >= list[i].start && (!list[i].end || at < list[i].end)) return list[i];
     }
     return null;
@@ -863,11 +855,9 @@ var Player = (function () {
   function paintChapters() {
     const list = Media.chapters(item);
     let html = '';
-    let i;
-    let c;
     let shot;
-    for (i = 0; i < list.length; i++) {
-      c = list[i];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
       shot = c.thumb ? Plex.photoUrl(server, c.thumb, 240, 135) : '';
       html += '<div class="osd-chap' + (i === chapSel ? ' on' : '') + '">' +
               '<div class="osd-chap-shot"' +
@@ -1137,8 +1127,7 @@ var Player = (function () {
 
   function indexOfCtl(id) {
     const list = controls();
-    let i;
-    for (i = 0; i < list.length; i++) if (list[i].id === id) return i;
+    for (let i = 0; i < list.length; i++) if (list[i].id === id) return i;
     return 0;
   }
 

@@ -360,10 +360,8 @@
      objects discovery handed us. A server that has since gone is dropped. */
   function rehydrate(cached) {
     const out = [];
-    let i;
-    let server;
-    for (i = 0; i < cached.length; i++) {
-      server = Servers.get(cached[i].serverId);
+    for (let i = 0; i < cached.length; i++) {
+      const server = Servers.get(cached[i].serverId);
       if (server) out.push({ server: server, sections: cached[i].sections });
     }
     return out;

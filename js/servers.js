@@ -24,8 +24,7 @@ var Servers = (function () {
   function count() { return list.length; }
 
   function get(id) {
-    let i;
-    for (i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return null;
   }
 
@@ -36,8 +35,7 @@ var Servers = (function () {
   }
 
   function stamp(items, server) {
-    let i;
-    for (i = 0; i < items.length; i++) if (items[i]) items[i]._server = server.id;
+    for (let i = 0; i < items.length; i++) if (items[i]) items[i]._server = server.id;
     return items;
   }
 
@@ -95,9 +93,8 @@ var Servers = (function () {
   function cyclePreferred() {
     if (list.length < 2) return preferred();
     let at = 0;
-    let i;
     const cur = preferred();
-    for (i = 0; i < list.length; i++) if (list[i].id === cur) at = i;
+    for (let i = 0; i < list.length; i++) if (list[i].id === cur) at = i;
     setPreferred(list[(at + 1) % list.length].id);
     return preferred();
   }

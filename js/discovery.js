@@ -44,8 +44,7 @@ var Discovery = (function () {
       return Plex.findByGuid(sv, 'tmdb://' + id).catch(function () { return null; });
     })).then(function (perServer) {
       const hits = [];
-      let i;
-      for (i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
+      for (let i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
       return hits.length ? Merge.lists([hits])[0] : null;
     });
   }

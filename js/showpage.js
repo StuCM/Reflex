@@ -81,9 +81,8 @@ var ShowPage = (function () {
 
   function openSeason(list) {
     const want = opts.at && opts.at.season;
-    let i;
     if (want !== undefined && want !== null) {
-      for (i = 0; i < list.length; i++) if (list[i].index === want) return i;
+      for (let i = 0; i < list.length; i++) if (list[i].index === want) return i;
     }
     return Shows.openAt(list);
   }
@@ -113,10 +112,8 @@ var ShowPage = (function () {
 
   function renderSeasons() {
     let html = '';
-    let i;
-    let cls;
-    for (i = 0; i < seasons.length; i++) {
-      cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
+    for (let i = 0; i < seasons.length; i++) {
+      const cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
             (zone === 'seasons' && i === seasonIdx ? ' on' : '');
       html += '<span class="' + cls + '">' + UI.escapeHtml(seasons[i].title || ('Series ' + (i + 1))) +
               '</span>';
@@ -143,13 +140,11 @@ var ShowPage = (function () {
        them costs more than it is worth. */
     const first = UI.clamp(epIdx - EPISODE_LEAD, 0, Math.max(0, episodes.length - EPISODE_POOL));
     let html = '';
-    let i;
-    let ep;
     let on;
     let watched;
     let still;
-    for (i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
-      ep = episodes[i];
+    for (let i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
+      const ep = episodes[i];
       on = (i === epIdx && zone === 'episodes');
       watched = ep.viewOffset && ep.duration
         ? Math.round(100 * ep.viewOffset / ep.duration) + '%'
@@ -201,10 +196,8 @@ var ShowPage = (function () {
     }
     const first = UI.clamp(recapIdx - RECAP_LEAD, 0, Math.max(0, recaps.length - RECAP_POOL));
     let html = '';
-    let i;
-    let r;
-    for (i = first; i < Math.min(first + RECAP_POOL, recaps.length); i++) {
-      r = recaps[i];
+    for (let i = first; i < Math.min(first + RECAP_POOL, recaps.length); i++) {
+      const r = recaps[i];
       html += '<div class="sh-recap' + (on && i === recapIdx ? ' on' : '') + '">' +
               '<span class="sh-recap-thumb"' +
               (r.thumb ? ' style="background-image:url(' + UI.escapeHtml(r.thumb) + ')"' : '') +
@@ -342,10 +335,8 @@ var ShowPage = (function () {
       episodes = list;
       /* Land on the episode we were opened at, or failing that the first
          unfinished one: what you want is almost always the next one. */
-      let i;
-      let hit;
-      for (i = 0; i < list.length; i++) {
-        hit = want === null ? (list[i].viewOffset || !list[i].viewCount)
+      for (let i = 0; i < list.length; i++) {
+        const hit = want === null ? (list[i].viewOffset || !list[i].viewCount)
                             : list[i].index === want;
         if (hit) { epIdx = i; break; }
       }

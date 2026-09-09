@@ -38,16 +38,14 @@ var Menu = (function () {
      than a surprise. */
   function land() {
     const list = rows();
-    let i;
     sel = 0;
-    for (i = 0; i < list.length; i++) if (list[i].on) { sel = i; return; }
+    for (let i = 0; i < list.length; i++) if (list[i].on) { sel = i; return; }
   }
 
   function paint() {
     const list = rows();
     let html = '';
     let i;
-    let r;
     for (i = 0; i < tabs.length; i++) {
       html += '<span class="menu-tab' + (i === tab ? ' on' : '') + '">' +
               UI.escapeHtml(tabs[i].label) + '</span>';
@@ -56,7 +54,7 @@ var Menu = (function () {
 
     html = '';
     for (i = 0; i < list.length; i++) {
-      r = list[i];
+      const r = list[i];
       html += '<div class="menu-row' + (i === sel ? ' sel' : '') +
               (r.on ? ' on' : '') + (r.off ? ' off' : '') + '">' +
               '<span class="menu-mark">' + (r.on ? '●' : '') + '</span>' +
@@ -111,7 +109,7 @@ var Menu = (function () {
   /* Closed before the choice is acted on, so a screen that reopens the menu or
      tears itself down in response is not fighting an overlay that is still up. */
   function choose() {
-    let r = rows()[sel];
+    const r = rows()[sel];
     const go = onChoose;
     close();
     if (r && !r.off && go) go(r.value, r);

@@ -66,19 +66,15 @@ var Rail = (function () {
   }
 
   function build() {
-    let r;
-    let i;
-    let rowEl;
     let label;
     let strip;
-    let tile;
     let inner;
     let img;
     let name;
     let sub;
     let prog;
-    for (r = 0; r < ROW_POOL; r++) {
-      rowEl = document.createElement('div');
+    for (let r = 0; r < ROW_POOL; r++) {
+      const rowEl = document.createElement('div');
       rowEl.className = 'row hidden';
       label = document.createElement('div');
       label.className = 'row-label';
@@ -89,8 +85,8 @@ var Rail = (function () {
       rowEl._label = label; rowEl._strip = strip; rowEl._row = -1;
       rowEl._rowRef = null; rowEl._tiles = []; rowEl._onScreen = false;
 
-      for (i = 0; i < TILE_POOL; i++) {
-        tile = document.createElement('div');
+      for (let i = 0; i < TILE_POOL; i++) {
+        const tile = document.createElement('div');
         /* Hidden until something is in it — otherwise the pool shows as a
            stack of empty cards for as long as the first rows take to arrive. */
         tile.className = 'tile hidden';
@@ -126,13 +122,10 @@ var Rail = (function () {
      for them is reassigned in place. A whole-rail render per image would be far
      more work than one picture is worth. */
   function repaint(tmdbId) {
-    let r;
-    let i;
-    let t;
     let url;
-    for (r = 0; r < ROW_POOL; r++) {
-      for (i = 0; i < TILE_POOL; i++) {
-        t = rowEls[r]._tiles[i];
+    for (let r = 0; r < ROW_POOL; r++) {
+      for (let i = 0; i < TILE_POOL; i++) {
+        const t = rowEls[r]._tiles[i];
         if (!t._item || t._deferred || t._wait || Plex.tmdbId(t._item) !== tmdbId) continue;
         url = Art.tile(t._item, TILE_W, TILE_H);
         if (url) t._img.src = url;
@@ -143,12 +136,9 @@ var Rail = (function () {
   /* A tile showing a placeholder must re-render once its page lands. One that
      already shows a poster must not, or we reassign src for nothing. */
   function invalidateEmpty() {
-    let r;
-    let i;
-    let t;
-    for (r = 0; r < ROW_POOL; r++) {
-      for (i = 0; i < TILE_POOL; i++) {
-        t = rowEls[r]._tiles[i];
+    for (let r = 0; r < ROW_POOL; r++) {
+      for (let i = 0; i < TILE_POOL; i++) {
+        const t = rowEls[r]._tiles[i];
         if (!t._filled || t._deferred) t._idx = -1;
       }
     }
@@ -166,13 +156,10 @@ var Rail = (function () {
   /* The rail has stopped moving, so the tiles still on it can have their
      pictures. Off-screen rows keep waiting — they have their own reason to. */
   function settled() {
-    let r;
-    let i;
-    let t;
-    for (r = 0; r < ROW_POOL; r++) {
+    for (let r = 0; r < ROW_POOL; r++) {
       if (!rowEls[r]._onScreen) continue;
-      for (i = 0; i < TILE_POOL; i++) {
-        t = rowEls[r]._tiles[i];
+      for (let i = 0; i < TILE_POOL; i++) {
+        const t = rowEls[r]._tiles[i];
         if (t._wait && t._item) paint(t);
       }
     }
@@ -186,7 +173,6 @@ var Rail = (function () {
     const reused = rowEl._row !== r || rowEl._rowRef !== row;
     let i;
     let idx;
-    let tile;
     let item;
     let held;
     let focused;
@@ -215,7 +201,7 @@ var Rail = (function () {
     place(rowEl._strip, -firstVisible * STRIDE, !reused);
 
     for (i = 0; i < TILE_POOL; i++) {
-      tile = rowEl._tiles[i];
+      const tile = rowEl._tiles[i];
       idx = start + i;
       if (idx >= row.total) { tile.classList.add('hidden'); tile._idx = -1; tile._item = null; continue; }
       tile.classList.remove('hidden');
@@ -278,14 +264,12 @@ var Rail = (function () {
        the row you just moved to half below the fold. */
     const firstVisible = UI.clamp(rowIdx - (ROWS_FIT - 1), 0, Math.max(0, rows.length - ROWS_FIT));
     const start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
-    let i;
-    let r;
     /* Row 0 sits under the tall hero; everything below it sits under the band.
        Both states are one translate on this element, so the collapse animates
        for free on the transform that was moving anyway. */
     translate(elRows, 0, (rowIdx === 0 ? BIG_DROP : 0) - firstVisible * ROW_H);
-    for (i = 0; i < ROW_POOL; i++) {
-      r = start + i;
+    for (let i = 0; i < ROW_POOL; i++) {
+      const r = start + i;
       if (r >= rows.length) {
         rowEls[i].classList.add('hidden');
         rowEls[i]._row = -1;

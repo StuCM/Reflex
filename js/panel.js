@@ -71,12 +71,10 @@ var Panel = (function () {
     };
     const kinds = ['container', 'video', 'audio'];
     let i;
-    let k;
     for (i = 0; i < kinds.length; i++) {
-      k = kinds[i];
+      const k = kinds[i];
       const keys = Object.keys(BASE[k]);
-      let n;
-      for (n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
+      for (let n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
     }
 
     for (i = 0; i < CANDIDATES.length; i++) {
@@ -137,8 +135,7 @@ var Panel = (function () {
     const video = list('video').join(',');
     const audio = list('audio').join(',');
     const out = [];
-    let i;
-    for (i = 0; i < containers.length; i++) {
+    for (let i = 0; i < containers.length; i++) {
       out.push('add-direct-play-profile(type=videoProfile&container=' + containers[i] +
                '&codec=' + video + '&audioCodec=' + audio + ')');
     }
@@ -155,18 +152,15 @@ var Panel = (function () {
     const rows = probe();
     const lines = [];
     const kinds = ['video', 'container', 'audio'];
-    let i;
-    let k;
-    let said;
     lines.push('DECLARED TO THE SERVER');
     lines.push('containers   ' + list('container').join(', '));
     lines.push('video        ' + list('video').join(', '));
     lines.push('audio        ' + list('audio').join(', '));
     lines.push('');
     lines.push('PANEL ANSWERED  (only "probably" is acted on)');
-    for (k = 0; k < kinds.length; k++) {
-      said = [];
-      for (i = 0; i < rows.length; i++) {
+    for (let k = 0; k < kinds.length; k++) {
+      const said = [];
+      for (let i = 0; i < rows.length; i++) {
         if (rows[i].kind === kinds[k]) said.push(rows[i].name + '=' + (rows[i].said || 'no'));
       }
       lines.push(kinds[k] + (kinds[k] === 'video' ? '        ' : (kinds[k] === 'audio' ? '        ' : '    ')) +

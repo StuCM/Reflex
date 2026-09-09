@@ -102,14 +102,11 @@ var Browse = (function () {
   function setSections(perServer) {
     const byType = {};
     let i;
-    let j;
-    let list;
-    let sec;
     let type;
     for (i = 0; i < perServer.length; i++) {
-      list = perServer[i].sections || [];
-      for (j = 0; j < list.length; j++) {
-        sec = list[j];
+      const list = perServer[i].sections || [];
+      for (let j = 0; j < list.length; j++) {
+        const sec = list[j];
         type = sec.type;
         if (!SECTION_TITLES[type]) continue;
         if (!byType[type]) byType[type] = { title: SECTION_TITLES[type], type: type, parts: [] };
@@ -131,10 +128,8 @@ var Browse = (function () {
   function serversOf(sec) {
     const out = [];
     const seen = {};
-    let i;
-    let id;
-    for (i = 0; i < sec.parts.length; i++) {
-      id = sec.parts[i].server.id;
+    for (let i = 0; i < sec.parts.length; i++) {
+      const id = sec.parts[i].server.id;
       if (seen[id]) continue;
       seen[id] = true;
       out.push(sec.parts[i].server);
@@ -165,9 +160,8 @@ var Browse = (function () {
   /* Select mode renames the row, so while it is on the row is known by where it
      is rather than by what it says. */
   function watchingRowIdx() {
-    let i;
     if (picking) return pickAt;
-    for (i = 0; i < rows.length; i++) if (rows[i].title === WATCHING) return i;
+    for (let i = 0; i < rows.length; i++) if (rows[i].title === WATCHING) return i;
     return -1;
   }
 
@@ -201,8 +195,7 @@ var Browse = (function () {
 
   function pickIndex(item) {
     const key = Media.identity(item);
-    let i;
-    for (i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === key) return i;
+    for (let i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === key) return i;
     return -1;
   }
 
@@ -210,10 +203,8 @@ var Browse = (function () {
      about a mode that lasts seconds, and Rail owns no state to teach. */
   function markPicks() {
     const tiles = document.querySelectorAll('#rows .tile');
-    let i;
-    let tile;
-    for (i = 0; i < tiles.length; i++) {
-      tile = tiles[i];
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
       tile.classList.toggle('picked',
         !!(picking && tile._item && pickIndex(tile._item) >= 0));
     }
@@ -298,9 +289,8 @@ var Browse = (function () {
     const gone = Media.identity(entry);
     let at;
     let row;
-    let i;
     deckItems = deckItems.filter(function (m) { return Media.identity(m) !== gone; });
-    for (i = 0; i < sections.length; i++) Store.put('rows:' + sections[i].title, null);
+    for (let i = 0; i < sections.length; i++) Store.put('rows:' + sections[i].title, null);
     at = watchingRowIdx();
     if (at < 0) return;
     row = Rows.list(rows[at].title, deckCut());
@@ -322,8 +312,7 @@ var Browse = (function () {
       return Plex.scrobble(server, watchedKey(copy)).then(function () { return true; });
     })).then(function (done) {
       const refused = [];
-      let i;
-      for (i = 0; i < done.length; i++) if (!done[i]) refused.push(job.copies[i]);
+      for (let i = 0; i < done.length; i++) if (!done[i]) refused.push(job.copies[i]);
       if (refused.length) return { needsWatched: true, copies: refused };
       dropFromDeck(job.entry);
       return { ok: true };
@@ -342,8 +331,7 @@ var Browse = (function () {
     })).then(function (res) {
       const again = [];
       let failed = 0;
-      let i;
-      for (i = 0; i < res.length; i++) {
+      for (let i = 0; i < res.length; i++) {
         if (res[i].ok) continue;
         if (res[i].needsWatched) again.push({ entry: jobs[i].entry, copies: res[i].copies });
         else failed++;
@@ -380,9 +368,8 @@ var Browse = (function () {
      something the row actually holds. */
   function isOnDeck(item) {
     const key = item && Media.identity(item);
-    let i;
     if (!key) return false;
-    for (i = 0; i < deckItems.length; i++) {
+    for (let i = 0; i < deckItems.length; i++) {
       if (Media.identity(deckItems[i]) === key) return true;
     }
     return false;
@@ -479,9 +466,8 @@ var Browse = (function () {
   /* Rows from titled item lists, remembering the part-watched ones so the
      Continue watching cut has something to filter. */
   function listRows(built) {
-    let i;
     deckItems = [];
-    for (i = 0; i < built.length; i++) {
+    for (let i = 0; i < built.length; i++) {
       if (built[i].title === WATCHING) deckItems = built[i].items;
     }
     return built.map(function (r) { return Rows.list(r.title, r.items); });
@@ -500,8 +486,7 @@ var Browse = (function () {
     const base = { type: sec.type === 'show' ? 2 : 1 };
     if (filter) {
       const keys = Object.keys(filter);
-      let i;
-      for (i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
+      for (let i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
     }
     const parts = sec.parts.map(function (p) {
       return { server: p.server, key: p.key, updatedAt: p.updatedAt,
@@ -609,12 +594,9 @@ var Browse = (function () {
   function mergeHubs(perPart) {
     const byTitle = {};
     const order = [];
-    let i;
-    let j;
-    let list;
-    for (i = 0; i < perPart.length; i++) {
-      list = perPart[i] || [];
-      for (j = 0; j < list.length; j++) {
+    for (let i = 0; i < perPart.length; i++) {
+      const list = perPart[i] || [];
+      for (let j = 0; j < list.length; j++) {
         if (!byTitle[list[j].title]) { byTitle[list[j].title] = []; order.push(list[j].title); }
         byTitle[list[j].title].push(list[j].items);
       }
@@ -728,10 +710,8 @@ var Browse = (function () {
      memory. Asking a server for them would cost the page its whole point. */
   function deckSeeds() {
     const out = [];
-    let i;
-    let id;
-    for (i = 0; i < deckItems.length && out.length < MAX_SEEDS; i++) {
-      id = Plex.tmdbId(deckItems[i]);
+    for (let i = 0; i < deckItems.length && out.length < MAX_SEEDS; i++) {
+      const id = Plex.tmdbId(deckItems[i]);
       if (id && out.indexOf(id) < 0) out.push(id);
     }
     return out;
@@ -828,8 +808,7 @@ var Browse = (function () {
   function countNoun(found) {
     let films = 0;
     let shows = 0;
-    let i;
-    for (i = 0; i < found.length; i++) {
+    for (let i = 0; i < found.length; i++) {
       if (found[i].type === 'show') shows++; else films++;
     }
     if (shows && films) return 'results';

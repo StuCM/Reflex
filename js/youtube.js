@@ -23,10 +23,8 @@ var Youtube = (function () {
   function qs(params) {
     const keys = Object.keys(params);
     const parts = [];
-    let i;
-    let v;
-    for (i = 0; i < keys.length; i++) {
-      v = params[keys[i]];
+    for (let i = 0; i < keys.length; i++) {
+      const v = params[keys[i]];
       if (v === null || v === undefined) continue;
       parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(v));
     }
@@ -100,9 +98,8 @@ var Youtube = (function () {
      a missing rail, so a failure here keeps the items. */
   function withLengths(items) {
     const ids = [];
-    let i;
     let id;
-    for (i = 0; i < items.length; i++) {
+    for (let i = 0; i < items.length; i++) {
       id = items[i].id && items[i].id.videoId;
       if (id) ids.push(id);
     }
@@ -148,12 +145,10 @@ var Youtube = (function () {
   function parse(items) {
     const list = items || [];
     const out = [];
-    let i;
-    let it;
     let id;
     let title;
-    for (i = 0; i < list.length; i++) {
-      it = list[i] || {};
+    for (let i = 0; i < list.length; i++) {
+      const it = list[i] || {};
       id = it.id && it.id.videoId;
       title = (it.snippet && it.snippet.title) || '';
       if (!id || !title) continue;
@@ -196,9 +191,8 @@ var Youtube = (function () {
   function pickForShow(parsed, showTitle) {
     const want = normalise(showTitle);
     const out = [];
-    let i;
     if (want.length < 3) return [];               // no title left to match on
-    for (i = 0; i < (parsed || []).length; i++) {
+    for (let i = 0; i < (parsed || []).length; i++) {
       if (normalise(parsed[i].title).indexOf(want) >= 0) out.push(parsed[i]);
     }
     return out;

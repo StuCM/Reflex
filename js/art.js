@@ -32,9 +32,8 @@ var Art = (function () {
   /* The best-voted path out of one of TMDB's image lists, or null. */
   function bestOf(list) {
     const usable = [];
-    let i;
     if (!Array.isArray(list)) return null;
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if (list[i] && list[i].file_path) usable.push(list[i]);
     }
     usable.sort(function (a, b) {
@@ -59,8 +58,7 @@ var Art = (function () {
     const credits = (payload && payload.credits) || {};
     const billing = Array.isArray(credits.cast) ? credits.cast : [];
     const cast = [];
-    let i;
-    for (i = 0; i < billing.length && cast.length < CAST; i++) {
+    for (let i = 0; i < billing.length && cast.length < CAST; i++) {
       if (billing[i] && billing[i].name) cast.push(billing[i].name);
     }
     const score = (payload && typeof payload.vote_average === 'number') ? payload.vote_average : 0;
@@ -154,12 +152,11 @@ var Art = (function () {
   /* A title with no usable backdrops is cached too, or an obscure one costs a
      request every time the row is walked past. */
   function landed(id, got) {
-    let i;
     active--;
     delete pending[id];
     cache[id] = got;
     pump();
-    for (i = 0; i < listeners.length; i++) listeners[i](id);
+    for (let i = 0; i < listeners.length; i++) listeners[i](id);
   }
 
   return { pick: pick, facts: facts, url: url, tile: tile, hero: hero,

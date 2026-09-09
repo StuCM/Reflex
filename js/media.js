@@ -63,9 +63,8 @@ var Media = (function () {
     const streams = (part && part.Stream) || [];
     let best = null;
     let bestScore = -1;
-    let i;
     let sc;
-    for (i = 0; i < streams.length; i++) {
+    for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType !== 2) continue;
       sc = audioScore(streams[i]);
       if (sc > bestScore) { bestScore = sc; best = streams[i]; }
@@ -81,11 +80,9 @@ var Media = (function () {
     const streams = (part && part.Stream) || [];
     let best = null;
     let bestScore = -1;
-    let i;
-    let st;
     let sc;
-    for (i = 0; i < streams.length; i++) {
-      st = streams[i];
+    for (let i = 0; i < streams.length; i++) {
+      const st = streams[i];
       if (st.streamType !== 2 || isCommentary(st)) continue;
       sc = Math.min(st.channels || 2, 8) * 10 + (st.selected ? 5 : 0) +
            (st.default ? 2 : 0);
@@ -121,9 +118,8 @@ var Media = (function () {
      through. */
   function audioTracks(part) {
     const streams = (part && part.Stream) || [];
-    let out = [];
-    let i;
-    for (i = 0; i < streams.length; i++) {
+    const out = [];
+    for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType === 2) out.push(streams[i]);
     }
     return out;
@@ -131,8 +127,7 @@ var Media = (function () {
 
   function streamById(part, id) {
     const list = (part && part.Stream) || [];
-    let i;
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if (String(list[i].id) === String(id)) return list[i];
     }
     return null;
@@ -143,11 +138,9 @@ var Media = (function () {
      being excluded too. */
   function audioSummary(part) {
     const streams = (part && part.Stream) || [];
-    let out = [];
-    let i;
-    let st;
-    for (i = 0; i < streams.length; i++) {
-      st = streams[i];
+    const out = [];
+    for (let i = 0; i < streams.length; i++) {
+      const st = streams[i];
       if (st.streamType !== 2) continue;
       out.push(audioLabel(st) + (isCommentary(st) ? ' (commentary)' : ''));
     }
@@ -208,9 +201,8 @@ var Media = (function () {
 
   function subtitleTracks(part) {
     const streams = (part && part.Stream) || [];
-    let out = [];
-    let i;
-    for (i = 0; i < streams.length; i++) {
+    const out = [];
+    for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType === 3) out.push(streams[i]);
     }
     return out;
@@ -236,10 +228,9 @@ var Media = (function () {
     const list = subtitleTracks(part);
     const usable = [];
     let i;
-    let st;
     let want;
     for (i = 0; i < list.length; i++) {
-      st = list[i];
+      const st = list[i];
       if (isTextSub(st) && !isCommentary(st)) usable.push(st);
     }
     if (!usable.length) return null;
@@ -265,10 +256,8 @@ var Media = (function () {
   function markerAt(item, seconds) {
     const list = (item && item.Marker) || [];
     const t = seconds * 1000;
-    let i;
-    let m;
-    for (i = 0; i < list.length; i++) {
-      m = list[i];
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
       if (t >= (m.startTimeOffset || 0) && t < (m.endTimeOffset || 0)) return m;
     }
     return null;
@@ -287,11 +276,9 @@ var Media = (function () {
      more often than not — Plex only carries one where it indexed the file. */
   function chapters(item) {
     const list = (item && item.Chapter) || [];
-    let out = [];
-    let i;
-    let c;
-    for (i = 0; i < list.length; i++) {
-      c = list[i];
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
       out.push({
         title: c.tag || c.title || ('Chapter ' + (c.index || i + 1)),
         start: (c.startTimeOffset || 0) / 1000,
@@ -332,10 +319,9 @@ var Media = (function () {
   /* [{ label, bitrate }] — bitrate null means the file as it is. */
   function qualities(media) {
     const source = (media && media.bitrate) || 0;
-    let out = [];
-    let i;
+    const out = [];
     out.push({ label: 'Original (' + versionLabel(media) + ')', bitrate: null });
-    for (i = 0; i < BITRATES.length; i++) {
+    for (let i = 0; i < BITRATES.length; i++) {
       if (!source || BITRATES[i] < source) {
         out.push({ label: bitrateLabel(BITRATES[i]) + ' — server converts',
                    bitrate: BITRATES[i] });
@@ -426,12 +412,10 @@ var Media = (function () {
      match because one server has no external id is not. */
 
   function externalIds(item) {
-    let out = [];
+    const out = [];
     const g = (item && item.Guid) || [];
-    let i;
-    let id;
-    for (i = 0; i < g.length; i++) {
-      id = String(g[i].id || '').toLowerCase();
+    for (let i = 0; i < g.length; i++) {
+      const id = String(g[i].id || '').toLowerCase();
       if (id.indexOf('imdb://') === 0 || id.indexOf('tmdb://') === 0 ||
           id.indexOf('tvdb://') === 0) out.push(id);
     }
