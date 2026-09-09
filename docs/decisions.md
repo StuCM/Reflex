@@ -13,6 +13,69 @@ Newest first. One entry per decision, appended by the orchestrator at
 
 ---
 
+## 2026-09-10 — The layering, and the case for a bundler
+
+`js/` became six directories — `core`, `api`, `data`, `rules`, `view`,
+`screen` — and the boundaries are checked rather than trusted: `npm run check`
+now fails on a request opened outside `api/`, on `Store` addressed outside
+`data/`, and on the DOM, a request or the cache reached for from `rules/`.
+Every rule was confirmed by planting a violation and watching it go red, and
+the first run found a real one — the debug beacon in `core/ui.js` had its own
+`XMLHttpRequest`.
+
+The premise it started from was only half right. "Separate the frontend from
+the functionality" was already true of most of the tree: fifteen files touched
+no DOM and four were view-only. What was genuinely wrong was the cache.
+`store.js` was a key/value store that knew nothing about what it held, and
+seven files had invented their own key strings, five key conventions, two
+incompatible ways of stamping an entry with a time, and an invalidation that
+wrote `null` into a row. `data/cached.js` now owns all of it, and there are
+zero `Store` call sites outside `data/`.
+
+Three real duplications went with it: `api/http.js` (three copies of the same
+forty lines of XHR, plus a byte-identical `qs()`), `view/glyphs.js` (two copies
+of the same SVG builder), and the cache above. A fourth — a shared audio/
+subtitle/quality row model between the film page and the player — was specced
+and then abandoned on reading the code: they ask the same question from
+genuinely different information, `Panel.features()` with nothing playing versus
+the live `audioTracks` list, so there is no shared implementation to extract.
+Only five duplicated strings, which is not an abstraction.
+
+PR #1's ES2015 pass was redone here rather than merged. It had branched 217
+commits back, and `git merge-tree` gave twelve conflicting files where GitHub
+reported the branch mergeable — its diff was `var`→`const` applied to text that
+no longer existed. The lesson is cheap to apply: GitHub's mergeable flag is
+computed against a cached base, and `git merge-tree --write-tree` is the local
+truth. Redone by acorn codemods that splice source text rather than reprint it,
+so comments and alignment survived, and that refused what they could not prove —
+notably a loop counter captured by a closure, where `let` gives one binding per
+turn and `var` gives one, which is a behaviour change and not a rename.
+
+Then the harder question, asked by the user rather than by us: is "no bundler"
+a constraint or a habit? It is a consequence — Chromium 53 has no
+`<script type="module">`, so `import`/`export` is only reachable through a
+bundler, which is why `js/` is thirty globals and a hand-ordered script list.
+But the consequence points *at* bundling, not away from it, and the case turned
+out stronger than expected. `esbuild --target=chrome53` downlevels `async`/
+`await` and object rest, so the syntax bans in CLAUDE.md are the price of
+having no compiler rather than anything the panel imposes; `tools/check-es5.js`
+is a regex scan its own header calls "not proof", where a compiler is proof.
+Proven: the thirty files bundled and put on the B8 browse at 3.0s with 92/92
+smoke, and `data/meta.js` rewritten as a real `async` function produced a
+bundle with no occurrence of `async` in it.
+
+The one reservation was debugging on the panel, and the deploy killed it.
+`ares-package` minifies every file in `js/` unconditionally — `rules/media.js`
+ships as 7.5KB of `function n(e)` — so the TV has never run the source in this
+repo, and a source map cannot survive a pipeline that re-minifies whatever it
+is given. Bundling cannot make that worse.
+
+So: bundle, then modules, then types — but not in the same branch as the
+layering, which was already thirteen commits across forty files and exactly the
+shape PR #1 died in. Features are frozen until it is done.
+
+---
+
 ## 2026-09-09 — A night of refactors, and five tests that proved nothing
 
 Two files made every task wait on every other: `dev/smoke.js` at 3,344 lines and
