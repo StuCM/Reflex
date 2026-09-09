@@ -44,6 +44,12 @@ Ordered. Each step is green before the next starts.
 
 ### 0b. Bugs found deploying 0.0.2 to the panel
 
+- **Push `main`.** Before 2026-09-10 it had 217 commits that had never left
+  this laptop, so `origin/main` sat at `035773d` — which is exactly where the
+  cloud session's PR #1 branched, and why it could never merge. Any session
+  that is not this one branches from GitHub. If `main` is stale there, their
+  work is born conflicted.
+
 - **`tools/package.sh` bakes keys into the file that no longer ships.** It
   `sed`s `TMDB_KEY`/`YOUTUBE_KEY` into the *staged* `js/core/config.js`, then
   verifies the patch against that same file — so its guard passes while a

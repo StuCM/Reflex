@@ -44,9 +44,17 @@ Only five duplicated strings, which is not an abstraction.
 PR #1's ES2015 pass was redone here rather than merged. It had branched 217
 commits back, and `git merge-tree` gave twelve conflicting files where GitHub
 reported the branch mergeable — its diff was `var`→`const` applied to text that
-no longer existed. The lesson is cheap to apply: GitHub's mergeable flag is
-computed against a cached base, and `git merge-tree --write-tree` is the local
-truth. Redone by acorn codemods that splice source text rather than reprint it,
+no longer existed.
+
+The cause was ours, not the PR's, and it only became visible on pushing:
+`origin/main` was sitting at `035773d`, which is *exactly* where PR #1 branched.
+Local `main` had 217 commits that had never been pushed, so a cloud session
+branching from GitHub could not have started anywhere else. **Push `main`.** A
+branch cut from a remote that is six weeks stale is guaranteed to conflict, and
+no amount of care in the branch can prevent it. Two smaller lessons stand
+alongside it: GitHub's mergeable flag is computed against a cached base and
+should not be trusted, and `git merge-tree --write-tree` is the local truth for
+a second. Redone by acorn codemods that splice source text rather than reprint it,
 so comments and alignment survived, and that refused what they could not prove —
 notably a loop counter captured by a closure, where `let` gives one binding per
 turn and `var` gives one, which is a behaviour change and not a rename.
