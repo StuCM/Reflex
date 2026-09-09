@@ -102,10 +102,13 @@ function scan(file, rules) {
 }
 
 function listFiles(dir, ext) {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter(function (f) { return path.extname(f) === ext; })
-    .map(function (f) { return path.join(dir, f); });
+  const out = [];
+  fs.readdirSync(dir, { withFileTypes: true }).forEach(function (e) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) out.push.apply(out, listFiles(full, ext));
+    else if (path.extname(e.name) === ext) out.push(full);
+  });
+  return out.sort();
 }
 
 const jsFiles = listFiles(path.join(ROOT, 'js'), '.js');
@@ -119,15 +122,18 @@ cssFiles.forEach(function (f) { scan(f, CSS_RULES); });
    this is now the way a whole screen loses its styling in silence. */
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
+/* Compared by path, not by basename: js/ is layered now, and a script tag
+   naming the right file in the wrong layer is exactly the mistake a move
+   like that makes. */
 function loaded(dir, files, tags) {
   const referenced = (html.match(tags) || [])
-    .map(function (s) { return s.replace(/.*\//, '').replace(/"$/, ''); });
-  const present = files.map(function (f) { return path.basename(f); });
+    .map(function (s) { return s.replace(/"$/, '').replace(/^.*"/, ''); });
+  const present = files.map(function (f) { return path.relative(ROOT, f).split(path.sep).join('/'); });
   present.forEach(function (f) {
-    if (referenced.indexOf(f) < 0) problems.push('index.html  ' + dir + f + ' exists but is never loaded');
+    if (referenced.indexOf(f) < 0) problems.push('index.html  ' + f + ' exists but is never loaded');
   });
   referenced.forEach(function (f) {
-    if (present.indexOf(f) < 0) problems.push('index.html  loads ' + dir + f + ', which does not exist');
+    if (present.indexOf(f) < 0) problems.push('index.html  loads ' + f + ', which does not exist');
   });
   return present;
 }

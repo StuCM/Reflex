@@ -200,36 +200,36 @@
 <!-- No bundler, so load order is the dependency graph: settings, then the
      services, then the pieces of screen, then the app that wires them up.
      tools/check-es5.js fails if a file in js/ is missing from this list. -->
-<script src="js/config.js"></script>
-<script src="js/http.js"></script>
-<script src="js/store.js"></script>
-<script src="js/cache.js"></script>
-<script src="js/panel.js"></script>
-<script src="js/subs.js"></script>
-<script src="js/media.js"></script>
-<script src="js/servers.js"></script>
-<script src="js/merge.js"></script>
-<script src="js/plex.js"></script>
-<script src="js/tmdb.js"></script>
-<script src="js/youtube.js"></script>
-<script src="js/art.js"></script>
+<script src="js/core/config.js"></script>
+<script src="js/api/http.js"></script>
+<script src="js/data/store.js"></script>
+<script src="js/data/cache.js"></script>
+<script src="js/core/panel.js"></script>
+<script src="js/rules/subs.js"></script>
+<script src="js/rules/media.js"></script>
+<script src="js/data/servers.js"></script>
+<script src="js/data/merge.js"></script>
+<script src="js/api/plex.js"></script>
+<script src="js/api/tmdb.js"></script>
+<script src="js/api/youtube.js"></script>
+<script src="js/data/art.js"></script>
 
-<script src="js/ui.js"></script>
-<script src="js/glyphs.js"></script>
-<script src="js/menu.js"></script>
-<script src="js/rows.js"></script>
-<script src="js/rail.js"></script>
-<script src="js/meta.js"></script>
-<script src="js/guard.js"></script>
-<script src="js/shows.js"></script>
-<script src="js/masthead.js"></script>
-<script src="js/detail.js"></script>
-<script src="js/showpage.js"></script>
-<script src="js/devices.js"></script>
-<script src="js/discovery.js"></script>
-<script src="js/sidebar.js"></script>
-<script src="js/browse.js"></script>
-<script src="js/player.js"></script>
+<script src="js/core/ui.js"></script>
+<script src="js/view/glyphs.js"></script>
+<script src="js/view/menu.js"></script>
+<script src="js/rules/rows.js"></script>
+<script src="js/view/rail.js"></script>
+<script src="js/data/meta.js"></script>
+<script src="js/data/guard.js"></script>
+<script src="js/data/shows.js"></script>
+<script src="js/view/masthead.js"></script>
+<script src="js/screen/detail.js"></script>
+<script src="js/screen/showpage.js"></script>
+<script src="js/data/devices.js"></script>
+<script src="js/data/discovery.js"></script>
+<script src="js/view/sidebar.js"></script>
+<script src="js/screen/browse.js"></script>
+<script src="js/screen/player.js"></script>
 
 <script src="js/app.js"></script>
 </body>

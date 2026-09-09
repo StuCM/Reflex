@@ -12,6 +12,20 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+/* js/ is layered, and a test names a module rather than a path — 'media', not
+   'rules/media'. One scan maps the names to where they live, so moving a file
+   between layers does not touch a single test. */
+const LAYERS = ['core', 'api', 'data', 'rules', 'view', 'screen'];
+function locate(name) {
+  const flat = path.join(__dirname, '..', 'js', name + '.js');
+  if (fs.existsSync(flat)) return flat;
+  for (let i = 0; i < LAYERS.length; i++) {
+    const inLayer = path.join(__dirname, '..', 'js', LAYERS[i], name + '.js');
+    if (fs.existsSync(inLayer)) return inLayer;
+  }
+  throw new Error('no such module in js/: ' + name);
+}
+
 module.exports = function load(files) {
   const store = {};
   const ctx = {
@@ -33,8 +47,7 @@ module.exports = function load(files) {
   };
   vm.createContext(ctx);
   files.forEach(function (f) {
-    const file = path.join(__dirname, '..', 'js', f + '.js');
-    vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, { filename: f + '.js' });
+    vm.runInContext(fs.readFileSync(locate(f), 'utf8'), ctx, { filename: f + '.js' });
   });
   return ctx;
 };
