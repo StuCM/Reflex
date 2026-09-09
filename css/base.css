@@ -43,11 +43,10 @@
   --r-tag:   6px;
   --r-badge: 4px;
 
-  /* Controls. One round button, worn by the film page and the player alike.
-     The design's transport buttons run 76–104px and its icon buttons 64px;
-     the app's single 88px stands until the player's own layout task. */
+  /* Controls. The film page's round button. The player sizes its own transport
+     in css/player.css and Play is a content-sized pill, so this no longer has
+     to serve every screen. */
   --c-btn:   88px;
-  --c-play:  280px;   /* the primary action, on the film page */
   --c-ctl:   152px;   /* the column a button and its caption sit in */
 
   /* Margins. The design puts every screen at 96; the film page, the show page
@@ -123,7 +122,7 @@ html, body {
 .dt-act-btn svg, .osd-btn svg { display: block; margin: 19px auto 0; }
 
 .dt-act.primary .dt-act-btn {
-  width: var(--c-play); background: var(--ac); color: var(--bg);
+  background: var(--ac); color: var(--bg);
   font-size: 30px; line-height: var(--c-btn); letter-spacing: 0.06em;
   text-transform: uppercase;
 }
