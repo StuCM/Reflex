@@ -10,11 +10,6 @@
 var Discovery = (function () {
   'use strict';
 
-  var DAY = 24 * 60 * 60 * 1000;
-  /* A film can be added to a library but is rarely taken out, so a hit stands
-     and only a miss is ever asked again. */
-  var MISS_AGAIN_AFTER = 7 * DAY;
-
   function enabled() { return Tmdb.enabled(); }
 
   /* A TMDB result as something the rail can draw with no Plex request at all:
@@ -22,7 +17,7 @@ var Discovery = (function () {
      undefined until someone asks whether we hold it. */
   function entry(result) {
     return { type: 'movie', title: result.title, year: result.year,
-             Guid: [{ id: 'tmdb://' + result.id }],
+             Guid: [{ id: `tmdb://${result.id}` }],
              _tmdb: result,
              _resolved: undefined };
   }
@@ -33,18 +28,18 @@ var Discovery = (function () {
   /* The line the masthead shows under the name — the honest answer before OK
      is pressed. */
   function settle(item, found) {
-    var sub = found ? Media.railSub(found) : '';
+    const sub = found ? Media.railSub(found) : '';
     item._resolved = found || null;
     item._availability = !found ? 'Not in your library'
-      : (sub ? 'In your library  ·  ' + sub : 'In your library');
+      : (sub ? `In your library  ·  ${sub}` : 'In your library');
   }
 
   function ask(id) {
-    return Promise.all(Servers.all().map(function (sv) {
-      return Plex.findByGuid(sv, 'tmdb://' + id).catch(function () { return null; });
-    })).then(function (perServer) {
-      var hits = [], i;
-      for (i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
+    return Promise.all(Servers.all().map((sv) => {
+      return Plex.findByGuid(sv, `tmdb://${id}`).catch(() => { return null; });
+    })).then((perServer) => {
+      const hits = [];
+      for (let i = 0; i < perServer.length; i++) if (perServer[i]) hits.push(perServer[i]);
       return hits.length ? Merge.lists([hits])[0] : null;
     });
   }
@@ -55,19 +50,18 @@ var Discovery = (function () {
   function resolve(item) {
     if (item._resolved !== undefined) return Promise.resolve(item._resolved);
     if (item._asking) return item._asking;
-    var key = 'tmdb:' + item._tmdb.id;
-    item._asking = Store.get(key).then(function (hit) {
-      if (hit && (hit.item || Date.now() - hit.at < MISS_AGAIN_AFTER)) return hit.item || null;
-      return ask(item._tmdb.id).then(function (found) {
-        Store.put(key, { at: Date.now(), item: found });
+    item._asking = Cache.lookup.get(item._tmdb.id).then((hit) => {
+      if (hit !== undefined) return hit;
+      return ask(item._tmdb.id).then((found) => {
+        Cache.lookup.put(item._tmdb.id, found);
         return found;
       });
-    }).then(function (found) {
+    }).then((found) => {
       settle(item, found);
       return item._resolved;
-    }, function (e) {
+    }, (e) => {
       item._asking = null;                    // a failed lookup is worth retrying
-      UI.debug('resolve ' + item.title + ': ' + e.message);
+      UI.debug(`resolve ${item.title}: ${e.message}`);
       return null;
     });
     return item._asking;
@@ -79,7 +73,8 @@ var Discovery = (function () {
      watched, which the caller already holds — asking a server for them would
      cost the page the very thing it exists to avoid. */
   function load(ctx) {
-    var cats = Config.categories || [], i = 0;
+    const cats = Config.categories || [];
+    let i = 0;
     function step() {
       if (!ctx.isCurrent() || i >= cats.length) return Promise.resolve();
       return one(ctx, cats[i++]).then(step);
@@ -88,20 +83,20 @@ var Discovery = (function () {
   }
 
   function one(ctx, cat) {
-    var seeds = ctx.seeds || [];
-    var key = 'disc:' + cat.kind + ':' + (cat.id || seeds.join('-'));
-    return Store.get(key).then(function (hit) {
-      if (hit && hit.films.length && Date.now() - hit.at < DAY) return hit.films;
-      return Tmdb.catalogue(cat, seeds).then(function (found) {
-        Store.put(key, { at: Date.now(), films: found });
+    const seeds = ctx.seeds || [];
+    const key = cat.kind + ':' + (cat.id || seeds.join('-'));
+    return Cache.catalogue.get(key).then((hit) => {
+      if (hit && hit.length) return hit;
+      return Tmdb.catalogue(cat, seeds).then((found) => {
+        Cache.catalogue.put(key, found);
         return found;
       });
-    }).then(function (found) {
+    }).then((found) => {
       if (!ctx.isCurrent()) return;
       if (!found.length) { UI.debug(cat.title + ': TMDB returned nothing'); return; }
       ctx.add(cat.title, found.map(entry));
       UI.debug(cat.title + ': ' + found.length + ' from TMDB');
-    }, function (e) {
+    }, (e) => {
       UI.debug(cat.title + ' failed: ' + e.message);
     });
   }

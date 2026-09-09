@@ -7,52 +7,26 @@
 var Youtube = (function () {
   'use strict';
 
-  var KEY = Config.youtubeKey;                   // see js/config.js
-  var API = Config.youtubeBase;                  // see js/config.js
+  const KEY = Config.youtubeKey;                   // see js/config.js
+  const API = Config.youtubeBase;                  // see js/config.js
 
   /* The channel by handle, not by id: a guessed id in source would be wrong and
      unverifiable, and a handle is something a human can check. */
-  var HANDLE = '@ManOfRecaps';
-  var CHANNEL_KEY = 'youtube:channel:' + HANDLE;
+  const HANDLE = '@ManOfRecaps';
 
-  var SEASON = /\b(?:season|series|s)\s*0*(\d{1,2})\b/i;
+  const SEASON = /\b(?:season|series|s)\s*0*(\d{1,2})\b/i;
 
   /* Is there a key at all? Without one the recaps action never appears. */
   function enabled() { return !!KEY; }
 
-  function qs(params) {
-    var keys = Object.keys(params), parts = [], i, v;
-    for (i = 0; i < keys.length; i++) {
-      v = params[keys[i]];
-      if (v === null || v === undefined) continue;
-      parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(v));
-    }
-    return parts.join('&');
-  }
-
   function request(path, params) {
     params.key = KEY;
-    return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', API + path + '?' + qs(params), true);
-      xhr.timeout = 15000;
-      xhr.onload = function () {
-        if (xhr.status < 200 || xhr.status >= 300) {
-          reject(new Error('YouTube ' + path + ' -> ' + xhr.status));
-          return;
-        }
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch (e) { reject(new Error('YouTube bad json')); }
-      };
-      xhr.ontimeout = function () { reject(new Error('YouTube timeout')); };
-      xhr.onerror = function () { reject(new Error('YouTube network')); };
-      xhr.send(null);
-    });
+    return Http.request(API + path + '?' + Http.qs(params), { label: `YouTube ${path}` });
   }
 
   /* One request in flight at a time. Two searches racing is 200 units spent to
      answer one question. */
-  var queue = Promise.resolve();
+  let queue = Promise.resolve();
   function get(path, params) {
     function run() { return request(path, params); }
     queue = queue.then(run, run);
@@ -61,14 +35,14 @@ var Youtube = (function () {
 
   /* The channel id behind the handle, resolved once and kept for good. */
   function channelId() {
-    return Store.get(CHANNEL_KEY).then(function (cached) {
+    return Cache.ytChannel.get(HANDLE).then((cached) => {
       if (cached) return cached;
-      return get('/channels', { part: 'id', forHandle: HANDLE }).then(function (r) {
-        var items = r && r.items;
+      return get('/channels', { part: 'id', forHandle: HANDLE }).then((r) => {
+        const items = r && r.items;
         if (!items || !items.length || !items[0].id) {
-          throw new Error('no channel for ' + HANDLE);
+          throw new Error(`no channel for ${HANDLE}`);
         }
-        Store.put(CHANNEL_KEY, items[0].id);
+        Cache.ytChannel.put(HANDLE, items[0].id);
         return items[0].id;
       });
     });
@@ -78,16 +52,16 @@ var Youtube = (function () {
      called from a keypress; a quota refusal answers with nothing rather than an
      error, because "none today" is the truth the screen has to show. */
   function recaps(showTitle) {
-    return channelId().then(function (id) {
+    return channelId().then((id) => {
       return get('/search', {
         part: 'snippet', channelId: id, q: showTitle + ' recap',
         maxResults: 25, type: 'video'
       });
-    }).then(function (r) {
+    }).then((r) => {
       return withLengths((r && r.items) || []);
-    }).catch(function (e) {
+    }).catch((e) => {
       if (!/-> 403$/.test(e.message)) throw e;
-      UI.debug('youtube: ' + e.message + ' (quota)');
+      UI.debug(`youtube: ${e.message} (quota)`);
       return [];
     });
   }
@@ -96,25 +70,28 @@ var Youtube = (function () {
      hundred the search already cost. A missing length is a missing caption, not
      a missing rail, so a failure here keeps the items. */
   function withLengths(items) {
-    var ids = [], i, id;
-    for (i = 0; i < items.length; i++) {
+    const ids = [];
+    let id;
+    for (let i = 0; i < items.length; i++) {
       id = items[i].id && items[i].id.videoId;
       if (id) ids.push(id);
     }
     if (!ids.length) return Promise.resolve(items);
-    return get('/videos', { part: 'contentDetails', id: ids.join(',') }).then(function (r) {
-      var by = {}, k, list = (r && r.items) || [];
+    return get('/videos', { part: 'contentDetails', id: ids.join(',') }).then((r) => {
+      const by = {};
+      let k;
+      const list = (r && r.items) || [];
       for (k = 0; k < list.length; k++) by[list[k].id] = list[k].contentDetails;
       for (k = 0; k < items.length; k++) {
         id = items[k].id && items[k].id.videoId;
         if (by[id]) items[k].contentDetails = by[id];
       }
       return items;
-    }, function () { return items; });
+    }, () => { return items; });
   }
 
   function seasonOf(title) {
-    var m = SEASON.exec(title);
+    const m = SEASON.exec(title);
     return m ? Number(m[1]) : null;
   }
 
@@ -122,24 +99,29 @@ var Youtube = (function () {
 
   /* PT1H2M3S -> 1:02:03. Anything else has no length to show. */
   function lengthOf(iso) {
-    var m = /^P(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)$/.exec(iso || '');
+    const m = /^P(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)$/.exec(iso || '');
     if (!m) return '';
-    var h = Number(m[1] || 0), mins = Number(m[2] || 0), secs = Number(m[3] || 0);
+    const h = Number(m[1] || 0);
+    const mins = Number(m[2] || 0);
+    const secs = Number(m[3] || 0);
     return h ? h + ':' + pad(mins) + ':' + pad(secs) : mins + ':' + pad(secs);
   }
 
   function thumbOf(snippet) {
-    var t = (snippet && snippet.thumbnails) || {};
-    var pick = t.medium || t.high || t.default;
+    const t = (snippet && snippet.thumbnails) || {};
+    const pick = t.medium || t.high || t.default;
     return (pick && pick.url) || '';
   }
 
   /* The API payload as the rail wants it, in season order with the unnumbered
      ones last. Never throws: a malformed item is simply not a recap. */
   function parse(items) {
-    var list = items || [], out = [], i, it, id, title;
-    for (i = 0; i < list.length; i++) {
-      it = list[i] || {};
+    const list = items || [];
+    const out = [];
+    let id;
+    let title;
+    for (let i = 0; i < list.length; i++) {
+      const it = list[i] || {};
       id = it.id && it.id.videoId;
       title = (it.snippet && it.snippet.title) || '';
       if (!id || !title) continue;
@@ -157,10 +139,13 @@ var Youtube = (function () {
   /* Sorting the positions rather than the list: Chromium 53's sort is not
      stable, and within a season the order the API chose is the one to keep. */
   function bySeason(list) {
-    var order = [], out = [], i;
+    const order = [];
+    const out = [];
+    let i;
     for (i = 0; i < list.length; i++) order.push(i);
-    order.sort(function (a, b) {
-      var x = list[a].season, y = list[b].season;
+    order.sort((a, b) => {
+      const x = list[a].season;
+      const y = list[b].season;
       if (x === y) return a - b;
       if (x === null) return 1;
       if (y === null) return -1;
@@ -171,15 +156,16 @@ var Youtube = (function () {
   }
 
   function normalise(s) {
-    return ' ' + String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '') + ' ';
+    return ` ${String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '')} `;
   }
 
   /* Only the videos that name this show. The channel covers everything, and a
      search for a one-word title brings back most of it. */
   function pickForShow(parsed, showTitle) {
-    var want = normalise(showTitle), out = [], i;
+    const want = normalise(showTitle);
+    const out = [];
     if (want.length < 3) return [];               // no title left to match on
-    for (i = 0; i < (parsed || []).length; i++) {
+    for (let i = 0; i < (parsed || []).length; i++) {
       if (normalise(parsed[i].title).indexOf(want) >= 0) out.push(parsed[i]);
     }
     return out;

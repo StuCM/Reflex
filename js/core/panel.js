@@ -22,7 +22,7 @@ var Panel = (function () {
   /* Known good on a B8, and the profile that was already shipping. A probe can
      add to this; it can never take anything away, because a TV that answers ""
      for a type it plays perfectly well is a common enough thing. */
-  var BASE = {
+  const BASE = {
     container: { mkv: true, mp4: true, mpegts: true },
     video: { h264: true, hevc: true },
     audio: { aac: true, ac3: true, eac3: true, mp3: true }
@@ -30,7 +30,7 @@ var Panel = (function () {
 
   /* Candidates worth asking about, each with the mime the pipeline understands.
      Nothing here is claimed unless the answer comes back "probably". */
-  var CANDIDATES = [
+  const CANDIDATES = [
     { kind: 'video', name: 'vp9',   mime: 'video/webm; codecs="vp9"' },
     { kind: 'video', name: 'vp8',   mime: 'video/webm; codecs="vp8"' },
     { kind: 'video', name: 'av1',   mime: 'video/mp4; codecs="av01.0.05M.08"' },
@@ -53,12 +53,12 @@ var Panel = (function () {
     { kind: 'audio', name: 'truehd', mime: 'audio/true-hd' }
   ];
 
-  var answers = null;          // [{ kind, name, mime, said }]
-  var caps = null;             // BASE plus whatever the probe added
-  var features = null;         // what the media element exposes beyond src/play
+  let answers = null;          // [{ kind, name, mime, said }]
+  let caps = null;             // BASE plus whatever the probe added
+  let features = null;         // what the media element exposes beyond src/play
 
   function ask(mime) {
-    var el = document.getElementById('video');
+    const el = document.getElementById('video');
     if (!el || !el.canPlayType) return '';
     try { return el.canPlayType(mime) || ''; } catch (e) { return ''; }
   }
@@ -69,16 +69,17 @@ var Panel = (function () {
     caps = {
       container: {}, video: {}, audio: {}
     };
-    var kinds = ['container', 'video', 'audio'], i, k;
+    const kinds = ['container', 'video', 'audio'];
+    let i;
     for (i = 0; i < kinds.length; i++) {
-      k = kinds[i];
-      var keys = Object.keys(BASE[k]), n;
-      for (n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
+      const k = kinds[i];
+      const keys = Object.keys(BASE[k]);
+      for (let n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
     }
 
     for (i = 0; i < CANDIDATES.length; i++) {
-      var c = CANDIDATES[i];
-      var said = ask(c.mime);
+      const c = CANDIDATES[i];
+      const said = ask(c.mime);
       answers.push({ kind: c.kind, name: c.name, mime: c.mime, said: said });
       /* "maybe" is what a TV says when it has not been asked precisely enough,
          and acting on it is how you get a black screen. */
@@ -99,7 +100,7 @@ var Panel = (function () {
      server for that track and restart, which is what the player does today. */
   function probeFeatures() {
     if (features) return features;
-    var el = document.getElementById('video');
+    const el = document.getElementById('video');
     function has(name) { return !!(el && name in el); }
     features = {
       audioTracks: has('audioTracks') ? String((el.audioTracks || {}).length) : 'no',
@@ -130,10 +131,12 @@ var Panel = (function () {
      differently — not of editing a string and hoping. */
   function clientProfile() {
     if (!caps) probe();
-    var containers = list('container'), video = list('video').join(','), audio = list('audio').join(',');
-    var out = [], i;
-    for (i = 0; i < containers.length; i++) {
-      out.push('add-direct-play-profile(type=videoProfile&container=' + containers[i] +
+    const containers = list('container');
+    const video = list('video').join(',');
+    const audio = list('audio').join(',');
+    const out = [];
+    for (let i = 0; i < containers.length; i++) {
+      out.push(`add-direct-play-profile(type=videoProfile&container=${containers[i]}` +
                '&codec=' + video + '&audioCodec=' + audio + ')');
     }
     /* The two limits that are about this panel rather than about codecs: H.264
@@ -146,27 +149,29 @@ var Panel = (function () {
   /* For the panel chip: what was asked and what came back, so widening is a
      decision made on evidence. */
   function report() {
-    var rows = probe(), lines = [], kinds = ['video', 'container', 'audio'], i, k, said;
+    const rows = probe();
+    const lines = [];
+    const kinds = ['video', 'container', 'audio'];
     lines.push('DECLARED TO THE SERVER');
-    lines.push('containers   ' + list('container').join(', '));
-    lines.push('video        ' + list('video').join(', '));
-    lines.push('audio        ' + list('audio').join(', '));
+    lines.push(`containers   ${list('container').join(', ')}`);
+    lines.push(`video        ${list('video').join(', ')}`);
+    lines.push(`audio        ${list('audio').join(', ')}`);
     lines.push('');
     lines.push('PANEL ANSWERED  (only "probably" is acted on)');
-    for (k = 0; k < kinds.length; k++) {
-      said = [];
-      for (i = 0; i < rows.length; i++) {
+    for (let k = 0; k < kinds.length; k++) {
+      const said = [];
+      for (let i = 0; i < rows.length; i++) {
         if (rows[i].kind === kinds[k]) said.push(rows[i].name + '=' + (rows[i].said || 'no'));
       }
       lines.push(kinds[k] + (kinds[k] === 'video' ? '        ' : (kinds[k] === 'audio' ? '        ' : '    ')) +
                  said.join('  '));
     }
-    var f = probeFeatures();
+    const f = probeFeatures();
     lines.push('');
     lines.push('PIPELINE');
-    lines.push('audioTracks  ' + f.audioTracks + '    textTracks ' + f.textTracks +
+    lines.push(`audioTracks  ${f.audioTracks}    textTracks ${f.textTracks}` +
                '    MediaSource ' + (f.mediaSource ? 'yes' : 'no'));
-    lines.push('webOS ' + (f.webOS ? f.webOSVersion : 'no') +
+    lines.push(`webOS ${f.webOS ? f.webOSVersion : 'no'}` +
                '    frame stats ' + (f.playbackQuality ? 'yes' : 'no'));
     lines.push('');
     lines.push('Audio over ARC is a separate question: TrueHD and DTS-HD MA never');

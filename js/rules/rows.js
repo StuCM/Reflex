@@ -12,7 +12,7 @@
 var Rows = (function () {
   'use strict';
 
-  var PAGE = 100;                // items per request against a server section
+  const PAGE = 100;                // items per request against a server section
 
   function list(title, items) {
     return { kind: 'list', title: title, items: items, total: items.length, focus: 0 };
@@ -35,7 +35,7 @@ var Rows = (function () {
 
   /* How far ahead of the focus to materialise: a screenful, plus enough that
      holding a direction key does not outrun the walk. */
-  var LOOKAHEAD = 24;
+  const LOOKAHEAD = 24;
 
   function needsUpTo(row) { return row.focus + LOOKAHEAD; }
 

@@ -21,7 +21,7 @@ cp "$ROOT/appinfo.json" "$ROOT/index.html" "$ROOT/icon.png" "$ROOT/largeIcon.png
 cp -r "$ROOT/css" "$ROOT/js" "$STAGE/"
 
 # The dev server injects its shim into index.html in memory, never on disk.
-# If one ever lands on disk it would ship to the TV, so check. (js/config.js
+# If one ever lands on disk it would ship to the TV, so check. (js/core/config.js
 # reading window.REFLEX_CONFIG is the seam itself and belongs here.)
 if grep -q "__dev/" "$STAGE/index.html"; then
   echo "  refusing to package: a dev script tag is in index.html on disk" >&2
@@ -29,12 +29,12 @@ if grep -q "__dev/" "$STAGE/index.html"; then
   exit 1
 fi
 
-# The TV has no environment and no build step: whatever js/config.js says on
+# The TV has no environment and no build step: whatever js/core/config.js says on
 # disk is what the panel gets. So each key is read from the environment or from
 # a gitignored .env and written into the *staged* copy — the repo's stays empty,
 # which is what keeps it out of a public history.
 #
-#   bake <env var> <js/config.js field> <what is lost without it>
+#   bake <env var> <js/core/config.js field> <what is lost without it>
 bake() {
   eval "value=\$$1"
   if [ -z "$value" ] && [ -f "$ROOT/.env" ]; then
@@ -44,11 +44,11 @@ bake() {
     echo "  no $1: $3"
     return
   fi
-  sed -i "s|$2: '',|$2: '$value',|" "$STAGE/js/config.js"
+  sed -i "s|$2: '',|$2: '$value',|" "$STAGE/js/core/config.js"
   # A silent miss ships an app with a dead feature and no explanation, which is
   # the exact failure this file exists to make impossible.
-  if ! grep -q "$2: '$value'," "$STAGE/js/config.js"; then
-    echo "  refusing to package: $1 set but js/config.js has no $2: '' to replace" >&2
+  if ! grep -q "$2: '$value'," "$STAGE/js/core/config.js"; then
+    echo "  refusing to package: $1 set but js/core/config.js has no $2: '' to replace" >&2
     exit 1
   fi
   echo "  $2 baked in (...${value#"${value%????}"})"

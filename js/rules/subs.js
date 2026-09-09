@@ -18,9 +18,9 @@ var Subs = (function () {
 
   /* '01:23:45,678', '01:23:45.678' and '23:45.67' all appear in the wild. */
   function seconds(stamp) {
-    var m = String(stamp).match(/(?:(\d+):)?(\d{1,2}):(\d{1,2})(?:[.,](\d{1,3}))?/);
+    const m = String(stamp).match(/(?:(\d+):)?(\d{1,2}):(\d{1,2})(?:[.,](\d{1,3}))?/);
     if (!m) return null;
-    var frac = m[4] ? parseInt(m[4], 10) / Math.pow(10, m[4].length) : 0;
+    const frac = m[4] ? parseInt(m[4], 10) / Math.pow(10, m[4].length) : 0;
     return (m[1] ? parseInt(m[1], 10) : 0) * 3600 +
            parseInt(m[2], 10) * 60 + parseInt(m[3], 10) + frac;
   }
@@ -36,11 +36,15 @@ var Subs = (function () {
 
   /* Cues, in time order: [{ start, end, text }] in seconds. */
   function parse(text) {
-    var lines = String(text || '').replace(/\r/g, '').split('\n');
-    var cues = [], i, arrow, start, end, body, line;
+    const lines = String(text || '').replace(/\r/g, '').split('\n');
+    const cues = [];
+    let start;
+    let end;
+    let body;
+    let line;
 
-    for (i = 0; i < lines.length; i++) {
-      arrow = lines[i].indexOf('-->');
+    for (let i = 0; i < lines.length; i++) {
+      const arrow = lines[i].indexOf('-->');
       if (arrow < 0) continue;
       start = seconds(lines[i].substring(0, arrow));
       end = seconds(lines[i].substring(arrow + 3));
@@ -60,16 +64,17 @@ var Subs = (function () {
       if (body.length) cues.push({ start: start, end: end, text: body.join('\n') });
     }
 
-    cues.sort(function (a, b) { return a.start - b.start; });
+    cues.sort((a, b) => { return a.start - b.start; });
     return cues;
   }
 
   /* First cue index starting after t. Binary, because a two-hour film has a
      couple of thousand cues and this runs on every timeupdate. */
   function after(cues, t) {
-    var lo = 0, hi = cues.length, mid;
+    let lo = 0;
+    let hi = cues.length;
     while (lo < hi) {
-      mid = (lo + hi) >> 1;
+      const mid = (lo + hi) >> 1;
       if (cues[mid].start <= t) lo = mid + 1; else hi = mid;
     }
     return lo;
@@ -78,12 +83,14 @@ var Subs = (function () {
   /* What should be on screen at t, or '' for nothing. Cues overlap — two
      speakers, or a sign translated over dialogue — so this collects every one
      still open rather than the newest. */
-  var OVERLAP = 12;                     // how far back an open cue can start
+  const OVERLAP = 12;                     // how far back an open cue can start
 
   function textAt(cues, t) {
     if (!cues || !cues.length) return '';
-    var out = [], i = after(cues, t), stop = Math.max(0, i - OVERLAP), j;
-    for (j = i - 1; j >= stop; j--) {
+    const out = [];
+    const i = after(cues, t);
+    const stop = Math.max(0, i - OVERLAP);
+    for (let j = i - 1; j >= stop; j--) {
       if (cues[j].end > t) out.unshift(cues[j].text);
     }
     return out.join('\n');

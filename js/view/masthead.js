@@ -8,20 +8,22 @@
 var Masthead = (function () {
   'use strict';
 
-  var elRow = document.getElementById('mh-row');
-  var elTitle = document.getElementById('mh-title');
-  var elMeta = document.getElementById('mh-meta');
-  var elDesc = document.getElementById('mh-desc');
-  var elCast = document.getElementById('mh-cast');
+  const elRow = document.getElementById('mh-row');
+  const elTitle = document.getElementById('mh-title');
+  const elMeta = document.getElementById('mh-meta');
+  const elDesc = document.getElementById('mh-desc');
+  const elCast = document.getElementById('mh-cast');
   /* The backdrop is two stacked layers; the one carrying .on is the one you see,
      and a new picture is written into the other and faded up over it. */
-  var artLayers = [document.getElementById('hero-art-a'),
+  const artLayers = [document.getElementById('hero-art-a'),
                    document.getElementById('hero-art-b')];
-  var shown = 0;
+  let shown = 0;
   /* Long enough that sweeping a row never starts a full-screen image, short
      enough that a deliberate step still feels answered. */
-  var HOLD = 420;                // ms of stillness before asking for a backdrop
-  var artTimer = null, artWant = null, lastArt = '';
+  const HOLD = 420;                // ms of stillness before asking for a backdrop
+  let artTimer = null;
+  let artWant = null;
+  let lastArt = '';
 
   /* The backdrop, debounced: only the last item asked for is drawn, so sweeping
      a row costs one full-screen image rather than one per key. */
@@ -33,18 +35,18 @@ var Masthead = (function () {
 
   function paintArt() {
     Art.warm(artWant);
-    var url = Art.hero(artWant);
+    const url = Art.hero(artWant);
     if (!url || url === lastArt) return;
     lastArt = url;
 
     /* Swap only once the picture is decoded, or the fade reveals an empty box.
        A broken URL swaps anyway, so it cannot leave the old one up for ever;
        a swap the next backdrop has already overtaken is dropped. */
-    var next = artLayers[shown ? 0 : 1];
-    var pre = new Image();
-    pre.onload = pre.onerror = function () {
+    const next = artLayers[shown ? 0 : 1];
+    const pre = new Image();
+    pre.onload = pre.onerror = () => {
       if (lastArt !== url) return;
-      next.style.backgroundImage = 'url("' + url + '")';
+      next.style.backgroundImage = `url("${url}")`;
       artLayers[shown].classList.remove('on');
       next.classList.add('on');
       shown = shown ? 0 : 1;
@@ -54,7 +56,7 @@ var Masthead = (function () {
 
   /* A backdrop that lands after the debounce fired belongs on screen only if
      the item it belongs to is still the one being rested on. */
-  Art.onReady(function (tmdbId) {
+  Art.onReady((tmdbId) => {
     if (!artWant || Plex.tmdbId(artWant) !== tmdbId) return;
     paintArt();
     paintFacts(artWant);
@@ -65,7 +67,7 @@ var Masthead = (function () {
      header never blanks while waiting, and an empty cast draws no line at all
      rather than a label with nothing after it. */
   function paintFacts(item) {
-    var got = Art.factsFor(item);
+    const got = Art.factsFor(item);
     elDesc.textContent = (got && got.overview) || item.summary || '';
     elCast.textContent = (got && got.cast.length) ? got.cast.join('  \u00b7  ') : '';
   }

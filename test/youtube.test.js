@@ -8,7 +8,7 @@
    rejects.
    Run: node test/youtube.test.js */
 var assert = require('assert');
-var app = require('./load.js')(['config', 'youtube']);
+var app = require('./load.js')(['config', 'http', 'youtube']);
 var Youtube = app.Youtube;
 
 function item(id, title, duration) {

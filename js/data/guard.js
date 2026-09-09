@@ -43,13 +43,13 @@ var Guard = (function () {
      too, by the same rule — which is the honest answer, because the server
      would be muxing a 4K stream and that is what gets killed. */
   function check(item, mediaIndex, forceAudioId, opts) {
-    var n = mediaIndex || 0;
+    const n = mediaIndex || 0;
     opts = opts || {};
-    return Meta.load(item).then(function (md) {
+    return Meta.load(item).then((md) => {
       if (!md) return { ok: false, state: 'nometa', text: 'No metadata for this copy.' };
 
-      var media = md.Media && md.Media[n];
-      var part = media && media.Part && media.Part[0];
+      const media = md.Media && md.Media[n];
+      const part = media && media.Part && media.Part[0];
       if (!part) {
         return { ok: false, state: 'nopart', md: md, media: media, mediaIndex: n,
                  text: 'This version has no playable part.' };
@@ -57,10 +57,10 @@ var Guard = (function () {
 
       /* The track that passes as-is if there is one, otherwise the film's own
          audio and the server re-encodes it. */
-      var passes = Media.pickAudio(part);
-      var audio = passes || Media.bestAudio(part);
+      let passes = Media.pickAudio(part);
+      let audio = passes || Media.bestAudio(part);
       if (forceAudioId) {
-        var wanted = Media.streamById(part, forceAudioId);
+        const wanted = Media.streamById(part, forceAudioId);
         if (wanted) { audio = wanted; passes = Media.pickAudio(part) === wanted; }
       }
       if (!audio) {
@@ -68,19 +68,19 @@ var Guard = (function () {
                  mediaIndex: n, audio: null, text: Media.audioSummary(part) };
       }
 
-      var server = Servers.of(md);
-      return Plex.decide(server, md, n, 0, audio.id, opts).then(function (v) {
-        var direct = v.decision === 'directplay';
-        var uhd = Media.isUHD(media);
+      const server = Servers.of(md);
+      return Plex.decide(server, md, n, 0, audio.id, opts).then((v) => {
+        const direct = v.decision === 'directplay';
+        const uhd = Media.isUHD(media);
         /* Only direct play hands the panel the original file. A re-encode
            arrives as H.264, which it always manages — so this check belongs
            here, not before the decision. */
-        var undecodable = direct && !Media.canDecode(media);
-        var willing = Media.allows(media, direct);
-        UI.debug('decision: ' + v.decision + ' · ' + md.title +
-                 (Servers.count() > 1 ? ' on ' + server.name : '') +
+        const undecodable = direct && !Media.canDecode(media);
+        const willing = Media.allows(media, direct);
+        UI.debug(`decision: ${v.decision} · ${md.title}` +
+                 (Servers.count() > 1 ? ` on ${server.name}` : '') +
                  ' · ' + Media.audioLabel(audio) +
-                 (v.video || v.audio ? ' · v:' + (v.video || '?') + ' a:' + (v.audio || '?') : '') +
+                 (v.video || v.audio ? ` · v:${v.video || '?'} a:${v.audio || '?'}` : '') +
                  ' ' + v.text);
         return {
           /* 4K must direct play or not play. Anything else may transcode. */
@@ -94,11 +94,11 @@ var Guard = (function () {
           md: md, media: media, part: part, mediaIndex: n,
           text: v.text || ''
         };
-      }, function (e) {
+      }, (e) => {
         return { ok: false, state: 'error', md: md, media: media, part: part,
                  mediaIndex: n, audio: audio, text: e.message };
       });
-    }, function (e) {
+    }, (e) => {
       return { ok: false, state: 'error', text: e.message };
     });
   }
@@ -126,8 +126,8 @@ var Guard = (function () {
     if (v.state === 'error') {
       /* The server answering with a refusal is a different problem from it not
          answering, and saying the wrong one sends you looking at the network. */
-      var status = /-> (\d{3})/.exec(v.text || '');
-      return status ? 'server said ' + status[1] : 'check failed';
+      const status = /-> (\d{3})/.exec(v.text || '');
+      return status ? `server said ${status[1]}` : 'check failed';
     }
     return 'would transcode';
   }
@@ -151,7 +151,7 @@ var Guard = (function () {
     if (v.state === 'nometa') return ['No metadata', 'The server returned nothing for this copy.'];
     if (v.state === 'error') return ['Could not check playback', v.text];
 
-    var why = v.text || ('the server returned "' + v.state + '"');
+    const why = v.text || (`the server returned "${v.state}"`);
     /* The only thing still refused outright. */
     return ['4K transcode refused', item.title + ' will not direct play — ' + why +
       '. Starting it would register a 4K transcode on the server, which gets ' +

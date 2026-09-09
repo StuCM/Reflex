@@ -93,9 +93,18 @@ function allowedScopes() {
   var out = [];
   try {
     var dir = require(path.join(root, '.claude', 'crew.config.json')).scopes.fromDir;
-    out = fs.readdirSync(path.join(root, dir))
-      .filter(function (f) { return /\.js$/.test(f); })
-      .map(function (f) { return f.replace(/\.js$/, ''); });
+    // js/ is layered; a scope is the module name, and the layer name too.
+    var base = path.join(root, dir);
+    fs.readdirSync(base, { withFileTypes: true }).forEach(function (e) {
+      if (e.isDirectory()) {
+        out.push(e.name);
+        fs.readdirSync(path.join(base, e.name)).forEach(function (f) {
+          if (/\.js$/.test(f)) out.push(f.replace(/\.js$/, ''));
+        });
+      } else if (/\.js$/.test(e.name)) {
+        out.push(e.name.replace(/\.js$/, ''));
+      }
+    });
   } catch (e) { /* no source dir — extras only */ }
   var extra = require(path.join(root, '.claude', 'crew.config.json')).scopes.extra || [];
   return out.concat(extra).sort();

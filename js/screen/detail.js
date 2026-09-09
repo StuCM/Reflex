@@ -18,71 +18,54 @@
 var Detail = (function () {
   'use strict';
 
-  var elView = document.getElementById('detail');
-  var elArt = document.getElementById('dt-art');
-  var elKicker = document.getElementById('dt-kicker');
-  var elTitle = document.getElementById('dt-title');
-  var elChips = document.getElementById('dt-chips');
-  var elRatings = document.getElementById('dt-ratings');
-  var elTagline = document.getElementById('dt-tagline');
-  var elSummary = document.getElementById('dt-summary');
-  var elNames = document.getElementById('dt-names');
-  var elCrew = document.getElementById('dt-crew');
-  var elActions = document.getElementById('dt-actions');
-  var elMenu = document.getElementById('dt-menu');
-  var elExtras = document.getElementById('dt-extras');
-  var elExtrasLabel = document.getElementById('dt-extras-label');
-  var elCast = document.getElementById('dt-cast');
+  const elView = document.getElementById('detail');
+  const elArt = document.getElementById('dt-art');
+  const elKicker = document.getElementById('dt-kicker');
+  const elTitle = document.getElementById('dt-title');
+  const elChips = document.getElementById('dt-chips');
+  const elRatings = document.getElementById('dt-ratings');
+  const elTagline = document.getElementById('dt-tagline');
+  const elSummary = document.getElementById('dt-summary');
+  const elNames = document.getElementById('dt-names');
+  const elCrew = document.getElementById('dt-crew');
+  const elActions = document.getElementById('dt-actions');
+  const elMenu = document.getElementById('dt-menu');
+  const elExtras = document.getElementById('dt-extras');
+  const elExtrasLabel = document.getElementById('dt-extras-label');
+  const elCast = document.getElementById('dt-cast');
 
   /* Inlined, like the search icon in index.html: the app runs from file:// on
      the TV, so there is no icon font to fetch. */
-  var STAR_GLYPH =
+  const STAR_GLYPH =
     '<svg class="dt-glyph" width="22" height="22" viewBox="0 0 256 256" fill="none" ' +
     'stroke="currentColor" stroke-width="18" stroke-linejoin="round">' +
     '<polygon points="128,24 158,94 234,101 177,152 194,228 128,188 62,228 79,152 22,101 98,94"/>' +
     '</svg>';
-  var PLAY_GLYPH =
+  const PLAY_GLYPH =
     '<svg class="dt-extra-play" width="52" height="52" viewBox="0 0 256 256" fill="none" ' +
     'stroke="currentColor" stroke-width="16" stroke-linejoin="round">' +
     '<circle cx="128" cy="128" r="100"/><polygon points="106,84 178,128 106,172"/></svg>';
 
-  function glyph(inner) {
-    return '<svg width="46" height="46" viewBox="0 0 256 256" fill="none" ' +
-           'stroke="currentColor" stroke-width="16" stroke-linecap="round" ' +
-           'stroke-linejoin="round">' + inner + '</svg>';
-  }
-  var GLYPHS = {
-    trailer: glyph('<circle cx="128" cy="128" r="100"/><polygon points="106,84 178,128 106,172"/>'),
-    quality: glyph('<line x1="56" y1="196" x2="56" y2="140"/>' +
-                   '<line x1="128" y1="196" x2="128" y2="96"/>' +
-                   '<line x1="200" y1="196" x2="200" y2="52"/>'),
-    source: glyph('<rect x="36" y="44" width="184" height="72" rx="14"/>' +
-                  '<rect x="36" y="140" width="184" height="72" rx="14"/>'),
-    audio: glyph('<polygon points="36,100 92,100 148,48 148,208 92,156 36,156"/>' +
-                 '<path d="M188 92a52 52 0 0 1 0 72"/>'),
-    subs: glyph('<rect x="28" y="52" width="200" height="152" rx="18"/>' +
-                '<line x1="64" y1="124" x2="140" y2="124"/>' +
-                '<line x1="64" y1="164" x2="192" y2="164"/>'),
-    remove: glyph('<circle cx="128" cy="128" r="100"/>' +
-                  '<line x1="84" y1="128" x2="172" y2="128"/>')
-  };
 
-  var item = null;                 // the merged entry
-  var copies = [];                 // one per server that has it
-  var sources = [];                // flattened: one per server × version
-  var extras = [];                 // trailers and the rest, playable in their own right
-  var sel = 0;                     // which source Play would use
-  var strip = 0;                   // 0 = the action row, 1 = the extras
-  var idx = 0;                     // within that row
-  var headMd = null;               // the first copy's metadata: what the header says
-  var onDeck = false;              // is this in Continue watching, and so clearable
-  var opts = {};
-  var generation = 0;
+  let item = null;                 // the merged entry
+  let copies = [];                 // one per server that has it
+  let sources = [];                // flattened: one per server × version
+  let extras = [];                 // trailers and the rest, playable in their own right
+  let sel = 0;                     // which source Play would use
+  let strip = 0;                   // 0 = the action row, 1 = the extras
+  let idx = 0;                     // within that row
+  let headMd = null;               // the first copy's metadata: what the header says
+  let onDeck = false;              // is this in Continue watching, and so clearable
+  let opts = {};
+  let generation = 0;
 
   /* The combination Play would start: the guard's verdict for it, and the three
      things the buttons can change about it. */
-  var verdict = null, chosenAudio = null, chosenSub = null;
-  var maxBitrate = null, forceStream = false;
+  let verdict = null;
+  let chosenAudio = null;
+  let chosenSub = null;
+  let maxBitrate = null;
+  let forceStream = false;
 
   function open(entry, options) {
     if (!entry) return;
@@ -92,7 +75,7 @@ var Detail = (function () {
 
     /* Merge already put the preferred server's copy first, so source 0 is the
        one the preference asks for. */
-    copies = Merge.sources(entry).map(function (copy) {
+    copies = Merge.sources(entry).map((copy) => {
       return { item: copy, server: Servers.of(copy), versions: null };
     });
     extras = [];
@@ -128,11 +111,11 @@ var Detail = (function () {
      response, but not how many. So each copy contributes one provisional line
      that becomes one line per version once we know. */
   function rebuild() {
-    var chosen = sources[sel] || null;
+    const chosen = sources[sel] || null;
     sources = [];
-    copies.forEach(function (copy) {
+    copies.forEach((copy) => {
       if (copy.versions) {
-        copy.versions.forEach(function (v) { sources.push(v); });
+        copy.versions.forEach((v) => { sources.push(v); });
         return;
       }
       sources.push({ copy: copy, server: copy.server, mediaIndex: 0,
@@ -142,8 +125,7 @@ var Detail = (function () {
     /* Keep the user's choice pinned across a rebuild. */
     sel = 0;
     if (chosen) {
-      var i;
-      for (i = 0; i < sources.length; i++) {
+      for (let i = 0; i < sources.length; i++) {
         if (sources[i].copy === chosen.copy && sources[i].mediaIndex === chosen.mediaIndex) {
           sel = i;
           break;
@@ -157,27 +139,27 @@ var Detail = (function () {
      its own, so the other versions are separate library items and only a guid
      lookup across the whole server finds them. */
   function addOtherVersions(md) {
-    var gen = generation;
-    var known = {};
-    copies.forEach(function (c) { known[c.item._server + ':' + c.item.ratingKey] = true; });
+    const gen = generation;
+    const known = {};
+    copies.forEach((c) => { known[c.item._server + ':' + c.item.ratingKey] = true; });
 
-    Servers.all().forEach(function (sv) {
-      Plex.allVersions(sv, md).then(function (found) {
+    Servers.all().forEach((sv) => {
+      Plex.allVersions(sv, md).then((found) => {
         if (gen !== generation || !found.length) return;
-        var added = 0;
-        found.forEach(function (other) {
-          var key = other._server + ':' + other.ratingKey;
+        let added = 0;
+        found.forEach((other) => {
+          const key = other._server + ':' + other.ratingKey;
           if (known[key]) return;
           known[key] = true;
           added++;
           copies.push({ item: other, server: Servers.of(other), versions: null });
-          Meta.load(other).then(function (omd) {
+          Meta.load(other).then((omd) => {
             if (gen !== generation || !omd) return;
-            expand(copies.find(function (c) { return c.item === other; }), omd);
+            expand(copies.find((c) => { return c.item === other; }), omd);
           });
         });
         if (added) {
-          UI.debug('found ' + added + ' more version' + (added === 1 ? '' : 's') +
+          UI.debug(`found ${added} more version${added === 1 ? '' : 's'}` +
                    ' of ' + md.title + ' on ' + sv.name);
           rebuild();
           render();
@@ -192,7 +174,7 @@ var Detail = (function () {
      is still a transcode on someone else's hardware. */
   function addExtras(md) {
     if (extras.length || !md.Extras || !md.Extras.Metadata) return;
-    extras = md.Extras.Metadata.slice(0, 6).map(function (x) {
+    extras = md.Extras.Metadata.slice(0, 6).map((x) => {
       return { copy: { item: x }, server: Servers.of(x), mediaIndex: 0,
                media: (x.Media && x.Media[0]) || {},
                title: x.title || 'Extra', kind: x.subtype || x.extraType || '',
@@ -203,8 +185,8 @@ var Detail = (function () {
   }
 
   function expand(copy, md) {
-    var list = (md.Media && md.Media.length ? md.Media : [null]);
-    copy.versions = list.map(function (media, n) {
+    const list = (md.Media && md.Media.length ? md.Media : [null]);
+    copy.versions = list.map((media, n) => {
       return { copy: copy, server: copy.server, mediaIndex: n, media: media || {},
                verdict: null, provisional: false };
     });
@@ -217,8 +199,8 @@ var Detail = (function () {
      session, so asking about one you end up not playing costs a query and
      nothing else. */
   function check(src) {
-    var gen = generation;
-    Guard.check(src.copy.item, src.mediaIndex).then(function (v) {
+    const gen = generation;
+    Guard.check(src.copy.item, src.mediaIndex).then((v) => {
       if (gen !== generation) return;
       src.verdict = v;
       render();
@@ -228,7 +210,7 @@ var Detail = (function () {
   /* Nobody has chosen anything yet, so the selected copy's own verdict is what
      Play would use — including a refusal, which Play then explains in full. */
   function adoptDefault() {
-    var src = sources[sel];
+    const src = sources[sel];
     if (verdict || !src || !src.verdict) return;
     verdict = src.verdict;
     chosenAudio = src.verdict.audio || null;
@@ -241,16 +223,16 @@ var Detail = (function () {
      deliver a message is a worse answer than not switching, so a refusal is a
      toast and the page does not move. */
   function choose(next) {
-    var gen = generation;
-    var src = sources[next.sel];
+    const gen = generation;
+    const src = sources[next.sel];
     if (!src) return;
     Guard.check(src.copy.item, src.mediaIndex, next.audio && next.audio.id,
                 { maxBitrate: next.maxBitrate, forceStream: next.forceStream })
-      .then(function (v) {
+      .then((v) => {
         if (gen !== generation) return;
         if (!v.ok) {
-          UI.toast('Kept as it was — ' + Guard.label(v));
-          UI.debug('choice refused: ' + Guard.refusal(item, v)[1]);
+          UI.toast(`Kept as it was — ${Guard.label(v)}`);
+          UI.debug(`choice refused: ${Guard.refusal(item, v)[1]}`);
           return;
         }
         /* By stream id on the copy we came from, so a subtitle language chosen
@@ -270,7 +252,7 @@ var Detail = (function () {
   /* The track the guard picks for a copy on its own — anything else is the
      user's, and costs direct play unless the panel can select it. */
   function defaultAudio() {
-    var base = sources[sel] && sources[sel].verdict;
+    const base = sources[sel] && sources[sel].verdict;
     return (base && base.audio) || null;
   }
 
@@ -283,8 +265,8 @@ var Detail = (function () {
   function part() { return verdict && verdict.part; }
 
   function sourceRows() {
-    return sources.map(function (src, n) {
-      var name = (src.server && src.server.name) || 'server';
+    return sources.map((src, n) => {
+      let name = (src.server && src.server.name) || 'server';
       if (Servers.count() > 1 && Servers.isPreferred(src.server)) name += ' · preferred';
       return { label: Media.versionLabel(src.media) + ' · ' + name,
                note: Guard.label(src.verdict),
@@ -293,8 +275,8 @@ var Detail = (function () {
   }
 
   function qualityRows() {
-    var media = sources[sel] && sources[sel].media;
-    return Media.qualities(media).map(function (q) {
+    const media = sources[sel] && sources[sel].media;
+    return Media.qualities(media).map((q) => {
       return { label: q.label,
                note: q.bitrate && Media.isUHD(media)
                  ? 'a 4K transcode is what gets the stream killed — this will be refused' : '',
@@ -309,13 +291,13 @@ var Detail = (function () {
      row says before OK is what OK does. */
   function needsMux(st) {
     if (panelOwnsAudio()) return false;
-    var base = defaultAudio();
+    const base = defaultAudio();
     return !(base && String(base.id) === String(st.id));
   }
 
   function audioRows() {
-    return Media.audioTracks(part()).map(function (st) {
-      var on = !!(chosenAudio && String(chosenAudio.id) === String(st.id));
+    return Media.audioTracks(part()).map((st) => {
+      const on = !!(chosenAudio && String(chosenAudio.id) === String(st.id));
       return { label: Media.audioMenuLabel(st),
                note: on ? '' : (needsMux(st) ? 'costs direct play — the server would mux it'
                                              : 'keeps direct play'),
@@ -324,8 +306,8 @@ var Detail = (function () {
   }
 
   function subRows() {
-    var out = [{ label: 'Off', on: !chosenSub, value: null }];
-    Media.subtitleTracks(part()).forEach(function (st) {
+    const out = [{ label: 'Off', on: !chosenSub, value: null }];
+    Media.subtitleTracks(part()).forEach((st) => {
       out.push({ label: Media.subLabel(st),
                  note: Media.isTextSub(st) ? '' : 'image track — it would have to be burnt in',
                  on: !!(chosenSub && String(chosenSub.id) === String(st.id)),
@@ -336,27 +318,27 @@ var Detail = (function () {
 
   /* "1:12", from seconds — where a part-watched film would pick up. */
   function atLabel(secs) {
-    var mins = Math.floor(secs / 60);
+    const mins = Math.floor(secs / 60);
     return Math.floor(mins / 60) + ':' + (mins % 60 < 10 ? '0' : '') + (mins % 60);
   }
 
   /* Where Play would pick up, in seconds, and 0 when there is nothing worth
      resuming — the first ten seconds of a film are not a position. */
   function resumeAt() {
-    var at = (item && item.viewOffset) || 0;
+    const at = (item && item.viewOffset) || 0;
     return at > 10000 ? Math.floor(at / 1000) : 0;
   }
 
   /* Play says what it will do and what it will cost, because both are decided
      by the buttons beside it. */
   function playCaption() {
-    var at = resumeAt();
-    return (at ? 'resume at ' + atLabel(at) : 'from start') +
+    const at = resumeAt();
+    return (at ? `resume at ${atLabel(at)}` : 'from start') +
            '  ·  ' + (verdict ? Guard.label(verdict) : 'checking…');
   }
 
   function sourceCaption() {
-    var src = sources[sel];
+    const src = sources[sel];
     return (src && src.server && src.server.name) || 'checking…';
   }
 
@@ -370,7 +352,7 @@ var Detail = (function () {
      it here, so the page closes onto the rail it has already been dropped
      from. */
   function removeFromDeck() {
-    Browse.clearOne(item, function () { onDeck = false; close(); });
+    Browse.clearOne(item, () => { onDeck = false; close(); });
   }
 
   /* Eight at most: Play, starting again where there is something to resume,
@@ -378,40 +360,41 @@ var Detail = (function () {
      Trailer is only here when there is one, and Remove only when the thing is
      actually on the deck. */
   function actions() {
-    var out = [{ act: 'play', label: 'Play', primary: true, caption: playCaption(),
-                 run: function () { start(verdict, false); } }];
+    const out = [{ act: 'play', label: 'Play', primary: true, caption: playCaption(),
+                 run: () => { start(verdict, false); } }];
     /* Part way through, resuming and starting again are two different things to
        want. Both are the verdict the buttons already settled — the second only
        says where to begin. */
     if (resumeAt()) {
       out.push({ act: 'start', label: 'From start', primary: true, quiet: true,
                  caption: verdict ? Guard.label(verdict) : 'checking…',
-                 run: function () { start(verdict, false, 0); } });
+                 run: () => { start(verdict, false, 0); } });
     }
     if (extras.length) {
-      out.push({ act: 'trailer', glyph: GLYPHS.trailer, caption: extras[0].title,
-                 run: function () { start(extras[0].verdict, true); } });
+      out.push({ act: 'trailer', glyph: Glyphs.trailer, caption: extras[0].title,
+                 run: () => { start(extras[0].verdict, true); } });
     }
-    out.push({ act: 'quality', glyph: GLYPHS.quality, caption: qualityCaption(),
+    out.push({ act: 'quality', glyph: Glyphs.quality, caption: qualityCaption(),
                run: openQuality });
-    out.push({ act: 'source', glyph: GLYPHS.source, caption: sourceCaption(),
+    out.push({ act: 'source', glyph: Glyphs.source, caption: sourceCaption(),
                run: openSource });
-    out.push({ act: 'audio', glyph: GLYPHS.audio, run: openAudio,
+    out.push({ act: 'audio', glyph: Glyphs.audio, run: openAudio,
                caption: chosenAudio ? Media.audioLabel(chosenAudio) : 'checking…' });
-    out.push({ act: 'subtitles', glyph: GLYPHS.subs, caption: Media.subLabel(chosenSub),
+    out.push({ act: 'subtitles', glyph: Glyphs.subs, caption: Media.subLabel(chosenSub),
                run: openSubs });
     if (onDeck) {
-      out.push({ act: 'remove', glyph: GLYPHS.remove, run: removeFromDeck,
+      out.push({ act: 'remove', glyph: Glyphs.remove, run: removeFromDeck,
                  caption: 'Remove from Continue watching' });
     }
     return out;
   }
 
   function renderActions() {
-    var list = actions(), html = '', i, a;
-    for (i = 0; i < list.length; i++) {
-      a = list[i];
-      html += '<div class="dt-act' + (a.primary ? ' primary' : '') +
+    const list = actions();
+    let html = '';
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      html += `<div class="dt-act${a.primary ? ' primary' : ''}` +
               (a.quiet ? ' quiet' : '') +
               (strip === 0 && i === idx ? ' on' : '') + '" data-act="' + a.act + '">' +
               '<div class="dt-act-btn">' + (a.glyph || UI.escapeHtml(a.label)) + '</div>' +
@@ -424,7 +407,7 @@ var Detail = (function () {
   /* The chooser sits under the button that opened it, clamped so a button near
      the end of the row does not push it off the screen. */
   function openChooser(tab, onChoose) {
-    var btn = elActions.children[idx];
+    const btn = elActions.children[idx];
     elMenu.style.left = UI.clamp(96 + (btn ? btn.offsetLeft : 0), 96, 964) + 'px';
     Menu.open({ host: elMenu, tabs: [tab], onChoose: onChoose, onClose: render });
   }
@@ -432,7 +415,7 @@ var Detail = (function () {
   function openSource() {
     openChooser({ label: 'Play from', rows: sourceRows,
                   note: 'Every copy on every server, each already checked.' },
-      function (n) {
+      (n) => {
         if (n === sel) return;
         choose({ sel: n, audio: null, maxBitrate: null, forceStream: false });
       });
@@ -441,14 +424,14 @@ var Detail = (function () {
   function openQuality() {
     openChooser({ label: 'Quality', rows: qualityRows,
                   note: 'Anything but Original asks the server to re-encode.' },
-      function (kbps) {
+      (kbps) => {
         if ((kbps || null) === maxBitrate) return;
         choose({ sel: sel, audio: chosenAudio, maxBitrate: kbps, forceStream: forceStream });
       });
   }
 
   function openAudio() {
-    openChooser({ label: 'Audio', rows: audioRows }, function (st) {
+    openChooser({ label: 'Audio', rows: audioRows }, (st) => {
       if (chosenAudio && String(chosenAudio.id) === String(st.id)) return;
       /* A direct play hands the panel the whole file and the panel picks its own
          track, so a choice it cannot make itself means asking the server to mux
@@ -464,7 +447,7 @@ var Detail = (function () {
   function openSubs() {
     openChooser({ label: 'Subtitles', rows: subRows,
                   note: 'Drawn over the video as text, so they cost the server nothing.' },
-      function (st) {
+      (st) => {
         if (st && !Media.isTextSub(st)) {
           UI.toast('Kept as it was — an image track would have to be burnt in');
           return;
@@ -479,17 +462,17 @@ var Detail = (function () {
   /* A trailer is a card, not a line: a still with a play glyph and its length,
      the verdict under it because a clip is guarded like anything else. */
   function extraCard(src, on) {
-    var v = src.verdict;
-    var state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
-    var clip = src.copy.item;
-    var mins = clip.duration
+    const v = src.verdict;
+    const state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
+    const clip = src.copy.item;
+    const mins = clip.duration
       ? Math.max(1, Math.round(clip.duration / 60000)) + ' min' : '';
-    var shot = Plex.photoUrl(src.server, clip.thumb, 320, 180);
-    return '<div class="dt-extra' + (on ? ' on' : '') + '">' +
+    const shot = Plex.photoUrl(src.server, clip.thumb, 320, 180);
+    return `<div class="dt-extra${on ? ' on' : ''}">` +
            '<div class="dt-extra-shot"' +
-           (shot ? ' style="background-image: url(\'' + shot + '\')"' : '') + '>' +
+           (shot ? ` style="background-image: url('${shot}')"` : '') + '>' +
            PLAY_GLYPH +
-           (mins ? '<div class="dt-extra-len">' + UI.escapeHtml(mins) + '</div>' : '') +
+           (mins ? `<div class="dt-extra-len">${UI.escapeHtml(mins)}</div>` : '') +
            '</div>' +
            '<div class="dt-extra-title">' + UI.escapeHtml(src.title) + '</div>' +
            '<div class="dt-extra-verdict badge ' + state + '">' +
@@ -501,8 +484,8 @@ var Detail = (function () {
     adoptDefault();
     renderActions();
 
-    var html = '', i;
-    for (i = 0; i < extras.length; i++) {
+    let html = '';
+    for (let i = 0; i < extras.length; i++) {
       html += extraCard(extras[i], strip === 1 && i === idx);
     }
     elExtras.innerHTML = html;
@@ -529,8 +512,8 @@ var Detail = (function () {
     elCast.innerHTML = '';
     renderHead();
 
-    var art = Plex.artUrl(item, 960, 540);
-    elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
+    const art = Plex.artUrl(item, 960, 540);
+    elArt.style.backgroundImage = art ? `url("${art}")` : 'none';
   }
 
   /* The kicker, the chips and the ratings, from whatever we have so far. Called
@@ -545,7 +528,7 @@ var Detail = (function () {
      when the rail already fetched one and Plex's summary otherwise — the two
      screens must not describe the same film differently. */
   function description(md) {
-    var got = Art.factsFor(item);
+    const got = Art.factsFor(item);
     if (got && got.overview) return got.overview;
     return (md && md.summary) || item.summary || '';
   }
@@ -553,9 +536,9 @@ var Detail = (function () {
   /* Key actors, names only. Same source as the header above, so the strip of
      photographs further down never contradicts it. */
   function namesLine(md) {
-    var got = Art.factsFor(item);
-    var names = (got && got.cast.length) ? got.cast
-      : (md && md.Role ? md.Role.slice(0, 4).map(function (r) { return r.tag; }) : []);
+    const got = Art.factsFor(item);
+    const names = (got && got.cast.length) ? got.cast
+      : (md && md.Role ? md.Role.slice(0, 4).map((r) => { return r.tag; }) : []);
     return names.join('  ·  ');
   }
 
@@ -563,7 +546,7 @@ var Detail = (function () {
      An episode is named by its show; anything we do not have drops out with its
      separator rather than leaving a gap. */
   function kickerLine() {
-    var bits = [item.type === 'episode' ? item.grandparentTitle : item.type];
+    const bits = [item.type === 'episode' ? item.grandparentTitle : item.type];
     if (headMd && headMd.Genre && headMd.Genre.length) bits.push(headMd.Genre[0].tag);
     if (headMd && headMd.Director && headMd.Director.length) bits.push(headMd.Director[0].tag);
     return bits.filter(Boolean).join(' · ');
@@ -571,16 +554,16 @@ var Detail = (function () {
 
   /* Media.episodeLabel leads with the show, which the kicker already says. */
   function episodeChip() {
-    var label = Media.episodeLabel(item);
-    var at = label.lastIndexOf('·');
+    const label = Media.episodeLabel(item);
+    const at = label.lastIndexOf('·');
     return at < 0 ? '' : label.slice(at + 1).trim();
   }
 
   /* TMDB's run time when we have it — it is the film's, where the item's
      duration is this copy's file. */
   function runtimeChip() {
-    var got = Art.factsFor(item);
-    var mins = (got && got.runtime) ||
+    const got = Art.factsFor(item);
+    const mins = (got && got.runtime) ||
                (item.duration ? Math.round(item.duration / 60000) : 0);
     if (!mins) return '';
     if (mins < 60) return mins + 'm';
@@ -590,21 +573,21 @@ var Detail = (function () {
   /* The quality of the copy that would play if Play were pressed now. HDR only
      when the server says so — a claim we cannot check is worse than silence. */
   function qualityChip() {
-    var src = sources[sel];
-    var media = (src && src.media) || null;
-    var res = String((media && media.videoResolution) || '').toLowerCase();
+    const src = sources[sel];
+    const media = (src && src.media) || null;
+    const res = String((media && media.videoResolution) || '').toLowerCase();
     if (!res) return '';
-    var name = res === '4k' ? '4K' : (/^\d+$/.test(res) ? res + 'p' : res.toUpperCase());
+    const name = res === '4k' ? '4K' : (/^\d+$/.test(res) ? res + 'p' : res.toUpperCase());
     return /hdr|dovi|dolby/i.test(media.videoDynamicRange || '') ? name + ' HDR' : name;
   }
 
   /* Certificate, where it sits in a show, year, run time and quality. A chip we
      have nothing for is absent, never an empty outline. */
   function chipsHtml() {
-    var out = [];
+    const out = [];
     function add(text, outlined) {
       if (!text) return;
-      out.push('<span class="dt-chip' + (outlined ? ' out' : '') + '">' +
+      out.push(`<span class="dt-chip${outlined ? ' out' : ''}">` +
                UI.escapeHtml(String(text)) + '</span>');
     }
     add(item.contentRating, true);
@@ -619,10 +602,10 @@ var Detail = (function () {
      There is no IMDb here: Plex gives critics and audience, TMDB gives its
      own, and a number under the wrong badge is a lie the user cannot check. */
   function ratingsHtml() {
-    var got = Art.factsFor(item);
-    var out = [];
+    const got = Art.factsFor(item);
+    const out = [];
     function add(text) {
-      out.push('<span class="dt-rating">' + STAR_GLYPH +
+      out.push(`<span class="dt-rating">${STAR_GLYPH}` +
                '<span class="dt-rating-text">' + UI.escapeHtml(text) + '</span></span>');
     }
     if (headMd && headMd.rating) add(Math.round(headMd.rating * 10) + '% Critics');
@@ -637,10 +620,10 @@ var Detail = (function () {
      arrive also fills in the cast and crew, which are the same whichever server
      you end up playing from. */
   function loadDetails() {
-    var gen = generation;
-    var filled = false;
-    copies.forEach(function (copy) {
-      Meta.load(copy.item).then(function (md) {
+    const gen = generation;
+    let filled = false;
+    copies.forEach((copy) => {
+      Meta.load(copy.item).then((md) => {
         if (gen !== generation || !md) return;
         copy.md = md;
         expand(copy, md);
@@ -660,34 +643,37 @@ var Detail = (function () {
   }
 
   function crewHtml(md) {
-    var bits = [];
+    const bits = [];
     function names(list) {
-      return (list || []).map(function (x) { return UI.escapeHtml(x.tag); }).join(', ');
+      return (list || []).map((x) => { return UI.escapeHtml(x.tag); }).join(', ');
     }
-    if (md.Director && md.Director.length) bits.push('<b>Director</b> ' + names(md.Director));
-    if (md.Writer && md.Writer.length) bits.push('<b>Writer</b> ' + names(md.Writer));
-    if (md.studio) bits.push('<b>Studio</b> ' + UI.escapeHtml(md.studio));
+    if (md.Director && md.Director.length) bits.push(`<b>Director</b> ${names(md.Director)}`);
+    if (md.Writer && md.Writer.length) bits.push(`<b>Writer</b> ${names(md.Writer)}`);
+    if (md.studio) bits.push(`<b>Studio</b> ${UI.escapeHtml(md.studio)}`);
     return bits.join('<span class="dt-gap"></span>');
   }
 
   /* The first letters of the first two words: "Ada Lovelace" is AL. */
   function initials(name) {
-    var words = String(name || '').trim().split(/\s+/), out = '', i;
-    for (i = 0; i < words.length && out.length < 2; i++) {
+    const words = String(name || '').trim().split(/\s+/);
+    let out = '';
+    for (let i = 0; i < words.length && out.length < 2; i++) {
       if (words[i]) out += words[i].charAt(0).toUpperCase();
     }
     return out;
   }
 
   function castHtml(md) {
-    var roles = (md.Role || []).slice(0, 8), html = '', i, r, url;
+    const roles = (md.Role || []).slice(0, 8);
+    let html = '';
+    let url;
     if (!roles.length) return '';
-    for (i = 0; i < roles.length; i++) {
-      r = roles[i];
+    for (let i = 0; i < roles.length; i++) {
+      const r = roles[i];
       url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
       html += '<div class="dt-actor">' +
-              (url ? '<img src="' + url + '" alt="">'
-                   : '<div class="dt-actor-blank">' + UI.escapeHtml(initials(r.tag)) + '</div>') +
+              (url ? `<img src="${url}" alt="">`
+                   : `<div class="dt-actor-blank">${UI.escapeHtml(initials(r.tag))}</div>`) +
               '<div class="dt-actor-name">' + UI.escapeHtml(r.tag) + '</div>' +
               '<div class="dt-actor-role">' + UI.escapeHtml(r.role || '') + '</div>' +
               '</div>';
@@ -704,7 +690,7 @@ var Detail = (function () {
   function start(v, isExtra, at) {
     if (!v) { UI.toast('Still checking that copy…'); return; }
     if (!v.ok) {
-      var why = Guard.refusal(item, v);
+      const why = Guard.refusal(item, v);
       UI.message(why[0], why[1]);
       return;
     }
@@ -714,9 +700,9 @@ var Detail = (function () {
   }
 
   function key(code) {
-    var K = UI.KEY;
+    const K = UI.KEY;
     if (Menu.isOpen()) return Menu.key(code);
-    var last = (strip === 0 ? actions().length : extras.length) - 1;
+    const last = (strip === 0 ? actions().length : extras.length) - 1;
 
     if (code === K.LEFT && idx > 0) { idx--; render(); return true; }
     if (code === K.RIGHT && idx < last) { idx++; render(); return true; }
@@ -725,7 +711,7 @@ var Detail = (function () {
     }
     if (code === K.UP && strip === 1) { strip = 0; idx = 0; render(); return true; }
     if (code === K.OK) {
-      var a = strip === 0 ? actions()[idx] : null;
+      const a = strip === 0 ? actions()[idx] : null;
       if (a) a.run(); else start(extras[idx] && extras[idx].verdict, true);
       return true;
     }

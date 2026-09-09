@@ -10,7 +10,7 @@
 var Servers = (function () {
   'use strict';
 
-  var list = [];
+  let list = [];
 
   function ls(key, value) {
     try {
@@ -24,8 +24,7 @@ var Servers = (function () {
   function count() { return list.length; }
 
   function get(id) {
-    var i;
-    for (i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return null;
   }
 
@@ -36,20 +35,19 @@ var Servers = (function () {
   }
 
   function stamp(items, server) {
-    var i;
-    for (i = 0; i < items.length; i++) if (items[i]) items[i]._server = server.id;
+    for (let i = 0; i < items.length; i++) if (items[i]) items[i]._server = server.id;
     return items;
   }
 
   function set(found) {
     list = found;
-    ls('servers', JSON.stringify(list.map(function (sv) {
+    ls('servers', JSON.stringify(list.map((sv) => {
       return { id: sv.id, name: sv.name, base: sv.base, token: sv.token };
     })));
   }
 
   function load() {
-    var raw = ls('servers');
+    const raw = ls('servers');
     loadPreference();
     if (!raw) return [];
     try { list = JSON.parse(raw) || []; } catch (e) { list = []; }
@@ -74,7 +72,7 @@ var Servers = (function () {
      have simply appears as whoever does have it — the preference is a
      preference, not a filter. */
 
-  var preferredId = null;
+  let preferredId = null;
 
   function preferred() {
     if (preferredId && get(preferredId)) return preferredId;
@@ -94,8 +92,9 @@ var Servers = (function () {
      is: the chip says which server is preferred and OK moves to the next. */
   function cyclePreferred() {
     if (list.length < 2) return preferred();
-    var at = 0, i, cur = preferred();
-    for (i = 0; i < list.length; i++) if (list[i].id === cur) at = i;
+    let at = 0;
+    const cur = preferred();
+    for (let i = 0; i < list.length; i++) if (list[i].id === cur) at = i;
     setPreferred(list[(at + 1) % list.length].id);
     return preferred();
   }

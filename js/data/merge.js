@@ -24,7 +24,8 @@ var Merge = (function () {
   }
 
   function before(a, b) {
-    var ka = sortKey(a), kb = sortKey(b);
+    const ka = sortKey(a);
+    const kb = sortKey(b);
     if (ka !== kb) return ka < kb;
     return ((a && a.year) || 0) < ((b && b.year) || 0);
   }
@@ -45,20 +46,21 @@ var Merge = (function () {
      make the row a cycle, and these get written to IndexedDB. Read it through
      sources(), which puts the shown copy back at the front. */
   function combine(primary, item) {
-    var extras = primary._sources || [], i, key = copyKey(item);
+    const extras = primary._sources || [];
+    const key = copyKey(item);
     /* One copy per library. A film listed twice by the same library (two
        editions in one) is not what this is for — versions within one item are,
        and those live in Media[], not here. */
     if (copyKey(primary) === key) return primary;
-    for (i = 0; i < extras.length; i++) {
+    for (let i = 0; i < extras.length; i++) {
       if (copyKey(extras[i]) === key) return primary;
     }
 
     /* Plex syncs the position between servers, but if they disagree, the
        furthest through is the one worth resuming. */
-    var offset = Math.max(primary.viewOffset || 0, item.viewOffset || 0);
-    var seen = Math.max(primary.lastViewedAt || 0, item.lastViewedAt || 0);
-    var shown;
+    const offset = Math.max(primary.viewOffset || 0, item.viewOffset || 0);
+    const seen = Math.max(primary.lastViewedAt || 0, item.lastViewedAt || 0);
+    let shown;
 
     if (Servers.preferred() === item._server && primary._server !== Servers.preferred()) {
       delete primary._sources;
@@ -78,7 +80,8 @@ var Merge = (function () {
      longer carries the ids they were derived from. */
   function push(idx, item, keys) {
     if (!item) return false;
-    var i, at = -1;
+    let i;
+    let at = -1;
     keys = keys || Media.identities(item);
     for (i = 0; i < keys.length; i++) {
       if (idx.map[keys[i]] !== undefined) { at = idx.map[keys[i]]; break; }
@@ -103,10 +106,10 @@ var Merge = (function () {
      in its own order, with anything only the others have appended where it
      first appears. */
   function lists(arrays) {
-    var idx = index(), i, j, arr;
-    for (i = 0; i < arrays.length; i++) {
-      arr = arrays[i] || [];
-      for (j = 0; j < arr.length; j++) push(idx, arr[j]);
+    const idx = index();
+    for (let i = 0; i < arrays.length; i++) {
+      const arr = arrays[i] || [];
+      for (let j = 0; j < arr.length; j++) push(idx, arr[j]);
     }
     return idx.out;
   }
@@ -130,8 +133,8 @@ var Merge = (function () {
      stays because without it a film walked into the All row has no TMDB id, so
      it gets neither a backdrop of its own nor a place in the merge by identity. */
   function slim(item) {
-    var media = (item.Media && item.Media[0]) || null;
-    var out = {
+    const media = (item.Media && item.Media[0]) || null;
+    const out = {
       ratingKey: item.ratingKey,
       _server: item._server,
       _part: item._part,
@@ -165,7 +168,7 @@ var Merge = (function () {
   function stream(parts, fetch) {
     return {
       fetch: fetch,
-      streams: parts.map(function (p) {
+      streams: parts.map((p) => {
         return { part: p, offset: 0, buffer: [], total: 0, done: false, counted: false };
       }),
       idx: index(),
@@ -177,19 +180,19 @@ var Merge = (function () {
   /* An upper bound until the walk finishes: every copy on every server, less
      the duplicates found so far. It only ever gets more accurate. */
   function estimate(st) {
-    var total = 0, i;
-    for (i = 0; i < st.streams.length; i++) total += st.streams[i].total;
+    let total = 0;
+    for (let i = 0; i < st.streams.length; i++) total += st.streams[i].total;
     return Math.max(st.idx.out.length, total - st.idx.dupes);
   }
 
   function items(st) { return st.idx.out; }
 
   function fetchInto(st, s) {
-    return st.fetch(s.part, s.offset).then(function (res) {
-      var got = (res && res.items) || [], i;
+    return st.fetch(s.part, s.offset).then((res) => {
+      const got = (res && res.items) || [];
       if (res && res.total) s.total = res.total;
       s.offset += got.length;
-      for (i = 0; i < got.length; i++) {
+      for (let i = 0; i < got.length; i++) {
         /* Which library it came from: one section now spans several, and two
            of them can hold the same film in different shapes. */
         got[i]._part = s.part.key;
@@ -197,7 +200,7 @@ var Merge = (function () {
       }
       if (!got.length || (s.total && s.offset >= s.total)) s.done = true;
       return s;
-    }, function () {
+    }, () => {
       /* A server that stops answering drops out of the merge rather than
          stalling the row. */
       s.done = true;
@@ -210,23 +213,25 @@ var Merge = (function () {
   function advance(st, upTo) {
     if (st.idx.out.length > upTo || st.exhausted) return Promise.resolve(st.idx.out);
     if (st.busy) return st.busy;
-    st.busy = fill(st, upTo).then(function (out) { st.busy = null; return out; },
-                                  function (e) { st.busy = null; throw e; });
+    st.busy = fill(st, upTo).then((out) => { st.busy = null; return out; },
+                                  (e) => { st.busy = null; throw e; });
     return st.busy;
   }
 
   function fill(st, upTo) {
-    var i, needs, live, pick;
+    let i;
+    let live;
+    let pick;
     /* A loop, not recursion: walking deep into a big library would otherwise
        build a stack frame per film. */
     while (st.idx.out.length <= upTo) {
-      needs = [];
+      const needs = [];
       for (i = 0; i < st.streams.length; i++) {
         if (!st.streams[i].done && !st.streams[i].buffer.length) needs.push(st.streams[i]);
       }
       if (needs.length) {
-        return Promise.all(needs.map(function (s) { return fetchInto(st, s); }))
-          .then(function () { return fill(st, upTo); });
+        return Promise.all(needs.map((s) => { return fetchInto(st, s); }))
+          .then(() => { return fill(st, upTo); });
       }
       live = [];
       for (i = 0; i < st.streams.length; i++) {
@@ -240,7 +245,7 @@ var Merge = (function () {
       }
       /* Identities come off the full item — slimming drops the Guid array they
          are mostly derived from. */
-      var raw = pick.buffer.shift();
+      const raw = pick.buffer.shift();
       push(st.idx, slim(raw), Media.identities(raw));
     }
     return Promise.resolve(st.idx.out);

@@ -8,9 +8,9 @@
 var Plex = (function () {
   'use strict';
 
-  var TV       = Config.plexTvBase;
-  var PRODUCT  = 'Reflex';
-  var VERSION  = '0.0.1';
+  const TV       = Config.plexTvBase;
+  const PRODUCT  = 'Reflex';
+  const VERSION  = '0.0.1';
   /* The panel is webOS, but do NOT say so here.
      Measured against both of this account's servers, on 2026-08-13: the media
      decision engine answers 400 Bad Request — an HTML error page, not a Plex
@@ -22,14 +22,14 @@ var Plex = (function () {
      under WAM, which is also what the platform version says. Product, device,
      model and device name still say Reflex on a B8, so the server's dashboard
      shows exactly what this is. */
-  var PLATFORM = 'Chrome';
-  var PLATFORM_VERSION = '53.0';
-  var DEVICE   = 'LG OLED B8';
+  const PLATFORM = 'Chrome';
+  const PLATFORM_VERSION = '53.0';
+  const DEVICE   = 'LG OLED B8';
 
   /* Items per category row. The rail shows ten across and you have to scroll to
      reach the rest, so asking for thirty per hub per server was mostly payload
      we never drew — and it is on the critical path of the first paint. */
-  var HUB_COUNT = 12;
+  const HUB_COUNT = 12;
 
   /* What we declare to the server is built from what the panel says it can
      play — see js/panel.js. It used to be a constant here, which meant the
@@ -42,7 +42,7 @@ var Plex = (function () {
      /api/v2/resources — a server you do NOT own rejects the account token with
      401, which is the case here (shared user). Server tokens live on the server
      objects in js/servers.js. */
-  var s = { clientId: null, token: null };
+  const s = { clientId: null, token: null };
 
   /* ---------- plumbing ---------- */
 
@@ -55,23 +55,15 @@ var Plex = (function () {
   }
 
   function uuid() {
-    var out = '', i;
-    for (i = 0; i < 32; i++) {
+    let out = '';
+    for (let i = 0; i < 32; i++) {
       if (i === 8 || i === 12 || i === 16 || i === 20) out += '-';
       out += Math.floor(Math.random() * 16).toString(16);
     }
     return out;
   }
 
-  function qs(params) {
-    var keys = Object.keys(params), parts = [], i, v;
-    for (i = 0; i < keys.length; i++) {
-      v = params[keys[i]];
-      if (v === null || v === undefined) continue;
-      parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(v));
-    }
-    return parts.join('&');
-  }
+  const qs = Http.qs;
 
   function headers() {
     return {
@@ -88,28 +80,20 @@ var Plex = (function () {
     };
   }
 
-  /* opts.token: the token to send, or false for none. */
+  /* opts.token: the token to send, or false for none. A body that is not JSON
+     is an answer here, not a failure: several endpoints reply in plain text. */
   function request(method, url, opts) {
     opts = opts || {};
-    return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.open(method, url, true);
-      xhr.timeout = opts.timeout || 15000;
-      var h = headers(), keys = Object.keys(h), i;
-      for (i = 0; i < keys.length; i++) xhr.setRequestHeader(keys[i], h[keys[i]]);
-      if (opts.token) xhr.setRequestHeader('X-Plex-Token', opts.token);
-      xhr.onload = function () {
-        if (xhr.status < 200 || xhr.status >= 300) {
-          reject(new Error(method + ' ' + tidy(url) + ' -> ' + xhr.status + why(xhr)));
-          return;
-        }
-        if (!xhr.responseText) { resolve(null); return; }
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch (e) { resolve(xhr.responseText); }
-      };
-      xhr.ontimeout = function () { reject(new Error('timeout ' + url)); };
-      xhr.onerror = function () { reject(new Error('network ' + url)); };
-      xhr.send(opts.body || null);
+    const h = headers();
+    if (opts.token) h['X-Plex-Token'] = opts.token;
+    return Http.request(url, {
+      method: method,
+      headers: h,
+      timeout: opts.timeout,
+      body: opts.body,
+      text: true,
+      label: method + ' ' + tidy(url),
+      explain: why
     });
   }
 
@@ -123,13 +107,13 @@ var Plex = (function () {
   /* Plex says why it refused, in the body. Throwing that away and reporting a
      bare status is how a 400 becomes unexplainable. */
   function why(xhr) {
-    var body = '';
+    let body = '';
     try { body = xhr.responseText || ''; } catch (e) { return ''; }
     if (!body) return '';
-    var m = body.match(/status="([^"]+)"/) ||        // <Response status="..."/>
+    const m = body.match(/status="([^"]+)"/) ||        // <Response status="..."/>
             body.match(/"status"\s*:\s*"([^"]+)"/);
-    if (m) return '  ·  ' + m[1];
-    return '  ·  ' + body.replace(/\s+/g, ' ').substring(0, 220);
+    if (m) return `  ·  ${m[1]}`;
+    return `  ·  ${body.replace(/\s+/g, ' ').substring(0, 220)}`;
   }
 
   function tv(method, path, opts) {
@@ -161,29 +145,29 @@ var Plex = (function () {
     return tv('POST', '/api/v2/pins', { token: false });
   }
 
-  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function wait(ms) { return new Promise((r) => { setTimeout(r, ms); }); }
 
   /* Resolves with a token once the user has entered the code, or null if the
      pin expired. A failed poll is reported and retried rather than thrown — a
      single network blip must not throw the user back to a fresh code. */
   function linkPoll(pinId, deadline, onStatus) {
-    var tries = 0;
+    let tries = 0;
 
     function attempt() {
       tries++;
-      return tv('GET', '/api/v2/pins/' + pinId, { token: false })
-        .then(function (pin) {
+      return tv('GET', `/api/v2/pins/${pinId}`, { token: false })
+        .then((pin) => {
           if (pin && pin.authToken) {
             s.token = pin.authToken;
             ls('token', s.token);
             if (onStatus) onStatus('linked, token stored');
             return s.token;
           }
-          if (onStatus) onStatus('pin ' + pinId + ' · poll ' + tries + ' · not claimed yet');
+          if (onStatus) onStatus(`pin ${pinId} · poll ${tries} · not claimed yet`);
           if (Date.now() > deadline) return null;
           return wait(2000).then(attempt);
-        }, function (err) {
-          if (onStatus) onStatus('pin ' + pinId + ' · poll ' + tries + ' FAILED: ' + err.message);
+        }, (err) => {
+          if (onStatus) onStatus(`pin ${pinId} · poll ${tries} FAILED: ${err.message}`);
           if (Date.now() > deadline) return null;
           return wait(3000).then(attempt);
         });
@@ -205,18 +189,19 @@ var Plex = (function () {
 
   function ping(uri, token) {
     return request('GET', uri + '/identity', { timeout: 4000, token: token })
-      .then(function () { return uri; });
+      .then(() => { return uri; });
   }
 
   /* Promise.any doesn't exist in Chromium 53. */
   function raceOk(promises) {
-    return new Promise(function (resolve, reject) {
-      var left = promises.length, settled = false;
+    return new Promise((resolve, reject) => {
+      let left = promises.length;
+      let settled = false;
       if (!left) { reject(new Error('nothing to race')); return; }
-      promises.forEach(function (p) {
-        p.then(function (v) {
+      promises.forEach((p) => {
+        p.then((v) => {
           if (!settled) { settled = true; resolve(v); }
-        }, function () {
+        }, () => {
           left--;
           if (left === 0 && !settled) reject(new Error('all connections failed'));
         });
@@ -229,60 +214,61 @@ var Plex = (function () {
      Unlike before, this keeps them ALL — the same film is often on more than
      one, and the app deduplicates rather than picking a winner. */
   function discover() {
-    var cached = Servers.all();
+    const cached = Servers.all();
     if (cached.length) {
-      return Promise.all(cached.map(function (sv) {
-        return ping(sv.base, sv.token).then(function () { return sv; }, function () { return null; });
-      })).then(function (live) {
-        var ok = live.filter(function (sv) { return !!sv; });
+      return Promise.all(cached.map((sv) => {
+        return ping(sv.base, sv.token).then(() => { return sv; }, () => { return null; });
+      })).then((live) => {
+        const ok = live.filter((sv) => { return !!sv; });
         if (ok.length) { Servers.set(ok); return ok; }
         Servers.forget();
         return discover();
       });
     }
 
-    return tv('GET', '/api/v2/resources?' + qs({ includeHttps: 1, includeRelay: 0 }))
-      .then(function (resources) {
-        var jobs = [], i, r;
-        for (i = 0; i < resources.length; i++) {
-          r = resources[i];
+    return tv('GET', `/api/v2/resources?${qs({ includeHttps: 1, includeRelay: 0 })}`)
+      .then((resources) => {
+        const jobs = [];
+        for (let i = 0; i < resources.length; i++) {
+          const r = resources[i];
           if (!r.provides || r.provides.indexOf('server') < 0) continue;
           jobs.push(reach(r));
         }
         if (!jobs.length) throw new Error('no servers on this account');
         return Promise.all(jobs);
       })
-      .then(function (found) {
-        var ok = found.filter(function (sv) { return !!sv; });
+      .then((found) => {
+        const ok = found.filter((sv) => { return !!sv; });
         if (!ok.length) throw new Error('no direct server connection');
         /* Stable order, so rows do not reshuffle between launches. */
-        ok.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+        ok.sort((a, b) => { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
         Servers.set(ok);
         return ok;
       });
   }
 
   function reach(resource) {
-    var token = resource.accessToken || s.token;
-    var uris = [], j, c;
-    for (j = 0; j < (resource.connections || []).length; j++) {
-      c = resource.connections[j];
+    const token = resource.accessToken || s.token;
+    const uris = [];
+    for (let j = 0; j < (resource.connections || []).length; j++) {
+      const c = resource.connections[j];
       if (c.relay) continue;
       uris.push(c.uri);
     }
     if (!uris.length) return Promise.resolve(null);
-    return raceOk(uris.map(function (u) { return ping(u, token); })).then(function (uri) {
+    return raceOk(uris.map((u) => { return ping(u, token); })).then((uri) => {
       return { id: resource.clientIdentifier, name: resource.name || 'server',
                base: uri, token: token };
-    }, function () { return null; });
+    }, () => { return null; });
   }
 
   /* ---------- library ---------- */
 
   function sections(server) {
-    return ask(server, '/library/sections').then(function (res) {
-      var dirs = (res.MediaContainer && res.MediaContainer.Directory) || [], out = [], i;
-      for (i = 0; i < dirs.length; i++) {
+    return ask(server, '/library/sections').then((res) => {
+      const dirs = (res.MediaContainer && res.MediaContainer.Directory) || [];
+      const out = [];
+      for (let i = 0; i < dirs.length; i++) {
         /* Movies and shows. Music and photos are not something this app has any
            business drawing. */
         if (dirs[i].type !== 'movie' && dirs[i].type !== 'show') continue;
@@ -291,12 +277,12 @@ var Plex = (function () {
                    updatedAt: dirs[i].updatedAt || 0, server: server.id });
       }
       return out;
-    }).catch(function () { return []; });
+    }).catch(() => { return []; });
   }
 
   /* type 1 is movies, 2 is shows — pass it in `extra` for a show section. */
   function items(server, sectionKey, start, size, extra) {
-    var params = {
+    const params = {
       type: 1,
       sort: 'titleSort:asc',
       includeCollections: 0,
@@ -308,12 +294,12 @@ var Plex = (function () {
     /* Filters (e.g. contentRating) are applied server side — never pull a
        section down to sieve it here. */
     if (extra) {
-      var keys = Object.keys(extra), i;
-      for (i = 0; i < keys.length; i++) params[keys[i]] = extra[keys[i]];
+      const keys = Object.keys(extra);
+      for (let i = 0; i < keys.length; i++) params[keys[i]] = extra[keys[i]];
     }
-    return ask(server, '/library/sections/' + sectionKey + '/all?' + qs(params),
-               { timeout: 20000 }).then(function (res) {
-      var mc = res.MediaContainer || {};
+    return ask(server, `/library/sections/${sectionKey}/all?${qs(params)}`,
+               { timeout: 20000 }).then((res) => {
+      const mc = res.MediaContainer || {};
       return { total: mc.totalSize || mc.size || 0,
                items: Servers.stamp(mc.Metadata || [], server) };
     });
@@ -323,12 +309,13 @@ var Plex = (function () {
      the server may label things BBFC (U, PG, 12A, 15, 18) or MPAA (G, PG-13,
      R), or prefix them by region ("gb/12A"). */
   function contentRatings(server, sectionKey) {
-    return ask(server, '/library/sections/' + sectionKey + '/contentRating')
-      .then(function (res) {
-        var dirs = (res.MediaContainer && res.MediaContainer.Directory) || [], out = [], i;
-        for (i = 0; i < dirs.length; i++) out.push(dirs[i].title || dirs[i].key);
+    return ask(server, `/library/sections/${sectionKey}/contentRating`)
+      .then((res) => {
+        const dirs = (res.MediaContainer && res.MediaContainer.Directory) || [];
+        const out = [];
+        for (let i = 0; i < dirs.length; i++) out.push(dirs[i].title || dirs[i].key);
         return out;
-      }).catch(function () { return []; });
+      }).catch(() => { return []; });
   }
 
   /* Continue Watching. /library/onDeck is the universally supported endpoint —
@@ -336,12 +323,12 @@ var Plex = (function () {
   /* Films and episodes both turn up here, and an episode is the more common
      case on a real server. */
   function onDeck(server) {
-    return ask(server, '/library/onDeck?' + qs({ includeGuids: 1 })).then(function (res) {
-      var md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
-      return Servers.stamp(md.filter(function (m) {
+    return ask(server, `/library/onDeck?${qs({ includeGuids: 1 })}`).then((res) => {
+      const md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
+      return Servers.stamp(md.filter((m) => {
         return m.type === 'movie' || m.type === 'episode';
       }), server);
-    }).catch(function () { return []; });
+    }).catch(() => { return []; });
   }
 
   /* ---------- getting things off the deck ----------
@@ -355,7 +342,7 @@ var Plex = (function () {
   /* Whether a server answered removeFromContinueWatching. Memory only, so a
      row of ten does not rediscover the same 404 ten times and an upgraded
      server is not written off for ever. */
-  var canHide = {};
+  const canHide = {};
 
   /* Hide an item from Continue watching without touching its watch state.
      Resolves false where the server has no such endpoint, so the caller can ask
@@ -364,7 +351,7 @@ var Plex = (function () {
     if (canHide[server.id] === false) return Promise.resolve(false);
     return request('PUT', server.base + '/actions/removeFromContinueWatching?' +
                    qs({ ratingKey: ratingKey }), { token: server.token })
-      .then(function () { canHide[server.id] = true; return true; }, function (e) {
+      .then(() => { canHide[server.id] = true; return true; }, (e) => {
         if (!/-> 40[04](\s|$)/.test(e.message)) throw e;
         canHide[server.id] = false;
         return false;
@@ -383,48 +370,50 @@ var Plex = (function () {
      a season's are its episodes. Never /allLeaves on a library we don't own —
      one show at a time is the whole point. */
   function children(server, ratingKey) {
-    return ask(server, '/library/metadata/' + ratingKey + '/children?' +
-               qs({ includeGuids: 1 }), { timeout: 20000 }).then(function (res) {
-      var md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
+    return ask(server, `/library/metadata/${ratingKey}/children?` +
+               qs({ includeGuids: 1 }), { timeout: 20000 }).then((res) => {
+      const md = (res.MediaContainer && res.MediaContainer.Metadata) || [];
       return Servers.stamp(md, server);
-    }).catch(function () { return []; });
+    }).catch(() => { return []; });
   }
 
   /* The section's own categories — Recently Added, Recently Released and so on.
      One request returns every hub with its items, which is how the stock app
      shows a huge library without listing it. */
   function hubs(server, sectionKey) {
-    return ask(server, '/hubs/sections/' + sectionKey + '?' +
+    return ask(server, `/hubs/sections/${sectionKey}?` +
                qs({ count: HUB_COUNT, includeGuids: 1 }),
-               { timeout: 20000 }).then(function (res) {
-      var list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, h;
-      for (i = 0; i < list.length; i++) {
-        h = list[i];
+               { timeout: 20000 }).then((res) => {
+      const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
+      const out = [];
+      for (let i = 0; i < list.length; i++) {
+        const h = list[i];
         if (!h.Metadata || !h.Metadata.length) continue;
         if (h.type !== 'movie' && h.type !== 'show') continue;
         out.push({ title: h.title, items: Servers.stamp(h.Metadata, server) });
       }
       return out;
-    }).catch(function () { return []; });
+    }).catch(() => { return []; });
   }
 
   /* ponytail: movies only, because show drill-down doesn't exist yet (task 3).
      Widen the type filter when it does. */
   function search(server, query) {
-    return ask(server, '/hubs/search?' + qs({ query: query, limit: 40 }), { timeout: 20000 })
-      .then(function (res) {
-        var list = (res.MediaContainer && res.MediaContainer.Hub) || [], out = [], i, j, h;
-        for (i = 0; i < list.length; i++) {
-          h = list[i];
+    return ask(server, `/hubs/search?${qs({ query: query, limit: 40 })}`, { timeout: 20000 })
+      .then((res) => {
+        const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
+        const out = [];
+        for (let i = 0; i < list.length; i++) {
+          const h = list[i];
           if (!h.Metadata) continue;
-          for (j = 0; j < h.Metadata.length; j++) {
+          for (let j = 0; j < h.Metadata.length; j++) {
             if (h.Metadata[j].type === 'movie' || h.Metadata[j].type === 'show') {
               out.push(h.Metadata[j]);
             }
           }
         }
         return Servers.stamp(out, server);
-      }).catch(function () { return []; });
+      }).catch(() => { return []; });
   }
 
   /* Watch history. Plex attributes everything to the account, not the person,
@@ -435,36 +424,37 @@ var Plex = (function () {
       sort: 'viewedAt:desc',
       'X-Plex-Container-Start': 0,
       'X-Plex-Container-Size': size || 200
-    }), { timeout: 20000 }).then(function (res) {
+    }), { timeout: 20000 }).then((res) => {
       return (res.MediaContainer && res.MediaContainer.Metadata) || [];
-    }).catch(function () { return []; });
+    }).catch(() => { return []; });
   }
 
   function devices(server) {
-    return ask(server, '/devices').then(function (res) {
-      var d = (res.MediaContainer && res.MediaContainer.Device) || [], out = [], i;
-      for (i = 0; i < d.length; i++) {
+    return ask(server, '/devices').then((res) => {
+      const d = (res.MediaContainer && res.MediaContainer.Device) || [];
+      const out = [];
+      for (let i = 0; i < d.length; i++) {
         out.push({ id: String(d[i].id),
-                   name: d[i].name || d[i].clientIdentifier || ('device ' + d[i].id),
+                   name: d[i].name || d[i].clientIdentifier || (`device ${d[i].id}`),
                    platform: d[i].platform || '' });
       }
       return out;
-    }).catch(function () { return []; });
+    }).catch(() => { return []; });
   }
 
   /* Find a library item by external id, e.g. 'tmdb://27205'. This is the join
      that lets us start from a curated external list and ask what the server
      has, instead of crawling the library. */
   function copiesByGuid(server, guid) {
-    return ask(server, '/library/all?' + qs({ guid: guid, includeGuids: 1 }), { timeout: 15000 })
-      .then(function (res) {
-        var m = (res.MediaContainer && res.MediaContainer.Metadata) || [];
+    return ask(server, `/library/all?${qs({ guid: guid, includeGuids: 1 })}`, { timeout: 15000 })
+      .then((res) => {
+        const m = (res.MediaContainer && res.MediaContainer.Metadata) || [];
         return Servers.stamp(m, server);
-      }).catch(function () { return []; });
+      }).catch(() => { return []; });
   }
 
   function findByGuid(server, guid) {
-    return copiesByGuid(server, guid).then(function (m) { return m.length ? m[0] : null; });
+    return copiesByGuid(server, guid).then((m) => { return m.length ? m[0] : null; });
   }
 
   /* Every copy of a film on this server, wherever it lives.
@@ -473,16 +463,17 @@ var Plex = (function () {
      other version is not another entry in Media[] — it is a different library
      item under a different chip, and only a guid lookup finds it. */
   function allVersions(server, item) {
-    var ids = [], g = (item && item.Guid) || [], i;
+    const ids = [];
+    const g = (item && item.Guid) || [];
     if (item && item.guid && String(item.guid).indexOf('plex://') === 0) ids.push(item.guid);
-    for (i = 0; i < g.length; i++) if (g[i].id) ids.push(g[i].id);
+    for (let i = 0; i < g.length; i++) if (g[i].id) ids.push(g[i].id);
     if (!ids.length) return Promise.resolve([]);
 
     /* Try the ids in order and take the first that finds anything — one
        request in the normal case. */
     function attempt(n) {
       if (n >= ids.length) return Promise.resolve([]);
-      return copiesByGuid(server, ids[n]).then(function (found) {
+      return copiesByGuid(server, ids[n]).then((found) => {
         return found.length ? found : attempt(n + 1);
       });
     }
@@ -492,12 +483,12 @@ var Plex = (function () {
   /* TMDB id off an item, handling both the modern Guid array and the legacy
      agent form (com.plexapp.agents.themoviedb://123?lang=en). */
   function tmdbId(item) {
-    var g = (item && item.Guid) || [], i, id;
-    for (i = 0; i < g.length; i++) {
-      id = g[i].id || '';
+    const g = (item && item.Guid) || [];
+    for (let i = 0; i < g.length; i++) {
+      const id = g[i].id || '';
       if (id.indexOf('tmdb://') === 0) return id.substring(7);
     }
-    var m = String((item && item.guid) || '').match(/themoviedb:\/\/(\d+)/);
+    const m = String((item && item.guid) || '').match(/themoviedb:\/\/(\d+)/);
     return m ? m[1] : null;
   }
 
@@ -507,10 +498,10 @@ var Plex = (function () {
      right moment. includeChapters gives the trackbar its ticks. Both are part
      of the same payload the app already fetches, so neither costs a request. */
   function metadata(server, ratingKey) {
-    return ask(server, '/library/metadata/' + ratingKey + '?' +
+    return ask(server, `/library/metadata/${ratingKey}?` +
                qs({ includeGuids: 1, includeExtras: 1,
-                    includeMarkers: 1, includeChapters: 1 })).then(function (res) {
-      var m = res.MediaContainer && res.MediaContainer.Metadata;
+                    includeMarkers: 1, includeChapters: 1 })).then((res) => {
+      const m = res.MediaContainer && res.MediaContainer.Metadata;
       if (!m || !m[0]) return null;
       /* Extras arrive nested and are playable in their own right, so they need
          stamping too or nothing can tell which server they came from. */
@@ -549,7 +540,7 @@ var Plex = (function () {
 
   /* ---------- playback decision ---------- */
 
-  var sessionId = null;
+  let sessionId = null;
   function session() {
     if (!sessionId) sessionId = uuid();
     return sessionId;
@@ -575,7 +566,7 @@ var Plex = (function () {
     opts = opts || {};
     return {
       hasMDE: 1,
-      path: '/library/metadata/' + item.ratingKey,
+      path: `/library/metadata/${item.ratingKey}`,
       mediaIndex: mediaIndex,
       partIndex: partIndex,
       protocol: 'http',
@@ -612,17 +603,19 @@ var Plex = (function () {
   }
 
   function decide(server, item, mediaIndex, partIndex, audioStreamId, opts) {
-    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts);
-    return ask(server, '/video/:/transcode/universal/decision?' + qs(params),
-               { timeout: 20000 }).then(function (res) {
-      var mc = res.MediaContainer || {};
-      var md = (mc.Metadata && mc.Metadata[0]) || null;
-      var part = md && md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
-      var streams = (part && part.Stream) || [], i, video = '', audio = '';
+    const params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts);
+    return ask(server, `/video/:/transcode/universal/decision?${qs(params)}`,
+               { timeout: 20000 }).then((res) => {
+      const mc = res.MediaContainer || {};
+      const md = (mc.Metadata && mc.Metadata[0]) || null;
+      const part = md && md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
+      const streams = (part && part.Stream) || [];
+      let video = '';
+      let audio = '';
       /* Per stream, so "the audio needs re-encoding" can be told apart from
          "the whole thing does" — one of those is acceptable here and the other
          is what gets a 4K session killed. */
-      for (i = 0; i < streams.length; i++) {
+      for (let i = 0; i < streams.length; i++) {
         if (streams[i].streamType === 1 && !video) video = streams[i].decision || '';
         if (streams[i].streamType === 2 && !audio) audio = streams[i].decision || '';
       }
@@ -640,7 +633,7 @@ var Plex = (function () {
      browser will not play this, so it cannot be tested on the laptop.
      Calling this DOES open a session on the server. */
   function transcodeUrl(server, item, mediaIndex, partIndex, audioStreamId, opts) {
-    var params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts);
+    const params = playbackParams(server, item, mediaIndex, partIndex, audioStreamId, opts);
     params.hasMDE = null;
     params.protocol = 'hls';
     params.copyts = 1;
@@ -661,13 +654,13 @@ var Plex = (function () {
      js/subs.js parses. */
 
   function subtitleUrl(server, stream) {
-    var path = (stream && stream.key) || ('/library/streams/' + (stream && stream.id));
+    const path = (stream && stream.key) || (`/library/streams/${stream && stream.id}`);
     return server.base + path + '?' + qs({ encoding: 'utf-8', 'X-Plex-Token': server.token });
   }
 
   function subtitles(server, stream) {
     return request('GET', subtitleUrl(server, stream), { timeout: 15000 })
-      .then(function (body) {
+      .then((body) => {
         /* request() parses JSON when it can; a subtitle file never is one, so
            anything but a string here means the server answered with something
            other than the track. */
@@ -684,13 +677,13 @@ var Plex = (function () {
   function timeline(server, item, state, timeMs, durationMs) {
     return ask(server, '/:/timeline?' + qs({
       ratingKey: item.ratingKey,
-      key: '/library/metadata/' + item.ratingKey,
+      key: `/library/metadata/${item.ratingKey}`,
       state: state,
       time: Math.floor(timeMs),
       duration: Math.floor(durationMs),
       playbackTime: Math.floor(timeMs),
       hasMDE: 1
-    }), { timeout: 8000 }).catch(function () { return null; });
+    }), { timeout: 8000 }).catch(() => { return null; });
   }
 
   return {

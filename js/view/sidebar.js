@@ -11,30 +11,30 @@
 var Sidebar = (function () {
   'use strict';
 
-  var el = document.getElementById('sidebar-list');
+  const el = document.getElementById('sidebar-list');
 
-  var VIEW_H = 968;     // the panel less its top padding and a little breathing room
-  var offset = 0;       // how far the list is wound up, in px
+  const VIEW_H = 968;     // the panel less its top padding and a little breathing room
+  let offset = 0;       // how far the list is wound up, in px
 
-  var secs = [];        // { title, categories: [string], current }
-  var watching = null;  // { current, type } — the Continue watching entry's state
-  var rows = [];        // the flattened list the d-pad walks
-  var idx = 0;
-  var showing = false;
-  var NONE = -2;        // nothing expanded; sections are 0-up and watching is -1
-  var expanded = NONE;  // which entry's children are listed, if any
-  var onPick = null;
-  var atMode = '';      // the mode showing, so it can be marked as the sections are
+  let secs = [];        // { title, categories: [string], current }
+  let watching = null;  // { current, type } — the Continue watching entry's state
+  let rows = [];        // the flattened list the d-pad walks
+  let idx = 0;
+  let showing = false;
+  const NONE = -2;        // nothing expanded; sections are 0-up and watching is -1
+  let expanded = NONE;  // which entry's children are listed, if any
+  let onPick = null;
+  let atMode = '';      // the mode showing, so it can be marked as the sections are
 
   /* Kids, discovery and search are modes rather than sections; the last three
      are the settings the chip row used to carry. */
   function modes() {
-    var out = [{ label: 'Discovery', kind: 'discover', current: atMode === 'discover' },
+    const out = [{ label: 'Discovery', kind: 'discover', current: atMode === 'discover' },
                { label: 'Kids', kind: 'kids', current: atMode === 'kids' },
                { label: 'Search', kind: 'search' }];
     if (Servers.count() > 1) {
-      var pref = Servers.get(Servers.preferred());
-      out.push({ label: 'Prefer ' + (pref ? pref.name : '?'), kind: 'prefer' });
+      const pref = Servers.get(Servers.preferred());
+      out.push({ label: `Prefer ${pref ? pref.name : '?'}`, kind: 'prefer' });
     }
     /* An action on Continue watching rather than a mode, but this remote has no
        colour buttons at all, so green is the shortcut and this is the route.
@@ -44,8 +44,8 @@ var Sidebar = (function () {
     }
     out.push({ label: 'Devices', kind: 'devices' });
     out.push({ label: 'Panel', kind: 'panel' });
-    out.push({ label: 'Autoplay next: ' + Player.autoplayLabel(), kind: 'autoplay' });
-    out.push({ label: 'Theme music: ' + ShowPage.themeLabel(), kind: 'theme' });
+    out.push({ label: `Autoplay next: ${Player.autoplayLabel()}`, kind: 'autoplay' });
+    out.push({ label: `Theme music: ${ShowPage.themeLabel()}`, kind: 'theme' });
     return out;
   }
 
@@ -54,8 +54,8 @@ var Sidebar = (function () {
      with the two cuts of it as its children. */
   function watchingRows() {
     if (!watching) return [];
-    var type = watching.type || null;
-    var out = [{ label: 'Continue watching', kind: 'watching', index: -1, type: null,
+    const type = watching.type || null;
+    const out = [{ label: 'Continue watching', kind: 'watching', index: -1, type: null,
                  opens: true, current: !!watching.current && type === null }];
     if (expanded !== -1) return out;
     out.push({ label: 'Movies', kind: 'watching', index: -1, type: 'movie', sub: true,
@@ -66,13 +66,13 @@ var Sidebar = (function () {
   }
 
   function build() {
-    var out = watchingRows(), i, j, cats;
-    for (i = 0; i < secs.length; i++) {
-      cats = secs[i].categories || [];
+    const out = watchingRows();
+    for (let i = 0; i < secs.length; i++) {
+      const cats = secs[i].categories || [];
       out.push({ label: secs[i].title, kind: 'section', index: i,
                  opens: cats.length > 0, current: !!secs[i].current });
       if (i !== expanded) continue;
-      for (j = 0; j < cats.length; j++) {
+      for (let j = 0; j < cats.length; j++) {
         /* Continue watching has its own entry above, and every section builds
            one — listing them all is the duplication this is rid of. */
         if (cats[j] === 'Continue watching') continue;
@@ -83,10 +83,10 @@ var Sidebar = (function () {
   }
 
   function render() {
-    var html = '', i, r;
-    for (i = 0; i < rows.length; i++) {
-      r = rows[i];
-      html += '<div class="sb-row' + (r.sub ? ' sub' : '') +
+    let html = '';
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      html += `<div class="sb-row${r.sub ? ' sub' : ''}` +
               (r.current ? ' cur' : '') + (i === idx ? ' on' : '') + '">' +
               UI.escapeHtml(r.label) + '</div>';
     }
@@ -100,20 +100,20 @@ var Sidebar = (function () {
      different heights, so the offsets are read off the DOM rather than
      arithmetic that would have to know about both. */
   function reveal() {
-    var row = el.children[idx];
+    const row = el.children[idx];
     if (!row) return;
-    var top = row.offsetTop, bottom = top + row.offsetHeight;
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
     if (bottom > offset + VIEW_H) offset = bottom - VIEW_H;
     if (top < offset) offset = top;
     if (offset < 0) offset = 0;
-    var t = 'translateY(' + (-offset) + 'px)';
+    const t = `translateY(${-offset}px)`;
     el.style.transform = t;
     el.style.webkitTransform = t;
   }
 
   function at(kind, index) {
-    var i;
-    for (i = 0; i < rows.length; i++) {
+    for (let i = 0; i < rows.length; i++) {
       if (rows[i].kind === kind && rows[i].index === index) return i;
     }
     return 0;
@@ -131,8 +131,7 @@ var Sidebar = (function () {
     onPick = pick;
     atMode = mode || '';
     expanded = NONE;
-    var i;
-    for (i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;
+    for (let i = 0; i < secs.length; i++) if (secs[i].current) expanded = i;
     /* The section is current too whenever Continue watching is, so this comes
        second: the list opens on where the focus actually is, not a level up. */
     if (watching && watching.current) expanded = -1;
@@ -154,7 +153,8 @@ var Sidebar = (function () {
   /* True for every key: an overlay that lets some keys through to the rail
      behind it would move a selection you cannot see. */
   function key(code) {
-    var K = UI.KEY, r = rows[idx];
+    const K = UI.KEY;
+    const r = rows[idx];
 
     if (UI.isBack(code) || code === K.LEFT) { close(); return true; }
     if (code === K.UP) { idx = UI.clamp(idx - 1, 0, rows.length - 1); render(); return true; }

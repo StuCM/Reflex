@@ -8,34 +8,36 @@
 var ShowPage = (function () {
   'use strict';
 
-  var elTitle = document.getElementById('sh-title');
-  var elMeta = document.getElementById('sh-meta');
-  var elSummary = document.getElementById('sh-summary');
-  var elSeasons = document.getElementById('sh-seasons');
-  var elEpisodes = document.getElementById('sh-episodes');
-  var elArt = document.getElementById('sh-art');
-  var elHint = document.getElementById('sh-hint');
-  var elRecaps = document.getElementById('sh-recaps');
-  var elHead = document.getElementById('sh-head');
-  var elTheme = document.getElementById('theme');
+  const elTitle = document.getElementById('sh-title');
+  const elMeta = document.getElementById('sh-meta');
+  const elSummary = document.getElementById('sh-summary');
+  const elSeasons = document.getElementById('sh-seasons');
+  const elEpisodes = document.getElementById('sh-episodes');
+  const elArt = document.getElementById('sh-art');
+  const elHint = document.getElementById('sh-hint');
+  const elRecaps = document.getElementById('sh-recaps');
+  const elHead = document.getElementById('sh-head');
+  const elTheme = document.getElementById('theme');
 
-  var EPISODE_POOL = 6;          // episode rows on screen at once, at 111px each
-  var EPISODE_LEAD = 3;          // rows kept above the focused one
-  var RECAP_POOL = 7;            // recap cards on screen at once, at 222px each
-  var RECAP_LEAD = 2;
+  const EPISODE_POOL = 6;          // episode rows on screen at once, at 111px each
+  const EPISODE_LEAD = 3;          // rows kept above the focused one
+  const RECAP_POOL = 7;            // recap cards on screen at once, at 222px each
+  const RECAP_LEAD = 2;
 
-  var show = null;
-  var seasons = [], seasonIdx = 0;
-  var episodes = [], epIdx = 0;
-  var zone = 'episodes';         // 'seasons' | 'episodes' | 'recaps'
-  var recaps = null;             // null until searched, then the list, empty or not
-  var recapIdx = 0;
-  var searching = false;
-  var wantEp = null;             // options.at.episode, honoured on the first load only
-  var opts = {};
-  var generation = 0;
-  var verdicts = {};             // ratingKey -> verdict, for the rows
-  var checkTimer = null;
+  let show = null;
+  let seasons = [];
+  let seasonIdx = 0;
+  let episodes = [];
+  let epIdx = 0;
+  let zone = 'episodes';         // 'seasons' | 'episodes' | 'recaps'
+  let recaps = null;             // null until searched, then the list, empty or not
+  let recapIdx = 0;
+  let searching = false;
+  let wantEp = null;             // options.at.episode, honoured on the first load only
+  let opts = {};
+  let generation = 0;
+  let verdicts = {};             // ratingKey -> verdict, for the rows
+  let checkTimer = null;
 
   /* options.at = { season, episode } opens on a named episode — Plex's own
      index values, not array positions. Without it the page opens where it
@@ -58,8 +60,8 @@ var ShowPage = (function () {
     elSeasons.innerHTML = '';
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
 
-    var gen = generation;
-    Shows.seasons(entry).then(function (list) {
+    const gen = generation;
+    Shows.seasons(entry).then((list) => {
       if (gen !== generation) return;
       seasons = list;
       seasonIdx = openSeason(list);
@@ -70,17 +72,17 @@ var ShowPage = (function () {
         return;
       }
       loadEpisodes();
-    }).catch(function (e) {
+    }).catch((e) => {
       if (gen !== generation) return;
-      UI.debug('seasons: ' + e.message);
+      UI.debug(`seasons: ${e.message}`);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the series list.</div>';
     });
   }
 
   function openSeason(list) {
-    var want = opts.at && opts.at.season, i;
+    const want = opts.at && opts.at.season;
     if (want !== undefined && want !== null) {
-      for (i = 0; i < list.length; i++) if (list[i].index === want) return i;
+      for (let i = 0; i < list.length; i++) if (list[i].index === want) return i;
     }
     return Shows.openAt(list);
   }
@@ -97,33 +99,33 @@ var ShowPage = (function () {
   function paintHeader() {
     elTitle.textContent = show.title || '';
     elSummary.textContent = show.summary || '';
-    var bits = [];
+    const bits = [];
     if (show.year) bits.push(show.year);
-    var counts = Shows.summary(show);
+    const counts = Shows.summary(show);
     if (counts) bits.push(counts);
     if (show.contentRating) bits.push(show.contentRating);
-    if (Merge.isShared(show)) bits.push('on ' + Merge.sources(show).length + ' servers');
+    if (Merge.isShared(show)) bits.push(`on ${Merge.sources(show).length} servers`);
     elMeta.textContent = bits.join('   ·   ');
-    var art = Plex.artUrl(show, 960, 540);
-    elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
+    const art = Plex.artUrl(show, 960, 540);
+    elArt.style.backgroundImage = art ? `url("${art}")` : 'none';
   }
 
   function renderSeasons() {
-    var html = '', i, cls;
-    for (i = 0; i < seasons.length; i++) {
-      cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
+    let html = '';
+    for (let i = 0; i < seasons.length; i++) {
+      const cls = `chip${i === seasonIdx ? ' cur' : ''}` +
             (zone === 'seasons' && i === seasonIdx ? ' on' : '');
-      html += '<span class="' + cls + '">' + UI.escapeHtml(seasons[i].title || ('Series ' + (i + 1))) +
+      html += `<span class="${cls}">${UI.escapeHtml(seasons[i].title || ('Series ' + (i + 1)))}` +
               '</span>';
     }
     elSeasons.innerHTML = html;
   }
 
   function verdictHtml(ep) {
-    var v = verdicts[verdictKey(ep)];
+    const v = verdicts[verdictKey(ep)];
     if (!v) return '';
-    var state = v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn');
-    return '<span class="badge ' + state + ' sh-verdict">' +
+    const state = v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn');
+    return `<span class="badge ${state} sh-verdict">` +
            UI.escapeHtml(Guard.label(v)) + '</span>';
   }
 
@@ -136,19 +138,22 @@ var ShowPage = (function () {
     }
     /* A window, not the lot: a 24-episode series is common and drawing all of
        them costs more than it is worth. */
-    var first = UI.clamp(epIdx - EPISODE_LEAD, 0, Math.max(0, episodes.length - EPISODE_POOL));
-    var html = '', i, ep, on, watched, still;
-    for (i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
-      ep = episodes[i];
+    const first = UI.clamp(epIdx - EPISODE_LEAD, 0, Math.max(0, episodes.length - EPISODE_POOL));
+    let html = '';
+    let on;
+    let watched;
+    let still;
+    for (let i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
+      const ep = episodes[i];
       on = (i === epIdx && zone === 'episodes');
       watched = ep.viewOffset && ep.duration
         ? Math.round(100 * ep.viewOffset / ep.duration) + '%'
         : (ep.viewCount ? 'watched' : '');
       /* An episode's thumb *is* its still, so the picture is already paid for. */
       still = Plex.posterUrl(ep, 160, 90);
-      html += '<div class="sh-episode' + (on ? ' on' : '') + '">' +
+      html += `<div class="sh-episode${on ? ' on' : ''}">` +
               '<span class="sh-ep-still"' +
-              (still ? ' style="background-image:url(' + UI.escapeHtml(still) + ')"' : '') +
+              (still ? ` style="background-image:url(${UI.escapeHtml(still)})"` : '') +
               '></span>' +
               '<span class="sh-ep-num">' + (ep.index === undefined ? '·' : ep.index) + '</span>' +
               '<span class="sh-ep-title">' + UI.escapeHtml(ep.title || '') + '</span>' +
@@ -177,7 +182,7 @@ var ShowPage = (function () {
      list to make room — a transform, not a height. */
   function renderRecaps() {
     if (!Youtube.enabled()) { elRecaps.innerHTML = ''; return; }
-    var on = zone === 'recaps';
+    const on = zone === 'recaps';
     elHint.textContent = hint();
     elRecaps.classList.toggle('open', on);
     /* The whole column moves, or the episode rows would slide over the title. */
@@ -185,17 +190,17 @@ var ShowPage = (function () {
     elSeasons.classList.toggle('lifted', on);
     elEpisodes.classList.toggle('lifted', on);
     if (!recaps || !recaps.length) {
-      elRecaps.innerHTML = '<div class="sh-recap sh-recap-action' + (on ? ' on' : '') + '">' +
+      elRecaps.innerHTML = `<div class="sh-recap sh-recap-action${on ? ' on' : ''}">` +
         (searching ? 'Searching…' : (recaps ? 'No recaps found' : 'Find recaps')) + '</div>';
       return;
     }
-    var first = UI.clamp(recapIdx - RECAP_LEAD, 0, Math.max(0, recaps.length - RECAP_POOL));
-    var html = '', i, r;
-    for (i = first; i < Math.min(first + RECAP_POOL, recaps.length); i++) {
-      r = recaps[i];
-      html += '<div class="sh-recap' + (on && i === recapIdx ? ' on' : '') + '">' +
+    const first = UI.clamp(recapIdx - RECAP_LEAD, 0, Math.max(0, recaps.length - RECAP_POOL));
+    let html = '';
+    for (let i = first; i < Math.min(first + RECAP_POOL, recaps.length); i++) {
+      const r = recaps[i];
+      html += `<div class="sh-recap${on && i === recapIdx ? ' on' : ''}">` +
               '<span class="sh-recap-thumb"' +
-              (r.thumb ? ' style="background-image:url(' + UI.escapeHtml(r.thumb) + ')"' : '') +
+              (r.thumb ? ` style="background-image:url(${UI.escapeHtml(r.thumb)})"` : '') +
               '></span>' +
               '<span class="sh-recap-title">' + UI.escapeHtml(r.title) + '</span>' +
               '<span class="sh-recap-len">' + UI.escapeHtml(r.length) + '</span>' +
@@ -211,24 +216,25 @@ var ShowPage = (function () {
     if (searching || recaps) return;
     searching = true;
     renderRecaps();
-    var gen = generation, title = show.title || '';
-    var key = 'recaps:' + Media.identity(show);
-    Store.get(key).then(function (cached) {
+    const gen = generation;
+    const title = show.title || '';
+    const id = Media.identity(show);
+    Cache.recaps.get(id).then((cached) => {
       if (cached) return cached;
-      return Youtube.recaps(title).then(function (items) {
-        var list = Youtube.pickForShow(Youtube.parse(items), title);
-        Store.put(key, list);
+      return Youtube.recaps(title).then((items) => {
+        const list = Youtube.pickForShow(Youtube.parse(items), title);
+        Cache.recaps.put(id, list);
         return list;
       });
-    }).then(function (list) {
+    }).then((list) => {
       if (gen !== generation) return;
       searching = false;
       recaps = list;
       recapIdx = 0;
       renderRecaps();
-    }, function (e) {
+    }, (e) => {
       if (gen !== generation) return;
-      UI.debug('recaps: ' + e.message);
+      UI.debug(`recaps: ${e.message}`);
       /* Nothing was learnt, so the action goes back to being untried rather
          than claiming this show has no recaps. */
       searching = false;
@@ -243,16 +249,16 @@ var ShowPage = (function () {
      it costs a GET and nothing else: no decision, no session, nothing a
      kill-stream rule would ever see. */
 
-  var THEME_VOL = 0.35;           // quiet: it announces the show, it is not the show
-  var FADE_STEP = 40;             // ms between volume steps while fading in
-  var fadeTimer = null;
-  var themeOn = null;             // read from storage once, then cached
+  const THEME_VOL = 0.35;           // quiet: it announces the show, it is not the show
+  const FADE_STEP = 40;             // ms between volume steps while fading in
+  let fadeTimer = null;
+  let themeOn = null;             // read from storage once, then cached
 
   /* Whether a series' theme plays when its page opens. Storage that refuses us
      reads as on, because on is what was asked for. */
   function themePlays() {
     if (themeOn !== null) return themeOn;
-    var stored = null;
+    let stored = null;
     try { stored = localStorage.getItem('reflex.theme'); } catch (e) { stored = null; }
     themeOn = stored !== 'off';
     return themeOn;
@@ -271,27 +277,27 @@ var ShowPage = (function () {
 
   /* A show with no theme is the ordinary case, so this says nothing about it. */
   function playTheme() {
-    var url = themePlays() ? Plex.themeUrl(Servers.of(show), show) : '';
+    const url = themePlays() ? Plex.themeUrl(Servers.of(show), show) : '';
     if (!url) return;
     elTheme.loop = true;
     elTheme.volume = 0;
     elTheme.src = url;
-    var started = elTheme.play();
+    const started = elTheme.play();
     /* The platform may refuse to start audio nobody asked for. That is an
        answer, not a fault: say so once and stay silent. */
     if (started && started.catch) {
-      started.catch(function (e) { UI.debug('theme: ' + e.message); });
+      started.catch((e) => { UI.debug(`theme: ${e.message}`); });
     }
     fadeIn();
   }
 
   function fadeIn() {
-    var span = parseFloat(getComputedStyle(document.documentElement)
+    const span = parseFloat(getComputedStyle(document.documentElement)
                             .getPropertyValue('--t-move')) || 340;
-    var step = THEME_VOL / Math.max(1, Math.round(span / FADE_STEP));
+    const step = THEME_VOL / Math.max(1, Math.round(span / FADE_STEP));
     clearInterval(fadeTimer);
-    fadeTimer = setInterval(function () {
-      var v = elTheme.volume + step;
+    fadeTimer = setInterval(() => {
+      const v = elTheme.volume + step;
       if (v < THEME_VOL) { elTheme.volume = v; return; }
       elTheme.volume = THEME_VOL;
       clearInterval(fadeTimer);
@@ -315,31 +321,30 @@ var ShowPage = (function () {
   /* ---------- loading ---------- */
 
   function loadEpisodes() {
-    var gen = generation;
-    var season = seasons[seasonIdx];
+    const gen = generation;
+    const season = seasons[seasonIdx];
     /* The episode we were opened at is for this load only: switching series
        afterwards goes back to landing on the first unfinished one. */
-    var want = wantEp;
+    const want = wantEp;
     wantEp = null;
     episodes = [];
     epIdx = 0;
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
-    Shows.episodes(season).then(function (list) {
+    Shows.episodes(season).then((list) => {
       if (gen !== generation) return;
       episodes = list;
       /* Land on the episode we were opened at, or failing that the first
          unfinished one: what you want is almost always the next one. */
-      var i, hit;
-      for (i = 0; i < list.length; i++) {
-        hit = want === null ? (list[i].viewOffset || !list[i].viewCount)
+      for (let i = 0; i < list.length; i++) {
+        const hit = want === null ? (list[i].viewOffset || !list[i].viewCount)
                             : list[i].index === want;
         if (hit) { epIdx = i; break; }
       }
       renderEpisodes();
       scheduleCheck();
-    }).catch(function (e) {
+    }).catch((e) => {
       if (gen !== generation) return;
-      UI.debug('episodes: ' + e.message);
+      UI.debug(`episodes: ${e.message}`);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the episode list.</div>';
     });
   }
@@ -349,11 +354,11 @@ var ShowPage = (function () {
      server a query per episode you rest on and opens no sessions. */
   function scheduleCheck() {
     clearTimeout(checkTimer);
-    var ep = episodes[epIdx];
+    const ep = episodes[epIdx];
     if (!ep || verdicts[verdictKey(ep)]) return;
-    var gen = generation;
-    checkTimer = setTimeout(function () {
-      Guard.check(ep, 0).then(function (v) {
+    const gen = generation;
+    checkTimer = setTimeout(() => {
+      Guard.check(ep, 0).then((v) => {
         if (gen !== generation) return;
         verdicts[verdictKey(ep)] = v;
         renderEpisodes();
@@ -364,9 +369,9 @@ var ShowPage = (function () {
   /* ---------- keys ---------- */
 
   function playFocused() {
-    var ep = episodes[epIdx];
+    const ep = episodes[epIdx];
     if (!ep) return;
-    var v = verdicts[verdictKey(ep)];
+    const v = verdicts[verdictKey(ep)];
     /* Not checked yet, or the preferred copy will not play: the detail page is
        where every copy is listed, so send them there rather than guessing. */
     if (!v || !v.ok) { openCopies(); return; }
@@ -374,19 +379,19 @@ var ShowPage = (function () {
   }
 
   function openCopies() {
-    var ep = episodes[epIdx];
+    const ep = episodes[epIdx];
     if (ep && opts.onChoose) opts.onChoose(ep);
   }
 
   /* OK in the recaps zone is either the search or one of its results. */
   function chooseRecap() {
     if (!recaps) { findRecaps(); return; }
-    var video = recaps[recapIdx];
+    const video = recaps[recapIdx];
     if (video && opts.onRecap) opts.onRecap(video);
   }
 
   function key(code) {
-    var K = UI.KEY;
+    const K = UI.KEY;
 
     if (zone === 'seasons') {
       if (code === K.LEFT && seasonIdx > 0) { seasonIdx--; renderSeasons(); loadEpisodes(); return true; }

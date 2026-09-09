@@ -19,80 +19,105 @@
 var Player = (function () {
   'use strict';
 
-  var v = document.getElementById('video');
-  var osd = document.getElementById('osd');
-  var osdTitle = document.getElementById('osd-name');
-  var osdTime = document.getElementById('osd-time');
-  var osdTotal = document.getElementById('osd-total');
-  var osdFill = document.getElementById('osd-fill');
-  var osdBuffered = document.getElementById('osd-buffered');
-  var osdTicks = document.getElementById('osd-ticks');
-  var osdBar = document.getElementById('osd-bar');
-  var osdKnob = document.getElementById('osd-knob');
-  var osdLeft = document.getElementById('osd-left');
-  var osdRight = document.getElementById('osd-right');
-  var osdHint = document.getElementById('osd-hint');
-  var chapEl = document.getElementById('osd-chapters');
-  var chapInner = document.getElementById('osd-chapters-inner');
-  var skipEl = document.getElementById('osd-skip');
-  var nextEl = document.getElementById('upnext');
-  var nextStillEl = document.getElementById('un-still');
-  var nextShowEl = document.getElementById('un-show');
-  var nextTitleEl = document.getElementById('un-title');
-  var nextHintEl = document.getElementById('un-hint');
-  var subEl = document.getElementById('subtitle');
-  var menuEl = document.getElementById('menu');
+  const v = document.getElementById('video');
+  const osd = document.getElementById('osd');
+  const osdTitle = document.getElementById('osd-name');
+  const osdTime = document.getElementById('osd-time');
+  const osdTotal = document.getElementById('osd-total');
+  const osdFill = document.getElementById('osd-fill');
+  const osdBuffered = document.getElementById('osd-buffered');
+  const osdTicks = document.getElementById('osd-ticks');
+  const osdBar = document.getElementById('osd-bar');
+  const osdKnob = document.getElementById('osd-knob');
+  const osdLeft = document.getElementById('osd-left');
+  const osdRight = document.getElementById('osd-right');
+  const osdHint = document.getElementById('osd-hint');
+  const chapEl = document.getElementById('osd-chapters');
+  const chapInner = document.getElementById('osd-chapters-inner');
+  const skipEl = document.getElementById('osd-skip');
+  const nextEl = document.getElementById('upnext');
+  const nextStillEl = document.getElementById('un-still');
+  const nextShowEl = document.getElementById('un-show');
+  const nextTitleEl = document.getElementById('un-title');
+  const nextHintEl = document.getElementById('un-hint');
+  const subEl = document.getElementById('subtitle');
+  const menuEl = document.getElementById('menu');
 
-  var BAR_W = 1300;                // #osd-bar, in CSS pixels
-  var CARD_W = 260;                // .osd-chap plus its margin
-  var CARDS_SHOWN = 6;
-  var SEEK_SETTLE = 400;           // ms of stillness before a seek is applied
-  var NUDGE = 30;                  // left / right, seconds
-  var JUMP = 300;                  // rewind / fast forward, seconds
+  const BAR_W = 1300;                // #osd-bar, in CSS pixels
+  const CARD_W = 260;                // .osd-chap plus its margin
+  const CARDS_SHOWN = 6;
+  const SEEK_SETTLE = 400;           // ms of stillness before a seek is applied
+  const NUDGE = 30;                  // left / right, seconds
+  const JUMP = 300;                  // rewind / fast forward, seconds
 
-  var item = null, server = null, onExit = null, onError = null, onSwitch = null;
-  var onNext = null, onPlayNext = null;
-  var currentPart = null, currentAudio = null, currentMedia = null;
-  var mediaIndex = 0, maxBitrate = null, transcoding = false, forceStream = false;
-  var ticker = null, osdTimer = null, resumeMs = 0;
+  let item = null;
+  let server = null;
+  let onExit = null;
+  let onError = null;
+  let onSwitch = null;
+  let onNext = null;
+  let onPlayNext = null;
+  let currentPart = null;
+  let currentAudio = null;
+  let currentMedia = null;
+  let mediaIndex = 0;
+  let maxBitrate = null;
+  let transcoding = false;
+  let forceStream = false;
+  let ticker = null;
+  let osdTimer = null;
+  let resumeMs = 0;
 
   /* A stall is the thing you actually see as a blip, and it is over before the
      ten-second sample comes round. Count them instead. */
-  var stalls = 0, lowest = 999, startedAt = 0;
+  let stalls = 0;
+  let lowest = 999;
+  let startedAt = 0;
 
   /* Where a run of seek presses is heading. Every currentTime assignment on a
      direct-played file is a real seek — a range request, a decoder flush — so
      holding the key would otherwise fire one per press and fight the network
      the whole way. Accumulate, show where you are going, apply once you stop. */
-  var pending = null, seekTimer = null;
+  let pending = null;
+  let seekTimer = null;
 
   /* Subtitles: the parsed cues, which track they came from, and the language
      the user asked for. The language is what survives a restart — after a
      switch to another version the stream ids are different, but "French" still
      means the same thing. */
-  var cues = [], currentSub = null, wantedLang = null, subToken = 0, subNote = '';
+  let cues = [];
+  let currentSub = null;
+  let wantedLang = null;
+  let subToken = 0;
+  let subNote = '';
 
   /* The skip prompt. The menu is js/menu.js and keeps its own state. */
-  var marker = null;
+  let marker = null;
 
   /* Focus is a mode, and that is the only reason every key CLAUDE.md documents
      goes on meaning what it says: in 'none' the arrows seek, in 'bar' they
      scrub the trackbar, in 'row' they walk the buttons — and ctl says which
      button. Which panel is open under the row, and where the chapter rail is,
      are separate. */
-  var focus = 'none', ctl = -1, openPanel = null, chapSel = 0;
+  let focus = 'none';
+  let ctl = -1;
+  let openPanel = null;
+  let chapSel = 0;
 
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
-    var h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
-    var mm = (m < 10 ? '0' : '') + m, ss = (s < 10 ? '0' : '') + s;
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor(sec / 60) % 60;
+    const s = sec % 60;
+    const mm = (m < 10 ? '0' : '') + m;
+    const ss = (s < 10 ? '0' : '') + s;
     return h ? (h + ':' + mm + ':' + ss) : (m + ':' + ss);
   }
 
   /* A live or badly-muxed stream reports Infinity, and every sum here divides
      by this — so fall back to what the server said the film runs to. */
   function duration() {
-    var d = v.duration;
+    const d = v.duration;
     if (d && isFinite(d)) return d;
     return ((item && item.duration) || 0) / 1000;
   }
@@ -110,21 +135,22 @@ var Player = (function () {
      OSD would never go away once playback started. */
 
   function paintOsd() {
-    var at = target(), dur = duration();
-    var left = dur ? Math.max(0, dur - at) : 0;
+    let at = target();
+    const dur = duration();
+    const left = dur ? Math.max(0, dur - at) : 0;
 
     osdTime.textContent = fmt(at) +
       (pending !== null ? '   SEEKING' : (v.paused ? '   PAUSED' : ''));
-    osdTotal.textContent = fmt(dur) + (dur ? '   ·   ' + fmt(left) + ' left' : '');
+    osdTotal.textContent = fmt(dur) + (dur ? `   ·   ${fmt(left)} left` : '');
 
-    var x = dur ? Math.round(BAR_W * Math.min(at, dur) / dur) : 0;
+    const x = dur ? Math.round(BAR_W * Math.min(at, dur) / dur) : 0;
     osdFill.style.width = x + 'px';
     /* transform, not left: the knob moves on every timeupdate and this is the
        one property the panel can move without a layout pass. */
     osdKnob.style.webkitTransform = osdKnob.style.transform =
-      'translateX(' + Math.min(x, BAR_W - 6) + 'px)';
+      `translateX(${Math.min(x, BAR_W - 6)}px)`;
 
-    var ahead = 0;
+    let ahead = 0;
     try {
       if (v.buffered && v.buffered.length) ahead = v.buffered.end(v.buffered.length - 1);
     } catch (e) { ahead = 0; }
@@ -135,16 +161,18 @@ var Player = (function () {
      known — they do not move, and rebuilding them on every frame is exactly
      the kind of work this panel cannot afford. */
   function paintTicks() {
-    var dur = duration();
+    const dur = duration();
     if (!dur) { osdTicks.innerHTML = ''; return; }
-    var html = '', list = Media.chapters(item), i, at;
+    let html = '';
+    const list = Media.chapters(item);
+    let i;
 
-    var markers = (item && item.Marker) || [];
+    const markers = (item && item.Marker) || [];
     for (i = 0; i < markers.length; i++) {
-      at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
-      var wide = Math.max(2, Math.round(BAR_W *
+      const at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
+      const wide = Math.max(2, Math.round(BAR_W *
         (((markers[i].endTimeOffset || 0) - (markers[i].startTimeOffset || 0)) / 1000) / dur));
-      html += '<i class="osd-band" style="left:' + at + 'px;width:' + wide + 'px"></i>';
+      html += `<i class="osd-band" style="left:${at}px;width:${wide}px"></i>`;
     }
     for (i = 0; i < list.length; i++) {
       if (list[i].start <= 0) continue;
@@ -163,7 +191,7 @@ var Player = (function () {
     /* While a seek is still being aimed, the OSD is the only feedback there is,
        so it stays until the seek lands. The menu keeps it up too — it sits
        above the bar and reads as one panel. */
-    osdTimer = setTimeout(function () {
+    osdTimer = setTimeout(() => {
       if (pending !== null || Menu.isOpen() || openPanel || focus !== 'none') { showOsd(); return; }
       osd.style.opacity = '0';
       subEl.classList.remove('lifted');
@@ -182,7 +210,7 @@ var Player = (function () {
     } else if (focus === 'bar') {
       osdHint.textContent = '◀ ▶ scrub · OK seek there · ▼ controls · BACK back to playback';
     } else {
-      osdHint.textContent = '◀ ▶ ' + NUDGE + 's · ▲ trackbar · ▼ controls · 0–9 jump · ' +
+      osdHint.textContent = `◀ ▶ ${NUDGE}s · ▲ trackbar · ▼ controls · 0–9 jump · ` +
                             'CH± chapter · OK pause';
     }
   }
@@ -219,7 +247,7 @@ var Player = (function () {
   /* The panel's own track list, or null when it does not have one. Only useful
      once metadata has loaded, so never cached. */
   function panelTracks() {
-    var list = v.audioTracks;
+    const list = v.audioTracks;
     if (!list || typeof list.length !== 'number' || list.length < 2) return null;
     return list;
   }
@@ -230,18 +258,19 @@ var Player = (function () {
      know what we are looking at, and guessing would select the wrong track
      silently, which is the bug this whole section exists to fix. */
   function panelIndexOf(st) {
-    var tracks = Media.audioTracks(currentPart), list = panelTracks(), i;
+    const tracks = Media.audioTracks(currentPart);
+    const list = panelTracks();
     if (!list || list.length !== tracks.length) return -1;
-    for (i = 0; i < tracks.length; i++) {
+    for (let i = 0; i < tracks.length; i++) {
       if (String(tracks[i].id) === String(st.id)) return i;
     }
     return -1;
   }
 
   function selectPanelTrack(n) {
-    var list = panelTracks(), i;
+    const list = panelTracks();
     if (!list || n < 0 || n >= list.length) return false;
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       if (list[i]) list[i].enabled = (i === n);
     }
     /* Trust nothing: read it back. A pipeline that exposes the list read-only
@@ -263,24 +292,24 @@ var Player = (function () {
      the one track that cannot cross ARC. */
   function applyChosenTrack() {
     if (!currentAudio || transcoding) return;
-    var n = panelIndexOf(currentAudio);
+    const n = panelIndexOf(currentAudio);
     if (n < 0) { paintControls(); return; }
-    var list = panelTracks();
+    const list = panelTracks();
     if (list[n] && list[n].enabled) return;          // already right, say nothing
     if (selectPanelTrack(n)) {
-      UI.debug('audio set on the panel (track ' + n + '): ' + Media.audioLabel(currentAudio));
+      UI.debug(`audio set on the panel (track ${n}): ${Media.audioLabel(currentAudio)}`);
     }
     paintControls();
   }
 
   function chooseAudio(st) {
     if (currentAudio && String(currentAudio.id) === String(st.id)) return;
-    var n = panelIndexOf(st);
+    const n = panelIndexOf(st);
     if (n >= 0 && selectPanelTrack(n)) {
       /* The good case: the panel switched it, nothing restarted, the server
          was not asked for anything. */
       currentAudio = st;
-      UI.debug('audio switched on the panel (track ' + n + '): ' + Media.audioLabel(st));
+      UI.debug(`audio switched on the panel (track ${n}): ${Media.audioLabel(st)}`);
       paintControls();
       showOsd();
       return;
@@ -297,34 +326,6 @@ var Player = (function () {
 
   /* Inlined, as everywhere else here: the app runs from file:// on the TV, so
      there is no icon font to fetch. */
-  function glyph(inner) {
-    return '<svg width="46" height="46" viewBox="0 0 256 256" fill="none" ' +
-           'stroke="currentColor" stroke-width="16" stroke-linecap="round" ' +
-           'stroke-linejoin="round">' + inner + '</svg>';
-  }
-  var GLYPHS = {
-    rewind: glyph('<polygon points="124,64 124,192 40,128"/>' +
-                  '<polygon points="216,64 216,192 132,128"/>'),
-    forward: glyph('<polygon points="132,64 132,192 216,128"/>' +
-                   '<polygon points="40,64 40,192 124,128"/>'),
-    /* Filling their box the way the two jumps either side of them do: the
-       buttons were always one size, and a triangle inset in its own box is
-       what read as a smaller play than forward. */
-    play: glyph('<polygon points="72,48 72,208 208,128"/>'),
-    pause: glyph('<line x1="88" y1="52" x2="88" y2="204"/>' +
-                 '<line x1="168" y1="52" x2="168" y2="204"/>'),
-    audio: glyph('<polygon points="36,100 92,100 148,48 148,208 92,156 36,156"/>' +
-                 '<path d="M188 92a52 52 0 0 1 0 72"/>'),
-    subs: glyph('<rect x="28" y="52" width="200" height="152" rx="18"/>' +
-                '<line x1="64" y1="124" x2="140" y2="124"/>' +
-                '<line x1="64" y1="164" x2="192" y2="164"/>'),
-    quality: glyph('<line x1="56" y1="196" x2="56" y2="140"/>' +
-                   '<line x1="128" y1="196" x2="128" y2="96"/>' +
-                   '<line x1="200" y1="196" x2="200" y2="52"/>'),
-    chapters: glyph('<rect x="28" y="60" width="200" height="136" rx="18"/>' +
-                    '<line x1="96" y1="60" x2="96" y2="196"/>' +
-                    '<line x1="160" y1="60" x2="160" y2="196"/>')
-  };
 
   function audioCaption() {
     return Media.audioMenuLabel(currentAudio) +
@@ -333,7 +334,7 @@ var Player = (function () {
 
   function subCaption() {
     return (currentSub ? Media.subLabel(currentSub) : 'off') +
-           (subNote ? ' — ' + subNote : '');
+           (subNote ? ` — ${subNote}` : '');
   }
 
   function qualityCaption() {
@@ -342,7 +343,7 @@ var Player = (function () {
   }
 
   function chapterCaption() {
-    var here = chapterAt(Media.chapters(item), target());
+    const here = chapterAt(Media.chapters(item), target());
     return here ? here.title : 'none';
   }
 
@@ -350,23 +351,26 @@ var Player = (function () {
      on screen, and the index into it is what the arrows move. */
   function controls() {
     return [
-      { glyph: GLYPHS.rewind, run: function () { seekBy(-JUMP); } },
-      { glyph: v.paused ? GLYPHS.play : GLYPHS.pause, run: togglePlay },
-      { glyph: GLYPHS.forward, run: function () { seekBy(JUMP); } },
-      { id: 'audio', glyph: GLYPHS.audio, caption: audioCaption() },
-      { id: 'subs', glyph: GLYPHS.subs, caption: subCaption() },
-      { id: 'quality', glyph: GLYPHS.quality, caption: qualityCaption() },
-      { id: 'chapters', glyph: GLYPHS.chapters, caption: chapterCaption() }
+      { glyph: Glyphs.rewind, run: () => { seekBy(-JUMP); } },
+      { glyph: v.paused ? Glyphs.play : Glyphs.pause, run: togglePlay },
+      { glyph: Glyphs.forward, run: () => { seekBy(JUMP); } },
+      { id: 'audio', glyph: Glyphs.audio, caption: audioCaption() },
+      { id: 'subs', glyph: Glyphs.subs, caption: subCaption() },
+      { id: 'quality', glyph: Glyphs.quality, caption: qualityCaption() },
+      { id: 'chapters', glyph: Glyphs.chapters, caption: chapterCaption() }
     ];
   }
 
   function paintControls() {
-    var list = controls(), lh = '', rh = '', i, c, html;
-    for (i = 0; i < list.length; i++) {
-      c = list[i];
-      html = '<div class="osd-ctl' + (focus === 'row' && i === ctl ? ' foc' : '') +
+    const list = controls();
+    let lh = '';
+    let rh = '';
+    let html;
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      html = `<div class="osd-ctl${focus === 'row' && i === ctl ? ' foc' : ''}` +
              (c.id && c.id === openPanel ? ' on' : '') + '"' +
-             (c.id ? ' id="osd-ctl-' + c.id + '"' : '') + '>' +
+             (c.id ? ` id="osd-ctl-${c.id}"` : '') + '>' +
              '<div class="osd-btn">' + c.glyph + '</div>' +
              '<div class="osd-cap">' + UI.escapeHtml(c.caption || '') + '</div>' +
              '</div>';
@@ -392,7 +396,7 @@ var Player = (function () {
   }
 
   function seekTo(seconds) {
-    var dur = duration();
+    const dur = duration();
     pending = Math.max(0, dur ? Math.min(seconds, dur - 2) : seconds);
     dismissSkip();
     showOsd();
@@ -402,7 +406,7 @@ var Player = (function () {
 
   function applySeek() {
     if (pending === null) return;
-    var to = pending;
+    const to = pending;
     pending = null;
     try { v.currentTime = to; } catch (e) { /* not seekable yet */ }
     report(v.paused ? 'paused' : 'playing');
@@ -413,7 +417,7 @@ var Player = (function () {
   /* A digit is the cheapest jump there is: 3 means three tenths in. The stock
      app has nothing like it and it is the fastest way past a first act. */
   function jumpToTenth(n) {
-    var dur = duration();
+    const dur = duration();
     if (!dur) return;
     seekTo(dur * n / 10);
   }
@@ -421,7 +425,10 @@ var Player = (function () {
   /* Chapter skip, falling back to a fixed jump on a file with no chapters —
      the button should always do something. */
   function chapterStep(dir) {
-    var list = Media.chapters(item), at = target(), i, to = null;
+    const list = Media.chapters(item);
+    let at = target();
+    let i;
+    let to = null;
     if (!list.length) { seekBy(dir * JUMP); return; }
     if (dir > 0) {
       for (i = 0; i < list.length; i++) {
@@ -445,10 +452,10 @@ var Player = (function () {
      credits are, so there is nothing to detect here — only something to offer
      while you are inside one. OK takes it; anything else carries on. */
 
-  var skipDismissed = null;
+  let skipDismissed = null;
 
   function checkMarker() {
-    var found = Media.markerAt(item, v.currentTime || 0);
+    let found = Media.markerAt(item, v.currentTime || 0);
     /* A dismissal lasts as long as you are inside the thing you dismissed, and
        no longer. Rewinding back over an intro and being refused the offer —
        because you happened to seek while it was on screen an hour ago — is not
@@ -470,7 +477,7 @@ var Player = (function () {
   }
 
   function takeSkip() {
-    var to = (marker.endTimeOffset || 0) / 1000;
+    const to = (marker.endTimeOffset || 0) / 1000;
     skipDismissed = marker;
     marker = null;
     skipEl.classList.add('hidden');
@@ -479,7 +486,7 @@ var Player = (function () {
     pending = null;
     clearTimeout(seekTimer);
     try { v.currentTime = to; } catch (e) { /* not seekable yet */ }
-    UI.debug('skipped to ' + fmt(to));
+    UI.debug(`skipped to ${fmt(to)}`);
     showOsd();
   }
 
@@ -490,15 +497,17 @@ var Player = (function () {
      night is load on hardware we do not own, put there by someone who fell
      asleep. A season boundary never counts down at all. */
 
-  var AUTOPLAY = [0, 5, 10, 15, 30];        // seconds; 0 is "wait for OK"
-  var autoplay = null;                      // read from storage once, then cached
-  var next = null, nextTimer = null, nextLeft = 0;
+  const AUTOPLAY = [0, 5, 10, 15, 30];        // seconds; 0 is "wait for OK"
+  let autoplay = null;                      // read from storage once, then cached
+  let next = null;
+  let nextTimer = null;
+  let nextLeft = 0;
 
   /* How long an ended episode waits before playing the next, in seconds, or 0
      for not at all. Storage that refuses us falls back to 0, the safe way. */
   function autoplaySeconds() {
     if (autoplay !== null) return autoplay;
-    var stored = 0;
+    let stored = 0;
     try { stored = Number(localStorage.getItem('reflex.autoplay')); } catch (e) { stored = 0; }
     autoplay = AUTOPLAY.indexOf(stored) > 0 ? stored : 0;
     return autoplay;
@@ -514,7 +523,7 @@ var Player = (function () {
 
   /* 'off' or '10s' — what the sidebar entry and its toast say. */
   function autoplayLabel() {
-    var secs = autoplaySeconds();
+    const secs = autoplaySeconds();
     return secs ? secs + 's' : 'off';
   }
 
@@ -522,17 +531,17 @@ var Player = (function () {
      because with nothing to offer this is an ordinary stop. */
   function offerNext() {
     if (!onNext || !item) { stop('stopped'); return; }
-    var asked = item;
-    onNext(item).then(function (found) {
+    const asked = item;
+    onNext(item).then((found) => {
       if (item !== asked) return;            // stopped while we were asking
       if (!found || !found.episode) { stop('stopped'); return; }
       showNext(found);
-    }, function () { stop('stopped'); });
+    }, () => { stop('stopped'); });
   }
 
   /* "S1 E5 · Sundown" — where it sits in the series, then what it is called. */
   function nextLabel(ep) {
-    return 'S' + (ep.parentIndex === undefined ? '?' : ep.parentIndex) +
+    return `S${ep.parentIndex === undefined ? '?' : ep.parentIndex}` +
            ' E' + (ep.index === undefined ? '?' : ep.index) +
            '   ·   ' + (ep.title || '');
   }
@@ -541,10 +550,10 @@ var Player = (function () {
     next = found;
     dismissSkip();
     Menu.close();
-    var ep = found.episode;
-    var still = Plex.posterUrl(ep, 320, 180);
-    nextStillEl.style.backgroundImage = still ? 'url("' + still + '")' : 'none';
-    nextShowEl.textContent = 'Up next   ·   ' + (ep.grandparentTitle || '');
+    const ep = found.episode;
+    const still = Plex.posterUrl(ep, 320, 180);
+    nextStillEl.style.backgroundImage = still ? `url("${still}")` : 'none';
+    nextShowEl.textContent = `Up next   ·   ${ep.grandparentTitle || ''}`;
     nextTitleEl.textContent = nextLabel(ep);
     /* Crossing into a new season always waits, whatever the setting says: it is
        exactly where an unattended chain should stop. */
@@ -552,13 +561,13 @@ var Player = (function () {
     paintNext();
     nextEl.classList.remove('hidden');
     if (nextLeft > 0) nextTimer = setInterval(tickNext, 1000);
-    UI.debug('up next: ' + nextLabel(ep) +
-             (nextLeft > 0 ? ' in ' + nextLeft + 's' : ' — waiting for OK'));
+    UI.debug(`up next: ${nextLabel(ep)}` +
+             (nextLeft > 0 ? ` in ${nextLeft}s` : ' — waiting for OK'));
   }
 
   function paintNext() {
     nextHintEl.textContent = nextLeft > 0
-      ? 'Playing in ' + nextLeft + 's   ·   OK now   ·   BACK to stop'
+      ? `Playing in ${nextLeft}s   ·   OK now   ·   BACK to stop`
       : 'OK to play   ·   BACK to stop';
   }
 
@@ -580,7 +589,8 @@ var Player = (function () {
   }
 
   function takeNext() {
-    var ep = next && next.episode, go = onPlayNext;
+    const ep = next && next.episode;
+    const go = onPlayNext;
     clearNext();
     if (!ep || !go) { stop('stopped'); return; }
     /* The finished episode is reported stopped before the next one starts — a
@@ -603,7 +613,7 @@ var Player = (function () {
      server we do not own. */
 
   function setSub(stream) {
-    var token = ++subToken;
+    const token = ++subToken;
     cues = [];
     subNote = '';
     subEl.textContent = '';
@@ -629,24 +639,24 @@ var Player = (function () {
 
     subNote = 'loading…';
     paintControls();
-    Plex.subtitles(server, stream).then(function (text) {
+    Plex.subtitles(server, stream).then((text) => {
       if (token !== subToken) return;
       cues = Subs.parse(text);
       subNote = cues.length ? '' : 'the track came back empty';
-      UI.debug('subtitles: ' + Media.subLabel(stream) + ' · ' + cues.length + ' cues');
+      UI.debug(`subtitles: ${Media.subLabel(stream)} · ${cues.length} cues`);
       paintControls();
       paintSub();
-    }, function (e) {
+    }, (e) => {
       if (token !== subToken) return;
       currentSub = null;
-      subNote = 'could not be fetched (' + e.message.split(' -> ').pop() + ')';
+      subNote = `could not be fetched (${e.message.split(' -> ').pop()})`;
       paintControls();
     });
   }
 
   function paintSub() {
     if (!cues.length) return;
-    var text = Subs.textAt(cues, (v.currentTime || 0) + 0.05);
+    const text = Subs.textAt(cues, (v.currentTime || 0) + 0.05);
     if (text === subEl.getAttribute('data-cue')) return;
     subEl.setAttribute('data-cue', text);
     subEl.textContent = text;
@@ -660,8 +670,9 @@ var Player = (function () {
      button you pressed is about. */
 
   function audioRows() {
-    var tracks = Media.audioTracks(currentPart), out = [], i;
-    for (i = 0; i < tracks.length; i++) out.push(audioRow(tracks[i]));
+    const tracks = Media.audioTracks(currentPart);
+    const out = [];
+    for (let i = 0; i < tracks.length; i++) out.push(audioRow(tracks[i]));
     return out;
   }
 
@@ -675,14 +686,14 @@ var Player = (function () {
       note: (currentAudio && String(currentAudio.id) === String(st.id)) ? ''
         : (panelIndexOf(st) >= 0 ? '' : 'restarts — the server has to mux this one'),
       on: !!(currentAudio && String(currentAudio.id) === String(st.id)),
-      value: function () { chooseAudio(st); }
+      value: () => { chooseAudio(st); }
     };
   }
 
   function subRows() {
-    var list = Media.subtitleTracks(currentPart), i;
-    var out = [{ label: 'Off', on: !currentSub, value: function () { setSub(null); } }];
-    for (i = 0; i < list.length; i++) out.push(subRow(list[i]));
+    const list = Media.subtitleTracks(currentPart);
+    const out = [{ label: 'Off', on: !currentSub, value: () => { setSub(null); } }];
+    for (let i = 0; i < list.length; i++) out.push(subRow(list[i]));
     return out;
   }
 
@@ -691,7 +702,7 @@ var Player = (function () {
       label: Media.subLabel(st),
       note: Media.isTextSub(st) ? '' : 'image track — cannot be shown without a transcode',
       on: !!(currentSub && String(currentSub.id) === String(st.id)),
-      value: function () { setSub(st); }
+      value: () => { setSub(st); }
     };
   }
 
@@ -701,20 +712,22 @@ var Player = (function () {
      what the user means by "make this play properly", and both go through the
      guard, so the 4K rule refuses the cap and offers the other version. */
   function qualityRows() {
-    var versions = (item && item.Media) || [], out = [], i;
+    const versions = (item && item.Media) || [];
+    const out = [];
+    let i;
     if (versions.length > 1) {
       for (i = 0; i < versions.length; i++) out.push(versionRow(versions[i], i));
     }
-    var list = Media.qualities(currentMedia);
+    const list = Media.qualities(currentMedia);
     for (i = 0; i < list.length; i++) out.push(qualityRow(list[i]));
     return out;
   }
 
   function versionRow(media, n) {
     return {
-      label: 'Version — ' + Media.versionLabel(media),
+      label: `Version — ${Media.versionLabel(media)}`,
       on: n === mediaIndex && !maxBitrate,
-      value: function () {
+      value: () => {
         if (n === mediaIndex && !maxBitrate) return;
         switchTo({ mediaIndex: n, maxBitrate: null }, Media.versionLabel(media));
       }
@@ -730,7 +743,7 @@ var Player = (function () {
     if (Media.isUHD(currentMedia)) {
       return 'a 4K transcode is what gets the stream killed — this will be refused';
     }
-    return 'transcode · ' + Media.bitrateLabel(q.bitrate);
+    return `transcode · ${Media.bitrateLabel(q.bitrate)}`;
   }
 
   function qualityRow(q) {
@@ -738,7 +751,7 @@ var Player = (function () {
       label: q.label,
       note: qualityNote(q),
       on: (q.bitrate || null) === maxBitrate,
-      value: function () {
+      value: () => {
         if ((q.bitrate || null) === maxBitrate) return;
         switchTo({ maxBitrate: q.bitrate || null }, q.label);
       }
@@ -748,10 +761,9 @@ var Player = (function () {
   /* The chapter the playhead is in, or null. The rail rings it and the caption
      names it, so both have to agree. */
   function chapterAt(list, at) {
-    var i;
     /* Backwards: a chapter Plex gave no end offset for would otherwise swallow
        the whole film from its start onwards. */
-    for (i = list.length - 1; i >= 0; i--) {
+    for (let i = list.length - 1; i >= 0; i--) {
       if (at >= list[i].start && (!list[i].end || at < list[i].end)) return list[i];
     }
     return null;
@@ -761,7 +773,7 @@ var Player = (function () {
      does — js/menu.js draws and walks, and knows nothing about any of it. The
      builders are handed over rather than called, so the list is made when the
      panel opens and reflects where playback has got to. */
-  var PANELS = {
+  const PANELS = {
     audio: { label: 'Audio', rows: audioRows },
     subs: { label: 'Subtitles', rows: subRows,
             note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.' },
@@ -775,14 +787,14 @@ var Player = (function () {
     if (id === 'chapters') { openChapters(); return; }
     openPanel = id;
     paintControls();
-    var btn = document.getElementById('osd-ctl-' + id);
+    const btn = document.getElementById(`osd-ctl-${id}`);
     menuEl.style.left =
       UI.clamp(64 + osdRight.offsetLeft + (btn ? btn.offsetLeft : 0), 64, 960) + 'px';
     Menu.open({
       host: menuEl,
       tabs: [PANELS[id]],
-      onChoose: function (act) { act(); },
-      onClose: function () { openPanel = null; paintControls(); showOsd(); }
+      onChoose: (act) => { act(); },
+      onClose: () => { openPanel = null; paintControls(); showOsd(); }
     });
     showOsd();
   }
@@ -795,7 +807,7 @@ var Player = (function () {
      lose — never its size. */
 
   function openChapters() {
-    var list = Media.chapters(item);
+    const list = Media.chapters(item);
     if (!list.length) { UI.toast('This file has no chapters'); return; }
     openPanel = 'chapters';
     chapSel = Math.max(0, list.indexOf(chapterAt(list, target())));
@@ -813,26 +825,28 @@ var Player = (function () {
   }
 
   function paintChapters() {
-    var list = Media.chapters(item), html = '', i, c, shot;
-    for (i = 0; i < list.length; i++) {
-      c = list[i];
+    const list = Media.chapters(item);
+    let html = '';
+    let shot;
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
       shot = c.thumb ? Plex.photoUrl(server, c.thumb, 240, 135) : '';
-      html += '<div class="osd-chap' + (i === chapSel ? ' on' : '') + '">' +
+      html += `<div class="osd-chap${i === chapSel ? ' on' : ''}">` +
               '<div class="osd-chap-shot"' +
-              (shot ? ' style="background-image: url(\'' + shot + '\')"' : '') + '>' +
+              (shot ? ` style="background-image: url('${shot}')"` : '') + '>' +
               '<div class="osd-chap-time">' + UI.escapeHtml(fmt(c.start)) + '</div>' +
               '</div>' +
               '<div class="osd-chap-title">' + UI.escapeHtml(c.title) + '</div>' +
               '</div>';
     }
     chapInner.innerHTML = html;
-    var first = UI.clamp(chapSel - 2, 0, Math.max(0, list.length - CARDS_SHOWN));
+    const first = UI.clamp(chapSel - 2, 0, Math.max(0, list.length - CARDS_SHOWN));
     chapInner.style.webkitTransform = chapInner.style.transform =
-      'translateX(' + (-first * CARD_W) + 'px)';
+      `translateX(${-first * CARD_W}px)`;
   }
 
   function chapterKey(code) {
-    var list = Media.chapters(item);
+    const list = Media.chapters(item);
     if (code === 37) { chapSel = (chapSel + list.length - 1) % list.length; paintChapters(); return true; }
     if (code === 39) { chapSel = (chapSel + 1) % list.length; paintChapters(); return true; }
     if (code === 13 || code === 415 || code === 19) {
@@ -860,7 +874,7 @@ var Player = (function () {
     if (change.forceStream === undefined) change.forceStream = forceStream;
     /* On the hint line rather than in a caption: a caption names what IS
        chosen, and this has not happened yet. play() writes the hint back. */
-    osdHint.textContent = 'Switching to ' + what + '…';
+    osdHint.textContent = `Switching to ${what}…`;
     showOsd();
     onSwitch(change);
   }
@@ -875,9 +889,9 @@ var Player = (function () {
   /* A black screen tells you nothing, and "the panel refused it" is only one of
      the reasons this fails. Say which. */
   function mediaErrorText(err) {
-    var code = err ? err.code : 0;
-    var detail = err && err.message ? '  ·  ' + err.message : '';
-    if (code === 1) return 'The stream was aborted.' + detail;
+    const code = err ? err.code : 0;
+    const detail = err && err.message ? `  ·  ${err.message}` : '';
+    if (code === 1) return `The stream was aborted.${detail}`;
     if (code === 2) return 'The network dropped the stream — the server stopped ' +
                            'answering part way through.' + detail;
     if (code === 3) return 'The panel could not decode this stream (media error 3). ' +
@@ -887,7 +901,7 @@ var Player = (function () {
     if (code === 4) return 'The stream would not open (media error 4) — the server ' +
                            'refused the request, or the container is one the panel ' +
                            'will not accept at all.' + detail;
-    return 'The stream failed (media error ' + code + ').' + detail;
+    return `The stream failed (media error ${code}).${detail}`;
   }
 
   /* A desktop browser is not this panel, and its codec support is much
@@ -896,8 +910,8 @@ var Player = (function () {
      about the TV, and mistaking one for the other costs an evening. */
   function laptopNote(media) {
     if (!Config.dev) return '';
-    var codec = (media && media.videoCodec) || '?';
-    var container = (media && media.container) || '?';
+    const codec = (media && media.videoCodec) || '?';
+    const container = (media && media.container) || '?';
     return '  ·  You are on the dev server, so this is a desktop browser, not ' +
            'the B8. It is playing ' + String(codec).toUpperCase() + ' in ' +
            String(container).toUpperCase() + ', and browsers do not decode AC3, ' +
@@ -906,8 +920,8 @@ var Player = (function () {
   }
 
   function fail(msg) {
-    var report_ = onError;
-    UI.debug('playback failed: ' + msg);
+    const report_ = onError;
+    UI.debug(`playback failed: ${msg}`);
     stop('stopped');
     if (report_) report_(msg);
   }
@@ -924,7 +938,7 @@ var Player = (function () {
     clearNext();
 
     stalls = 0; lowest = 999; startedAt = Date.now();
-    var url = opts.url || Plex.streamUrl(server, opts.part);
+    const url = opts.url || Plex.streamUrl(server, opts.part);
     osdTitle.textContent = opts.item.title || '';
     pending = null;
     clearTimeout(seekTimer);
@@ -948,7 +962,7 @@ var Player = (function () {
     hint();
     v.classList.remove('hidden');
 
-    v.onloadedmetadata = function () {
+    v.onloadedmetadata = () => {
       /* Only now does currentTime mean anything. Don't resume within half a
          minute of the end — that is a film you finished. */
       if (resumeMs > 10000 && v.duration && resumeMs < (v.duration * 1000) - 30000) {
@@ -961,22 +975,22 @@ var Player = (function () {
       /* The subtitle track the user had before a restart, matched by language
          because a different version of the film has different stream ids. */
       if (wantedLang !== null) {
-        var again = Media.pickSubtitle(currentPart, wantedLang);
+        const again = Media.pickSubtitle(currentPart, wantedLang);
         if (again) setSub(again);
       }
     };
     /* The track list is not always populated by loadedmetadata, so try again
        once the picture is actually running. */
-    v.onplaying = function () { applyChosenTrack(); showOsd(); };
+    v.onplaying = () => { applyChosenTrack(); showOsd(); };
     /* 'waiting' is the panel telling us it has run dry. */
-    v.onwaiting = function () { stalls++; };
-    v.ontimeupdate = function () {
+    v.onwaiting = () => { stalls++; };
+    v.ontimeupdate = () => {
       if (osdShowing()) paintOsd();
       paintSub();
       checkMarker();
     };
-    v.onended = function () { offerNext(); };
-    v.onerror = function () {
+    v.onended = () => { offerNext(); };
+    v.onerror = () => {
       fail(mediaErrorText(v.error) + laptopNote(currentMedia));
     };
 
@@ -988,23 +1002,23 @@ var Player = (function () {
     v.load();
     showOsd();
     UI.debug((transcoding ? 'playing (server converting' +
-              (maxBitrate ? ' at ' + Media.bitrateLabel(maxBitrate) : '') + ') ' : 'playing ') +
+              (maxBitrate ? ` at ${Media.bitrateLabel(maxBitrate)}` : '') + ') ' : 'playing ') +
              String(url).split('?')[0]);
 
     /* Ask directly rather than waiting on loadedmetadata, which need not fire
        on its own, and report a rejected play() rather than sitting on a black
        screen — it is otherwise completely silent. */
-    var started = v.play();
+    const started = v.play();
     if (started && started.then) {
-      started.then(null, function (e) {
-        fail('The player refused to start: ' + ((e && (e.name + ' ' + e.message)) || 'unknown') +
+      started.then(null, (e) => {
+        fail(`The player refused to start: ${(e && (e.name + ' ' + e.message)) || 'unknown'}` +
              '. If this is the TV, it is usually the media pipeline rejecting the ' +
              'container rather than the codec.');
       });
     }
 
     clearInterval(ticker);
-    ticker = setInterval(function () {
+    ticker = setInterval(() => {
       report(v.paused ? 'paused' : 'playing');
       UI.debug(health());
     }, 10000);
@@ -1016,21 +1030,22 @@ var Player = (function () {
      Reported every ten seconds alongside the timeline, so the debug line
      answers it without a profiler. */
   function health() {
-    var ahead = 0;
+    let ahead = 0;
     try {
       if (v.buffered && v.buffered.length) {
         ahead = Math.round(v.buffered.end(v.buffered.length - 1) - v.currentTime);
       }
     } catch (e) { ahead = -1; }
 
-    var dropped = v.webkitDroppedFrameCount, decoded = v.webkitDecodedFrameCount;
+    let dropped = v.webkitDroppedFrameCount;
+    let decoded = v.webkitDecodedFrameCount;
     if (dropped === undefined && v.getVideoPlaybackQuality) {
-      var q = v.getVideoPlaybackQuality();
+      const q = v.getVideoPlaybackQuality();
       dropped = q.droppedVideoFrames;
       decoded = q.totalVideoFrames;
     }
-    var frames = (decoded === undefined) ? 'frames n/a'
-      : ('dropped ' + dropped + '/' + decoded);
+    const frames = (decoded === undefined) ? 'frames n/a'
+      : (`dropped ${dropped}/${decoded}`);
 
     if (ahead >= 0 && ahead < lowest) lowest = ahead;
 
@@ -1042,8 +1057,8 @@ var Player = (function () {
      exists: enough stalls on a 4K remux means the link cannot carry it, and
      the answer is the 1080p copy on the film page rather than anything here. */
   function summary() {
-    var mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
-    return 'played ' + mins + ' min · ' + stalls + ' stall' + (stalls === 1 ? '' : 's') +
+    const mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
+    return `played ${mins} min · ${stalls} stall${stalls === 1 ? '' : 's'}` +
            ' · buffer low ' + (lowest === 999 ? '?' : lowest + 's');
   }
 
@@ -1073,7 +1088,7 @@ var Player = (function () {
     skipEl.classList.add('hidden');
     subEl.classList.add('hidden');
     marker = null; cues = [];
-    var done = quiet ? null : onExit;
+    const done = quiet ? null : onExit;
     item = null; server = null; onExit = null; onError = null; onSwitch = null;
     onNext = null; onPlayNext = null;
     currentPart = null; currentAudio = null; currentMedia = null; currentSub = null;
@@ -1083,8 +1098,8 @@ var Player = (function () {
   function playing() { return !!item; }
 
   function indexOfCtl(id) {
-    var list = controls(), i;
-    for (i = 0; i < list.length; i++) if (list[i].id === id) return i;
+    const list = controls();
+    for (let i = 0; i < list.length; i++) if (list[i].id === id) return i;
     return 0;
   }
 
@@ -1121,11 +1136,11 @@ var Player = (function () {
      the button here — the skip offer is taken with OK from playback, and BACK
      still dismisses it from the row. */
   function controlKey(code) {
-    var n = controls().length;
+    const n = controls().length;
     if (code === 37) { ctl = (ctl + n - 1) % n; paintControls(); showOsd(); return true; }
     if (code === 39) { ctl = (ctl + 1) % n; paintControls(); showOsd(); return true; }
     if (code === 13) {
-      var c = controls()[ctl];
+      const c = controls()[ctl];
       if (c.id) openPanelFor(c.id); else c.run();
       return true;
     }

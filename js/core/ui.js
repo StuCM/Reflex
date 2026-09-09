@@ -6,26 +6,25 @@ var UI = (function () {
   /* Every full-screen view in index.html. show() hides all of them and reveals
      one; show('player') is a legitimate call that reveals none of them, since
      the video element sits above the lot. */
-  var VIEWS = ['browse', 'show', 'detail', 'link', 'message', 'search', 'devices'];
+  const VIEWS = ['browse', 'show', 'detail', 'link', 'message', 'search', 'devices'];
 
   /* Remote keycodes. The TV sends 461 for Back; a desktop browser sends 8 or
      27, which is what lets the whole app be driven from a keyboard in dev. */
-  var KEY = {
+  const KEY = {
     LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
     OK: 13, RED: 403,
     BACK: 461, ESC: 27, BACKSPACE: 8
   };
 
-  var els = {};
-  var i;
-  for (i = 0; i < VIEWS.length; i++) els[VIEWS[i]] = document.getElementById(VIEWS[i]);
+  const els = {};
+  for (let i = 0; i < VIEWS.length; i++) els[VIEWS[i]] = document.getElementById(VIEWS[i]);
 
-  var elToast = document.getElementById('toast');
-  var elDebug = document.getElementById('debug');
+  const elToast = document.getElementById('toast');
+  const elDebug = document.getElementById('debug');
 
-  var current = 'browse';
-  var toastTimer = null;
-  var bootedAt = Date.now();
+  let current = 'browse';
+  let toastTimer = null;
+  const bootedAt = Date.now();
 
   function isBack(code) {
     return code === KEY.BACK || code === KEY.ESC || code === KEY.BACKSPACE;
@@ -33,8 +32,7 @@ var UI = (function () {
 
   function show(name) {
     current = name;
-    var n;
-    for (n = 0; n < VIEWS.length; n++) {
+    for (let n = 0; n < VIEWS.length; n++) {
       els[VIEWS[n]].classList.toggle('hidden', VIEWS[n] !== name);
     }
   }
@@ -48,22 +46,21 @@ var UI = (function () {
      of the first load — which is the only way to tell a slow server from a slow
      panel without a profiler. */
   function debug(msg) {
-    var stamped = (Date.now() - bootedAt) + 'ms  ' + msg;
+    const stamped = (Date.now() - bootedAt) + 'ms  ' + msg;
     elDebug.textContent = stamped;
-    if (window.console && console.log) console.log('REFLEX ' + stamped);
+    if (window.console && console.log) console.log(`REFLEX ${stamped}`);
     if (!Config.beacon) return;
-    try {
-      var x = new XMLHttpRequest();
-      x.open('GET', Config.beacon + '?m=' + encodeURIComponent(msg), true);
-      x.send(null);
-    } catch (e) { /* never let logging break the app */ }
+    /* Never let logging break the app: the answer is thrown away, and so is
+       any failure to deliver it. */
+    Http.request(Config.beacon + '?m=' + encodeURIComponent(msg), { label: 'beacon' })
+      .then(null, () => {});
   }
 
   function toast(msg) {
     elToast.textContent = msg;
     elToast.classList.remove('hidden');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { elToast.classList.add('hidden'); }, 4000);
+    toastTimer = setTimeout(() => { elToast.classList.add('hidden'); }, 4000);
   }
 
   function message(title, body) {
