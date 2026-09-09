@@ -98,9 +98,8 @@ var Merge = (function () {
      first appears. */
   function lists(arrays) {
     const idx = index();
-    let arr;
     for (let i = 0; i < arrays.length; i++) {
-      arr = arrays[i] || [];
+      const arr = arrays[i] || [];
       for (let j = 0; j < arr.length; j++) push(idx, arr[j]);
     }
     return idx.out;
@@ -199,11 +198,11 @@ var Merge = (function () {
   }
 
   function fill(st, upTo) {
-    let needs, live, pick;
+    let pick;
     /* A loop, not recursion: walking deep into a big library would otherwise
        build a stack frame per film. */
     while (st.idx.out.length <= upTo) {
-      needs = [];
+      const needs = [];
       for (let i = 0; i < st.streams.length; i++) {
         if (!st.streams[i].done && !st.streams[i].buffer.length) needs.push(st.streams[i]);
       }
@@ -211,7 +210,7 @@ var Merge = (function () {
         return Promise.all(needs.map(s => fetchInto(st, s)))
           .then(() => fill(st, upTo));
       }
-      live = [];
+      const live = [];
       for (let i = 0; i < st.streams.length; i++) {
         if (st.streams[i].buffer.length) live.push(st.streams[i]);
       }

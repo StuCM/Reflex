@@ -82,10 +82,10 @@ var ShowPage = (function () {
   }
 
   function renderSeasons() {
-    let html = '', cls;
+    let html = '';
     for (let i = 0; i < seasons.length; i++) {
-      cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
-            (zone === 'seasons' && i === seasonIdx ? ' on' : '');
+      const cls = 'chip' + (i === seasonIdx ? ' cur' : '') +
+                  (zone === 'seasons' && i === seasonIdx ? ' on' : '');
       html += '<span class="' + cls + '">' + UI.escapeHtml(seasons[i].title || ('Series ' + (i + 1))) +
               '</span>';
     }
@@ -110,13 +110,13 @@ var ShowPage = (function () {
     /* A window, not the lot: a 24-episode series is common and drawing all of
        them costs more than it is worth. */
     const first = UI.clamp(epIdx - 4, 0, Math.max(0, episodes.length - EPISODE_POOL));
-    let html = '', ep, on, watched;
+    let html = '';
     for (let i = first; i < Math.min(first + EPISODE_POOL, episodes.length); i++) {
-      ep = episodes[i];
-      on = (i === epIdx && zone === 'episodes');
-      watched = ep.viewOffset && ep.duration
-        ? Math.round(100 * ep.viewOffset / ep.duration) + '%'
-        : (ep.viewCount ? 'watched' : '');
+      const ep = episodes[i];
+      const on = (i === epIdx && zone === 'episodes');
+      const watched = ep.viewOffset && ep.duration
+              ? Math.round(100 * ep.viewOffset / ep.duration) + '%'
+              : (ep.viewCount ? 'watched' : '');
       html += '<div class="sh-episode' + (on ? ' on' : '') + '">' +
               '<span class="sh-ep-num">' + (ep.index === undefined ? '·' : ep.index) + '</span>' +
               '<span class="sh-ep-title">' + UI.escapeHtml(ep.title || '') + '</span>' +

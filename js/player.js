@@ -126,11 +126,10 @@ var Player = (function () {
     if (!dur) { osdTicks.innerHTML = ''; return; }
     let html = '';
     const list = Media.chapters(item);
-    let at;
 
     const markers = (item && item.Marker) || [];
     for (let i = 0; i < markers.length; i++) {
-      at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
+      const at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
       const wide = Math.max(2, Math.round(BAR_W *
         (((markers[i].endTimeOffset || 0) - (markers[i].startTimeOffset || 0)) / 1000) / dur));
       html += `<i class="osd-band" style="left:${at}px;width:${wide}px"></i>`;
@@ -546,7 +545,7 @@ var Player = (function () {
   }
 
   function paintMenu() {
-    let html = '', r;
+    let html = '';
     for (let i = 0; i < TABS.length; i++) {
       html += '<span class="menu-tab' + (i === tab ? ' on' : '') + '">' +
               UI.escapeHtml(TABS[i]) + '</span>';
@@ -555,7 +554,7 @@ var Player = (function () {
 
     html = '';
     for (let i = 0; i < rows.length; i++) {
-      r = rows[i];
+      const r = rows[i];
       html += '<div class="menu-row' + (i === sel ? ' sel' : '') +
               (r.on ? ' on' : '') + (r.off ? ' off' : '') + '">' +
               '<span class="menu-mark">' + (r.on ? '●' : '') + '</span>' +

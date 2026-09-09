@@ -38,20 +38,16 @@ var Subs = (function () {
   function parse(text) {
     const lines = String(text || '').replace(/\r/g, '').split('\n');
     const cues = [];
-    let arrow;
-    let start;
-    let end;
-    let body;
     let line;
 
     for (let i = 0; i < lines.length; i++) {
-      arrow = lines[i].indexOf('-->');
+      const arrow = lines[i].indexOf('-->');
       if (arrow < 0) continue;
-      start = seconds(lines[i].substring(0, arrow));
-      end = seconds(lines[i].substring(arrow + 3));
+      const start = seconds(lines[i].substring(0, arrow));
+      const end = seconds(lines[i].substring(arrow + 3));
       if (start === null || end === null) continue;
 
-      body = [];
+      const body = [];
       for (i++; i < lines.length; i++) {
         line = lines[i];
         if (line.replace(/\s/g, '') === '') break;
@@ -72,9 +68,9 @@ var Subs = (function () {
   /* First cue index starting after t. Binary, because a two-hour film has a
      couple of thousand cues and this runs on every timeupdate. */
   function after(cues, t) {
-    let lo = 0, hi = cues.length, mid;
+    let lo = 0, hi = cues.length;
     while (lo < hi) {
-      mid = (lo + hi) >> 1;
+      const mid = (lo + hi) >> 1;
       if (cues[mid].start <= t) lo = mid + 1; else hi = mid;
     }
     return lo;

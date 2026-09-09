@@ -60,10 +60,9 @@ var Discovery = (function () {
       return Plex.onDeck(sv);
     })).then(perServer => {
       const seeds = [];
-      let id;
       const list = Devices.mine(Merge.lists(perServer));
       for (let i = 0; i < list.length && seeds.length < MAX_SEEDS; i++) {
-        id = Plex.tmdbId(list[i]);
+        const id = Plex.tmdbId(list[i]);
         if (id) seeds.push(id);
       }
       return seeds;

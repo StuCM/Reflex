@@ -66,9 +66,8 @@ var Plex = (function () {
   function qs(params) {
     const keys = Object.keys(params);
     const parts = [];
-    let v;
     for (let i = 0; i < keys.length; i++) {
-      v = params[keys[i]];
+      const v = params[keys[i]];
       if (v === null || v === undefined) continue;
       parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(v));
     }
@@ -246,9 +245,8 @@ var Plex = (function () {
     return tv('GET', '/api/v2/resources?' + qs({ includeHttps: 1, includeRelay: 0 }))
       .then(resources => {
         const jobs = [];
-        let r;
         for (let i = 0; i < resources.length; i++) {
-          r = resources[i];
+          const r = resources[i];
           if (!r.provides || r.provides.indexOf('server') < 0) continue;
           jobs.push(reach(r));
         }
@@ -268,9 +266,8 @@ var Plex = (function () {
   function reach(resource) {
     const token = resource.accessToken || s.token;
     const uris = [];
-    let c;
     for (let j = 0; j < (resource.connections || []).length; j++) {
-      c = resource.connections[j];
+      const c = resource.connections[j];
       if (c.relay) continue;
       uris.push(c.uri);
     }
@@ -367,9 +364,8 @@ var Plex = (function () {
                { timeout: 20000 }).then(res => {
       const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
       const out = [];
-      let h;
       for (let i = 0; i < list.length; i++) {
-        h = list[i];
+        const h = list[i];
         if (!h.Metadata || !h.Metadata.length) continue;
         if (h.type !== 'movie' && h.type !== 'show') continue;
         out.push({ title: h.title, items: Servers.stamp(h.Metadata, server) });
@@ -385,9 +381,8 @@ var Plex = (function () {
       .then(res => {
         const list = (res.MediaContainer && res.MediaContainer.Hub) || [];
         const out = [];
-        let h;
         for (let i = 0; i < list.length; i++) {
-          h = list[i];
+          const h = list[i];
           if (!h.Metadata) continue;
           for (let j = 0; j < h.Metadata.length; j++) {
             if (h.Metadata[j].type === 'movie' || h.Metadata[j].type === 'show') {
@@ -465,9 +460,8 @@ var Plex = (function () {
      agent form (com.plexapp.agents.themoviedb://123?lang=en). */
   function tmdbId(item) {
     const g = (item && item.Guid) || [];
-    let id;
     for (let i = 0; i < g.length; i++) {
-      id = g[i].id || '';
+      const id = g[i].id || '';
       if (id.indexOf('tmdb://') === 0) return id.substring(7);
     }
     const m = String((item && item.guid) || '').match(/themoviedb:\/\/(\d+)/);

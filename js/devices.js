@@ -80,9 +80,8 @@ var Devices = (function () {
     if (!claimed || !played) return items;
     return items.filter(entry => {
       const copies = Merge.sources(entry);
-      let dev;
       for (let i = 0; i < copies.length; i++) {
-        dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
+        const dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
         if (!dev || claimed[dev]) return true;
       }
       return false;
@@ -127,9 +126,9 @@ var Devices = (function () {
         '<div class="device-row">No device history available on these servers.</div>';
       return;
     }
-    let html = '', d;
+    let html = '';
     for (let i = 0; i < list.length; i++) {
-      d = list[i];
+      const d = list[i];
       html += '<div class="device-row' + (i === idx ? ' on' : '') + '">' +
               (d.mine ? '[x] ' : '[ ] ') + UI.escapeHtml(d.name) +
               (d.server ? ' <span class="device-count">on ' + UI.escapeHtml(d.server) +

@@ -79,16 +79,13 @@ var Browse = (function () {
   function setSections(perServer) {
     const byTitle = {};
     const order = [];
-    let list;
-    let sec;
-    let key;
     for (let i = 0; i < perServer.length; i++) {
-      list = perServer[i].sections || [];
+      const list = perServer[i].sections || [];
       for (let j = 0; j < list.length; j++) {
-        sec = list[j];
+        const sec = list[j];
         /* Title and type: a "Films" section and a "Films" show section would be
            two different things, however unlikely that is. */
-        key = sec.title.toLowerCase() + '/' + sec.type;
+        const key = sec.title.toLowerCase() + '/' + sec.type;
         if (!byTitle[key]) {
           byTitle[key] = { title: sec.title, type: sec.type, parts: [] };
           order.push(key);
@@ -108,9 +105,8 @@ var Browse = (function () {
   function serversOf(sec) {
     const out = [];
     const seen = {};
-    let id;
     for (let i = 0; i < sec.parts.length; i++) {
-      id = sec.parts[i].server.id;
+      const id = sec.parts[i].server.id;
       if (seen[id]) continue;
       seen[id] = true;
       out.push(sec.parts[i].server);
@@ -154,10 +150,9 @@ var Browse = (function () {
     }
     const list = chips();
     let html = '';
-    let cls;
     for (let i = 0; i < list.length; i++) {
-      cls = 'chip' + (list[i].current ? ' cur' : '') +
-            (headerFocus && i === chipIdx ? ' on' : '');
+      const cls = 'chip' + (list[i].current ? ' cur' : '') +
+                  (headerFocus && i === chipIdx ? ' on' : '');
       html += `<span class="${cls}">${UI.escapeHtml(list[i].label)}</span>`;
     }
     return html;
@@ -332,9 +327,8 @@ var Browse = (function () {
   function mergeHubs(perPart) {
     const byTitle = {};
     const order = [];
-    let list;
     for (let i = 0; i < perPart.length; i++) {
-      list = perPart[i] || [];
+      const list = perPart[i] || [];
       for (let j = 0; j < list.length; j++) {
         if (!byTitle[list[j].title]) { byTitle[list[j].title] = []; order.push(list[j].title); }
         byTitle[list[j].title].push(list[j].items);

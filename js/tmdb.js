@@ -30,9 +30,8 @@ var Tmdb = (function () {
   function qs(params) {
     const keys = Object.keys(params);
     const parts = [];
-    let v;
     for (let i = 0; i < keys.length; i++) {
-      v = params[keys[i]];
+      const v = params[keys[i]];
       if (v === null || v === undefined) continue;
       parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(v));
     }
@@ -96,9 +95,8 @@ var Tmdb = (function () {
     return serial(seeds, id => {
       return get(`/movie/${id}/recommendations`).then(r => {
         const list = r.results || [];
-        let m;
         for (let i = 0; i < list.length; i++) {
-          m = list[i];
+          const m = list[i];
           if (!goodEnough(m)) continue;
           if (seeds.indexOf(String(m.id)) >= 0) continue;      // don't suggest the seed
           score[m.id] = (score[m.id] || 0) + 1;

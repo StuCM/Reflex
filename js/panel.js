@@ -70,9 +70,8 @@ var Panel = (function () {
       container: {}, video: {}, audio: {}
     };
     const kinds = ['container', 'video', 'audio'];
-    let k;
     for (let i = 0; i < kinds.length; i++) {
-      k = kinds[i];
+      const k = kinds[i];
       const keys = Object.keys(BASE[k]);
       for (let n = 0; n < keys.length; n++) caps[k][keys[n]] = true;
     }
@@ -150,7 +149,6 @@ var Panel = (function () {
     const rows = probe();
     const lines = [];
     const kinds = ['video', 'container', 'audio'];
-    let said;
     lines.push('DECLARED TO THE SERVER');
     lines.push('containers   ' + list('container').join(', '));
     lines.push('video        ' + list('video').join(', '));
@@ -158,7 +156,7 @@ var Panel = (function () {
     lines.push('');
     lines.push('PANEL ANSWERED  (only "probably" is acted on)');
     for (let k = 0; k < kinds.length; k++) {
-      said = [];
+      const said = [];
       for (let i = 0; i < rows.length; i++) {
         if (rows[i].kind === kinds[k]) said.push(rows[i].name + '=' + (rows[i].said || 'no'));
       }

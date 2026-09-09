@@ -296,12 +296,10 @@ var Detail = (function () {
   function castHtml(md) {
     const roles = (md.Role || []).slice(0, 8);
     let html = '';
-    let r;
-    let url;
     if (!roles.length) return '';
     for (let i = 0; i < roles.length; i++) {
-      r = roles[i];
-      url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
+      const r = roles[i];
+      const url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
       html += '<div class="dt-actor">' +
               (url ? `<img src="${url}" alt="">` : '<div class="dt-actor-blank"></div>') +
               '<div class="dt-actor-name">' + UI.escapeHtml(r.tag) + '</div>' +

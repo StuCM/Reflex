@@ -63,10 +63,9 @@ var Media = (function () {
     const streams = (part && part.Stream) || [];
     let best = null;
     let bestScore = -1;
-    let sc;
     for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType !== 2) continue;
-      sc = audioScore(streams[i]);
+      const sc = audioScore(streams[i]);
       if (sc > bestScore) { bestScore = sc; best = streams[i]; }
     }
     return bestScore < 0 ? null : best;
@@ -80,13 +79,11 @@ var Media = (function () {
     const streams = (part && part.Stream) || [];
     let best = null;
     let bestScore = -1;
-    let st;
-    let sc;
     for (let i = 0; i < streams.length; i++) {
-      st = streams[i];
+      const st = streams[i];
       if (st.streamType !== 2 || isCommentary(st)) continue;
-      sc = Math.min(st.channels || 2, 8) * 10 + (st.selected ? 5 : 0) +
-           (st.default ? 2 : 0);
+      const sc = Math.min(st.channels || 2, 8) * 10 + (st.selected ? 5 : 0) +
+                 (st.default ? 2 : 0);
       if (sc > bestScore) { bestScore = sc; best = st; }
     }
     return best;
@@ -139,9 +136,8 @@ var Media = (function () {
   function audioSummary(part) {
     const streams = (part && part.Stream) || [];
     const out = [];
-    let st;
     for (let i = 0; i < streams.length; i++) {
-      st = streams[i];
+      const st = streams[i];
       if (st.streamType !== 2) continue;
       out.push(audioLabel(st) + (isCommentary(st) ? ' (commentary)' : ''));
     }
@@ -227,14 +223,12 @@ var Media = (function () {
   function pickSubtitle(part, languageCode) {
     const list = subtitleTracks(part);
     const usable = [];
-    let st;
-    let want;
     for (let i = 0; i < list.length; i++) {
-      st = list[i];
+      const st = list[i];
       if (isTextSub(st) && !isCommentary(st)) usable.push(st);
     }
     if (!usable.length) return null;
-    want = String(languageCode || '').toLowerCase();
+    const want = String(languageCode || '').toLowerCase();
     if (want) {
       for (let i = 0; i < usable.length; i++) {
         if (String(usable[i].languageCode || '').toLowerCase() === want) return usable[i];
@@ -256,9 +250,8 @@ var Media = (function () {
   function markerAt(item, seconds) {
     const list = (item && item.Marker) || [];
     const t = seconds * 1000;
-    let m;
     for (let i = 0; i < list.length; i++) {
-      m = list[i];
+      const m = list[i];
       if (t >= (m.startTimeOffset || 0) && t < (m.endTimeOffset || 0)) return m;
     }
     return null;
@@ -277,9 +270,8 @@ var Media = (function () {
   function chapters(item) {
     const list = (item && item.Chapter) || [];
     const out = [];
-    let c;
     for (let i = 0; i < list.length; i++) {
-      c = list[i];
+      const c = list[i];
       out.push({
         title: c.tag || c.title || ('Chapter ' + (c.index || i + 1)),
         start: (c.startTimeOffset || 0) / 1000,
@@ -413,9 +405,8 @@ var Media = (function () {
   function externalIds(item) {
     const out = [];
     const g = (item && item.Guid) || [];
-    let id;
     for (let i = 0; i < g.length; i++) {
-      id = String(g[i].id || '').toLowerCase();
+      const id = String(g[i].id || '').toLowerCase();
       if (id.indexOf('imdb://') === 0 || id.indexOf('tmdb://') === 0 ||
           id.indexOf('tvdb://') === 0) out.push(id);
     }
