@@ -10,11 +10,6 @@
 var Discovery = (function () {
   'use strict';
 
-  const DAY = 24 * 60 * 60 * 1000;
-  /* A film can be added to a library but is rarely taken out, so a hit stands
-     and only a miss is ever asked again. */
-  const MISS_AGAIN_AFTER = 7 * DAY;
-
   function enabled() { return Tmdb.enabled(); }
 
   /* A TMDB result as something the rail can draw with no Plex request at all:
@@ -55,11 +50,10 @@ var Discovery = (function () {
   function resolve(item) {
     if (item._resolved !== undefined) return Promise.resolve(item._resolved);
     if (item._asking) return item._asking;
-    const key = 'tmdb:' + item._tmdb.id;
-    item._asking = Store.get(key).then(function (hit) {
-      if (hit && (hit.item || Date.now() - hit.at < MISS_AGAIN_AFTER)) return hit.item || null;
+    item._asking = Cache.lookup.get(item._tmdb.id).then(function (hit) {
+      if (hit !== undefined) return hit;
       return ask(item._tmdb.id).then(function (found) {
-        Store.put(key, { at: Date.now(), item: found });
+        Cache.lookup.put(item._tmdb.id, found);
         return found;
       });
     }).then(function (found) {
@@ -90,11 +84,11 @@ var Discovery = (function () {
 
   function one(ctx, cat) {
     const seeds = ctx.seeds || [];
-    const key = 'disc:' + cat.kind + ':' + (cat.id || seeds.join('-'));
-    return Store.get(key).then(function (hit) {
-      if (hit && hit.films.length && Date.now() - hit.at < DAY) return hit.films;
+    const key = cat.kind + ':' + (cat.id || seeds.join('-'));
+    return Cache.catalogue.get(key).then(function (hit) {
+      if (hit && hit.length) return hit;
       return Tmdb.catalogue(cat, seeds).then(function (found) {
-        Store.put(key, { at: Date.now(), films: found });
+        Cache.catalogue.put(key, found);
         return found;
       });
     }).then(function (found) {

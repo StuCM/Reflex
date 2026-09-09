@@ -290,7 +290,7 @@ var Browse = (function () {
     let at;
     let row;
     deckItems = deckItems.filter(function (m) { return Media.identity(m) !== gone; });
-    for (let i = 0; i < sections.length; i++) Store.put('rows:' + sections[i].title, null);
+    for (let i = 0; i < sections.length; i++) Cache.rows.drop(sections[i].title);
     at = watchingRowIdx();
     if (at < 0) return;
     row = Rows.list(rows[at].title, deckCut());
@@ -503,15 +503,15 @@ var Browse = (function () {
     if (!row || row.kind !== 'merge') return;
     const jobs = row.state.streams.map(function (s) {
       if (s.total) return Promise.resolve();
-      const ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
-      return Store.get(ck).then(function (cached) {
+      const ck = s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
+      return Cache.total.get(ck).then(function (cached) {
         if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
           s.total = cached.total;
           return;
         }
         return Plex.items(s.part.server, s.part.key, 0, 0, s.part.filter).then(function (res) {
           s.total = res.total;
-          Store.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
+          Cache.total.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
         });
       }).catch(function (e) { UI.debug('count: ' + e.message); });
     });
@@ -534,9 +534,7 @@ var Browse = (function () {
     reset('library');
     const isCurrent = generationGuard();
     const sec = sections[i];
-    const cacheKey = 'rows:' + sec.title;
-
-    Store.get(cacheKey).then(function (cached) {
+    Cache.rows.get(sec.title).then(function (cached) {
       if (!isCurrent()) return;
       if (cached && cached.rows && cached.rows.length) {
         rows = listRows(cached.rows);
@@ -571,7 +569,7 @@ var Browse = (function () {
 
         mergeHubs(res[1]).forEach(function (hub) { built.push(hub); });
 
-        Store.put(cacheKey, { rows: built });
+        Cache.rows.put(sec.title, { rows: built });
         rows = listRows(built);
         rows.push(allRow(sec));
         noteCategories(sec);

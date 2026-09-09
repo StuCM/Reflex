@@ -13,7 +13,6 @@ var Youtube = (function () {
   /* The channel by handle, not by id: a guessed id in source would be wrong and
      unverifiable, and a handle is something a human can check. */
   const HANDLE = '@ManOfRecaps';
-  const CHANNEL_KEY = 'youtube:channel:' + HANDLE;
 
   const SEASON = /\b(?:season|series|s)\s*0*(\d{1,2})\b/i;
 
@@ -36,14 +35,14 @@ var Youtube = (function () {
 
   /* The channel id behind the handle, resolved once and kept for good. */
   function channelId() {
-    return Store.get(CHANNEL_KEY).then(function (cached) {
+    return Cache.ytChannel.get(HANDLE).then(function (cached) {
       if (cached) return cached;
       return get('/channels', { part: 'id', forHandle: HANDLE }).then(function (r) {
         const items = r && r.items;
         if (!items || !items.length || !items[0].id) {
           throw new Error('no channel for ' + HANDLE);
         }
-        Store.put(CHANNEL_KEY, items[0].id);
+        Cache.ytChannel.put(HANDLE, items[0].id);
         return items[0].id;
       });
     });

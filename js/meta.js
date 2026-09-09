@@ -40,10 +40,10 @@ var Meta = (function () {
     const server = Servers.of(item);
     if (!server) return Promise.resolve(null);
 
-    return Store.get('meta:' + key).then(function (cached) {
+    return Cache.meta.get(key).then(function (cached) {
       if (cached) return cached;
       return Plex.metadata(server, item.ratingKey).then(function (md) {
-        if (md) Store.put('meta:' + key, md);
+        if (md) Cache.meta.put(key, md);
         return md;
       });
     }).then(function (md) {

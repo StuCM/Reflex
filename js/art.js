@@ -135,14 +135,14 @@ var Art = (function () {
   }
 
   function fetchOne(id) {
-    Store.get('art:' + id).then(function (hit) {
+    Cache.art.get(id).then(function (hit) {
       /* An entry cached before the facts or the poster existed is a miss for
          them, or an old cache would leave a title short of one for ever. */
       if (hit && hit.facts && hit.poster !== undefined) return hit;
       return Tmdb.details(id).then(function (payload) {
         const got = pick(payload);
         got.facts = facts(payload);
-        Store.put('art:' + id, got);
+        Cache.art.put(id, got);
         return got;
       });
     }).then(function (got) { landed(id, got); },

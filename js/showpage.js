@@ -218,12 +218,12 @@ var ShowPage = (function () {
     renderRecaps();
     const gen = generation;
     const title = show.title || '';
-    const key = 'recaps:' + Media.identity(show);
-    Store.get(key).then(function (cached) {
+    const id = Media.identity(show);
+    Cache.recaps.get(id).then(function (cached) {
       if (cached) return cached;
       return Youtube.recaps(title).then(function (items) {
         const list = Youtube.pickForShow(Youtube.parse(items), title);
-        Store.put(key, list);
+        Cache.recaps.put(id, list);
         return list;
       });
     }).then(function (list) {
