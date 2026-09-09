@@ -39,7 +39,14 @@ const JS_RULES = [
   [/\bqueueMicrotask\s*\(/, 'queueMicrotask', 'Chrome 71'],
   [/\bResizeObserver\b/, 'ResizeObserver', 'Chrome 64'],
   [/\bBigInt\b/, 'BigInt', 'Chrome 67'],
-  [/\bObject\.hasOwn\s*\(/, 'Object.hasOwn', 'Chrome 93']
+  [/\bObject\.hasOwn\s*\(/, 'Object.hasOwn', 'Chrome 93'],
+  /* Not a compatibility rule but a readability one, and the only place it can
+     be enforced. Chromium 53 has block scoping (Chrome 49), so inside a module
+     there is no reason to reach for var. The one var per file that is allowed
+     sits at column 0: that is the module's own binding, and only var puts a
+     property on the global object for index.html's next script tag and for
+     test/load.js. */
+  [/^\s+var\s/, 'var inside a module', 'house rule: const/let, Chrome 49']
 ];
 
 const CSS_RULES = [
