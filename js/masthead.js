@@ -8,10 +8,10 @@
 var Masthead = (function () {
   'use strict';
 
-  var elTitle = document.getElementById('mh-title');
-  var elMeta = document.getElementById('mh-meta');
-  var elBadges = document.getElementById('mh-badges');
-  var elSummary = document.getElementById('mh-summary');
+  const elTitle = document.getElementById('mh-title');
+  const elMeta = document.getElementById('mh-meta');
+  const elBadges = document.getElementById('mh-badges');
+  const elSummary = document.getElementById('mh-summary');
 
   function badge(text, cls) {
     return '<span class="badge' + (cls ? ' ' + cls : '') + '">' +
@@ -19,16 +19,16 @@ var Masthead = (function () {
   }
 
   function audioBadge(item) {
-    var md = Meta.get(item);
+    const md = Meta.get(item);
     if (!md) return badge('AUDIO …');
-    var part = md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
-    var audio = Media.pickAudio(part);
+    const part = md.Media && md.Media[0] && md.Media[0].Part && md.Media[0].Part[0];
+    const audio = Media.pickAudio(part);
     if (!audio) return badge('NO PASSABLE AUDIO', 'bad');
     return badge('AUDIO ' + Media.audioLabel(audio), audio.channels > 2 ? 'good' : 'warn');
   }
 
   function render(row, item, hasRows) {
-    var position = row && row.total ? ((row.focus + 1) + ' of ' + row.total) : '';
+    const position = row && row.total ? ((row.focus + 1) + ' of ' + row.total) : '';
 
     if (!item) {
       elTitle.textContent = hasRows ? '…' : 'Loading…';
@@ -41,13 +41,13 @@ var Masthead = (function () {
     elTitle.textContent = item.title || '';
     elSummary.textContent = item.summary || '';
 
-    var meta = [];
+    const meta = [];
     /* An episode's title says nothing on its own — which show, and where in it,
        is the part you actually read. */
     if (item.type === 'episode') meta.push(Media.episodeLabel(item));
     if (item.year) meta.push(item.year);
     if (item.type === 'show') {
-      var counts = Shows.summary(item);
+      const counts = Shows.summary(item);
       if (counts) meta.push(counts);
     } else if (item.duration) {
       meta.push(Math.round(item.duration / 60000) + ' min');
@@ -62,7 +62,7 @@ var Masthead = (function () {
     /* A show has no media of its own, so there is no verdict to give and
        nothing to badge but where it lives. */
     if (item.type === 'show') {
-      var sb = '';
+      let sb = '';
       if (Merge.isShared(item)) {
         sb += badge('ON ' + Merge.sources(item).length + ' SERVERS');
       }
@@ -70,8 +70,8 @@ var Masthead = (function () {
       return;
     }
 
-    var media = (item.Media && item.Media[0]) || {};
-    var b = '';
+    const media = (item.Media && item.Media[0]) || {};
+    let b = '';
     if (media.videoResolution) {
       b += badge(String(media.videoResolution).toUpperCase(), Media.isUHD(media) ? 'warn' : '');
     }

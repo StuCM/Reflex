@@ -10,9 +10,9 @@
 var Discovery = (function () {
   'use strict';
 
-  var MAX_LOOKUPS = 40;          // titles per row we will ask the server about
-  var CONCURRENCY = 4;
-  var MAX_SEEDS = 8;
+  const MAX_LOOKUPS = 40;          // titles per row we will ask the server about
+  const CONCURRENCY = 4;
+  const MAX_SEEDS = 8;
 
   function enabled() { return Tmdb.enabled(); }
 
@@ -20,7 +20,7 @@ var Discovery = (function () {
      forty at a remote server at once is rude and slower in practice. */
   function mapLimit(list, max, fn) {
     return new Promise(function (resolve) {
-      var results = new Array(list.length), i = 0, done = 0, active = 0;
+      let results = new Array(list.length), i = 0, done = 0, active = 0;
       if (!list.length) { resolve([]); return; }
       function launch() {
         while (active < max && i < list.length) {
@@ -45,7 +45,7 @@ var Discovery = (function () {
       return Promise.all(Servers.all().map(function (sv) {
         return Plex.findByGuid(sv, 'tmdb://' + id);
       })).then(function (perServer) {
-        var hits = perServer.filter(function (m) { return !!m; });
+        const hits = perServer.filter(function (m) { return !!m; });
         return hits.length ? Merge.lists([hits])[0] : null;
       });
     }).then(function (found) {
@@ -57,7 +57,7 @@ var Discovery = (function () {
     return Promise.all(Servers.all().map(function (sv) {
       return Plex.onDeck(sv);
     })).then(function (perServer) {
-      var seeds = [], i, id, list = Devices.mine(Merge.lists(perServer));
+      let seeds = [], i, id, list = Devices.mine(Merge.lists(perServer));
       for (i = 0; i < list.length && seeds.length < MAX_SEEDS; i++) {
         id = Plex.tmdbId(list[i]);
         if (id) seeds.push(id);
@@ -70,7 +70,7 @@ var Discovery = (function () {
      items) puts a row on screen the moment it resolves, rather than making the
      user wait for the slowest one. */
   function load(ctx) {
-    var tasks = [{ title: 'Trending this week', get: Tmdb.trending }];
+    const tasks = [{ title: 'Trending this week', get: Tmdb.trending }];
     Tmdb.providers.forEach(function (p) {
       tasks.push({ title: 'On ' + p.name,
                    get: function () { return Tmdb.onProvider(p.id); } });
@@ -87,7 +87,7 @@ var Discovery = (function () {
       });
     }
 
-    var i = 0;
+    let i = 0;
     function step() {
       if (!ctx.isCurrent() || i >= tasks.length) return Promise.resolve();
       return runTask(tasks[i++]).then(step);

@@ -12,23 +12,23 @@
 var Browse = (function () {
   'use strict';
 
-  var elSections = document.getElementById('sections');
-  var elInput = document.getElementById('search-input');
+  const elSections = document.getElementById('sections');
+  const elInput = document.getElementById('search-input');
 
-  var sections = [], secIdx = 0;
-  var rows = [], rowIdx = 0;
-  var headerFocus = false, chipIdx = 0;   // d-pad focus on the chips above the rail
-  var mode = 'library';                   // library | kids | discover
-  var savedRows = null;                   // rows parked while showing search results
-  var searchQuery = null;                 // non-null while the results page is showing
-  var searchCount = 0;
-  var searchNoun = 'results';             // films, shows, or a mix of both
-  var generation = 0;                     // bumps on any row change, kills stale paints
-  var lastChips = null;                   // last chip HTML written, to skip pointless writes
-  var pageTimer = null;
-  var opts = {};
+  let sections = [], secIdx = 0;
+  let rows = [], rowIdx = 0;
+  let headerFocus = false, chipIdx = 0;   // d-pad focus on the chips above the rail
+  let mode = 'library';                   // library | kids | discover
+  let savedRows = null;                   // rows parked while showing search results
+  let searchQuery = null;                 // non-null while the results page is showing
+  let searchCount = 0;
+  let searchNoun = 'results';             // films, shows, or a mix of both
+  let generation = 0;                     // bumps on any row change, kills stale paints
+  let lastChips = null;                   // last chip HTML written, to skip pointless writes
+  let pageTimer = null;
+  let opts = {};
 
-  var RESULTS_PER_ROW = 10;
+  const RESULTS_PER_ROW = 10;
 
   function init(options) {
     opts = options || {};
@@ -47,13 +47,13 @@ var Browse = (function () {
   /* ---------- state the rest of the app asks about ---------- */
 
   function focusedRow() { return rows[rowIdx]; }
-  function focusedItem() { var r = focusedRow(); return r ? Rows.itemAt(r, r.focus) : null; }
+  function focusedItem() { const r = focusedRow(); return r ? Rows.itemAt(r, r.focus) : null; }
   function hasRows() { return rows.length > 0; }
   function currentSection() { return sections[secIdx] || null; }
 
   /* A guard any in-flight load can check before it paints. */
   function generationGuard() {
-    var gen = generation;
+    const gen = generation;
     return function () { return gen === generation; };
   }
 
@@ -63,7 +63,7 @@ var Browse = (function () {
     Masthead.render(focusedRow(), focusedItem(), rows.length > 0);
     scheduleWalk();
     Meta.schedule(focusedItem(), function (ratingKey) {
-      var here = focusedItem();
+      const here = focusedItem();
       if (here && here.ratingKey === ratingKey) {
         Masthead.render(focusedRow(), here, true);
       }
@@ -77,7 +77,7 @@ var Browse = (function () {
      section only one of them has still gets a chip of its own. */
 
   function setSections(perServer) {
-    var byTitle = {}, order = [], i, j, list, sec, key;
+    let byTitle = {}, order = [], i, j, list, sec, key;
     for (i = 0; i < perServer.length; i++) {
       list = perServer[i].sections || [];
       for (j = 0; j < list.length; j++) {
@@ -93,16 +93,16 @@ var Browse = (function () {
                                   updatedAt: sec.updatedAt || 0 });
       }
     }
-    var merged = order.map(function (k) { return byTitle[k]; });
-    var currentTitle = sections[secIdx] && sections[secIdx].title;
+    const merged = order.map(function (k) { return byTitle[k]; });
+    const currentTitle = sections[secIdx] && sections[secIdx].title;
     sections = merged;
-    var at = 0;
+    let at = 0;
     for (i = 0; i < merged.length; i++) if (merged[i].title === currentTitle) at = i;
     return at;
   }
 
   function serversOf(sec) {
-    var out = [], seen = {}, i, id;
+    let out = [], seen = {}, i, id;
     for (i = 0; i < sec.parts.length; i++) {
       id = sec.parts[i].server.id;
       if (seen[id]) continue;
@@ -118,7 +118,7 @@ var Browse = (function () {
      with the d-pad. Up from the top row lands here. */
 
   function chips() {
-    var out = [], i;
+    let out = [], i;
     for (i = 0; i < sections.length; i++) {
       out.push({ label: sections[i].title, kind: 'section', index: i,
                  current: mode === 'library' && i === secIdx });
@@ -129,7 +129,7 @@ var Browse = (function () {
        the current choice and cycles on OK — the remote has no colour buttons,
        and a whole settings screen for one preference would be worse. */
     if (Servers.count() > 1) {
-      var pref = Servers.get(Servers.preferred());
+      const pref = Servers.get(Servers.preferred());
       out.push({ label: 'prefer: ' + (pref ? pref.name : '?'), kind: 'prefer', current: false });
     }
     out.push({ label: 'devices', kind: 'devices', current: false });
@@ -146,7 +146,7 @@ var Browse = (function () {
              '<span class="chip">' + searchCount + ' ' + searchNoun +
              '</span><span class="chip">back to library</span>';
     }
-    var list = chips(), html = '', i, cls;
+    let list = chips(), html = '', i, cls;
     for (i = 0; i < list.length; i++) {
       cls = 'chip' + (list[i].current ? ' cur' : '') +
             (headerFocus && i === chipIdx ? ' on' : '');
@@ -156,21 +156,21 @@ var Browse = (function () {
   }
 
   function renderChips() {
-    var html = chipHtml();
+    let html = chipHtml();
     if (html === lastChips) return;      // rebuilding this on every keypress is not free
     lastChips = html;
     elSections.innerHTML = html;
   }
 
   function activateChip() {
-    var chip = chips()[chipIdx];
+    const chip = chips()[chipIdx];
     if (!chip) return;
     if (chip.kind === 'search') { openSearch(); return; }
     if (chip.kind === 'kids') { loadKids(); return; }
     if (chip.kind === 'discover') { loadDiscover(); return; }
     if (chip.kind === 'prefer') {
-      var at = chipIdx;
-      var now = Servers.get(Servers.cyclePreferred());
+      let at = chipIdx;
+      const now = Servers.get(Servers.cyclePreferred());
       UI.debug('preferring ' + (now ? now.name : '?') + ' where both servers have a film');
       /* Rebuild the rows: which copy of a shared film is shown changes with
          the preference. */
@@ -218,12 +218,12 @@ var Browse = (function () {
 
   function allRow(sec, title, filter, tag) {
     /* type 2 asks a show section for shows rather than every episode in it. */
-    var base = { type: sec.type === 'show' ? 2 : 1 };
+    const base = { type: sec.type === 'show' ? 2 : 1 };
     if (filter) {
-      var keys = Object.keys(filter), i;
+      let keys = Object.keys(filter), i;
       for (i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
     }
-    var parts = sec.parts.map(function (p) {
+    const parts = sec.parts.map(function (p) {
       return { server: p.server, key: p.key, updatedAt: p.updatedAt,
                filter: base, tag: tag || '' };
     });
@@ -236,9 +236,9 @@ var Browse = (function () {
      has found so far, so it only gets more accurate. */
   function primeTotals(row, isCurrent) {
     if (!row || row.kind !== 'merge') return;
-    var jobs = row.state.streams.map(function (s) {
+    const jobs = row.state.streams.map(function (s) {
       if (s.total) return Promise.resolve();
-      var ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
+      const ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
       return Store.get(ck).then(function (cached) {
         if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
           s.total = cached.total;
@@ -263,9 +263,9 @@ var Browse = (function () {
   function loadSection(i, allowFetch) {
     secIdx = i;
     reset('library');
-    var isCurrent = generationGuard();
-    var sec = sections[i];
-    var cacheKey = 'rows:' + sec.title;
+    const isCurrent = generationGuard();
+    let sec = sections[i];
+    const cacheKey = 'rows:' + sec.title;
 
     Store.get(cacheKey).then(function (cached) {
       if (!isCurrent()) return;
@@ -281,20 +281,20 @@ var Browse = (function () {
       /* Continue watching is per server; the category rows are per section. Two
          requests per server for the whole browse screen, however big the
          library is. */
-      var servers = serversOf(sec);
+      const servers = serversOf(sec);
       return Promise.all([
         Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
         Promise.all(sec.parts.map(function (p) { return Plex.hubs(p.server, p.key); })),
         Devices.ensureHistory()
       ]).then(function (res) {
         if (!isCurrent()) return;
-        var built = [];
+        const built = [];
 
         /* onDeck is per server, not per section: it hands back films and
            episodes together. A show section should carry on with episodes and a
            film section with films. */
-        var want = sec.type === 'show' ? 'episode' : 'movie';
-        var deck = Devices.mine(Merge.lists(res[0])).filter(function (m) {
+        const want = sec.type === 'show' ? 'episode' : 'movie';
+        const deck = Devices.mine(Merge.lists(res[0])).filter(function (m) {
           return m.type === want;
         });
         deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
@@ -322,7 +322,7 @@ var Browse = (function () {
      Order within it is first-seen, which keeps each server's own ordering
      intact rather than inventing a ranking across them. */
   function mergeHubs(perPart) {
-    var byTitle = {}, order = [], i, j, list;
+    let byTitle = {}, order = [], i, j, list;
     for (i = 0; i < perPart.length; i++) {
       list = perPart[i] || [];
       for (j = 0; j < list.length; j++) {
@@ -342,11 +342,11 @@ var Browse = (function () {
   function scheduleWalk() {
     clearTimeout(pageTimer);
     pageTimer = setTimeout(function () {
-      var row = focusedRow();
+      const row = focusedRow();
       if (!row || row.kind !== 'merge') return;
       if (Rows.haveUpTo(row) > Rows.needsUpTo(row)) return;
-      var isCurrent = generationGuard();
-      var had = Rows.haveUpTo(row), was = row.total;
+      const isCurrent = generationGuard();
+      const had = Rows.haveUpTo(row), was = row.total;
       Merge.advance(row.state, Rows.needsUpTo(row)).then(function () {
         if (!isCurrent()) return;
         row.total = Merge.estimate(row.state);
@@ -365,9 +365,9 @@ var Browse = (function () {
   /* ---------- kids ---------- */
 
   function loadKids() {
-    var sec = sections[secIdx];
+    let sec = sections[secIdx];
     reset('kids');
-    var isCurrent = generationGuard();
+    const isCurrent = generationGuard();
 
     /* Ask each library which certificates it uses, keep the ones at or below
        the cutoff, and let the servers do the filtering. */
@@ -375,7 +375,7 @@ var Browse = (function () {
       return Plex.contentRatings(p.server, p.key);
     })).then(function (perPart) {
       if (!isCurrent()) return;
-      var kid = [], seen = {};
+      const kid = [], seen = {};
       perPart.forEach(function (list) {
         list.filter(Media.isKidsRating).forEach(function (r) {
           if (!seen[r]) { seen[r] = true; kid.push(r); }
@@ -383,21 +383,21 @@ var Browse = (function () {
       });
       UI.debug('kids certificates: ' + (kid.join(', ') || 'none'));
 
-      var servers = serversOf(sec);
+      const servers = serversOf(sec);
       return Promise.all([
         Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
         Devices.ensureHistory()
       ]).then(function (res) {
         if (!isCurrent()) return;
-        var kidsWant = sec.type === 'show' ? 'episode' : 'movie';
-        var watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
+        const kidsWant = sec.type === 'show' ? 'episode' : 'movie';
+        const watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
           return m.type === kidsWant && Media.isKidsRating(m.contentRating);
         });
         rows = [];
         if (watching.length) rows.push(Rows.list('Kids · carry on watching', watching));
 
         if (kid.length) {
-          var row = allRow(sec, 'Kids · all films',
+          const row = allRow(sec, 'Kids · all films',
                            { contentRating: kid.join(',') }, 'kids' + Media.KIDS_MAX_AGE);
           rows.push(row);
           render();
@@ -421,7 +421,7 @@ var Browse = (function () {
 
   function loadDiscover() {
     reset('discover');
-    var isCurrent = generationGuard();
+    const isCurrent = generationGuard();
 
     if (!Discovery.enabled()) {
       mode = 'library';
@@ -473,24 +473,24 @@ var Browse = (function () {
      a grid of RESULTS_PER_ROW using the same row machinery. Both servers are
      asked, and a film on both appears once. */
   function runSearch() {
-    var q = elInput.value.trim();
+    const q = elInput.value.trim();
     if (!q) { closeSearch(); return; }
     elInput.blur();
     UI.show('browse');
     UI.toast('Searching…');
-    var isCurrent = generationGuard();
+    const isCurrent = generationGuard();
     Promise.all(Servers.all().map(function (sv) {
       return Plex.search(sv, q);
     })).then(function (perServer) {
       if (!isCurrent()) return;
-      var found = Merge.lists(perServer);
+      const found = Merge.lists(perServer);
       if (!savedRows) savedRows = rows;
       searchQuery = q;
       searchCount = found.length;
       searchNoun = countNoun(found);
       headerFocus = false;
       rows = [];
-      for (var i = 0; i < found.length; i += RESULTS_PER_ROW) {
+      for (let i = 0; i < found.length; i += RESULTS_PER_ROW) {
         rows.push(Rows.list(i === 0 ? 'Results' : '', found.slice(i, i + RESULTS_PER_ROW)));
       }
       if (!rows.length) rows = [Rows.list('No matches', [])];
@@ -506,7 +506,7 @@ var Browse = (function () {
      list that is half shows is the kind of small lie that makes a screen feel
      untrustworthy. */
   function countNoun(found) {
-    var films = 0, shows = 0, i;
+    let films = 0, shows = 0, i;
     for (i = 0; i < found.length; i++) {
       if (found[i].type === 'show') shows++; else films++;
     }
@@ -536,7 +536,7 @@ var Browse = (function () {
   }
 
   function key(code) {
-    var row = focusedRow(), K = UI.KEY;
+    const row = focusedRow(), K = UI.KEY;
 
     switch (code) {
       case K.LEFT:

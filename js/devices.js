@@ -17,20 +17,20 @@ var Devices = (function () {
   /* Enough to attribute the Continue watching row, which is all this is for.
      It is fetched per server on the first paint's critical path, and Plex
      history entries are fat. */
-  var HISTORY = 100;
+  const HISTORY = 100;
 
-  var played = null;             // 'serverId:ratingKey' -> 'serverId:deviceID'
-  var claimed = null;            // null = never configured, so don't filter
-  var list = [], idx = 0;
-  var onClose = null;
+  let played = null;             // 'serverId:ratingKey' -> 'serverId:deviceID'
+  let claimed = null;            // null = never configured, so don't filter
+  let list = [], idx = 0;
+  let onClose = null;
 
-  var elList = document.getElementById('device-list');
+  const elList = document.getElementById('device-list');
 
   function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function lsSet(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* full */ } }
 
   function init() {
-    var raw = lsGet('myDevices');
+    const raw = lsGet('myDevices');
     if (!raw) return;
     try { claimed = JSON.parse(raw); } catch (e) { claimed = null; }
   }
@@ -42,18 +42,18 @@ var Devices = (function () {
      way to tell your viewing from the other TV's. */
   function ensureHistory() {
     if (played) return Promise.resolve(played);
-    var servers = Servers.all();
+    const servers = Servers.all();
     return Promise.all(servers.map(function (sv) {
       return Plex.history(sv, HISTORY).then(function (entries) {
         return { server: sv, entries: entries };
       });
     })).then(function (perServer) {
-      var map = {}, count = 0;
+      let map = {}, count = 0;
       perServer.forEach(function (res) {
         /* Sorted newest first, so the first entry per item is the latest. */
         res.entries.forEach(function (e) {
           if (!e.ratingKey || e.deviceID === undefined) return;
-          var k = itemKey(res.server, e.ratingKey);
+          const k = itemKey(res.server, e.ratingKey);
           if (map[k] === undefined) { map[k] = res.server.id + ':' + e.deviceID; count++; }
         });
       });
@@ -69,7 +69,7 @@ var Devices = (function () {
   }
 
   function countDevices(map) {
-    var seen = {}, keys = Object.keys(map), i;
+    let seen = {}, keys = Object.keys(map), i;
     for (i = 0; i < keys.length; i++) seen[map[keys[i]]] = true;
     return Object.keys(seen).length;
   }
@@ -78,7 +78,7 @@ var Devices = (function () {
   function mine(items) {
     if (!claimed || !played) return items;
     return items.filter(function (entry) {
-      var copies = Merge.sources(entry), i, dev;
+      let copies = Merge.sources(entry), i, dev;
       for (i = 0; i < copies.length; i++) {
         dev = played[(copies[i]._server || '') + ':' + copies[i].ratingKey];
         if (!dev || claimed[dev]) return true;
@@ -94,15 +94,15 @@ var Devices = (function () {
     UI.show('devices');
     idx = 0;
     elList.innerHTML = '<div class="device-row">Reading history…</div>';
-    var servers = Servers.all();
+    const servers = Servers.all();
     Promise.all([
       ensureHistory(),
       Promise.all(servers.map(function (sv) {
         return Plex.devices(sv).then(function (d) { return { server: sv, devices: d }; });
       }))
     ]).then(function (res) {
-      var map = res[0] || {}, named = res[1] || [];
-      var names = {}, counts = {}, keys = Object.keys(map), i;
+      const map = res[0] || {}, named = res[1] || [];
+      let names = {}, counts = {}, keys = Object.keys(map), i;
       named.forEach(function (n) {
         n.devices.forEach(function (d) { names[n.server.id + ':' + d.id] = d.name; });
       });
@@ -110,7 +110,7 @@ var Devices = (function () {
         counts[map[keys[i]]] = (counts[map[keys[i]]] || 0) + 1;
       }
       list = Object.keys(counts).map(function (k) {
-        var server = Servers.get(k.split(':')[0]);
+        const server = Servers.get(k.split(':')[0]);
         return { key: k, name: names[k] || ('device ' + k.split(':')[1]),
                  server: Servers.label(server), count: counts[k],
                  mine: claimed ? !!claimed[k] : true };
@@ -125,7 +125,7 @@ var Devices = (function () {
         '<div class="device-row">No device history available on these servers.</div>';
       return;
     }
-    var html = '', i, d;
+    let html = '', i, d;
     for (i = 0; i < list.length; i++) {
       d = list[i];
       html += '<div class="device-row' + (i === idx ? ' on' : '') + '">' +
@@ -138,16 +138,16 @@ var Devices = (function () {
   }
 
   function save() {
-    var changed = false;
+    let changed = false;
     if (list.length) {
-      var map = {}, i;
+      let map = {}, i;
       for (i = 0; i < list.length; i++) if (list[i].mine) map[list[i].key] = true;
       claimed = map;
       lsSet('myDevices', JSON.stringify(map));
       UI.debug('devices: ' + Object.keys(map).length + ' of ' + list.length + ' claimed');
       changed = true;
     }
-    var done = onClose;
+    const done = onClose;
     onClose = null;
     if (done) done(changed);
   }

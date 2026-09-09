@@ -63,8 +63,8 @@
      a restart and neither of them should be lost to it. */
   function playChecked(item, verdict, isExtra, resumeAt, back, subLang) {
     if (!verdict || !verdict.ok) return;
-    var md = verdict.md;
-    var server = Servers.of(md);
+    const md = verdict.md;
+    let server = Servers.of(md);
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
     md.viewOffset = isExtra ? 0
       : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
@@ -122,7 +122,7 @@
   /* ---------- keys ---------- */
 
   function onKey(e) {
-    var code = e.keyCode, handled;
+    let code = e.keyCode, handled;
 
     if (Player.playing()) {
       if (Player.key(code)) e.preventDefault();
@@ -198,7 +198,7 @@
         });
       }));
     }).then(function (perServer) {
-      var any = perServer.filter(function (r) { return r.sections.length; });
+      const any = perServer.filter(function (r) { return r.sections.length; });
       if (!any.length) {
         UI.message('No libraries', 'Neither server shares a film or show section.');
         return;
@@ -213,7 +213,7 @@
   /* Cached sections name their server by id; turn them back into the server
      objects discovery handed us. A server that has since gone is dropped. */
   function rehydrate(cached) {
-    var out = [], i, server;
+    let out = [], i, server;
     for (i = 0; i < cached.length; i++) {
       server = Servers.get(cached[i].serverId);
       if (server) out.push({ server: server, sections: cached[i].sections });
@@ -249,7 +249,7 @@
   /* Does persistence actually work here? If not, every launch is a first
      launch, which looks like a login loop. */
   function storageSelfTest() {
-    var ok;
+    let ok;
     try {
       localStorage.setItem('selftest', 'y');
       ok = localStorage.getItem('selftest') === 'y';

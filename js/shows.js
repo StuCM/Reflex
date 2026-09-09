@@ -13,11 +13,11 @@ var Shows = (function () {
      Each returned season carries its own per-server copies, which is what the
      episode fetch then walks. */
   function seasons(entry) {
-    var copies = Merge.sources(entry);
+    const copies = Merge.sources(entry);
     return Promise.all(copies.map(function (copy) {
       return Plex.children(Servers.of(copy), copy.ratingKey);
     })).then(function (perServer) {
-      var merged = Merge.lists(perServer.map(function (list) {
+      const merged = Merge.lists(perServer.map(function (list) {
         return list.filter(function (m) { return m.type === 'season'; });
       }));
       merged.sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
@@ -27,11 +27,11 @@ var Shows = (function () {
 
   /* Episodes of a merged season, in order. */
   function episodes(season) {
-    var copies = Merge.sources(season);
+    const copies = Merge.sources(season);
     return Promise.all(copies.map(function (copy) {
       return Plex.children(Servers.of(copy), copy.ratingKey);
     })).then(function (perServer) {
-      var merged = Merge.lists(perServer.map(function (list) {
+      const merged = Merge.lists(perServer.map(function (list) {
         return list.filter(function (m) { return m.type === 'episode'; });
       }));
       merged.sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
@@ -41,7 +41,7 @@ var Shows = (function () {
 
   /* "4 series · 38 episodes", or as much of it as the server told us. */
   function summary(entry) {
-    var bits = [];
+    const bits = [];
     if (entry.childCount) {
       bits.push(entry.childCount + ' series');
     }
@@ -58,7 +58,7 @@ var Shows = (function () {
      unwatched, else the first. Somebody part way through series three does not
      want to land on series one every time. */
   function openAt(list) {
-    var i;
+    let i;
     for (i = 0; i < list.length; i++) {
       if ((list[i].leafCount || 0) > (list[i].viewedLeafCount || 0)) return i;
     }

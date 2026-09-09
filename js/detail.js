@@ -17,24 +17,24 @@
 var Detail = (function () {
   'use strict';
 
-  var elArt = document.getElementById('dt-art');
-  var elTitle = document.getElementById('dt-title');
-  var elMeta = document.getElementById('dt-meta');
-  var elTagline = document.getElementById('dt-tagline');
-  var elSummary = document.getElementById('dt-summary');
-  var elCrew = document.getElementById('dt-crew');
-  var elSources = document.getElementById('dt-sources');
-  var elExtras = document.getElementById('dt-extras');
-  var elExtrasLabel = document.getElementById('dt-extras-label');
-  var elCast = document.getElementById('dt-cast');
+  const elArt = document.getElementById('dt-art');
+  const elTitle = document.getElementById('dt-title');
+  const elMeta = document.getElementById('dt-meta');
+  const elTagline = document.getElementById('dt-tagline');
+  const elSummary = document.getElementById('dt-summary');
+  const elCrew = document.getElementById('dt-crew');
+  const elSources = document.getElementById('dt-sources');
+  const elExtras = document.getElementById('dt-extras');
+  const elExtrasLabel = document.getElementById('dt-extras-label');
+  const elCast = document.getElementById('dt-cast');
 
-  var item = null;                 // the merged entry
-  var copies = [];                 // one per server that has it
-  var sources = [];                // flattened: one per server × version
-  var extras = [];                 // trailers and the rest, playable in their own right
-  var idx = 0;                     // indexes sources.concat(extras)
-  var opts = {};
-  var generation = 0;
+  let item = null;                 // the merged entry
+  let copies = [];                 // one per server that has it
+  let sources = [];                // flattened: one per server × version
+  let extras = [];                 // trailers and the rest, playable in their own right
+  let idx = 0;                     // indexes sources.concat(extras)
+  let opts = {};
+  let generation = 0;
 
   function open(entry, options) {
     if (!entry) return;
@@ -74,7 +74,7 @@ var Detail = (function () {
      response, but not how many. So each copy contributes one provisional line
      that becomes one line per version once we know. */
   function rebuild() {
-    var chosen = lines()[idx] || null;
+    const chosen = lines()[idx] || null;
     sources = [];
     copies.forEach(function (copy) {
       if (copy.versions) {
@@ -88,7 +88,7 @@ var Detail = (function () {
     /* Keep the user's choice pinned across a rebuild. */
     idx = 0;
     if (chosen) {
-      var all = lines(), i;
+      let all = lines(), i;
       for (i = 0; i < all.length; i++) {
         if (all[i].copy === chosen.copy && all[i].mediaIndex === chosen.mediaIndex) {
           idx = i;
@@ -103,16 +103,16 @@ var Detail = (function () {
      its own, so the other versions are separate library items and only a guid
      lookup across the whole server finds them. */
   function addOtherVersions(md) {
-    var gen = generation;
-    var known = {};
+    const gen = generation;
+    const known = {};
     copies.forEach(function (c) { known[c.item._server + ':' + c.item.ratingKey] = true; });
 
     Servers.all().forEach(function (sv) {
       Plex.allVersions(sv, md).then(function (found) {
         if (gen !== generation || !found.length) return;
-        var added = 0;
+        let added = 0;
         found.forEach(function (other) {
-          var key = other._server + ':' + other.ratingKey;
+          const key = other._server + ':' + other.ratingKey;
           if (known[key]) return;
           known[key] = true;
           added++;
@@ -149,7 +149,7 @@ var Detail = (function () {
   }
 
   function expand(copy, md) {
-    var list = (md.Media && md.Media.length ? md.Media : [null]);
+    const list = (md.Media && md.Media.length ? md.Media : [null]);
     copy.versions = list.map(function (media, n) {
       return { copy: copy, server: copy.server, mediaIndex: n, media: media || {},
                verdict: null, provisional: false };
@@ -163,7 +163,7 @@ var Detail = (function () {
      session, so asking about one you end up not playing costs a query and
      nothing else. */
   function check(src) {
-    var gen = generation;
+    const gen = generation;
     Guard.check(src.copy.item, src.mediaIndex).then(function (v) {
       if (gen !== generation) return;
       src.verdict = v;
@@ -172,8 +172,8 @@ var Detail = (function () {
   }
 
   function versionLabel(src) {
-    var media = src.media || {};
-    var bits = [];
+    const media = src.media || {};
+    const bits = [];
     if (media.videoResolution) bits.push(String(media.videoResolution).toUpperCase());
     if (media.videoCodec) bits.push(String(media.videoCodec).toUpperCase());
     if (media.container) bits.push(String(media.container).toUpperCase());
@@ -183,9 +183,9 @@ var Detail = (function () {
   }
 
   function sourceLine(src, on) {
-    var v = src.verdict;
-    var state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
-    var name = (src.server && src.server.name) || 'server';
+    const v = src.verdict;
+    const state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
+    let name = (src.server && src.server.name) || 'server';
     if (Servers.count() > 1 && Servers.isPreferred(src.server)) name += ' · preferred';
 
     return '<div class="dt-source' + (on ? ' on' : '') + '">' +
@@ -197,9 +197,9 @@ var Detail = (function () {
   }
 
   function extraLine(src, on) {
-    var v = src.verdict;
-    var state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
-    var mins = src.copy.item.duration
+    const v = src.verdict;
+    const state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
+    const mins = src.copy.item.duration
       ? Math.max(1, Math.round(src.copy.item.duration / 60000)) + ' min' : '';
     return '<div class="dt-source' + (on ? ' on' : '') + '">' +
            '<div class="dt-source-name">' + UI.escapeHtml(src.title) + '</div>' +
@@ -212,7 +212,7 @@ var Detail = (function () {
   }
 
   function renderSources() {
-    var html = '', i;
+    let html = '', i;
     for (i = 0; i < sources.length; i++) html += sourceLine(sources[i], i === idx);
     elSources.innerHTML = html;
 
@@ -236,12 +236,12 @@ var Detail = (function () {
     elCast.innerHTML = '';
     elMeta.textContent = metaLine(item, null);
 
-    var art = Plex.artUrl(item, 960, 540);
+    const art = Plex.artUrl(item, 960, 540);
     elArt.style.backgroundImage = art ? 'url("' + art + '")' : 'none';
   }
 
   function metaLine(entry, md) {
-    var bits = [];
+    const bits = [];
     if (entry.type === 'episode') bits.push(Media.episodeLabel(entry));
     if (entry.year) bits.push(entry.year);
     if (entry.duration) bits.push(Math.round(entry.duration / 60000) + ' min');
@@ -262,8 +262,8 @@ var Detail = (function () {
      arrive also fills in the cast and crew, which are the same whichever server
      you end up playing from. */
   function loadDetails() {
-    var gen = generation;
-    var filled = false;
+    const gen = generation;
+    let filled = false;
     copies.forEach(function (copy) {
       Meta.load(copy.item).then(function (md) {
         if (gen !== generation || !md) return;
@@ -283,7 +283,7 @@ var Detail = (function () {
   }
 
   function crewHtml(md) {
-    var bits = [];
+    const bits = [];
     function names(list) {
       return (list || []).map(function (x) { return UI.escapeHtml(x.tag); }).join(', ');
     }
@@ -294,7 +294,7 @@ var Detail = (function () {
   }
 
   function castHtml(md) {
-    var roles = (md.Role || []).slice(0, 8), html = '', i, r, url;
+    let roles = (md.Role || []).slice(0, 8), html = '', i, r, url;
     if (!roles.length) return '';
     for (i = 0; i < roles.length; i++) {
       r = roles[i];
@@ -311,11 +311,11 @@ var Detail = (function () {
   /* ---------- keys ---------- */
 
   function play() {
-    var src = lines()[idx];
+    const src = lines()[idx];
     if (!src) return;
     if (!src.verdict) { UI.toast('Still checking that copy…'); return; }
     if (!src.verdict.ok) {
-      var why = Guard.refusal(item, src.verdict);
+      const why = Guard.refusal(item, src.verdict);
       UI.message(why[0], why[1]);
       return;
     }
@@ -323,7 +323,7 @@ var Detail = (function () {
   }
 
   function key(code) {
-    var K = UI.KEY;
+    const K = UI.KEY;
     if ((code === K.UP || code === K.LEFT) && idx > 0) { idx--; renderSources(); return true; }
     if ((code === K.DOWN || code === K.RIGHT) && idx < lines().length - 1) {
       idx++; renderSources(); return true;

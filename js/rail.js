@@ -10,24 +10,24 @@
 var Rail = (function () {
   'use strict';
 
-  var TILE_W = 160, TILE_H = 240, GAP = 24, STRIDE = TILE_W + GAP;
-  var ROW_H = 304;
-  var TILE_POOL = 12;            // tiles per row element
-  var ROW_POOL = 4;              // row elements in the DOM, ever
-  var TILES_VISIBLE = 10;        // tiles across at 1920 wide
-  var ROWS_VISIBLE = 2;
+  const TILE_W = 160, TILE_H = 240, GAP = 24, STRIDE = TILE_W + GAP;
+  const ROW_H = 304;
+  const TILE_POOL = 12;            // tiles per row element
+  const ROW_POOL = 4;              // row elements in the DOM, ever
+  const TILES_VISIBLE = 10;        // tiles across at 1920 wide
+  const ROWS_VISIBLE = 2;
 
-  var elRows = document.getElementById('rows');
-  var rowEls = [];
+  const elRows = document.getElementById('rows');
+  const rowEls = [];
 
   function translate(el, x, y) {
-    var t = 'translate(' + x + 'px,' + y + 'px)';
+    let t = 'translate(' + x + 'px,' + y + 'px)';
     el.style.transform = t;
     el.style.webkitTransform = t;
   }
 
   function build() {
-    var r, i, rowEl, label, strip, tile, inner, img, fb, prog;
+    let r, i, rowEl, label, strip, tile, inner, img, fb, prog;
     for (r = 0; r < ROW_POOL; r++) {
       rowEl = document.createElement('div');
       rowEl.className = 'row hidden';
@@ -69,7 +69,7 @@ var Rail = (function () {
   /* A tile showing a placeholder must re-render once its page lands. One that
      already shows a poster must not, or we reassign src for nothing. */
   function invalidateEmpty() {
-    var r, i, t;
+    let r, i, t;
     for (r = 0; r < ROW_POOL; r++) {
       for (i = 0; i < TILE_POOL; i++) {
         t = rowEls[r]._tiles[i];
@@ -79,8 +79,8 @@ var Rail = (function () {
   }
 
   function drawRow(rowEl, rows, r, rowIdx, onScreen) {
-    var row = rows[r], reused = rowEl._row !== r;
-    var i, idx, tile, item, url, firstVisible, start;
+    const row = rows[r], reused = rowEl._row !== r;
+    let i, idx, tile, item, url, firstVisible, start;
 
     rowEl.classList.remove('hidden');
     translate(rowEl, 0, r * ROW_H);
@@ -139,9 +139,9 @@ var Rail = (function () {
   }
 
   function render(rows, rowIdx) {
-    var firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
-    var start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
-    var i, r;
+    let firstVisible = UI.clamp(rowIdx - 1, 0, Math.max(0, rows.length - ROWS_VISIBLE));
+    let start = UI.clamp(firstVisible, 0, Math.max(0, rows.length - ROW_POOL));
+    let i, r;
     translate(elRows, 0, -firstVisible * ROW_H);
     for (i = 0; i < ROW_POOL; i++) {
       r = start + i;

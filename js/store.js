@@ -7,14 +7,14 @@
 var Store = (function () {
   'use strict';
 
-  var NAME = 'reflex', STORE = 'kv', dbp = null;
-  var mem = {};          // fallback if IndexedDB is unavailable or blocked
+  let NAME = 'reflex', STORE = 'kv', dbp = null;
+  const mem = {};          // fallback if IndexedDB is unavailable or blocked
 
   function open() {
     if (dbp) return dbp;
     dbp = new Promise(function (resolve, reject) {
       if (!window.indexedDB) { reject(new Error('no indexedDB')); return; }
-      var req = indexedDB.open(NAME, 1);
+      const req = indexedDB.open(NAME, 1);
       req.onupgradeneeded = function () {
         req.result.createObjectStore(STORE);
       };
@@ -27,8 +27,8 @@ var Store = (function () {
   function tx(mode, fn) {
     return open().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var t = db.transaction(STORE, mode);
-        var out = fn(t.objectStore(STORE));
+        const t = db.transaction(STORE, mode);
+        const out = fn(t.objectStore(STORE));
         t.oncomplete = function () { resolve(out.result); };
         t.onerror = function () { reject(t.error); };
       });
