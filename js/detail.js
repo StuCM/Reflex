@@ -44,7 +44,7 @@ var Detail = (function () {
 
     /* Merge already put the preferred server's copy first, so source 0 is the
        one the preference asks for. */
-    copies = Merge.sources(entry).map(function (copy) {
+    copies = Merge.sources(entry).map(copy => {
       return { item: copy, server: Servers.of(copy), versions: null };
     });
     extras = [];
@@ -76,9 +76,9 @@ var Detail = (function () {
   function rebuild() {
     const chosen = lines()[idx] || null;
     sources = [];
-    copies.forEach(function (copy) {
+    copies.forEach(copy => {
       if (copy.versions) {
-        copy.versions.forEach(function (v) { sources.push(v); });
+        copy.versions.forEach(v => { sources.push(v); });
         return;
       }
       sources.push({ copy: copy, server: copy.server, mediaIndex: 0,
@@ -105,21 +105,21 @@ var Detail = (function () {
   function addOtherVersions(md) {
     const gen = generation;
     const known = {};
-    copies.forEach(function (c) { known[c.item._server + ':' + c.item.ratingKey] = true; });
+    copies.forEach(c => { known[c.item._server + ':' + c.item.ratingKey] = true; });
 
-    Servers.all().forEach(function (sv) {
-      Plex.allVersions(sv, md).then(function (found) {
+    Servers.all().forEach(sv => {
+      Plex.allVersions(sv, md).then(found => {
         if (gen !== generation || !found.length) return;
         let added = 0;
-        found.forEach(function (other) {
+        found.forEach(other => {
           const key = other._server + ':' + other.ratingKey;
           if (known[key]) return;
           known[key] = true;
           added++;
           copies.push({ item: other, server: Servers.of(other), versions: null });
-          Meta.load(other).then(function (omd) {
+          Meta.load(other).then(omd => {
             if (gen !== generation || !omd) return;
-            expand(copies.filter(function (c) { return c.item === other; })[0], omd);
+            expand(copies.filter(c => c.item === other)[0], omd);
           });
         });
         if (added) {
@@ -138,7 +138,7 @@ var Detail = (function () {
      is still a transcode on someone else's hardware. */
   function addExtras(md) {
     if (extras.length || !md.Extras || !md.Extras.Metadata) return;
-    extras = md.Extras.Metadata.slice(0, 6).map(function (x) {
+    extras = md.Extras.Metadata.slice(0, 6).map(x => {
       return { copy: { item: x }, server: Servers.of(x), mediaIndex: 0,
                media: (x.Media && x.Media[0]) || {},
                title: x.title || 'Extra', kind: x.subtype || x.extraType || '',
@@ -150,7 +150,7 @@ var Detail = (function () {
 
   function expand(copy, md) {
     const list = (md.Media && md.Media.length ? md.Media : [null]);
-    copy.versions = list.map(function (media, n) {
+    copy.versions = list.map((media, n) => {
       return { copy: copy, server: copy.server, mediaIndex: n, media: media || {},
                verdict: null, provisional: false };
     });
@@ -164,7 +164,7 @@ var Detail = (function () {
      nothing else. */
   function check(src) {
     const gen = generation;
-    Guard.check(src.copy.item, src.mediaIndex).then(function (v) {
+    Guard.check(src.copy.item, src.mediaIndex).then(v => {
       if (gen !== generation) return;
       src.verdict = v;
       renderSources();
@@ -249,7 +249,7 @@ var Detail = (function () {
     if (md && md.rating) bits.push('critics ' + Number(md.rating).toFixed(1));
     if (md && md.audienceRating) bits.push('audience ' + Number(md.audienceRating).toFixed(1));
     if (md && md.Genre && md.Genre.length) {
-      bits.push(md.Genre.slice(0, 3).map(function (g) { return g.tag; }).join(', '));
+      bits.push(md.Genre.slice(0, 3).map(g => g.tag).join(', '));
     }
     if (entry.originallyAvailableAt) bits.push('aired ' + entry.originallyAvailableAt);
     if (entry.viewOffset && entry.duration) {
@@ -264,8 +264,8 @@ var Detail = (function () {
   function loadDetails() {
     const gen = generation;
     let filled = false;
-    copies.forEach(function (copy) {
-      Meta.load(copy.item).then(function (md) {
+    copies.forEach(copy => {
+      Meta.load(copy.item).then(md => {
         if (gen !== generation || !md) return;
         copy.md = md;
         expand(copy, md);
@@ -285,7 +285,7 @@ var Detail = (function () {
   function crewHtml(md) {
     const bits = [];
     function names(list) {
-      return (list || []).map(function (x) { return UI.escapeHtml(x.tag); }).join(', ');
+      return (list || []).map(x => UI.escapeHtml(x.tag)).join(', ');
     }
     if (md.Director && md.Director.length) bits.push('<b>Director</b> ' + names(md.Director));
     if (md.Writer && md.Writer.length) bits.push('<b>Writer</b> ' + names(md.Writer));

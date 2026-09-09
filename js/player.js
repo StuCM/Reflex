@@ -150,7 +150,7 @@ var Player = (function () {
     /* While a seek is still being aimed, the OSD is the only feedback there is,
        so it stays until the seek lands. The menu keeps it up too — it sits
        above the bar and reads as one panel. */
-    osdTimer = setTimeout(function () {
+    osdTimer = setTimeout(() => {
       if (pending !== null || menuOn) { showOsd(); return; }
       osd.style.opacity = '0';
       subEl.classList.remove('lifted');
@@ -406,14 +406,14 @@ var Player = (function () {
 
     subNote = 'loading…';
     paintTracks();
-    Plex.subtitles(server, stream).then(function (text) {
+    Plex.subtitles(server, stream).then(text => {
       if (token !== subToken) return;
       cues = Subs.parse(text);
       subNote = cues.length ? '' : 'the track came back empty';
       UI.debug('subtitles: ' + Media.subLabel(stream) + ' · ' + cues.length + ' cues');
       paintTracks();
       paintSub();
-    }, function (e) {
+    }, e => {
       if (token !== subToken) return;
       currentSub = null;
       subNote = 'could not be fetched (' + e.message.split(' -> ').pop() + ')';
@@ -464,7 +464,7 @@ var Player = (function () {
       note: (currentAudio && String(currentAudio.id) === String(st.id)) ? ''
         : (panelIndexOf(st) >= 0 ? '' : 'restarts — the server has to mux this one'),
       on: !!(currentAudio && String(currentAudio.id) === String(st.id)),
-      act: function () { chooseAudio(st); }
+      act: () => { chooseAudio(st); }
     };
   }
 
@@ -472,7 +472,7 @@ var Player = (function () {
     let list = Media.subtitleTracks(currentPart), i;
     rows.push({
       label: 'Off', on: !currentSub,
-      act: function () { setSub(null); closeMenu(); }
+      act: () => { setSub(null); closeMenu(); }
     });
     for (i = 0; i < list.length; i++) rows.push(subRow(list[i]));
   }
@@ -482,7 +482,7 @@ var Player = (function () {
       label: Media.subLabel(st),
       note: Media.isTextSub(st) ? '' : 'image track — cannot be shown without a transcode',
       on: !!(currentSub && String(currentSub.id) === String(st.id)),
-      act: function () { setSub(st); closeMenu(); }
+      act: () => { setSub(st); closeMenu(); }
     };
   }
 
@@ -504,7 +504,7 @@ var Player = (function () {
     return {
       label: 'Version — ' + Media.versionLabel(media),
       on: n === mediaIndex && !maxBitrate,
-      act: function () {
+      act: () => {
         if (n === mediaIndex && !maxBitrate) { closeMenu(); return; }
         switchTo({ mediaIndex: n, maxBitrate: null }, Media.versionLabel(media));
       }
@@ -517,7 +517,7 @@ var Player = (function () {
       note: q.bitrate && Media.isUHD(currentMedia)
         ? 'a 4K transcode is what gets the stream killed — this will be refused' : '',
       on: (q.bitrate || null) === maxBitrate,
-      act: function () {
+      act: () => {
         if ((q.bitrate || null) === maxBitrate) { closeMenu(); return; }
         switchTo({ maxBitrate: q.bitrate || null }, q.label);
       }
@@ -528,7 +528,7 @@ var Player = (function () {
     let list = Media.chapters(item), i;
     rows.push({
       label: 'Play from the beginning',
-      act: function () { seekTo(0); closeMenu(); }
+      act: () => { seekTo(0); closeMenu(); }
     });
     for (i = 0; i < list.length; i++) rows.push(chapterRow(list[i]));
   }
@@ -537,7 +537,7 @@ var Player = (function () {
     return {
       label: c.title, note: fmt(c.start),
       on: target() >= c.start && (!c.end || target() < c.end),
-      act: function () { seekTo(c.start); closeMenu(); }
+      act: () => { seekTo(c.start); closeMenu(); }
     };
   }
 
@@ -707,7 +707,7 @@ var Player = (function () {
     hint();
     v.classList.remove('hidden');
 
-    v.onloadedmetadata = function () {
+    v.onloadedmetadata = () => {
       /* Only now does currentTime mean anything. Don't resume within half a
          minute of the end — that is a film you finished. */
       if (resumeMs > 10000 && v.duration && resumeMs < (v.duration * 1000) - 30000) {
@@ -726,16 +726,16 @@ var Player = (function () {
     };
     /* The track list is not always populated by loadedmetadata, so try again
        once the picture is actually running. */
-    v.onplaying = function () { applyChosenTrack(); showOsd(); };
+    v.onplaying = () => { applyChosenTrack(); showOsd(); };
     /* 'waiting' is the panel telling us it has run dry. */
-    v.onwaiting = function () { stalls++; };
-    v.ontimeupdate = function () {
+    v.onwaiting = () => { stalls++; };
+    v.ontimeupdate = () => {
       if (osdShowing()) paintOsd();
       paintSub();
       checkMarker();
     };
-    v.onended = function () { stop('stopped'); };
-    v.onerror = function () {
+    v.onended = () => { stop('stopped'); };
+    v.onerror = () => {
       fail(mediaErrorText(v.error) + laptopNote(currentMedia));
     };
 
@@ -755,7 +755,7 @@ var Player = (function () {
        screen — it is otherwise completely silent. */
     const started = v.play();
     if (started && started.then) {
-      started.then(null, function (e) {
+      started.then(null, e => {
         fail('The player refused to start: ' + ((e && (e.name + ' ' + e.message)) || 'unknown') +
              '. If this is the TV, it is usually the media pipeline rejecting the ' +
              'container rather than the codec.');
@@ -763,7 +763,7 @@ var Player = (function () {
     }
 
     clearInterval(ticker);
-    ticker = setInterval(function () {
+    ticker = setInterval(() => {
       report(v.paused ? 'paused' : 'playing');
       UI.debug(health());
     }, 10000);

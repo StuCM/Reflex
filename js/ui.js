@@ -63,7 +63,7 @@ var UI = (function () {
     elToast.textContent = msg;
     elToast.classList.remove('hidden');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { elToast.classList.add('hidden'); }, 4000);
+    toastTimer = setTimeout(() => { elToast.classList.add('hidden'); }, 4000);
   }
 
   function message(title, body) {

@@ -14,13 +14,13 @@ var Shows = (function () {
      episode fetch then walks. */
   function seasons(entry) {
     const copies = Merge.sources(entry);
-    return Promise.all(copies.map(function (copy) {
+    return Promise.all(copies.map(copy => {
       return Plex.children(Servers.of(copy), copy.ratingKey);
-    })).then(function (perServer) {
-      const merged = Merge.lists(perServer.map(function (list) {
-        return list.filter(function (m) { return m.type === 'season'; });
+    })).then(perServer => {
+      const merged = Merge.lists(perServer.map(list => {
+        return list.filter(m => m.type === 'season');
       }));
-      merged.sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
+      merged.sort((a, b) => (a.index || 0) - (b.index || 0));
       return merged;
     });
   }
@@ -28,13 +28,13 @@ var Shows = (function () {
   /* Episodes of a merged season, in order. */
   function episodes(season) {
     const copies = Merge.sources(season);
-    return Promise.all(copies.map(function (copy) {
+    return Promise.all(copies.map(copy => {
       return Plex.children(Servers.of(copy), copy.ratingKey);
-    })).then(function (perServer) {
-      const merged = Merge.lists(perServer.map(function (list) {
-        return list.filter(function (m) { return m.type === 'episode'; });
+    })).then(perServer => {
+      const merged = Merge.lists(perServer.map(list => {
+        return list.filter(m => m.type === 'episode');
       }));
-      merged.sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
+      merged.sort((a, b) => (a.index || 0) - (b.index || 0));
       return merged;
     });
   }

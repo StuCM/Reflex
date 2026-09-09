@@ -40,11 +40,11 @@ var Tmdb = (function () {
   function get(path, params) {
     params = params || {};
     params.api_key = KEY;
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('GET', API + path + '?' + qs(params), true);
       xhr.timeout = 15000;
-      xhr.onload = function () {
+      xhr.onload = () => {
         if (xhr.status < 200 || xhr.status >= 300) {
           reject(new Error('TMDB ' + path + ' -> ' + xhr.status));
           return;
@@ -52,8 +52,8 @@ var Tmdb = (function () {
         try { resolve(JSON.parse(xhr.responseText)); }
         catch (e) { reject(new Error('TMDB bad json')); }
       };
-      xhr.ontimeout = function () { reject(new Error('TMDB timeout')); };
-      xhr.onerror = function () { reject(new Error('TMDB network')); };
+      xhr.ontimeout = () => { reject(new Error('TMDB timeout')); };
+      xhr.onerror = () => { reject(new Error('TMDB network')); };
       xhr.send(null);
     });
   }
@@ -71,7 +71,7 @@ var Tmdb = (function () {
   }
 
   function trending() {
-    return get('/trending/movie/week').then(function (r) { return ids(r.results); });
+    return get('/trending/movie/week').then(r => ids(r.results));
   }
 
   /* What's on a streaming service right now, in this region. */
@@ -81,7 +81,7 @@ var Tmdb = (function () {
       watch_region: REGION,
       sort_by: 'popularity.desc',
       'vote_count.gte': MIN_VOTES
-    }).then(function (r) { return ids(r.results); });
+    }).then(r => ids(r.results));
   }
 
   /* Content-based recommendations: ask TMDB what resembles each thing recently
@@ -91,8 +91,8 @@ var Tmdb = (function () {
     const seeds = (seedTmdbIds || []).slice(0, 8);
     if (!seeds.length) return Promise.resolve([]);
     const score = {};
-    return serial(seeds, function (id) {
-      return get('/movie/' + id + '/recommendations').then(function (r) {
+    return serial(seeds, id => {
+      return get('/movie/' + id + '/recommendations').then(r => {
         let list = r.results || [], i, m;
         for (i = 0; i < list.length; i++) {
           m = list[i];
@@ -100,9 +100,9 @@ var Tmdb = (function () {
           if (seeds.indexOf(String(m.id)) >= 0) continue;      // don't suggest the seed
           score[m.id] = (score[m.id] || 0) + 1;
         }
-      }, function () { /* one bad seed shouldn't sink the row */ });
-    }).then(function () {
-      return Object.keys(score).sort(function (a, b) { return score[b] - score[a]; });
+      }, () => { /* one bad seed shouldn't sink the row */ });
+    }).then(() => {
+      return Object.keys(score).sort((a, b) => score[b] - score[a]);
     });
   }
 

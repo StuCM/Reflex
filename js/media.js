@@ -269,7 +269,7 @@ var Media = (function () {
         end: (c.endTimeOffset || 0) / 1000
       });
     }
-    out.sort(function (a, b) { return a.start - b.start; });
+    out.sort((a, b) => a.start - b.start);
     return out;
   }
 

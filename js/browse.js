@@ -36,7 +36,7 @@ var Browse = (function () {
        It must not go on to reach the browse key handler: runSearch switches
        back to the browse view synchronously, so by the time the event bubbled
        up it would read as OK on whatever was focused before the search. */
-    elInput.addEventListener('keydown', function (e) {
+    elInput.addEventListener('keydown', e => {
       if (e.keyCode !== UI.KEY.OK) return;
       e.preventDefault();
       e.stopPropagation();
@@ -54,7 +54,7 @@ var Browse = (function () {
   /* A guard any in-flight load can check before it paints. */
   function generationGuard() {
     const gen = generation;
-    return function () { return gen === generation; };
+    return () => gen === generation;
   }
 
   function render() {
@@ -62,7 +62,7 @@ var Browse = (function () {
     Rail.render(rows, rowIdx);
     Masthead.render(focusedRow(), focusedItem(), rows.length > 0);
     scheduleWalk();
-    Meta.schedule(focusedItem(), function (ratingKey) {
+    Meta.schedule(focusedItem(), ratingKey => {
       const here = focusedItem();
       if (here && here.ratingKey === ratingKey) {
         Masthead.render(focusedRow(), here, true);
@@ -93,7 +93,7 @@ var Browse = (function () {
                                   updatedAt: sec.updatedAt || 0 });
       }
     }
-    const merged = order.map(function (k) { return byTitle[k]; });
+    const merged = order.map(k => byTitle[k]);
     const currentTitle = sections[secIdx] && sections[secIdx].title;
     sections = merged;
     let at = 0;
@@ -185,7 +185,7 @@ var Browse = (function () {
       return;
     }
     if (chip.kind === 'devices') {
-      Devices.open(function (changed) {
+      Devices.open(changed => {
         UI.show('browse');
         if (changed) loadSection(secIdx, true); else render();
       });
@@ -210,9 +210,9 @@ var Browse = (function () {
 
   /* One page of one server's section, for the merge walk. */
   function pageFetcher() {
-    return function (part, offset) {
+    return (part, offset) => {
       return Plex.items(part.server, part.key, offset, Rows.PAGE, part.filter)
-        .then(function (res) { return { items: res.items, total: res.total }; });
+        .then(res => ({ items: res.items, total: res.total }));
     };
   }
 
@@ -223,7 +223,7 @@ var Browse = (function () {
       let keys = Object.keys(filter), i;
       for (i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
     }
-    const parts = sec.parts.map(function (p) {
+    const parts = sec.parts.map(p => {
       return { server: p.server, key: p.key, updatedAt: p.updatedAt,
                filter: base, tag: tag || '' };
     });
@@ -236,21 +236,21 @@ var Browse = (function () {
      has found so far, so it only gets more accurate. */
   function primeTotals(row, isCurrent) {
     if (!row || row.kind !== 'merge') return;
-    const jobs = row.state.streams.map(function (s) {
+    const jobs = row.state.streams.map(s => {
       if (s.total) return Promise.resolve();
       const ck = 'total:' + s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
-      return Store.get(ck).then(function (cached) {
+      return Store.get(ck).then(cached => {
         if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
           s.total = cached.total;
           return;
         }
-        return Plex.items(s.part.server, s.part.key, 0, 0, s.part.filter).then(function (res) {
+        return Plex.items(s.part.server, s.part.key, 0, 0, s.part.filter).then(res => {
           s.total = res.total;
           Store.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
         });
-      }).catch(function (e) { UI.debug('count: ' + e.message); });
+      }).catch(e => { UI.debug('count: ' + e.message); });
     });
-    Promise.all(jobs).then(function () {
+    Promise.all(jobs).then(() => {
       if (!isCurrent()) return;
       row.total = Merge.estimate(row.state);
       render();
@@ -267,10 +267,10 @@ var Browse = (function () {
     let sec = sections[i];
     const cacheKey = 'rows:' + sec.title;
 
-    Store.get(cacheKey).then(function (cached) {
+    Store.get(cacheKey).then(cached => {
       if (!isCurrent()) return;
       if (cached && cached.rows && cached.rows.length) {
-        rows = cached.rows.map(function (r) { return Rows.list(r.title, r.items); });
+        rows = cached.rows.map(r => Rows.list(r.title, r.items));
         rows.push(allRow(sec));
         primeTotals(rows[rows.length - 1], isCurrent);
         render();
@@ -283,10 +283,10 @@ var Browse = (function () {
          library is. */
       const servers = serversOf(sec);
       return Promise.all([
-        Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
-        Promise.all(sec.parts.map(function (p) { return Plex.hubs(p.server, p.key); })),
+        Promise.all(servers.map(sv => Plex.onDeck(sv))),
+        Promise.all(sec.parts.map(p => Plex.hubs(p.server, p.key))),
         Devices.ensureHistory()
-      ]).then(function (res) {
+      ]).then(res => {
         if (!isCurrent()) return;
         const built = [];
 
@@ -294,16 +294,16 @@ var Browse = (function () {
            episodes together. A show section should carry on with episodes and a
            film section with films. */
         const want = sec.type === 'show' ? 'episode' : 'movie';
-        const deck = Devices.mine(Merge.lists(res[0])).filter(function (m) {
+        const deck = Devices.mine(Merge.lists(res[0])).filter(m => {
           return m.type === want;
         });
-        deck.sort(function (a, b) { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
+        deck.sort((a, b) => (b.lastViewedAt || 0) - (a.lastViewedAt || 0));
         if (deck.length) built.push({ title: 'Continue watching', items: deck });
 
-        mergeHubs(res[1]).forEach(function (hub) { built.push(hub); });
+        mergeHubs(res[1]).forEach(hub => { built.push(hub); });
 
         Store.put(cacheKey, { rows: built });
-        rows = built.map(function (r) { return Rows.list(r.title, r.items); });
+        rows = built.map(r => Rows.list(r.title, r.items));
         rows.push(allRow(sec));
         rowIdx = UI.clamp(rowIdx, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
@@ -311,7 +311,7 @@ var Browse = (function () {
         UI.debug(sec.title + ': ' + rows.length + ' rows from ' + servers.length + ' server' +
                  (servers.length === 1 ? '' : 's'));
       });
-    }).catch(function (e) {
+    }).catch(e => {
       if (!isCurrent()) return;
       UI.debug('rows: ' + e.message);
       if (!rows.length) UI.toast('Could not reach the servers');
@@ -330,9 +330,9 @@ var Browse = (function () {
         byTitle[list[j].title].push(list[j].items);
       }
     }
-    return order.map(function (title) {
+    return order.map(title => {
       return { title: title, items: Merge.lists(byTitle[title]) };
-    }).filter(function (hub) { return hub.items.length > 0; });
+    }).filter(hub => hub.items.length > 0);
   }
 
   /* ---------- walking the merge ---------- */
@@ -341,13 +341,13 @@ var Browse = (function () {
      only one for wherever you come to rest. */
   function scheduleWalk() {
     clearTimeout(pageTimer);
-    pageTimer = setTimeout(function () {
+    pageTimer = setTimeout(() => {
       const row = focusedRow();
       if (!row || row.kind !== 'merge') return;
       if (Rows.haveUpTo(row) > Rows.needsUpTo(row)) return;
       const isCurrent = generationGuard();
       const had = Rows.haveUpTo(row), was = row.total;
-      Merge.advance(row.state, Rows.needsUpTo(row)).then(function () {
+      Merge.advance(row.state, Rows.needsUpTo(row)).then(() => {
         if (!isCurrent()) return;
         row.total = Merge.estimate(row.state);
         /* Only repaint if the walk actually produced something, or this would
@@ -355,7 +355,7 @@ var Browse = (function () {
         if (Rows.haveUpTo(row) === had && row.total === was) return;
         Rail.invalidateEmpty();
         render();
-      }).catch(function (e) {
+      }).catch(e => {
         if (!isCurrent()) return;
         UI.debug('walk: ' + e.message);
       });
@@ -371,13 +371,13 @@ var Browse = (function () {
 
     /* Ask each library which certificates it uses, keep the ones at or below
        the cutoff, and let the servers do the filtering. */
-    Promise.all(sec.parts.map(function (p) {
+    Promise.all(sec.parts.map(p => {
       return Plex.contentRatings(p.server, p.key);
-    })).then(function (perPart) {
+    })).then(perPart => {
       if (!isCurrent()) return;
       const kid = [], seen = {};
-      perPart.forEach(function (list) {
-        list.filter(Media.isKidsRating).forEach(function (r) {
+      perPart.forEach(list => {
+        list.filter(Media.isKidsRating).forEach(r => {
           if (!seen[r]) { seen[r] = true; kid.push(r); }
         });
       });
@@ -385,12 +385,12 @@ var Browse = (function () {
 
       const servers = serversOf(sec);
       return Promise.all([
-        Promise.all(servers.map(function (sv) { return Plex.onDeck(sv); })),
+        Promise.all(servers.map(sv => Plex.onDeck(sv))),
         Devices.ensureHistory()
-      ]).then(function (res) {
+      ]).then(res => {
         if (!isCurrent()) return;
         const kidsWant = sec.type === 'show' ? 'episode' : 'movie';
-        const watching = Devices.mine(Merge.lists(res[0])).filter(function (m) {
+        const watching = Devices.mine(Merge.lists(res[0])).filter(m => {
           return m.type === kidsWant && Media.isKidsRating(m.contentRating);
         });
         rows = [];
@@ -410,7 +410,7 @@ var Browse = (function () {
             'there is nothing to filter on. BACK to return.');
         }
       });
-    }).catch(function (e) {
+    }).catch(e => {
       if (!isCurrent()) return;
       UI.debug('kids: ' + e.message);
       UI.toast('Could not load the kids list');
@@ -435,11 +435,11 @@ var Browse = (function () {
       isCurrent: isCurrent,
       /* Rows appear as they resolve rather than all at the end — the first one
          lands while the rest are still matching. */
-      add: function (title, items) {
+      add: (title, items) => {
         rows.push(Rows.list(title, items));
         render();
       }
-    }).then(function () {
+    }).then(() => {
       if (!isCurrent() || rows.length) return;
       UI.message('Nothing matched',
         'None of the curated titles are on either server, or the TMDB ids did ' +
@@ -460,7 +460,7 @@ var Browse = (function () {
     elInput.value = '';
     /* webOS raises its own on-screen keyboard when an input takes focus —
        no need to build a letter grid. */
-    setTimeout(function () { elInput.focus(); }, 50);
+    setTimeout(() => { elInput.focus(); }, 50);
   }
 
   function closeSearch() {
@@ -479,9 +479,9 @@ var Browse = (function () {
     UI.show('browse');
     UI.toast('Searching…');
     const isCurrent = generationGuard();
-    Promise.all(Servers.all().map(function (sv) {
+    Promise.all(Servers.all().map(sv => {
       return Plex.search(sv, q);
-    })).then(function (perServer) {
+    })).then(perServer => {
       if (!isCurrent()) return;
       const found = Merge.lists(perServer);
       if (!savedRows) savedRows = rows;
@@ -497,7 +497,7 @@ var Browse = (function () {
       rowIdx = 0;
       render();
       UI.debug('search "' + q + '": ' + found.length + ' ' + searchNoun);
-    }).catch(function (e) {
+    }).catch(e => {
       UI.message('Search failed', e.message);
     });
   }

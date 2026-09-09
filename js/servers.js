@@ -43,7 +43,7 @@ var Servers = (function () {
 
   function set(found) {
     list = found;
-    ls('servers', JSON.stringify(list.map(function (sv) {
+    ls('servers', JSON.stringify(list.map(sv => {
       return { id: sv.id, name: sv.name, base: sv.base, token: sv.token };
     })));
   }

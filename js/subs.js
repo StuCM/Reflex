@@ -60,7 +60,7 @@ var Subs = (function () {
       if (body.length) cues.push({ start: start, end: end, text: body.join('\n') });
     }
 
-    cues.sort(function (a, b) { return a.start - b.start; });
+    cues.sort((a, b) => a.start - b.start);
     return cues;
   }
 

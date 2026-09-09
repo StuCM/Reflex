@@ -24,10 +24,10 @@
     if (item.type === 'show') {
       ShowPage.open(item, {
         onExit: toBrowse,
-        onPlay: function (episode, verdict) {
+        onPlay: (episode, verdict) => {
           playChecked(episode, verdict, false, undefined, toShow);
         },
-        onChoose: function (episode) { openDetail(episode, toShow); }
+        onChoose: episode => { openDetail(episode, toShow); }
       });
       return;
     }
@@ -42,9 +42,9 @@
 
          Stopping returns to this page rather than past it — the page is where
          you pick another copy, or the next extra. */
-      onPlay: function (entry, verdict, isExtra) {
+      onPlay: (entry, verdict, isExtra) => {
         playChecked(entry, verdict, isExtra, undefined,
-                    function () { openDetail(item, back); });
+                    () => { openDetail(item, back); });
       },
       onExit: back || toBrowse
     });
@@ -88,10 +88,10 @@
          panel picks its own track out of a direct-played file, so there is
          nothing to switch client-side. Subtitles are not here — they are drawn
          over the video and never restart anything. */
-      onSwitch: function (change) {
+      onSwitch: change => {
         Guard.check(verdict.md, change.mediaIndex, change.audioId,
                     { maxBitrate: change.maxBitrate, forceStream: change.forceStream })
-          .then(function (v2) {
+          .then(v2 => {
             if (!v2.ok) {
               /* Refusing a switch must not end the film. Say why in a line and
                  leave what is already playing alone — the full explanation is
@@ -114,8 +114,8 @@
                               forceStream: verdict.forceStream })
         : null,
       transcode: !!verdict.transcode,
-      onExit: back || function () { openDetail(item, toBrowse); },
-      onError: function (msg) { UI.message('Playback failed', msg); }
+      onExit: back || (() => { openDetail(item, toBrowse); }),
+      onError: msg => { UI.message('Playback failed', msg); }
     });
   }
 
@@ -162,12 +162,12 @@
   function doLink() {
     UI.show('link');
     UI.debug('requesting a pin from plex.tv…');
-    Plex.linkStart().then(function (pin) {
+    Plex.linkStart().then(pin => {
       document.getElementById('link-code').textContent = pin.code;
       UI.debug('pin ' + pin.id + ' · client ' + String(Plex.state.clientId).substring(0, 8) +
                ' · code ' + pin.code);
       return Plex.linkPoll(pin.id, Date.now() + 15 * 60 * 1000, UI.debug);
-    }).then(function (token) {
+    }).then(token => {
       if (!token) {                          // pin expired, issue a fresh one
         UI.debug('pin expired after 15 min, requesting another');
         doLink();
@@ -175,7 +175,7 @@
       }
       UI.show('browse');
       start();
-    }).catch(function (e) {
+    }).catch(e => {
       UI.message('Could not reach plex.tv', e.message + '  ·  BACK to retry');
     });
   }
@@ -183,27 +183,27 @@
   function start() {
     UI.show('browse');
     /* Paint from cache before any network work — the whole point of the app. */
-    Store.get('sections').then(function (cached) {
+    Store.get('sections').then(cached => {
       if (cached && cached.length && Servers.count()) {
         Browse.loadSection(Browse.setSections(rehydrate(cached)), false);
       }
       return Plex.discover();
-    }).then(function (servers) {
-      UI.debug('servers: ' + servers.map(function (sv) { return sv.name; }).join(', '));
+    }).then(servers => {
+      UI.debug('servers: ' + servers.map(sv => sv.name).join(', '));
       /* Each server's own section list. They may not agree on what exists —
          Browse merges them by title. */
-      return Promise.all(servers.map(function (sv) {
-        return Plex.sections(sv).then(function (secs) {
+      return Promise.all(servers.map(sv => {
+        return Plex.sections(sv).then(secs => {
           return { server: sv, sections: secs };
         });
       }));
-    }).then(function (perServer) {
-      const any = perServer.filter(function (r) { return r.sections.length; });
+    }).then(perServer => {
+      const any = perServer.filter(r => r.sections.length);
       if (!any.length) {
         UI.message('No libraries', 'Neither server shares a film or show section.');
         return;
       }
-      Store.put('sections', perServer.map(function (r) {
+      Store.put('sections', perServer.map(r => {
         return { serverId: r.server.id, sections: r.sections };
       }));
       Browse.loadSection(Browse.setSections(perServer), true);
@@ -263,7 +263,7 @@
              (Config.dev ? ' · dev server' : ''));
   }
 
-  window.onerror = function (msg, url, line) {
+  window.onerror = (msg, url, line) => {
     UI.debug('JS ERROR ' + msg + ' @' + String(url).split('/').pop() + ':' + line);
     return false;
   };

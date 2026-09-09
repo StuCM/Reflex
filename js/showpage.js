@@ -41,7 +41,7 @@ var ShowPage = (function () {
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
 
     const gen = generation;
-    Shows.seasons(entry).then(function (list) {
+    Shows.seasons(entry).then(list => {
       if (gen !== generation) return;
       seasons = list;
       seasonIdx = Shows.openAt(list);
@@ -52,7 +52,7 @@ var ShowPage = (function () {
         return;
       }
       loadEpisodes();
-    }).catch(function (e) {
+    }).catch(e => {
       if (gen !== generation) return;
       UI.debug('seasons: ' + e.message);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the series list.</div>';
@@ -140,7 +140,7 @@ var ShowPage = (function () {
     episodes = [];
     epIdx = 0;
     elEpisodes.innerHTML = '<div class="sh-episode">Loading…</div>';
-    Shows.episodes(season).then(function (list) {
+    Shows.episodes(season).then(list => {
       if (gen !== generation) return;
       episodes = list;
       /* Land on the first unfinished episode: what you want is almost always
@@ -151,7 +151,7 @@ var ShowPage = (function () {
       }
       renderEpisodes();
       scheduleCheck();
-    }).catch(function (e) {
+    }).catch(e => {
       if (gen !== generation) return;
       UI.debug('episodes: ' + e.message);
       elEpisodes.innerHTML = '<div class="sh-episode">Could not read the episode list.</div>';
@@ -166,8 +166,8 @@ var ShowPage = (function () {
     let ep = episodes[epIdx];
     if (!ep || verdicts[verdictKey(ep)]) return;
     const gen = generation;
-    checkTimer = setTimeout(function () {
-      Guard.check(ep, 0).then(function (v) {
+    checkTimer = setTimeout(() => {
+      Guard.check(ep, 0).then(v => {
         if (gen !== generation) return;
         verdicts[verdictKey(ep)] = v;
         renderEpisodes();
