@@ -194,6 +194,13 @@
    not so much that it reads as a second row competing for attention. */
 #viewport { position: absolute; top: 500px; left: 0; width: 1920px; height: 580px; overflow: hidden; }
 
+/* Everything the rail positions carries its offset as --tx/--ty. JavaScript
+   sets two numbers; the transform, its timing and its easing stay here. */
+#rows, .row, .tile {
+  -webkit-transform: translate(var(--tx, 0px), var(--ty, 0px));
+  transform: translate(var(--tx, 0px), var(--ty, 0px));
+}
+
 #rows {
   position: absolute; top: 0; left: 0; width: 100%;
   -webkit-transition: -webkit-transform var(--t-move) var(--ease);
@@ -215,10 +222,8 @@
    happened at once. */
 .strip {
   position: absolute; top: 44px; left: var(--sp-edge); width: 100%; height: 362px;
-  /* --slide is how far along the row is scrolled. JavaScript sets the number;
-     the transform and its timing stay here. */
-  -webkit-transform: translate(var(--slide, 0px), 0);
-  transform: translate(var(--slide, 0px), 0);
+  -webkit-transform: translate(var(--tx, 0px), var(--ty, 0px));
+  transform: translate(var(--tx, 0px), var(--ty, 0px));
   -webkit-transition: -webkit-transform var(--t-move) var(--ease);
   transition: transform var(--t-move) var(--ease);
   will-change: transform;
