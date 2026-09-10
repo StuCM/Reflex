@@ -56,8 +56,17 @@ module.exports = function load(files) {
     },
   };
   vm.createContext(ctx);
+  /* The modules end with `window.X = X` while the migration runs, so the
+     sandbox needs a window — and pointing it at the context itself is what a
+     browser does, so a bare `Media` resolves the same way here. */
+  ctx.window = ctx;
   files.forEach(function (f) {
-    vm.runInContext(fs.readFileSync(locate(f), 'utf8'), ctx, { filename: f + '.js' });
+    /* `import.meta` is a syntax error in a script, and these are run as
+       scripts. Vite replaces it at build time; here there is nothing to
+       replace it with, and the tests do not read the keys. Goes away with the
+       loader itself, once every module under test is a real module. */
+    const source = fs.readFileSync(locate(f), 'utf8').replace(/import\.meta\.env/g, '({})');
+    vm.runInContext(source, ctx, { filename: f + '.js' });
   });
   return ctx;
 };

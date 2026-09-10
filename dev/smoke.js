@@ -52,6 +52,10 @@ const AREAS = [
 const args = process.argv.slice(2);
 const HEADED = args.indexOf('--head') >= 0;
 const SHOTS = args.indexOf('--shot') >= 0;
+/* Run against `vite build` output rather than the source. What ships is a
+   single classic script; what dev serves is a module graph, and only this
+   proves the two behave the same. */
+const BUILT = args.indexOf('--built') >= 0;
 
 const named = args.filter(function (a) {
   return a.charAt(0) !== '-';
@@ -278,6 +282,7 @@ function run() {
     pinPolls: 1,
     proxy: false,
     quiet: true,
+    built: BUILT,
   });
   let browser, port;
 

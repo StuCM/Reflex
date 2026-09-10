@@ -481,6 +481,11 @@ module.exports = function (h) {
 
     .then(function () {
       return step('the Mantis palette is what the stylesheet is serving', function () {
+        const ms = function (value) {
+          const n = parseFloat(value);
+          return /ms\s*$/.test(value) ? n : n * 1000;
+        };
+
         /* Cheap, and it catches a half-applied swap: the accent is the one
            colour every focused thing on every screen is drawn in. */
         return page
@@ -501,8 +506,12 @@ module.exports = function (h) {
             if (st.ac !== '#9d93d6') throw new Error('--ac is ' + st.ac + ', not the violet');
             if (st.bg !== '#161826')
               throw new Error('--bg is ' + st.bg + ', not the Mantis ground');
-            if (st.move !== '340ms') throw new Error('--t-move is ' + st.move);
-            if (st.fade !== '620ms') throw new Error('--t-fade is ' + st.fade);
+            /* A custom property is handed back as authored, and the build
+               minifies `340ms` to `.34s` — the same duration, spelled shorter.
+               Assert the duration, not the spelling, or this passes in dev and
+               fails against the artifact that ships. */
+            if (ms(st.move) !== 340) throw new Error('--t-move is ' + st.move);
+            if (ms(st.fade) !== 620) throw new Error('--t-fade is ' + st.fade);
             /* The backdrop crossfades gently; the UI's own motion must not be
              slowed with it. */
             if (st.heroFor !== '0.62s') throw new Error('a hero layer fades over ' + st.heroFor);

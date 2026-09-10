@@ -22,6 +22,7 @@ const mockTmdb = require('./mock-tmdb');
 const mockYoutube = require('./mock-youtube');
 
 const ROOT = path.join(__dirname, '..');
+const BUILD = path.join(ROOT, 'build');
 
 /* The video the mock serves for every item, if you have given it one. */
 function fixture() {
@@ -44,6 +45,7 @@ function parseArgs(argv) {
     pinPolls: 2,
     proxy: false,
     quiet: false,
+    built: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -52,6 +54,7 @@ function parseArgs(argv) {
     else if (a === '--latency') out.latency = Number(argv[++i]);
     else if (a === '--pin-polls') out.pinPolls = Number(argv[++i]);
     else if (a === '--proxy') out.proxy = true;
+    else if (a === '--built') out.built = true;
     else if (a === '--quiet') out.quiet = true;
     else if (a === '--help' || a === '-h') {
       usage();
@@ -73,6 +76,27 @@ function usage() {
       .replace(/^\/\* ?/, ''),
   );
 }
+
+/* Vite serves the app's own modules and nothing else: the mock keeps every
+   route it owns, and index.html stays with sendIndex below so the injected
+   REFLEX_CONFIG survives. Created lazily so start() stays synchronous — the
+   smoke suite's server lifecycle is not worth restructuring for this. */
+let vitePromise = null;
+function vite() {
+  if (!vitePromise) {
+    vitePromise = import('vite').then(function (mod) {
+      return mod.createServer({
+        root: ROOT,
+        appType: 'custom',
+        server: { middlewareMode: true },
+        logLevel: 'warn',
+      });
+    });
+  }
+  return vitePromise;
+}
+
+const VITE_OWNS = /^\/(src\/|@vite|@id\/|@fs\/|node_modules\/)/;
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -191,6 +215,32 @@ function start(opts) {
     /* The TV never asks for this; the browser always does. */
     if (pathname === '/favicon.ico') {
       sendFile(res, path.join(ROOT, 'icon.png'));
+      return;
+    }
+
+    /* --built serves what `vite build` produced instead of the source, so the
+       suite can be run against the artifact that actually ships. Everything a
+       server answers is unchanged; only the app's own files move. */
+    if (opts.built) {
+      const rel = pathname === '/' ? '/index.html' : pathname;
+      const file = path.join(BUILD, path.normalize(rel).replace(/^(\.\.[/\\])+/, ''));
+      if (file.indexOf(BUILD) !== 0 || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('not found in build/ — run `npm run build` first');
+        return;
+      }
+      if (rel === '/index.html') sendIndex(res, file, opts);
+      else sendFile(res, file);
+      return;
+    }
+
+    if (VITE_OWNS.test(pathname)) {
+      vite().then(function (dev) {
+        dev.middlewares(req, res, function () {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('vite: no route for ' + pathname);
+        });
+      });
       return;
     }
 
