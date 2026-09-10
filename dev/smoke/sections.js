@@ -534,7 +534,7 @@ module.exports = function (h) {
           return page.evaluate(function () {
             var lit = document.querySelector('#hero-art .hero-layer.on');
             return {
-              hero: lit ? lit.style.backgroundImage : '',
+              hero: lit ? getComputedStyle(lit).backgroundImage : '',
               layers: document.querySelectorAll('#hero-art .hero-layer').length,
               title: document.getElementById('mh-title').textContent.trim(),
             };
