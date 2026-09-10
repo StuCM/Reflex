@@ -258,7 +258,7 @@ function playChecked(
        guard rather than any of them getting a path of its own. */
     onSwitch: (change) => {
       guard
-        .check(metadata, change.mediaIndex, change.audioId, {
+        .check(metadata, change.mediaIndex, change.audioId || undefined, {
           maxBitrate: change.maxBitrate,
           forceStream: change.forceStream,
         })

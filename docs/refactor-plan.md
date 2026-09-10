@@ -4,7 +4,7 @@ Decided 2026-09-10, in conversation. This is the spec for section 0 of
 `docs/backlog.md`. Features are frozen until it is done.
 
 The layering landed at 0.0.2 — `js/` became six directories with the
-boundaries checked by `tools/check-es5.js`. That check is a regex scan its own
+boundaries checked by `tools/check-layers.js`. That check is a regex scan its own
 header calls "not proof", and the naming conventions were enforced by nothing
 at all. This replaces both with real tools.
 
@@ -242,7 +242,7 @@ how the screen is drawn. As of step 6 only `player`'s 5 remain.
 Chrome 86, `append` is Chrome 54, and 34 uses of the two landed across five
 converted files before anything noticed — because nothing *could*. `lib:
 ES2015` governs ES built-ins; TypeScript's `DOM` lib is one unversioned blob
-that types every modern API as present, and `tools/check-es5.js` only scans
+that types every modern API as present, and `tools/check-layers.js` only scans
 `js/`. `src/view/dom.ts` now holds `div`, `span`, `fill`, `put`, `must` and
 `svg` over `appendChild`, and `no-restricted-properties` in
 `eslint.config.mjs` keeps the banned two out of the rest of `src/`.
@@ -310,7 +310,12 @@ checks on it.
 | nothing | `max-lines`, `max-depth`, `complexity` | size stops being a judgement call |
 | nothing | `unicorn/name-replacements` | the thing that prompted all this |
 
-`tools/check-es5.js` is deleted once every row above is green.
+As of step 6 every row above is green but one: **the layer rules still have no
+import-lint replacement**, so `tools/check-es5.js` was not deleted — it was cut
+down to those rules alone, repointed at `src/`, and renamed
+`tools/check-layers.js`. It is 142 lines and still a regex scan, catching what
+a file reaches *for* rather than what it imports. Replacing it with
+`no-restricted-imports` per layer is the last job of step 7.
 
 ### The verified oxlint config
 
@@ -429,7 +434,7 @@ unconverted files keep finding their globals. It is deleted last.
    September spike (`RailTileElement` in `src/view/rail.ts` is the pattern).
 6. **`screen/`** — four files, the largest. Splitting them is a separate task,
    not a precondition.
-7. **Delete the bridge**, delete `tools/check-es5.js`, rewrite CLAUDE.md's
+7. **Delete the bridge**, turn `tools/check-layers.js` into import lint, rewrite CLAUDE.md's
    rules sections against the new names.
 
 Green smoke at every step. Nothing sits unreviewable — the lesson of PR #1,

@@ -27,7 +27,7 @@ Not available, do not use:
 - **`Array.prototype.sort` is not stable** (V8 got a stable sort in Chrome 70).
   Above ten elements equal items reorder arbitrarily. Where the original order
   matters, sort the *indices* and tie-break on position — `bySeason` in
-  `js/api/youtube.js` is the pattern. Audited 2026-09-08: every other sort in `js/`
+  `src/api/youtube.ts` is the pattern. Audited 2026-09-08: every other sort in `src/`
   keys on something unique (season index, chapter start, cue start, server
   name) or is a small cosmetic ordering, so nothing else needs changing.
 - Animate only `transform` and `opacity`. No shadow, filter, or blur
@@ -40,7 +40,7 @@ Available, and preferred — Chromium 53 is ES2015 apart from the above:
   anywhere but column 0, where a module's own binding lives. That one has to
   be `var`, because only `var` puts a property on the global object for
   `index.html`'s next script tag and for `test/load.js`.
-- Arrow functions (Chrome 45), and concise bodies. Nothing in `js/` uses
+- Arrow functions (Chrome 45), and concise bodies. Nothing in `src/` uses
   `this` or `arguments`, so there is no binding to preserve.
 - Template literals (Chrome 41). Prefer them to `+` chains once there is more
   than one thing being joined.
@@ -62,7 +62,7 @@ Reflex on a B8, so the admin's dashboard shows what it really is.
 Consequence: the server may now apply its Chrome profile and offer direct play
 of something Chrome decodes and this panel does not. `Media.canDecode` refuses
 anything outside H.264/HEVC in MKV/MP4/MPEG-TS before the decision call, and it
-is unit tested. Widen it only alongside `PROFILE` in `js/api/plex.js`, and only
+is unit tested. Widen it only alongside `PROFILE` in `src/api/plex/`, and only
 after `probe.py` says the panel really manages it.
 
 With that fixed, 4K HEVC direct plays on these servers.
@@ -87,13 +87,13 @@ else's two remote servers, connecting directly (not via relay).
   someone else's hardware.
 - Codec support is the panel's, but **Plex cannot see the panel** — it obeys
   what the client declares in `X-Plex-Client-Profile-Extra` and transcodes
-  everything else. `js/core/panel.js` builds that declaration by asking the panel
+  everything else. `src/core/panel.ts` builds that declaration by asking the panel
   with `canPlayType`, so widening is a matter of evidence rather than editing
   a string. Only `"probably"` is acted on: `"maybe"` is what a TV says when it
   has not been asked precisely enough, and acting on it is how you get a black
   screen. The `panel` chip shows what was asked and what came back.
 - What the panel can *decode* and what survives *HDMI ARC* are different
-  questions. `js/core/panel.js` answers the first, `js/rules/media.js` the second, and the
+  questions. `src/core/panel.ts` answers the first, `src/rules/` the second, and the
   audio rules below are not affected by any of this.
 - Sync library data incrementally and infrequently. Do not full-crawl a
   server we don't own.
@@ -170,99 +170,103 @@ question you cannot act on until OK.
 
 ## Layout
 
-No bundler. Each file is one global, and `index.html` loads them in dependency
-order — that script list *is* the dependency graph. `npm run check` fails if a
-file in `js/` is missing from it, or is loaded from the wrong layer.
+One entry, one bundle. `index.html` loads `src/main.ts` and nothing else, and
+the import graph *is* the dependency order — a file nothing imports is not in
+the bundle, which is a better manifest check than the list this used to be.
+Vite rewrites the module tag to a classic deferred script, because Chromium 53
+has no module scripts (Chrome 61).
 
-`js/` is layered, and the layering is enforced rather than suggested: the same
-check fails on a request opened outside `js/api/`, on `Store` addressed outside
-`js/data/`, and on the DOM, a request or the cache reached for from
-`js/rules/`.
+`src/` is layered, and the layering is enforced rather than suggested:
+`npm run check` fails on a request opened outside `src/api/`, on IndexedDB
+addressed outside `src/data/`, and on the DOM, a request or the cache reached
+for from `src/rules/`. It is still a regex scan — it catches what a file
+reaches *for*, not what it imports — and becomes `no-restricted-imports` in
+step 7.
 
-`js/core/` — what this build is, and what this device is.
+`src/core/` — what this build is, and what this device is.
 
-- `js/core/config.js` — the few settings that differ between the TV and a
+- `src/core/config.ts` — the few settings that differ between the TV and a
   laptop: plex.tv base URL, TMDB key, debug beacon. Nothing else may hardcode
   these.
-- `js/core/panel.js` — what this panel claims it can play, and the client
+- `src/core/panel.ts` — what this panel claims it can play, and the client
   profile built from it.
-- `js/core/ui.js` — which view is showing, toast, the debug line, keycodes.
+- `src/core/ui.ts` — which view is showing, toast, the debug line, keycodes.
 
-`js/api/` — the only files that make a request.
+`src/api/` — the only files that make a request.
 
-- `js/api/http.js` — one XHR, for every client that talks to something. The
+- `src/api/http.ts` — one XHR, for every client that talks to something. The
   three clients differ in the headers they send, the name an error uses, and
   whether a non-JSON body is an answer. Those are its options.
-- `js/api/plex.js` — auth (PIN flow), server discovery, library paging, poster
+- `src/api/plex.ts` — auth (PIN flow), server discovery, library paging, poster
   URLs, the decision call, timeline reporting. Every call takes a server.
-- `js/api/tmdb.js` — TMDB client for the curated rows. Inert without a key.
-- `js/api/youtube.js` — the recap channel, searched on a keypress and never on
+- `src/api/tmdb.ts` — TMDB client for the curated rows. Inert without a key.
+- `src/api/youtube.ts` — the recap channel, searched on a keypress and never on
   a page opening. Inert without a key.
 
-`js/data/` — what we hold: fetched, merged, cached.
+`src/data/` — what we hold: fetched, merged, cached.
 
-- `js/data/store.js` — IndexedDB cache. The rail paints from cache before any
+- `src/data/store.ts` — IndexedDB cache. The rail paints from cache before any
   network call.
-- `js/data/cache.js` — every key the cache holds and how long a hit lasts:
+- `src/data/cache.ts` — every key the cache holds and how long a hit lasts:
   kept until replaced, daily on a clock, or a hit kept while a miss is asked
-  again. Nothing outside `js/data/` addresses `Store` directly.
-- `js/data/servers.js` — the servers we can reach, which one an item came
+  again. Nothing outside `src/data/` addresses `Store` directly.
+- `src/data/servers.ts` — the servers we can reach, which one an item came
   from, and which one is preferred.
-- `js/data/merge.js` — one entry per film across servers: folding fetched
+- `src/data/merge.ts` — one entry per film across servers: folding fetched
   lists, and the streaming merge behind the All row.
-- `js/data/meta.js` — full metadata for a copy, debounced and cached per
+- `src/data/meta.ts` — full metadata for a copy, debounced and cached per
   server.
-- `js/data/art.js` — a title's picture and its facts from TMDB, queued, cached
+- `src/data/art.ts` — a title's picture and its facts from TMDB, queued, cached
   and published when they land.
-- `js/data/shows.js` — seasons and episodes of a show, merged across servers.
-- `js/data/discovery.js` — turns a TMDB list into rows of what the servers
+- `src/data/shows.ts` — seasons and episodes of a show, merged across servers.
+- `src/data/discovery.ts` — turns a TMDB list into rows of what the servers
   have.
-- `js/data/devices.js` — whose viewing is this; filters Continue watching.
-- `js/data/guard.js` — will this copy play, and at what cost to someone else's
+- `src/data/devices.ts` — whose viewing is this; filters Continue watching.
+- `src/data/guard.ts` — will this copy play, and at what cost to someone else's
   server. Everything that reaches Player goes through it first.
 
-`js/rules/` — pure. No DOM, no request, no cache, which is what makes it the
+`src/rules/` — pure. No DOM, no request, no cache, which is what makes it the
 half worth unit testing.
 
-- `js/rules/media.js` — the rules, as pure functions: audio and subtitle track
+- `src/rules/media.ts` — the rules, as pure functions: audio and subtitle track
   selection, the UHD guard, certificate ages, markers, chapters, quality caps,
   film identity. No network, no DOM. These are the parts that must not be
   wrong, so they are the parts that are unit tested.
-- `js/rules/subs.js` — SRT and WebVTT in, cues out, and what should be on
+- `src/rules/subs.ts` — SRT and WebVTT in, cues out, and what should be on
   screen at time t. Pure, and unit tested. Subtitles are drawn over the video
   rather than burned into it, which is what makes them free — see the player,
   below.
-- `js/rules/rows.js` — the row model. A 'list' row holds its items; a 'merge'
+- `src/rules/rows.ts` — the row model. A 'list' row holds its items; a 'merge'
   row is virtual over the servers' own totals and walks them as you scroll.
 
-`js/view/` — draws. Owns no state.
+`src/view/` — draws. Owns no state.
 
-- `js/view/glyphs.js` — the action icons, as inline SVG. The film page and the
+- `src/view/glyphs.ts` — the action icons, as inline SVG. The film page and the
   player draw from the one set.
-- `js/view/menu.js` — the menu shell both the detail page and the player draw
+- `src/view/menu.ts` — the menu shell both the detail page and the player draw
   with: tabs, rows, the winding transform, and an overlay that swallows every
   key. It knows nothing about playback or copies; a row carries a `value` and
   the caller decides what that means.
-- `js/view/rail.js` — draws rows from a fixed pool: 4 row elements, 12 tiles
+- `src/view/rail.ts` — draws rows from a fixed pool: 4 row elements, 12 tiles
   each, whatever the library size. Owns no state.
-- `js/view/masthead.js` — the backdrop, the title, and one line under it.
-- `js/view/sidebar.js` — the section and category list, and select mode.
+- `src/view/masthead.ts` — the backdrop, the title, and one line under it.
+- `src/view/sidebar.ts` — the section and category list, and select mode.
 
-`js/screen/` — the state, and where each key goes.
+`src/screen/` — the state, and where each key goes.
 
-- `js/screen/browse.js` — the state: sections, rows, focus, mode, paging,
+- `src/screen/browse.ts` — the state: sections, rows, focus, mode, paging,
   search.
-- `js/screen/detail.js` — the page OK opens on a film or an episode: cast,
+- `src/screen/detail.ts` — the page OK opens on a film or an episode: cast,
   ratings, extras, and an action row — Play, then Trailer, Quality, Source,
   Audio and Subtitles — where playback is actually chosen. Every choice goes
   back through `Guard.check` before it sticks, and Play's caption carries the
   verdict for the combination, so the cost is on screen before anything
   starts.
-- `js/screen/showpage.js` — a show: its series across the top, its episodes
+- `src/screen/showpage.ts` — a show: its series across the top, its episodes
   down the side, each checked in place so OK means something.
-- `js/screen/player.js` — playback and everything you can do during it: the
+- `src/screen/player.ts` — playback and everything you can do during it: the
   trackbar with its chapter ticks and marker bands, seeking, skip intro, and —
-  drawn with `js/view/menu.js`, the same shell the detail page uses — a menu
+  drawn with `src/view/menu.ts`, the same shell the detail page uses — a menu
   of audio tracks, subtitle languages, quality and chapters. What the tabs
   hold and what choosing does live here; the drawing and the d-pad do not.
   Seeks accumulate: every `currentTime` assignment on a direct-played file is
@@ -277,7 +281,7 @@ half worth unit testing.
   two things actually work:
 
   1. The panel exposes `audioTracks` and we select on it — instant, no restart,
-     no server involvement. `js/core/panel.js` reports on the `panel` chip
+     no server involvement. `src/core/panel.ts` reports on the `panel` chip
      whether this pipeline has it.
   2. Failing that, give up direct play (`directPlay=0`) so the server muxes the
      stream itself. That is a real session, and on a 4K file the guard refuses
@@ -303,7 +307,7 @@ half worth unit testing.
   a panel is two presses rather than one, which is why the colour keys still do
   it in one.
 
-- `js/app.js` — boot, and where each key goes.
+- `src/app.ts` — boot, and where each key goes.
 
 Tools:
 
@@ -335,9 +339,9 @@ user, then worker, then a deterministic gate, then review. Two rounds and a
 human decides.
 
 **Feature freeze, 2026-09-10.** No new features until section 0 of
-`docs/backlog.md` is empty. `js/` is mid-refactor: the layering landed at
-0.0.2, a bundler and then real modules follow. A feature written against the
-tree as it stands now is a feature that gets written twice. Bugs and the
+`docs/backlog.md` is empty. The migration finished at 0.3.1: `js/` is gone and
+`src/` is TypeScript modules throughout. What is left of step 7 is deleting the
+bridge and turning the layer check into import lint. Bugs and the
 refactor itself are the only work taken. If asked for a feature, say this and
 point at section 0.
 
@@ -348,7 +352,7 @@ Conventional commits, enforced by `.claude/crew/bin/commit-msg.js`:
     type(scope): summary
 
 Lowercase, imperative, 72 characters at most, no full stop. Types are the
-usual nine; scopes come from `js/` plus a short list in the config. A body is
+usual nine; scopes come from `src/` plus a short list in the config. A body is
 optional and capped at four lines.
 
 **No attribution footers.** No `Co-Authored-By`, no generated-by line. The
@@ -370,7 +374,7 @@ code. A file carrying its own design history has two copies of it, and they
 drift.
 
 One line on an export. Never restate the signature. Audited 2026-09-10: the
-tree was **22% comments** with blocks up to 20 lines, and `js/core/config.js`
+tree was **22% comments** with blocks up to 20 lines, and `src/core/config.ts`
 was 42%. The rule above was already written and nothing enforced it, so CI now
 ratchets the density per file — see `docs/refactor-plan.md`.
 
@@ -418,10 +422,8 @@ live there as *variables*: set `element.style.setProperty('--offset', …)` and
 let the stylesheet do `transform: translateX(var(--offset))`. The number comes
 from JavaScript; the design stays in CSS.
 
-`eslint.config.mjs` enforces both over `src/`. As of 2026-09-10 `js/` is down
-to `player.js` and `app.js`, holding 5 `innerHTML` assignments and 11 inline
-style writes — they go as the player converts, which is why the rule is scoped
-to `src/` rather than being a retrofit.
+`eslint.config.mjs` enforces both over `src/`. As of 0.3.1 there is no
+`innerHTML` and no inline style write left in the tree.
 
 **`replaceChildren` is Chrome 86 and `append` is Chrome 54.** Both read as
 ordinary DOM and neither is caught by anything: `tsconfig`'s `lib: ES2015`
@@ -453,11 +455,12 @@ film reaches the player's error path rather than playing.
 
 The three checks, and what each is for:
 
-- `npm run check` — scans `js/` and `css/` for anything newer than Chromium 53.
-  Desktop Chrome will happily run code the TV cannot, and this is the only
-  thing standing between that and a black screen. It is a text scan, not a
-  parser: a clean run means nothing obviously wrong, not proof.
-- `npm test` — the pure rules in `js/rules/media.js` and the row arithmetic.
+- `npm run check` — the layer rules over `src/`: no request outside `api/`, no
+  IndexedDB outside `data/`, nothing impure in `rules/`. The Chromium 53 syntax
+  scan retired with the bundler; `build.target` lowers syntax, `lib: ES2015`
+  catches the built-ins, stylelint reads browserslist for CSS, and eslint's
+  `no-restricted-properties` covers the DOM methods none of those can see.
+- `npm test` — the pure rules in `src/rules/` and the row arithmetic.
 - `npm run smoke` — drives the whole app in headless Chromium: link, browse,
   paging, kids, discovery, search, devices, the detail page, all three playback
   verdicts, and the player itself — the menu, a subtitle language fetched and
@@ -522,9 +525,9 @@ and console on the TV. Use a Chromium build close to 53; newer DevTools won't
 attach cleanly. Two things about it are worth knowing before you conclude
 anything from what you see:
 
-- **`ares-package` minifies every file in `js/`, and there is no flag to stop
-  it.** `js/rules/media.js` ships as 7.5KB of `function n(e)` from 22KB of
-  named functions and comments. The panel has never run the source in this
+- **`ares-package` minifies what it packages, and there is no flag to stop
+  it.** The rules shipped as 7.5KB of `function n(e)` from 22KB of named
+  functions and comments even before the bundler. The panel has never run the source in this
   repo, so a stack trace names nothing, and a source map cannot survive the
   pipeline — whatever you hand `ares-package`, it re-minifies. This is also why
   bundling costs nothing in debuggability: it is already at the floor.

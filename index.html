@@ -3,11 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>Reflex</title>
-<!-- No bundler here either, so the order is the cascade: the tokens and the
-     shared parts first, then one file per screen, each of which may override
-     them. screens.css is last because .msg-hint has to keep beating .dt-hint,
-     as it did when the two were one file. tools/check-es5.js fails if a file in
-     css/ is missing from this list. -->
+<!-- The order is the cascade: tokens and shared parts first, then one file per
+     screen. screens.css is last because .msg-hint has to keep beating
+     .dt-hint, as it did when the two were one file. -->
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/browse.css">
 <link rel="stylesheet" href="css/detail.css">
@@ -197,9 +195,8 @@
 <div id="toast" class="hidden"></div>
 <div id="debug"></div>
 
-<!-- No bundler, so load order is the dependency graph: settings, then the
-     services, then the pieces of screen, then the app that wires them up.
-     tools/check-es5.js fails if a file in js/ is missing from this list. -->
+<!-- One entry. The import graph is the dependency order now, and Vite rewrites
+     this tag to a classic deferred script — Chromium 53 has no module scripts. -->
 <script type="module" src="/src/main.ts"></script>
 
 </body>

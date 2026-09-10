@@ -1,12 +1,7 @@
 /* Playback, and everything you can do while it runs.
 
-   Nothing reaches this file without a verdict from data/guard, so what is left
-   is knowing where you are, getting somewhere else quickly, and changing the
-   audio, the subtitles or the quality without going back to the film page.
-
-   Audio, another version and a quality cap are each a restart, and each goes
-   back through the guard first. Subtitles are not: they are fetched as text
-   and drawn over the video, which costs one GET and no restart. */
+   Nothing reaches this file without a verdict from data/guard, which is why
+   nothing here re-checks one. */
 import { photoUrl, posterUrl } from '../api/plex/images';
 import { streamUrl, subtitles as fetchSubtitles, timeline } from '../api/plex/playback';
 import settings from '../core/config';
@@ -51,7 +46,7 @@ export interface PlaybackSwitch {
 export interface PlayOptions {
   item: PlexItem;
   server: PlexServer;
-  part: PlexPart;
+  part: PlexPart | undefined;
   url?: string | null;
   audio?: PlexStream | null;
   mediaIndex?: number;
@@ -1189,11 +1184,16 @@ export function play(options: PlayOptions): void {
   stalls = 0;
   lowest = 999;
   startedAt = Date.now();
-  const url = options.url || streamUrl(options.server, options.part);
+  /* Without this a missing part is a TypeError inside streamUrl. */
+  const url = options.url || (options.part && streamUrl(options.server, options.part));
+  if (!url) {
+    fail('This copy has no playable part.');
+    return;
+  }
   osdTitle.textContent = options.item.title || '';
   pending = null;
   if (seekTimer) clearTimeout(seekTimer);
-  currentPart = options.part;
+  currentPart = options.part || null;
   currentAudio = options.audio || null;
   mediaIndex = options.mediaIndex || 0;
   maxBitrate = options.maxBitrate || null;
