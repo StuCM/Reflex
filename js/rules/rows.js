@@ -12,7 +12,7 @@
 var Rows = (function () {
   'use strict';
 
-  const PAGE = 100;                // items per request against a server section
+  const PAGE = 100; // items per request against a server section
 
   function list(title, items) {
     return { kind: 'list', title: title, items: items, total: items.length, focus: 0 };
@@ -21,8 +21,14 @@ var Rows = (function () {
   /* parts: [{ server, key, updatedAt, filter, tag }], one per server section.
      fetch(part, offset) -> Promise({ items, total }). */
   function merged(title, parts, fetch) {
-    return { kind: 'merge', title: title || 'All films', focus: 0, total: 0,
-             parts: parts, state: Merge.stream(parts, fetch) };
+    return {
+      kind: 'merge',
+      title: title || 'All films',
+      focus: 0,
+      total: 0,
+      parts: parts,
+      state: Merge.stream(parts, fetch),
+    };
   }
 
   /* Null means "position exists but has not been walked to yet" — the tile
@@ -37,14 +43,23 @@ var Rows = (function () {
      holding a direction key does not outrun the walk. */
   const LOOKAHEAD = 24;
 
-  function needsUpTo(row) { return row.focus + LOOKAHEAD; }
+  function needsUpTo(row) {
+    return row.focus + LOOKAHEAD;
+  }
 
   function haveUpTo(row) {
     return row.kind === 'merge' ? Merge.items(row.state).length : row.total;
   }
 
-  return { PAGE: PAGE, list: list, merged: merged, itemAt: itemAt,
-           needsUpTo: needsUpTo, haveUpTo: haveUpTo, LOOKAHEAD: LOOKAHEAD };
+  return {
+    PAGE: PAGE,
+    list: list,
+    merged: merged,
+    itemAt: itemAt,
+    needsUpTo: needsUpTo,
+    haveUpTo: haveUpTo,
+    LOOKAHEAD: LOOKAHEAD,
+  };
 })();
 
-if (typeof module !== 'undefined') module.exports = Rows;   // for test/rows.test.js
+if (typeof module !== 'undefined') module.exports = Rows; // for test/rows.test.js

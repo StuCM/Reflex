@@ -24,28 +24,39 @@ const MACHINE_TOKEN = { 1: 'mock-server-token-main', 2: 'mock-server-token-backu
 const DEVICES = [
   { id: '1', name: 'Living room (B8)', platform: 'webOS' },
   { id: '2', name: 'iPhone', platform: 'iOS' },
-  { id: '3', name: 'Attic Fire TV', platform: 'Android' }
+  { id: '3', name: 'Attic Fire TV', platform: 'Android' },
 ];
 
 /* Which shows TheTVDB gave a theme tune to. Half of them, so the silent path
    is exercised rather than assumed — a show without one is normal, not a fault.
    dev/smoke/show.js picks its titles with this. */
-function hasTheme(showIndex) { return showIndex % 2 === 0; }
+function hasTheme(showIndex) {
+  return showIndex % 2 === 0;
+}
 
 /* No theme tune to hand either, so the mock makes one: a second of a quiet
    sine as a WAV, which is enough for "it is playing" to mean something. */
 const THEME_WAV = (function () {
-  const rate = 8000, samples = rate;            // one second, mono, 16-bit
+  const rate = 8000,
+    samples = rate; // one second, mono, 16-bit
   const data = Buffer.alloc(samples * 2);
   for (let i = 0; i < samples; i++) {
-    data.writeInt16LE(Math.round(6000 * Math.sin(2 * Math.PI * 220 * i / rate)), i * 2);
+    data.writeInt16LE(Math.round(6000 * Math.sin((2 * Math.PI * 220 * i) / rate)), i * 2);
   }
   const head = Buffer.alloc(44);
-  head.write('RIFF', 0); head.writeUInt32LE(36 + data.length, 4); head.write('WAVE', 8);
-  head.write('fmt ', 12); head.writeUInt32LE(16, 16); head.writeUInt16LE(1, 20);
-  head.writeUInt16LE(1, 22); head.writeUInt32LE(rate, 24); head.writeUInt32LE(rate * 2, 28);
-  head.writeUInt16LE(2, 32); head.writeUInt16LE(16, 34);
-  head.write('data', 36); head.writeUInt32LE(data.length, 40);
+  head.write('RIFF', 0);
+  head.writeUInt32LE(36 + data.length, 4);
+  head.write('WAVE', 8);
+  head.write('fmt ', 12);
+  head.writeUInt32LE(16, 16);
+  head.writeUInt16LE(1, 20);
+  head.writeUInt16LE(1, 22);
+  head.writeUInt32LE(rate, 24);
+  head.writeUInt32LE(rate * 2, 28);
+  head.writeUInt16LE(2, 32);
+  head.writeUInt16LE(16, 34);
+  head.write('data', 36);
+  head.writeUInt32LE(data.length, 40);
   return Buffer.concat([head, data]);
 })();
 
@@ -70,8 +81,11 @@ function create(opts) {
     const list = srv.items['1'];
     srv.deck = [];
     srv.history = [];
-    for (let i = 0; i < list.length && srv.deck.length < 6;
-         i += Math.max(1, Math.floor(list.length / 5))) {
+    for (
+      let i = 0;
+      i < list.length && srv.deck.length < 6;
+      i += Math.max(1, Math.floor(list.length / 5))
+    ) {
       const m = JSON.parse(JSON.stringify(list[i]));
       m.viewOffset = Math.floor(m.duration * (0.1 + (i % 7) / 10));
       m.lastViewedAt = 1720000000 + i;
@@ -91,33 +105,51 @@ function create(opts) {
     });
     srv.deck.forEach(function (m, i) {
       srv.history.push({
-        ratingKey: m.ratingKey, title: m.title, type: 'movie',
+        ratingKey: m.ratingKey,
+        title: m.title,
+        type: 'movie',
         viewedAt: 1720000000 - i * 3600,
-        deviceID: Number(DEVICES[i % DEVICES.length].id), accountID: 1
+        deviceID: Number(DEVICES[i % DEVICES.length].id),
+        accountID: 1,
       });
     });
     list.slice(0, 60).forEach(function (m, i) {
       srv.history.push({
-        ratingKey: m.ratingKey, title: m.title, type: 'movie',
+        ratingKey: m.ratingKey,
+        title: m.title,
+        type: 'movie',
         viewedAt: 1719000000 - i * 3600,
-        deviceID: Number(DEVICES[i % DEVICES.length].id), accountID: 1
+        deviceID: Number(DEVICES[i % DEVICES.length].id),
+        accountID: 1,
       });
     });
-    srv.history.sort(function (a, b) { return b.viewedAt - a.viewedAt; });
+    srv.history.sort(function (a, b) {
+      return b.viewedAt - a.viewedAt;
+    });
   });
 
   /* One film part-watched on BOTH servers, so the row has an entry whose copies
      have to be cleared on each of them. The decks are otherwise built from each
      server's own list and rarely overlap. */
   (function () {
-    const main = lib.servers[0], backup = lib.servers[1];
+    const main = lib.servers[0],
+      backup = lib.servers[1];
     const held = {};
-    backup.items['1'].forEach(function (m) { held[m.guid] = true; });
-    const shared = main.items['1'].find(function (m) { return held[m.guid]; });
+    backup.items['1'].forEach(function (m) {
+      held[m.guid] = true;
+    });
+    const shared = main.items['1'].find(function (m) {
+      return held[m.guid];
+    });
     if (!shared) return;
     [main, backup].forEach(function (srv) {
-      const copy = JSON.parse(JSON.stringify(
-        srv.items['1'].find(function (m) { return m.guid === shared.guid; })));
+      const copy = JSON.parse(
+        JSON.stringify(
+          srv.items['1'].find(function (m) {
+            return m.guid === shared.guid;
+          }),
+        ),
+      );
       copy.viewOffset = Math.floor(copy.duration * 0.35);
       copy.lastViewedAt = 1720000900;
       srv.deck.unshift(copy);
@@ -137,7 +169,9 @@ function create(opts) {
 
   function container(fields) {
     const mc = { size: 0, identifier: 'com.plexapp.plugins.library' };
-    Object.keys(fields || {}).forEach(function (k) { mc[k] = fields[k]; });
+    Object.keys(fields || {}).forEach(function (k) {
+      mc[k] = fields[k];
+    });
     return { MediaContainer: mc };
   }
 
@@ -146,7 +180,7 @@ function create(opts) {
     res.writeHead(status, {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Content-Length': Buffer.byteLength(text)
+      'Content-Length': Buffer.byteLength(text),
     });
     res.end(text);
   }
@@ -158,21 +192,29 @@ function create(opts) {
     return { total: list.length, page: list.slice(start, start + size) };
   }
 
-  const TYPE = { '1': 'movie', '2': 'show', '3': 'season', '4': 'episode' };
+  const TYPE = { 1: 'movie', 2: 'show', 3: 'season', 4: 'episode' };
 
   function filtered(srv, sectionKey, q) {
     let list = srv.items[sectionKey] || [];
     /* type=1 is movies, type=2 is shows. Asking a section for the wrong type is
        a client bug, and answering nothing is how a real server would say so. */
     if (q.type && TYPE[String(q.type)]) {
-      list = list.filter(function (m) { return m.type === TYPE[String(q.type)]; });
+      list = list.filter(function (m) {
+        return m.type === TYPE[String(q.type)];
+      });
     }
     /* Only the filters the app actually sends. contentRating arrives as a
        comma-separated list, applied server side — see Plex.items. */
     if (q.contentRating) {
       const allow = {};
-      String(q.contentRating).split(',').forEach(function (r) { allow[r] = true; });
-      list = list.filter(function (m) { return m.contentRating && allow[m.contentRating]; });
+      String(q.contentRating)
+        .split(',')
+        .forEach(function (r) {
+          allow[r] = true;
+        });
+      list = list.filter(function (m) {
+        return m.contentRating && allow[m.contentRating];
+      });
     }
     return list;
   }
@@ -184,7 +226,9 @@ function create(opts) {
     delete copy._profile;
     delete copy._film;
     if (copy.Media && copy.Media[0] && copy.Media[0].Part) {
-      copy.Media[0].Part.forEach(function (p) { delete p.Stream; });
+      copy.Media[0].Part.forEach(function (p) {
+        delete p.Stream;
+      });
     }
     return copy;
   }
@@ -197,19 +241,35 @@ function create(opts) {
 
   function poster(srv, res, q) {
     const url = String(q.url || '');
-    const w = Number(q.width || 160), h = Number(q.height || 240);
+    const w = Number(q.width || 160),
+      h = Number(q.height || 240);
 
     /* Cast photos: a disc with initials, enough to lay the row out. */
     const person = url.match(/\/people\/(\d+)\/([^?]+)/);
     if (person) {
       const name = decodeURIComponent(person[2]);
-      const initials = name.split(' ').map(function (p) { return p[0]; }).join('');
+      const initials = name
+        .split(' ')
+        .map(function (p) {
+          return p[0];
+        })
+        .join('');
       const hue = (name.charCodeAt(0) * 11 + name.length * 37) % 360;
       res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
-      res.end('<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" ' +
-        'viewBox="0 0 120 120"><rect width="120" height="120" fill="hsl(' + hue + ',24%,24%)"/>' +
-        '<text x="60" y="74" text-anchor="middle" font-family="Helvetica,Arial" ' +
-        'font-size="44" fill="#d8d8de">' + escapeXml(initials) + '</text></svg>');
+      res.end(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="' +
+          w +
+          '" height="' +
+          h +
+          '" ' +
+          'viewBox="0 0 120 120"><rect width="120" height="120" fill="hsl(' +
+          hue +
+          ',24%,24%)"/>' +
+          '<text x="60" y="74" text-anchor="middle" font-family="Helvetica,Arial" ' +
+          'font-size="44" fill="#d8d8de">' +
+          escapeXml(initials) +
+          '</text></svg>',
+      );
       return;
     }
 
@@ -223,44 +283,81 @@ function create(opts) {
 
     if (art) {
       res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
-      res.end('<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" ' +
-        'viewBox="0 0 320 180"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
-        '<stop offset="0" stop-color="hsl(' + hue + ',40%,26%)"/>' +
-        '<stop offset="1" stop-color="hsl(' + ((hue + 40) % 360) + ',30%,10%)"/></linearGradient>' +
-        '</defs><rect width="320" height="180" fill="url(#g)"/></svg>');
+      res.end(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="' +
+          w +
+          '" height="' +
+          h +
+          '" ' +
+          'viewBox="0 0 320 180"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset="0" stop-color="hsl(' +
+          hue +
+          ',40%,26%)"/>' +
+          '<stop offset="1" stop-color="hsl(' +
+          ((hue + 40) % 360) +
+          ',30%,10%)"/></linearGradient>' +
+          '</defs><rect width="320" height="180" fill="url(#g)"/></svg>',
+      );
       return;
     }
 
     const title = item ? item.title : '?';
     /* An episode is identified by its number, not the year of its show. */
-    const year = item && item.type === 'episode'
-      ? 'S' + item.parentIndex + 'E' + item.index
-      : (item ? item.year : '');
+    const year =
+      item && item.type === 'episode'
+        ? 'S' + item.parentIndex + 'E' + item.index
+        : item
+          ? item.year
+          : '';
     const words = title.split(' ');
-    let lines = [], line = '';
+    let lines = [],
+      line = '';
     words.forEach(function (word) {
-      if ((line + ' ' + word).trim().length > 11) { lines.push(line.trim()); line = word; }
-      else line = (line + ' ' + word).trim();
+      if ((line + ' ' + word).trim().length > 11) {
+        lines.push(line.trim());
+        line = word;
+      } else line = (line + ' ' + word).trim();
     });
     if (line) lines.push(line);
     lines = lines.slice(0, 4);
 
-    const text = lines.map(function (l, i) {
-      return '<text x="12" y="' + (46 + i * 26) + '" font-family="Helvetica,Arial" ' +
-             'font-size="21" fill="#f4f4f6">' + escapeXml(l) + '</text>';
-    }).join('');
+    const text = lines
+      .map(function (l, i) {
+        return (
+          '<text x="12" y="' +
+          (46 + i * 26) +
+          '" font-family="Helvetica,Arial" ' +
+          'font-size="21" fill="#f4f4f6">' +
+          escapeXml(l) +
+          '</text>'
+        );
+      })
+      .join('');
 
     /* A corner flash in the server's colour, so which copy you are looking at
        is obvious in a screenshot. */
     const flash = srv.spec.index === 1 ? '#2f6f4f' : '#6f4f2f';
 
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
-    res.end('<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" ' +
-      'viewBox="0 0 160 240"><rect width="160" height="240" fill="hsl(' + hue + ',34%,26%)"/>' +
-      '<rect y="196" width="160" height="44" fill="rgba(0,0,0,0.35)"/>' + text +
-      '<rect x="140" y="0" width="20" height="20" fill="' + flash + '"/>' +
-      '<text x="12" y="224" font-family="Helvetica,Arial" font-size="18" ' +
-      'fill="rgba(255,255,255,0.6)">' + year + '</text></svg>');
+    res.end(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' +
+        w +
+        '" height="' +
+        h +
+        '" ' +
+        'viewBox="0 0 160 240"><rect width="160" height="240" fill="hsl(' +
+        hue +
+        ',34%,26%)"/>' +
+        '<rect y="196" width="160" height="44" fill="rgba(0,0,0,0.35)"/>' +
+        text +
+        '<rect x="140" y="0" width="20" height="20" fill="' +
+        flash +
+        '"/>' +
+        '<text x="12" y="224" font-family="Helvetica,Arial" font-size="18" ' +
+        'fill="rgba(255,255,255,0.6)">' +
+        year +
+        '</text></svg>',
+    );
   }
 
   /* ---------- the decision endpoint ---------- */
@@ -273,19 +370,30 @@ function create(opts) {
   function decision(srv, res, q) {
     const m = String(q.path || '').match(/\/library\/metadata\/(\d+)/);
     const item = m ? srv.byKey[m[1]] : null;
-    const extra = item ? null : (m ? library.resolveExtra(srv.byKey, m[1]) : null);
-    if (!item && !extra) { json(res, 404, container({ size: 0 })); return; }
+    const extra = item ? null : m ? library.resolveExtra(srv.byKey, m[1]) : null;
+    if (!item && !extra) {
+      json(res, 404, container({ size: 0 }));
+      return;
+    }
 
     const full = extra || lib.fullMetadata(item);
     const part = full.Media[0].Part[0];
     const streams = part.Stream;
-    const video = streams.find(function (s) { return s.streamType === 1; });
+    const video = streams.find(function (s) {
+      return s.streamType === 1;
+    });
 
     let audio = null;
     if (q.audioStreamID) {
-      audio = streams.find(function (s) { return String(s.id) === String(q.audioStreamID); }) || null;
+      audio =
+        streams.find(function (s) {
+          return String(s.id) === String(q.audioStreamID);
+        }) || null;
     }
-    if (!audio) audio = streams.find(function (s) { return s.streamType === 2 && s.selected; });
+    if (!audio)
+      audio = streams.find(function (s) {
+        return s.streamType === 2 && s.selected;
+      });
 
     let verdict = 'directplay';
     let text = '';
@@ -301,8 +409,10 @@ function create(opts) {
          question as anywhere else. TrueHD and DTS-HD MA have to be re-encoded,
          which turns a remux into a transcode and is exactly the distinction
          the guard cares about. */
-      const lossless = audio && (audio.codec === 'truehd' ||
-        (audio.codec === 'dca' && String(audio.profile || '').indexOf('ma') === 0));
+      const lossless =
+        audio &&
+        (audio.codec === 'truehd' ||
+          (audio.codec === 'dca' && String(audio.profile || '').indexOf('ma') === 0));
       verdict = lossless ? 'transcode' : 'directstream';
       text = lossless
         ? 'Conversion required. Audio: Unsupported codec (' + audio.codec + ').'
@@ -317,16 +427,27 @@ function create(opts) {
       part.Stream = audio ? [video, audio] : [video];
       part.decision = verdict;
 
-      log(srv.name + ' decision ' + full.title + ' audio=' + (audio ? audio.codec : 'none') +
-          ' directPlay=0 -> ' + verdict);
-      json(res, 200, container({
-        size: 1,
-        transcodeDecisionText: text,
-        generalDecisionText: text,
-        mdeDecisionText: text,
-        directPlayDecisionCode: 2000,
-        Metadata: [full]
-      }));
+      log(
+        srv.name +
+          ' decision ' +
+          full.title +
+          ' audio=' +
+          (audio ? audio.codec : 'none') +
+          ' directPlay=0 -> ' +
+          verdict,
+      );
+      json(
+        res,
+        200,
+        container({
+          size: 1,
+          transcodeDecisionText: text,
+          generalDecisionText: text,
+          mdeDecisionText: text,
+          directPlayDecisionCode: 2000,
+          Metadata: [full],
+        }),
+      );
       return;
     }
 
@@ -335,30 +456,50 @@ function create(opts) {
        stream rather than starting one and being killed. */
     if (Number(q.maxVideoBitrate || 0) > 0) {
       verdict = 'transcode';
-      text = 'Conversion required. Video: Bitrate exceeds the requested maximum (' +
-             q.maxVideoBitrate + ' kbps).';
+      text =
+        'Conversion required. Video: Bitrate exceeds the requested maximum (' +
+        q.maxVideoBitrate +
+        ' kbps).';
     } else if (video.codec === 'vc1' || full.Media[0].container === 'avi') {
       verdict = 'transcode';
-      text = 'Conversion required. Video: Unsupported codec (' + video.codec +
-             '). Container: Unsupported container (' + full.Media[0].container + ').';
-    } else if (audio && (audio.codec === 'truehd' ||
-               (audio.codec === 'dca' && String(audio.profile || '').indexOf('ma') === 0))) {
+      text =
+        'Conversion required. Video: Unsupported codec (' +
+        video.codec +
+        '). Container: Unsupported container (' +
+        full.Media[0].container +
+        ').';
+    } else if (
+      audio &&
+      (audio.codec === 'truehd' ||
+        (audio.codec === 'dca' && String(audio.profile || '').indexOf('ma') === 0))
+    ) {
       verdict = 'transcode';
       text = 'Conversion required. Audio: Unsupported codec (' + audio.codec + ').';
     }
 
-    log(srv.name + ' decision ' + full.title + ' audio=' + (audio ? audio.codec : 'none') +
-        ' -> ' + verdict);
+    log(
+      srv.name +
+        ' decision ' +
+        full.title +
+        ' audio=' +
+        (audio ? audio.codec : 'none') +
+        ' -> ' +
+        verdict,
+    );
 
     part.decision = verdict;
-    json(res, 200, container({
-      size: 1,
-      transcodeDecisionText: text,
-      generalDecisionText: text,
-      mdeDecisionText: text,
-      directPlayDecisionCode: verdict === 'directplay' ? 1000 : 3000,
-      Metadata: [full]
-    }));
+    json(
+      res,
+      200,
+      container({
+        size: 1,
+        transcodeDecisionText: text,
+        generalDecisionText: text,
+        mdeDecisionText: text,
+        directPlayDecisionCode: verdict === 'directplay' ? 1000 : 3000,
+        Metadata: [full],
+      }),
+    );
   }
 
   /* ---------- the stream itself ---------- */
@@ -374,8 +515,10 @@ function create(opts) {
       if (!file && fs.existsSync(path.join(dir, name))) file = path.join(dir, name);
     });
     if (!file) {
-      log('stream requested but there is no dev/fixtures/sample.* — the player ' +
-          'will show its media-error path. npm run fixture');
+      log(
+        'stream requested but there is no dev/fixtures/sample.* — the player ' +
+          'will show its media-error path. npm run fixture',
+      );
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('no dev/fixtures/sample.* — run npm run fixture');
       return;
@@ -391,7 +534,7 @@ function create(opts) {
         'Content-Type': type,
         'Content-Range': 'bytes ' + start + '-' + end + '/' + size,
         'Accept-Ranges': 'bytes',
-        'Content-Length': end - start + 1
+        'Content-Length': end - start + 1,
       });
       fs.createReadStream(file, { start: start, end: end }).pipe(res);
       return;
@@ -413,30 +556,40 @@ function create(opts) {
     const pin = pathname.match(/^\/api\/v2\/pins\/(\d+)$/);
     if (pin) {
       const p = pins[pin[1]];
-      if (!p) { json(res, 404, {}); return true; }
+      if (!p) {
+        json(res, 404, {});
+        return true;
+      }
       p.polls++;
-      json(res, 200, { id: Number(pin[1]), code: p.code,
-                       authToken: p.polls > opts.pinPolls ? TOKEN : null });
+      json(res, 200, {
+        id: Number(pin[1]),
+        code: p.code,
+        authToken: p.polls > opts.pinPolls ? TOKEN : null,
+      });
       return true;
     }
     if (pathname === '/api/v2/resources') {
-      json(res, 200, lib.servers.map(function (srv, n) {
-        const conns = [];
-        /* A dead connection first on the first server, so discovery's race is
+      json(
+        res,
+        200,
+        lib.servers.map(function (srv, n) {
+          const conns = [];
+          /* A dead connection first on the first server, so discovery's race is
            doing something. */
-        if (n === 0) conns.push({ uri: 'http://10.255.255.1:32400', local: true, relay: false });
-        conns.push({ uri: origin + srv.prefix, local: false, relay: false });
-        conns.push({ uri: 'https://relay' + n + '.example.invalid', local: false, relay: true });
-        return {
-          name: srv.name,
-          product: 'Plex Media Server',
-          clientIdentifier: srv.machineId,
-          provides: 'server',
-          owned: false,
-          accessToken: MACHINE_TOKEN[srv.spec.index],
-          connections: conns
-        };
-      }));
+          if (n === 0) conns.push({ uri: 'http://10.255.255.1:32400', local: true, relay: false });
+          conns.push({ uri: origin + srv.prefix, local: false, relay: false });
+          conns.push({ uri: 'https://relay' + n + '.example.invalid', local: false, relay: true });
+          return {
+            name: srv.name,
+            product: 'Plex Media Server',
+            clientIdentifier: srv.machineId,
+            provides: 'server',
+            owned: false,
+            accessToken: MACHINE_TOKEN[srv.spec.index],
+            connections: conns,
+          };
+        }),
+      );
       return true;
     }
     return false;
@@ -451,13 +604,23 @@ function create(opts) {
     }
 
     if (pathname === '/library/sections') {
-      json(res, 200, container({
-        size: srv.sections.length,
-        Directory: srv.sections.map(function (s) {
-          return { key: s.key, title: s.title, type: s.type, updatedAt: s.updatedAt,
-                   agent: 'tv.plex.agents.movie', scanner: 'Plex Movie' };
-        })
-      }));
+      json(
+        res,
+        200,
+        container({
+          size: srv.sections.length,
+          Directory: srv.sections.map(function (s) {
+            return {
+              key: s.key,
+              title: s.title,
+              type: s.type,
+              updatedAt: s.updatedAt,
+              agent: 'tv.plex.agents.movie',
+              scanner: 'Plex Movie',
+            };
+          }),
+        }),
+      );
       return true;
     }
 
@@ -465,21 +628,32 @@ function create(opts) {
     if (m) {
       const list = filtered(srv, m[1], q);
       const cut = slice(list, q);
-      json(res, 200, container({
-        size: cut.page.length, totalSize: cut.total,
-        offset: Number(q['X-Plex-Container-Start'] || 0),
-        Metadata: cut.page.map(stripStreams)
-      }));
+      json(
+        res,
+        200,
+        container({
+          size: cut.page.length,
+          totalSize: cut.total,
+          offset: Number(q['X-Plex-Container-Start'] || 0),
+          Metadata: cut.page.map(stripStreams),
+        }),
+      );
       return true;
     }
 
     m = pathname.match(/^\/library\/sections\/(\w+)\/contentRating$/);
     if (m) {
       const ratings = srv.contentRatings(m[1]);
-      json(res, 200, container({
-        size: ratings.length,
-        Directory: ratings.map(function (r) { return { key: r, title: r }; })
-      }));
+      json(
+        res,
+        200,
+        container({
+          size: ratings.length,
+          Directory: ratings.map(function (r) {
+            return { key: r, title: r };
+          }),
+        }),
+      );
       return true;
     }
 
@@ -487,22 +661,41 @@ function create(opts) {
     if (m) {
       const list = srv.items[m[1]] || [];
       const kind = list.length ? list[0].type : 'movie';
-      const byAdded = list.slice().sort(function (a, b) { return b.addedAt - a.addedAt; });
-      const byYear = list.slice().sort(function (a, b) { return b.year - a.year; });
-      json(res, 200, container({
-        size: 4,
-        Hub: [
-          { title: 'Recently Added', hubIdentifier: 'recentlyAdded', type: kind,
-            Metadata: byAdded.slice(0, 20).map(stripStreams) },
-          { title: kind === 'show' ? 'Recently Aired' : 'Recently Released',
-            hubIdentifier: 'newest', type: kind,
-            Metadata: byYear.slice(0, 20).map(stripStreams) },
-          { title: 'Top Rated', hubIdentifier: 'topRated', type: kind,
-            Metadata: list.slice(10, 30).map(stripStreams) },
-          /* A hub of a type the app cannot show, to prove it skips it. */
-          { title: 'Directors', hubIdentifier: 'director', type: 'director', Metadata: [] }
-        ]
-      }));
+      const byAdded = list.slice().sort(function (a, b) {
+        return b.addedAt - a.addedAt;
+      });
+      const byYear = list.slice().sort(function (a, b) {
+        return b.year - a.year;
+      });
+      json(
+        res,
+        200,
+        container({
+          size: 4,
+          Hub: [
+            {
+              title: 'Recently Added',
+              hubIdentifier: 'recentlyAdded',
+              type: kind,
+              Metadata: byAdded.slice(0, 20).map(stripStreams),
+            },
+            {
+              title: kind === 'show' ? 'Recently Aired' : 'Recently Released',
+              hubIdentifier: 'newest',
+              type: kind,
+              Metadata: byYear.slice(0, 20).map(stripStreams),
+            },
+            {
+              title: 'Top Rated',
+              hubIdentifier: 'topRated',
+              type: kind,
+              Metadata: list.slice(10, 30).map(stripStreams),
+            },
+            /* A hub of a type the app cannot show, to prove it skips it. */
+            { title: 'Directors', hubIdentifier: 'director', type: 'director', Metadata: [] },
+          ],
+        }),
+      );
       return true;
     }
 
@@ -517,20 +710,31 @@ function create(opts) {
     if (pathname === '/actions/removeFromContinueWatching' && req.method === 'PUT') {
       if (srv.spec.index !== 1) {
         log(srv.name + ' has no removeFromContinueWatching — 404');
-        res.writeHead(404, { 'Content-Type': 'text/plain',
-                             'Access-Control-Allow-Origin': '*' });
+        res.writeHead(404, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
         res.end('not found');
         return true;
       }
-      log(srv.name + ' hid ' + q.ratingKey + ' from the deck (' +
-          dropFromDeck(srv, String(q.ratingKey)) + ' gone)');
+      log(
+        srv.name +
+          ' hid ' +
+          q.ratingKey +
+          ' from the deck (' +
+          dropFromDeck(srv, String(q.ratingKey)) +
+          ' gone)',
+      );
       json(res, 200, container({ size: 0 }));
       return true;
     }
 
     if (pathname === '/:/scrobble' && req.method === 'PUT') {
-      log(srv.name + ' scrobbled ' + q.key + ' (' +
-          dropFromDeck(srv, String(q.key)) + ' off the deck)');
+      log(
+        srv.name +
+          ' scrobbled ' +
+          q.key +
+          ' (' +
+          dropFromDeck(srv, String(q.key)) +
+          ' off the deck)',
+      );
       json(res, 200, container({ size: 0 }));
       return true;
     }
@@ -539,35 +743,54 @@ function create(opts) {
       const needle = String(q.query || '').toLowerCase();
       const limit = Number(q.limit || 40);
       function match(list) {
-        return list.filter(function (item) {
-          return item.title.toLowerCase().indexOf(needle) >= 0;
-        }).slice(0, limit).map(stripStreams);
+        return list
+          .filter(function (item) {
+            return item.title.toLowerCase().indexOf(needle) >= 0;
+          })
+          .slice(0, limit)
+          .map(stripStreams);
       }
-      json(res, 200, container({
-        size: 3,
-        Hub: [
-          { title: 'Movies', type: 'movie', Metadata: match(srv.items['1']) },
-          { title: 'Shows', type: 'show', Metadata: match(srv.items['3']) },
-          { title: 'People', type: 'actor', Metadata: [] }
-        ]
-      }));
+      json(
+        res,
+        200,
+        container({
+          size: 3,
+          Hub: [
+            { title: 'Movies', type: 'movie', Metadata: match(srv.items['1']) },
+            { title: 'Shows', type: 'show', Metadata: match(srv.items['3']) },
+            { title: 'People', type: 'actor', Metadata: [] },
+          ],
+        }),
+      );
       return true;
     }
 
     if (pathname === '/status/sessions/history/all') {
       const cut = slice(srv.history, q);
-      json(res, 200, container({ size: cut.page.length, totalSize: cut.total, Metadata: cut.page }));
+      json(
+        res,
+        200,
+        container({ size: cut.page.length, totalSize: cut.total, Metadata: cut.page }),
+      );
       return true;
     }
 
     if (pathname === '/devices') {
-      json(res, 200, container({
-        size: DEVICES.length,
-        Device: DEVICES.map(function (d) {
-          return { id: Number(d.id), name: d.name, platform: d.platform,
-                   clientIdentifier: 'client-' + d.id };
-        })
-      }));
+      json(
+        res,
+        200,
+        container({
+          size: DEVICES.length,
+          Device: DEVICES.map(function (d) {
+            return {
+              id: Number(d.id),
+              name: d.name,
+              platform: d.platform,
+              clientIdentifier: 'client-' + d.id,
+            };
+          }),
+        }),
+      );
       return true;
     }
 
@@ -584,17 +807,24 @@ function create(opts) {
     if (m) {
       const parent = srv.byKey[m[1]];
       const kids = srv.children[m[1]] || [];
-      if (!parent) { json(res, 404, container({ size: 0 })); return true; }
+      if (!parent) {
+        json(res, 404, container({ size: 0 }));
+        return true;
+      }
       const cut = slice(kids, q);
-      json(res, 200, container({
-        size: cut.page.length,
-        totalSize: cut.total,
-        title1: parent.type === 'show' ? parent.title : parent.parentTitle,
-        title2: parent.type === 'show' ? '' : parent.title,
-        parentTitle: parent.title,
-        key: parent.ratingKey,
-        Metadata: cut.page.map(stripStreams)
-      }));
+      json(
+        res,
+        200,
+        container({
+          size: cut.page.length,
+          totalSize: cut.total,
+          title1: parent.type === 'show' ? parent.title : parent.parentTitle,
+          title2: parent.type === 'show' ? '' : parent.title,
+          parentTitle: parent.title,
+          key: parent.ratingKey,
+          Metadata: cut.page.map(stripStreams),
+        }),
+      );
       return true;
     }
 
@@ -603,8 +833,15 @@ function create(opts) {
     if (m) {
       const eps = srv.episodesByShow[m[1]] || [];
       const cut = slice(eps, q);
-      json(res, 200, container({ size: cut.page.length, totalSize: cut.total,
-                                 Metadata: cut.page.map(stripStreams) }));
+      json(
+        res,
+        200,
+        container({
+          size: cut.page.length,
+          totalSize: cut.total,
+          Metadata: cut.page.map(stripStreams),
+        }),
+      );
       return true;
     }
 
@@ -615,11 +852,16 @@ function create(opts) {
         /* Extras are addressable in their own right, and that is how the app
            gets their streams. */
         const extra = library.resolveExtra(srv.byKey, m[1]);
-        if (extra) { json(res, 200, container({ size: 1, Metadata: [extra] })); return true; }
+        if (extra) {
+          json(res, 200, container({ size: 1, Metadata: [extra] }));
+          return true;
+        }
         json(res, 404, container({ size: 0 }));
         return true;
       }
-      const deckHit = srv.deck.find(function (d) { return d.ratingKey === item.ratingKey; });
+      const deckHit = srv.deck.find(function (d) {
+        return d.ratingKey === item.ratingKey;
+      });
       const full = lib.fullMetadata(item);
       if (deckHit) full.viewOffset = deckHit.viewOffset;
       json(res, 200, container({ size: 1, Metadata: [full] }));
@@ -631,9 +873,11 @@ function create(opts) {
     m = pathname.match(/^\/library\/metadata\/(\d+)\/theme\/\d+$/);
     if (m) {
       log(srv.name + ' theme for ' + m[1] + ' fetched');
-      res.writeHead(200, { 'Content-Type': 'audio/wav',
-                           'Access-Control-Allow-Origin': '*',
-                           'Content-Length': THEME_WAV.length });
+      res.writeHead(200, {
+        'Content-Type': 'audio/wav',
+        'Access-Control-Allow-Origin': '*',
+        'Content-Length': THEME_WAV.length,
+      });
       res.end(THEME_WAV);
       return true;
     }
@@ -647,22 +891,32 @@ function create(opts) {
       const srt = library.subtitleFile(m[1]);
       if (!srt) {
         log(srv.name + ' subtitle ' + m[1] + ' is an image track — refused');
-        res.writeHead(415, { 'Content-Type': 'text/plain',
-                             'Access-Control-Allow-Origin': '*' });
+        res.writeHead(415, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
         res.end('image subtitles cannot be served as text');
         return true;
       }
       log(srv.name + ' subtitle ' + m[1] + ' fetched');
-      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8',
-                           'Access-Control-Allow-Origin': '*',
-                           'Content-Length': Buffer.byteLength(srt) });
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+        'Content-Length': Buffer.byteLength(srt),
+      });
       res.end(srt);
       return true;
     }
 
-    if (pathname === '/photo/:/transcode') { poster(srv, res, q); return true; }
-    if (pathname === '/video/:/transcode/universal/decision') { decision(srv, res, q); return true; }
-    if (pathname.indexOf('/library/parts/') === 0) { streamFile(req, res); return true; }
+    if (pathname === '/photo/:/transcode') {
+      poster(srv, res, q);
+      return true;
+    }
+    if (pathname === '/video/:/transcode/universal/decision') {
+      decision(srv, res, q);
+      return true;
+    }
+    if (pathname.indexOf('/library/parts/') === 0) {
+      streamFile(req, res);
+      return true;
+    }
 
     /* A real server answers this with an HLS playlist, which the panel plays
        and a desktop browser does not — so the harness serves the same fixture
@@ -681,8 +935,7 @@ function create(opts) {
     }
 
     if (pathname === '/:/timeline') {
-      log(srv.name + ' timeline ' + q.state + ' ' +
-          Math.round(Number(q.time || 0) / 1000) + 's');
+      log(srv.name + ' timeline ' + q.state + ' ' + Math.round(Number(q.time || 0) / 1000) + 's');
       json(res, 200, container({ size: 0 }));
       return true;
     }
@@ -709,7 +962,7 @@ function create(opts) {
         }
       }
       return false;
-    }
+    },
   };
 }
 

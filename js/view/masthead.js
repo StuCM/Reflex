@@ -15,12 +15,11 @@ var Masthead = (function () {
   const elCast = document.getElementById('mh-cast');
   /* The backdrop is two stacked layers; the one carrying .on is the one you see,
      and a new picture is written into the other and faded up over it. */
-  const artLayers = [document.getElementById('hero-art-a'),
-                   document.getElementById('hero-art-b')];
+  const artLayers = [document.getElementById('hero-art-a'), document.getElementById('hero-art-b')];
   let shown = 0;
   /* Long enough that sweeping a row never starts a full-screen image, short
      enough that a deliberate step still feels answered. */
-  const HOLD = 420;                // ms of stillness before asking for a backdrop
+  const HOLD = 420; // ms of stillness before asking for a backdrop
   let artTimer = null;
   let artWant = null;
   let lastArt = '';
@@ -69,7 +68,7 @@ var Masthead = (function () {
   function paintFacts(item) {
     const got = Art.factsFor(item);
     elDesc.textContent = (got && got.overview) || item.summary || '';
-    elCast.textContent = (got && got.cast.length) ? got.cast.join('  \u00b7  ') : '';
+    elCast.textContent = got && got.cast.length ? got.cast.join('  \u00b7  ') : '';
   }
 
   function render(row, item, hasRows) {

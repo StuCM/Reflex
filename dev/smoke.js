@@ -35,15 +35,30 @@ const FILMS = 400;
 
 /* The order they run in, which is also the order they ran in as one file:
    several areas depend on the app being left where the one before it left it. */
-const AREAS = ['link', 'browse', 'show', 'recaps', 'sections', 'discovery',
-               'search', 'devices', 'detail', 'player', 'deck'];
+const AREAS = [
+  'link',
+  'browse',
+  'show',
+  'recaps',
+  'sections',
+  'discovery',
+  'search',
+  'devices',
+  'detail',
+  'player',
+  'deck',
+];
 
 const args = process.argv.slice(2);
 const HEADED = args.indexOf('--head') >= 0;
 const SHOTS = args.indexOf('--shot') >= 0;
 
-const named = args.filter(function (a) { return a.charAt(0) !== '-'; });
-const unknown = named.filter(function (a) { return AREAS.indexOf(a) < 0; });
+const named = args.filter(function (a) {
+  return a.charAt(0) !== '-';
+});
+const unknown = named.filter(function (a) {
+  return AREAS.indexOf(a) < 0;
+});
 if (unknown.length) {
   console.log('\n  no such area: ' + unknown.join(', '));
   console.log('  areas: ' + AREAS.join(' ') + '\n');
@@ -52,7 +67,9 @@ if (unknown.length) {
 /* Named or not, they run in AREAS order — the suite is the same suite however
    it was asked for. */
 const RUNNING = named.length
-  ? AREAS.filter(function (a) { return named.indexOf(a) >= 0; })
+  ? AREAS.filter(function (a) {
+      return named.indexOf(a) >= 0;
+    })
   : AREAS;
 
 let chromium;
@@ -60,9 +77,9 @@ try {
   chromium = require('playwright').chromium;
 } catch (e) {
   try {
-    chromium = require(path.join(
-      require('child_process').execSync('npm root -g').toString().trim(),
-      'playwright')).chromium;
+    chromium = require(
+      path.join(require('child_process').execSync('npm root -g').toString().trim(), 'playwright'),
+    ).chromium;
   } catch (e2) {
     console.log('\n  SKIPPED: Playwright is not installed.');
     console.log('  npm i -g playwright && npx playwright install chromium\n');
@@ -75,9 +92,10 @@ try {
    happens to be first. */
 function findTitles() {
   const lib = buildLibrary({ films: FILMS });
-  const main = lib.servers[0], backup = lib.servers[1];
+  const main = lib.servers[0],
+    backup = lib.servers[1];
 
-  const copies = {};      // film index -> [copy, ...]
+  const copies = {}; // film index -> [copy, ...]
   lib.servers.forEach(function (srv) {
     srv.items['1'].forEach(function (m) {
       (copies[m._film] = copies[m._film] || []).push(m);
@@ -87,30 +105,38 @@ function findTitles() {
   /* Search is a substring match, so a title is only usable here if no other
      title contains it — otherwise "one result" is not a safe assertion. */
   function unambiguous(m) {
-    const inFilms = lib.films.filter(function (f) { return f.title.indexOf(m.title) >= 0; }).length;
+    const inFilms = lib.films.filter(function (f) {
+      return f.title.indexOf(m.title) >= 0;
+    }).length;
     /* Search returns shows as well now, and shows are named from the same
        vocabulary — a title is only safe here if nothing else contains it. */
-    const inShows = lib.shows.filter(function (sh) { return sh.title.indexOf(m.title) >= 0; }).length;
+    const inShows = lib.shows.filter(function (sh) {
+      return sh.title.indexOf(m.title) >= 0;
+    }).length;
     return inFilms === 1 && inShows === 0;
   }
 
   /* A film only one server has, so its verdict is the only one on offer. */
   function only(profile) {
-    const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
+    const hit = main.items['1'].concat(backup.items['1']).find(function (m) {
       return m._profile === profile && copies[m._film].length === 1 && unambiguous(m);
-    })[0];
+    });
     if (!hit) throw new Error('no unambiguous single-server title with profile ' + profile);
     return hit;
   }
 
   /* A film both servers have, in different shapes: one copy direct plays and
      the other cannot. This is the case the whole feature exists for. */
-  const shared = main.items['1'].filter(function (m) {
+  const shared = main.items['1'].find(function (m) {
     if (copies[m._film].length !== 2 || !unambiguous(m)) return false;
-    const profiles = copies[m._film].map(function (c) { return c._profile; });
-    return profiles.indexOf('hevc-truehd') >= 0 &&
-           (profiles.indexOf('hevc-eac3') >= 0 || profiles.indexOf('h264-eac3') >= 0);
-  })[0];
+    const profiles = copies[m._film].map(function (c) {
+      return c._profile;
+    });
+    return (
+      profiles.indexOf('hevc-truehd') >= 0 &&
+      (profiles.indexOf('hevc-eac3') >= 0 || profiles.indexOf('h264-eac3') >= 0)
+    );
+  });
   if (!shared) throw new Error('no shared film with one playable and one unplayable copy');
 
   /* Two films the TMDB mock treats differently: one with posters and backdrops
@@ -118,11 +144,11 @@ function findTitles() {
      enough to have no poster at all, where the tile falls back to what Plex
      has. Both must have credits, or the header's cast line has nothing to say. */
   function withBackdrops(want) {
-    const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
+    const hit = main.items['1'].concat(backup.items['1']).find(function (m) {
       return oneBackdrop(m._film) === want && !noCredits(m._film) && unambiguous(m);
-    })[0];
-    if (!hit) throw new Error('no unambiguous film with ' + (want ? 'one' : 'several') +
-                              ' TMDB backdrops');
+    });
+    if (!hit)
+      throw new Error('no unambiguous film with ' + (want ? 'one' : 'several') + ' TMDB backdrops');
     return hit;
   }
 
@@ -143,10 +169,19 @@ function findTitles() {
       if (m._profile !== 'h264-eac3' || (m.childCount || 0) < 2) return false;
       /* Shows are searched for by title like films are, so one that another
          title contains is not safe to assert a single result on. */
-      const named = lib.shows.filter(function (sh) { return sh.title.indexOf(m.title) >= 0; });
-      if (named.length !== 1) return false;
-      if (lib.films.filter(function (f) { return f.title.indexOf(m.title) >= 0; }).length) return false;
-      const third = episodesOf(m, 1).filter(function (e) { return e.index === 3; })[0];
+      const matching = lib.shows.filter(function (sh) {
+        return sh.title.indexOf(m.title) >= 0;
+      });
+      if (matching.length !== 1) return false;
+      if (
+        lib.films.filter(function (f) {
+          return f.title.indexOf(m.title) >= 0;
+        }).length
+      )
+        return false;
+      const third = episodesOf(m, 1).find(function (e) {
+        return e.index === 3;
+      });
       return !!third && (third._profile === 'hevc-truehd' || third._profile === 'vc1-avi');
     }
 
@@ -156,25 +191,32 @@ function findTitles() {
       });
     }
 
-    const hit = main.items['3'].concat(backup.items['3']).filter(usable)[0];
-    if (!hit) throw new Error('no single-server show that direct plays with an awkward third episode');
+    const hit = main.items['3'].concat(backup.items['3']).find(function (m) {
+      return usable(m);
+    });
+    if (!hit)
+      throw new Error('no single-server show that direct plays with an awkward third episode');
     return {
       title: hit.title,
       seasons: hit.childCount,
       lastOfFirst: episodesOf(hit, 1).length,
-      lastOfLast: episodesOf(hit, hit.childCount).length
+      lastOfLast: episodesOf(hit, hit.childCount).length,
     };
   }
 
   /* A show the recaps mock answers for, and one it does not — both reached by
      search like everything else here, so both titles have to be unambiguous. */
   function showWithRecaps(want) {
-    const hit = lib.shows.filter(function (sh) {
+    const hit = lib.shows.find(function (sh) {
       if (mockYoutube.hasRecaps(sh.title) !== want) return false;
-      const named = lib.shows.filter(function (o) { return o.title.indexOf(sh.title) >= 0; });
-      if (named.length !== 1) return false;
-      return !lib.films.filter(function (f) { return f.title.indexOf(sh.title) >= 0; }).length;
-    })[0];
+      const matching = lib.shows.filter(function (o) {
+        return o.title.indexOf(sh.title) >= 0;
+      });
+      if (matching.length !== 1) return false;
+      return !lib.films.filter(function (f) {
+        return f.title.indexOf(sh.title) >= 0;
+      }).length;
+    });
     if (!hit) throw new Error('no unambiguous show ' + (want ? 'with' : 'without') + ' recaps');
     return hit.title;
   }
@@ -191,17 +233,19 @@ function findTitles() {
   return {
     movies: {
       biggest: Math.max.apply(null, movieCounts),
-      sum: movieCounts.reduce(function (a, b) { return a + b; }, 0)
+      sum: movieCounts.reduce(function (a, b) {
+        return a + b;
+      }, 0),
     },
-    truehdOnly: only('hevc-truehd'),     // must be refused before any request
-    transcodes: only('vc1-avi'),         // server says transcode, we refuse
-    directPlays: only('h264-eac3'),      // plays
-    shared: shared,                      // on both servers, only one copy playable
-    manyShots: withBackdrops(false),     // posters and backdrops both
-    oneShot: withBackdrops(true),        // no posters, so the tile falls back
-    run: runOfEpisodes(),                // a series to play one episode after another
-    recapShow: showWithRecaps(true),     // the channel has this one's seasons
-    noRecapShow: showWithRecaps(false)   // and nothing at all for this one
+    truehdOnly: only('hevc-truehd'), // must be refused before any request
+    transcodes: only('vc1-avi'), // server says transcode, we refuse
+    directPlays: only('h264-eac3'), // plays
+    shared: shared, // on both servers, only one copy playable
+    manyShots: withBackdrops(false), // posters and backdrops both
+    oneShot: withBackdrops(true), // no posters, so the tile falls back
+    run: runOfEpisodes(), // a series to play one episode after another
+    recapShow: showWithRecaps(true), // the channel has this one's seasons
+    noRecapShow: showWithRecaps(false), // and nothing at all for this one
   };
 }
 
@@ -213,7 +257,10 @@ function hasFixture() {
 }
 
 const results = [];
-function ok(name) { results.push([true, name]); console.log('  ok    ' + name); }
+function ok(name) {
+  results.push([true, name]);
+  console.log('  ok    ' + name);
+}
 function fail(name, err) {
   results.push([false, name]);
   console.log('  FAIL  ' + name + '\n        ' + (err && err.message ? err.message : err));
@@ -224,33 +271,52 @@ function run() {
   /* Port 0: the OS picks one that is free, which is what lets a second suite
      run beside this one. The mock prints the port it was asked for, so its
      banner says 0 and the real one is said here. */
-  const server = start({ port: 0, films: FILMS, latency: 0,
-                         pinPolls: 1, proxy: false, quiet: true });
+  const server = start({
+    port: 0,
+    films: FILMS,
+    latency: 0,
+    pinPolls: 1,
+    proxy: false,
+    quiet: true,
+  });
   let browser, port;
 
   return new Promise(function (resolve) {
-    server.on('listening', function () { resolve(server.address().port); });
-  }).then(function (p) {
-    port = p;
-    console.log('  smoke on http://localhost:' + port +
-                '   areas: ' + RUNNING.join(' ') + '\n');
-    return chromium.launch({ headless: !HEADED });
-  }).then(function (b) {
-    browser = b;
-    return b.newContext({ viewport: { width: 1920, height: 1080 } });
-  }).then(function (ctx) {
-    return ctx.newPage().then(function (page) { return drive(page, titles, port); });
-  }).then(function () {
-    return browser.close();
-  }, function (e) {
-    fail('run', e);
-    return browser && browser.close();
-  }).then(function () {
-    server.close();
-    const bad = results.filter(function (r) { return !r[0]; }).length;
-    console.log('\n  ' + (results.length - bad) + '/' + results.length + ' passed\n');
-    process.exit(bad ? 1 : 0);
-  });
+    server.on('listening', function () {
+      resolve(server.address().port);
+    });
+  })
+    .then(function (p) {
+      port = p;
+      console.log('  smoke on http://localhost:' + port + '   areas: ' + RUNNING.join(' ') + '\n');
+      return chromium.launch({ headless: !HEADED });
+    })
+    .then(function (b) {
+      browser = b;
+      return b.newContext({ viewport: { width: 1920, height: 1080 } });
+    })
+    .then(function (ctx) {
+      return ctx.newPage().then(function (page) {
+        return drive(page, titles, port);
+      });
+    })
+    .then(
+      function () {
+        return browser.close();
+      },
+      function (e) {
+        fail('run', e);
+        return browser && browser.close();
+      },
+    )
+    .then(function () {
+      server.close();
+      const bad = results.filter(function (r) {
+        return !r[0];
+      }).length;
+      console.log('\n  ' + (results.length - bad) + '/' + results.length + ' passed\n');
+      process.exit(bad ? 1 : 0);
+    });
 }
 
 function drive(page, titles, port) {
@@ -273,7 +339,10 @@ function drive(page, titles, port) {
   let expected404 = 0;
   page.on('console', function (m) {
     const text = m.text();
-    if (text.indexOf('REFLEX ') === 0) { trace.push(text.slice(7)); return; }
+    if (text.indexOf('REFLEX ') === 0) {
+      trace.push(text.slice(7));
+      return;
+    }
     const where = (m.location() && m.location().url) || '';
     if (m.type() === 'error' && where.indexOf('library/parts') < 0) {
       if (noFixture && where.indexOf('/video/:/transcode/universal/start') >= 0) {
@@ -290,7 +359,11 @@ function drive(page, titles, port) {
       errors.push('console: ' + text + ' ' + where);
     }
   });
-  function tracedThat(re) { return trace.some(function (l) { return re.test(l); }); }
+  function tracedThat(re) {
+    return trace.some(function (l) {
+      return re.test(l);
+    });
+  }
   /* Nothing may leave this machine in mock mode. The whole point of the mock is
      that developing the app never touches the server we do not own. */
   /* One lookup per title on screen and never a second: the whole point of the
@@ -317,14 +390,20 @@ function drive(page, titles, port) {
     if (/\/__yt\/(channels|search|videos)\?/.test(u)) ytCalls.push(u);
     if (u.indexOf('/__yt/search?') >= 0) ytSearches.push(u);
     if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
-    if (u.indexOf('/__tmdbimg/w342/') >= 0 ||
-        (u.indexOf('/photo/:/transcode') >= 0 && u.indexOf('width=209') >= 0)) tilePosters.push(u);
+    if (
+      u.indexOf('/__tmdbimg/w342/') >= 0 ||
+      (u.indexOf('/photo/:/transcode') >= 0 && u.indexOf('width=209') >= 0)
+    )
+      tilePosters.push(u);
     if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
-    if (u.indexOf('http://localhost:' + port) !== 0 &&
-        u.indexOf('data:') !== 0 &&
-        u.indexOf('10.255.255.1') < 0) offSite.push(u);
+    if (
+      u.indexOf('http://localhost:' + port) !== 0 &&
+      u.indexOf('data:') !== 0 &&
+      u.indexOf('10.255.255.1') < 0
+    )
+      offSite.push(u);
   });
 
   const shotDir = path.join(__dirname, 'screenshots');
@@ -332,33 +411,57 @@ function drive(page, titles, port) {
   let shotN = 0;
   function shot(name) {
     if (!SHOTS) return Promise.resolve();
-    return page.screenshot({ path: path.join(shotDir, (++shotN) + '-' + name + '.png') });
+    return page.screenshot({ path: path.join(shotDir, ++shotN + '-' + name + '.png') });
   }
 
-  function debugLine() { return page.textContent('#debug'); }
-  function visible(sel) { return page.isVisible(sel); }
+  function debugLine() {
+    return page.textContent('#debug');
+  }
+  function visible(sel) {
+    return page.isVisible(sel);
+  }
   /* times === 0 means do not press at all — "walk zero steps to the tab you are
      already on" is a real thing to ask for, and `times || 1` turned it into one
      press, which is a whole tab out. */
   function press(key, times) {
     let p = Promise.resolve();
     for (let i = 0; i < (times === undefined ? 1 : times); i++) {
-      p = p.then(function () { return page.keyboard.press(key); })
-           .then(function () { return page.waitForTimeout(60); });
+      p = p
+        .then(function () {
+          return page.keyboard.press(key);
+        })
+        .then(function () {
+          return page.waitForTimeout(60);
+        });
     }
     return p;
   }
   function waitFor(fn, what, ms) {
-    return page.waitForFunction(fn, null, { timeout: ms || 10000, polling: 100 })
-      .then(function () { return true; }, function () { throw new Error('timed out waiting for ' + what); });
+    return page.waitForFunction(fn, null, { timeout: ms || 10000, polling: 100 }).then(
+      function () {
+        return true;
+      },
+      function () {
+        throw new Error('timed out waiting for ' + what);
+      },
+    );
   }
   /* On failure, print the app's own last words alongside the assertion. A
      timeout says only what did not happen; the trace says what did. */
   function step(name, fn) {
-    return Promise.resolve().then(fn).then(function () { ok(name); }, function (e) {
-      fail(name, e);
-      trace.slice(-5).forEach(function (l) { console.log('        · ' + l); });
-    });
+    return Promise.resolve()
+      .then(fn)
+      .then(
+        function () {
+          ok(name);
+        },
+        function (e) {
+          fail(name, e);
+          trace.slice(-5).forEach(function (l) {
+            console.log('        · ' + l);
+          });
+        },
+      );
   }
 
   /* ---- the in-player menu ----
@@ -377,44 +480,46 @@ function drive(page, titles, port) {
      choosing it will cost, so a check that cannot see it is not checking. */
   function menuLabels() {
     return page.evaluate(function (sel) {
-      return Array.prototype.map.call(document.querySelectorAll(sel),
-        function (r) {
-          const note = r.querySelector('.menu-note-inline');
-          return (r.classList.contains('on') ? '* ' : '') +
-                 r.querySelector('.menu-label').textContent.trim() +
-                 (note ? '  [' + note.textContent.trim() + ']' : '');
-        });
+      return Array.prototype.map.call(document.querySelectorAll(sel), function (r) {
+        const note = r.querySelector('.menu-note-inline');
+        return (
+          (r.classList.contains('on') ? '* ' : '') +
+          r.querySelector('.menu-label').textContent.trim() +
+          (note ? '  [' + note.textContent.trim() + ']' : '')
+        );
+      });
     }, MENU_ROWS);
   }
 
-  function menuTabs() {
-    return page.evaluate(function (sel) {
-      return Array.prototype.map.call(document.querySelectorAll(sel),
-        function (t) { return t.textContent.trim() + (t.classList.contains('on') ? '*' : ''); });
-    }, MENU_TABS);
-  }
-
   function menuChoose(re) {
-    return page.evaluate(function (src) {
-      const rows = document.querySelectorAll(
-        '#menu:not(.hidden) .menu-row, #dt-menu:not(.hidden) .menu-row');
-      const want = new RegExp(src);
-      let sel = 0, to = -1;
-      for (let i = 0; i < rows.length; i++) {
-        if (rows[i].classList.contains('sel')) sel = i;
-        if (to < 0 && want.test(rows[i].textContent)) to = i;
-      }
-      return [sel, to];
-    }, re.source).then(function (idx) {
-      if (idx[1] < 0) {
-        return menuLabels().then(function (labels) {
-          throw new Error('no menu row matching ' + re + ' in: ' + labels.join(' | '));
-        });
-      }
-      return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]))
-        .then(function () { return page.keyboard.press('Enter'); })
-        .then(function () { return page.waitForTimeout(80); });
-    });
+    return page
+      .evaluate(function (src) {
+        const rows = document.querySelectorAll(
+          '#menu:not(.hidden) .menu-row, #dt-menu:not(.hidden) .menu-row',
+        );
+        const want = new RegExp(src);
+        let sel = 0,
+          to = -1;
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].classList.contains('sel')) sel = i;
+          if (to < 0 && want.test(rows[i].textContent)) to = i;
+        }
+        return [sel, to];
+      }, re.source)
+      .then(function (idx) {
+        if (idx[1] < 0) {
+          return menuLabels().then(function (labels) {
+            throw new Error('no menu row matching ' + re + ' in: ' + labels.join(' | '));
+          });
+        }
+        return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]))
+          .then(function () {
+            return page.keyboard.press('Enter');
+          })
+          .then(function () {
+            return page.waitForTimeout(80);
+          });
+      });
   }
 
   /* ---- the player's control row ----
@@ -427,8 +532,10 @@ function drive(page, titles, port) {
      caption, which one has the focus and which one's panel is open. */
   function controlRow() {
     return page.evaluate(function () {
-      const ids = [], caps = [];
-      let foc = -1, open = null;
+      const ids = [],
+        caps = [];
+      let foc = -1,
+        open = null;
       Array.prototype.forEach.call(
         document.querySelectorAll('#osd-controls .osd-ctl'),
         function (c, i) {
@@ -436,7 +543,8 @@ function drive(page, titles, port) {
           caps.push(c.querySelector('.osd-cap').textContent.trim());
           if (c.classList.contains('foc')) foc = i;
           if (c.classList.contains('on')) open = c.id;
-        });
+        },
+      );
       return { ids: ids, caps: caps, foc: foc, open: open };
     });
   }
@@ -458,7 +566,9 @@ function drive(page, titles, port) {
       return sidebarIsOpen().then(function (isOpen) {
         if (isOpen) return true;
         if (n <= 0) throw new Error('the sidebar would not open');
-        return press('ArrowLeft').then(function () { return attempt(n - 1); });
+        return press('ArrowLeft').then(function () {
+          return attempt(n - 1);
+        });
       });
     }
     return attempt(60);
@@ -468,11 +578,13 @@ function drive(page, titles, port) {
      nested under one. */
   function sidebarRows() {
     return page.evaluate(function () {
-      return Array.prototype.map.call(document.querySelectorAll('#sidebar .sb-row'),
-        function (r) {
-          return (r.classList.contains('cur') ? '* ' : '') +
-                 (r.classList.contains('sub') ? '- ' : '') + r.textContent.trim();
-        });
+      return Array.prototype.map.call(document.querySelectorAll('#sidebar .sb-row'), function (r) {
+        return (
+          (r.classList.contains('cur') ? '* ' : '') +
+          (r.classList.contains('sub') ? '- ' : '') +
+          r.textContent.trim()
+        );
+      });
     });
   }
 
@@ -482,39 +594,57 @@ function drive(page, titles, port) {
      was asked for; a category, which only ever exists nested, is found either
      way. */
   function sidebarWalkTo(label, sub) {
-    return page.evaluate(function (want) {
-      const rows = document.querySelectorAll('#sidebar .sb-row');
-      let on = 0, top = -1, nested = -1;
-      for (let i = 0; i < rows.length; i++) {
-        if (rows[i].classList.contains('on')) on = i;
-        if (rows[i].textContent.trim() !== want.label) continue;
-        if (rows[i].classList.contains('sub')) { if (nested < 0) nested = i; }
-        else if (top < 0) top = i;
-      }
-      return [on, want.sub ? nested : (top >= 0 ? top : nested)];
-    }, { label: label, sub: !!sub }).then(function (idx) {
-      if (idx[1] < 0) {
-        return sidebarRows().then(function (rows) {
-          throw new Error('no "' + label + '" in the sidebar: ' + rows.join(' | '));
-        });
-      }
-      return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]));
-    });
+    return page
+      .evaluate(
+        function (want) {
+          const rows = document.querySelectorAll('#sidebar .sb-row');
+          let on = 0,
+            top = -1,
+            nested = -1;
+          for (let i = 0; i < rows.length; i++) {
+            if (rows[i].classList.contains('on')) on = i;
+            if (rows[i].textContent.trim() !== want.label) continue;
+            if (rows[i].classList.contains('sub')) {
+              if (nested < 0) nested = i;
+            } else if (top < 0) top = i;
+          }
+          return [on, want.sub ? nested : top >= 0 ? top : nested];
+        },
+        { label: label, sub: !!sub },
+      )
+      .then(function (idx) {
+        if (idx[1] < 0) {
+          return sidebarRows().then(function (rows) {
+            throw new Error('no "' + label + '" in the sidebar: ' + rows.join(' | '));
+          });
+        }
+        return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]));
+      });
   }
 
   /* Walk to a named row and press OK on it. */
   function sidebarPick(label) {
-    return openSidebar()
-      .then(function () { return sidebarWalkTo(label); })
-      .then(function () { return page.keyboard.press('Enter'); })
-      .then(function () { return page.waitForTimeout(80); })
-      /* OK on a section whose categories are known opens them in place; it
+    return (
+      openSidebar()
+        .then(function () {
+          return sidebarWalkTo(label);
+        })
+        .then(function () {
+          return page.keyboard.press('Enter');
+        })
+        .then(function () {
+          return page.waitForTimeout(80);
+        })
+        /* OK on a section whose categories are known opens them in place; it
          takes a second press to actually switch to it. */
-      .then(sidebarIsOpen)
-      .then(function (still) {
-        if (!still) return;
-        return page.keyboard.press('Enter').then(function () { return page.waitForTimeout(80); });
-      });
+        .then(sidebarIsOpen)
+        .then(function (still) {
+          if (!still) return;
+          return page.keyboard.press('Enter').then(function () {
+            return page.waitForTimeout(80);
+          });
+        })
+    );
   }
 
   /* The cuts of Continue watching hang under it, so the parent has to be opened
@@ -529,16 +659,26 @@ function drive(page, titles, port) {
         const open = rows.indexOf('- ' + label) >= 0 || rows.indexOf('* - ' + label) >= 0;
         if (open) return;
         return sidebarWalkTo('Continue watching')
-          .then(function () { return page.keyboard.press('Enter'); })
-          .then(function () { return page.waitForTimeout(80); })
+          .then(function () {
+            return page.keyboard.press('Enter');
+          })
+          .then(function () {
+            return page.waitForTimeout(80);
+          })
           .then(sidebarIsOpen)
           .then(function (still) {
             if (!still) throw new Error('OK on Continue watching picked it instead of opening it');
           });
       })
-      .then(function () { return sidebarWalkTo(label, true); })
-      .then(function () { return page.keyboard.press('Enter'); })
-      .then(function () { return page.waitForTimeout(200); });
+      .then(function () {
+        return sidebarWalkTo(label, true);
+      })
+      .then(function () {
+        return page.keyboard.press('Enter');
+      })
+      .then(function () {
+        return page.waitForTimeout(200);
+      });
   }
 
   /* ---- the Continue watching row, as the clearing steps need it ----
@@ -548,30 +688,37 @@ function drive(page, titles, port) {
      behind each copy. */
 
   function deckRow() {
-    return page.evaluate(function () {
-      const el = document.querySelector('#rows .row.on');
-      const row = el && el._rowRef;
-      if (!row || !row.items) return null;
-      return {
-        label: el.querySelector('.row-label').textContent.trim(),
-        focus: row.focus,
-        picked: Array.prototype.filter.call(el.querySelectorAll('.tile'), function (t) {
-          return t.classList.contains('picked');
-        }).length,
-        hint: !document.getElementById('browse-hint').classList.contains('hidden'),
-        entries: row.items.map(function (m) {
-          return { title: m.grandparentTitle || m.title, type: m.type,
-                   key: String(m.ratingKey),
-                   showKey: m.grandparentRatingKey ? String(m.grandparentRatingKey) : '',
-                   servers: [m._server].concat((m._sources || []).map(function (s) {
-                     return s._server;
-                   })) };
-        })
-      };
-    }).then(function (row) {
-      if (!row) throw new Error('the Continue watching row is not the focused one');
-      return row;
-    });
+    return page
+      .evaluate(function () {
+        const el = document.querySelector('#rows .row.on');
+        const row = el && el._rowRef;
+        if (!row || !row.items) return null;
+        return {
+          label: el.querySelector('.row-label').textContent.trim(),
+          focus: row.focus,
+          picked: Array.prototype.filter.call(el.querySelectorAll('.tile'), function (t) {
+            return t.classList.contains('picked');
+          }).length,
+          hint: !document.getElementById('browse-hint').classList.contains('hidden'),
+          entries: row.items.map(function (m) {
+            return {
+              title: m.grandparentTitle || m.title,
+              type: m.type,
+              key: String(m.ratingKey),
+              showKey: m.grandparentRatingKey ? String(m.grandparentRatingKey) : '',
+              servers: [m._server].concat(
+                (m._sources || []).map(function (s) {
+                  return s._server;
+                }),
+              ),
+            };
+          }),
+        };
+      })
+      .then(function (row) {
+        if (!row) throw new Error('the Continue watching row is not the focused one');
+        return row;
+      });
   }
 
   /* Move the focus onto the first entry `wanted` accepts, and hand it back. */
@@ -582,18 +729,32 @@ function drive(page, titles, port) {
         if (to < 0 && wanted(row.entries[i])) to = i;
       }
       if (to < 0) {
-        throw new Error('nothing in the row matched: ' + row.entries.map(function (e) {
-          return e.title + ' [' + e.servers.join(' + ') + ']';
-        }).join(' | '));
+        throw new Error(
+          'nothing in the row matched: ' +
+            row.entries
+              .map(function (e) {
+                return e.title + ' [' + e.servers.join(' + ') + ']';
+              })
+              .join(' | '),
+        );
       }
-      return press(to > row.focus ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - row.focus))
-        .then(function () { return row.entries[to]; });
+      return press(to > row.focus ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - row.focus)).then(
+        function () {
+          return row.entries[to];
+        },
+      );
     });
   }
 
-  const onMain = function (e) { return e.servers.length === 1 && /main$/.test(e.servers[0]); };
-  const onBackup = function (e) { return e.servers.length === 1 && /backup$/.test(e.servers[0]); };
-  const onBoth = function (e) { return e.servers.length === 2; };
+  const onMain = function (e) {
+    return e.servers.length === 1 && e.servers[0].endsWith('main');
+  };
+  const onBackup = function (e) {
+    return e.servers.length === 1 && e.servers[0].endsWith('backup');
+  };
+  const onBoth = function (e) {
+    return e.servers.length === 2;
+  };
 
   /* The confirmation: what it says will happen, and which row it landed on. */
   function confirmBox() {
@@ -604,24 +765,32 @@ function drive(page, titles, port) {
         title: box.querySelector('.menu-tab').textContent.trim(),
         note: box.querySelector('.menu-note').textContent.trim(),
         rows: Array.prototype.map.call(box.querySelectorAll('.menu-row'), function (r) {
-          return (r.classList.contains('sel') ? '> ' : '') +
-                 r.querySelector('.menu-label').textContent.trim();
-        })
+          return (
+            (r.classList.contains('sel') ? '> ' : '') +
+            r.querySelector('.menu-label').textContent.trim()
+          );
+        }),
       };
     });
   }
 
   function waitForConfirm(what) {
-    return waitFor('!document.getElementById("confirm").classList.contains("hidden")',
-                   'the confirmation ' + what, 15000)
-      .then(confirmBox);
+    return waitFor(
+      '!document.getElementById("confirm").classList.contains("hidden")',
+      'the confirmation ' + what,
+      15000,
+    ).then(confirmBox);
   }
 
   /* Take the action rather than the default: Cancel is what it lands on. */
   function takeConfirm() {
     return press('ArrowUp')
-      .then(function () { return page.keyboard.press('Enter'); })
-      .then(function () { return page.waitForTimeout(400); });
+      .then(function () {
+        return page.keyboard.press('Enter');
+      })
+      .then(function () {
+        return page.waitForTimeout(400);
+      });
   }
 
   /* Whatever the browse screen has cached for a section's rows. Continue
@@ -631,11 +800,17 @@ function drive(page, titles, port) {
     return page.evaluate(function (key) {
       return new Promise(function (resolve) {
         const req = indexedDB.open('reflex', 1);
-        req.onerror = function () { resolve('no database'); };
+        req.onerror = function () {
+          resolve('no database');
+        };
         req.onsuccess = function () {
           const get = req.result.transaction('kv', 'readonly').objectStore('kv').get(key);
-          get.onsuccess = function () { resolve(get.result === undefined ? null : get.result); };
-          get.onerror = function () { resolve('read failed'); };
+          get.onsuccess = function () {
+            resolve(get.result === undefined ? null : get.result);
+          };
+          get.onerror = function () {
+            resolve('read failed');
+          };
         };
       });
     }, 'rows:' + section);
@@ -647,12 +822,24 @@ function drive(page, titles, port) {
      reload that stays on Movies would prove nothing about what they now say. */
   function reloadDeck() {
     return backToLibrary()
-      .then(function () { return sidebarPick('TV Shows'); })
-      .then(function () { return page.waitForTimeout(500); })
-      .then(function () { return sidebarPick('Movies'); })
-      .then(function () { return page.waitForTimeout(500); })
-      .then(function () { return sidebarPick('Continue watching'); })
-      .then(function () { return page.waitForTimeout(200); })
+      .then(function () {
+        return sidebarPick('TV Shows');
+      })
+      .then(function () {
+        return page.waitForTimeout(500);
+      })
+      .then(function () {
+        return sidebarPick('Movies');
+      })
+      .then(function () {
+        return page.waitForTimeout(500);
+      })
+      .then(function () {
+        return sidebarPick('Continue watching');
+      })
+      .then(function () {
+        return page.waitForTimeout(200);
+      })
       .then(deckRow);
   }
 
@@ -663,8 +850,9 @@ function drive(page, titles, port) {
       if (!row) return null;
       return {
         title: row.querySelector('.row-label').textContent.trim(),
-        types: Array.prototype.map.call(row.querySelectorAll('.tile:not(.hidden)'),
-          function (t) { return (t._item && t._item.type) || '?'; })
+        types: Array.prototype.map.call(row.querySelectorAll('.tile:not(.hidden)'), function (t) {
+          return (t._item && t._item.type) || '?';
+        }),
       };
     });
   }
@@ -672,29 +860,40 @@ function drive(page, titles, port) {
   /* The refusal screen has to be *showing*, and it has to be about the film we
      actually chose — naming the wrong one is a bug this caught once already. */
   function shown(titleFragment, film) {
-    return '(function(){' +
+    return (
+      '(function(){' +
       'var v = document.getElementById("message");' +
       'if (v.classList.contains("hidden")) return false;' +
-      'return /' + titleFragment + '/.test(document.getElementById("message-title").textContent) &&' +
-      ' document.getElementById("message-body").textContent.indexOf(' + JSON.stringify(film) + ') === 0;' +
-      '})()';
+      'return /' +
+      titleFragment +
+      '/.test(document.getElementById("message-title").textContent) &&' +
+      ' document.getElementById("message-body").textContent.indexOf(' +
+      JSON.stringify(film) +
+      ') === 0;' +
+      '})()'
+    );
   }
 
   /* Whatever the last step left on screen, get back to plain browsing. */
   function backToLibrary() {
     function attempt(n) {
-      return page.evaluate(function () {
-        return {
-          browse: !document.getElementById('browse').classList.contains('hidden') &&
-                  document.getElementById('detail').classList.contains('hidden') &&
-                  document.getElementById('show').classList.contains('hidden'),
-          results: document.getElementById('browse').classList.contains('results')
-        };
-      }).then(function (st) {
-        if (st.browse && !st.results) return true;
-        if (n <= 0) throw new Error('could not get back to the library rows');
-        return press('Backspace').then(function () { return attempt(n - 1); });
-      });
+      return page
+        .evaluate(function () {
+          return {
+            browse:
+              !document.getElementById('browse').classList.contains('hidden') &&
+              document.getElementById('detail').classList.contains('hidden') &&
+              document.getElementById('show').classList.contains('hidden'),
+            results: document.getElementById('browse').classList.contains('results'),
+          };
+        })
+        .then(function (st) {
+          if (st.browse && !st.results) return true;
+          if (n <= 0) throw new Error('could not get back to the library rows');
+          return press('Backspace').then(function () {
+            return attempt(n - 1);
+          });
+        });
     }
     return attempt(5);
   }
@@ -702,16 +901,28 @@ function drive(page, titles, port) {
   /* Search for an exact title and come to rest on the only result. */
   function searchFor(title) {
     return backToLibrary()
-      .then(function () { return sidebarPick('Movies'); })
-      .then(function () { return press('F1'); })
-      .then(function () { return page.waitForSelector('#search-input', { state: 'visible' }); })
-      .then(function () { return page.fill('#search-input', title); })
-      .then(function () { return page.keyboard.press('Enter'); })
+      .then(function () {
+        return sidebarPick('Movies');
+      })
+      .then(function () {
+        return press('F1');
+      })
+      .then(function () {
+        return page.waitForSelector('#search-input', { state: 'visible' });
+      })
+      .then(function () {
+        return page.fill('#search-input', title);
+      })
+      .then(function () {
+        return page.keyboard.press('Enter');
+      })
       .then(function () {
         /* Wait for *this* title, not merely a non-empty masthead — the previous
            film's title is still on screen and would satisfy a looser check. */
-        return waitFor('document.querySelector("#mh-title").textContent.trim() === ' +
-                       JSON.stringify(title), 'the search result for ' + title);
+        return waitFor(
+          'document.querySelector("#mh-title").textContent.trim() === ' + JSON.stringify(title),
+          'the search result for ' + title,
+        );
       });
   }
 
@@ -728,9 +939,12 @@ function drive(page, titles, port) {
       var lit = document.querySelector('#hero-art .hero-layer.on');
       var hero = lit ? lit.style.backgroundImage : '';
       return {
-        tile: { url: (img && img.src) || '', shot: shotOf(img && img.src),
-                painted: !!(img && img.naturalWidth > 0) },
-        hero: { url: hero, shot: shotOf(hero) }
+        tile: {
+          url: (img && img.src) || '',
+          shot: shotOf(img && img.src),
+          painted: !!(img && img.naturalWidth > 0),
+        },
+        hero: { url: hero, shot: shotOf(hero) },
       };
     });
   }
@@ -738,21 +952,31 @@ function drive(page, titles, port) {
   /* OK on the rail no longer plays — it opens the detail page, and playing is a
      decision made there against a named copy. */
   function openTitle(title) {
-    return searchFor(title)
-      .then(function () { return page.keyboard.press('Enter'); })
-      .then(function () {
-        return waitFor('!document.getElementById("detail").classList.contains("hidden") &&' +
-                       ' document.getElementById("dt-title").textContent.trim() === ' +
-                       JSON.stringify(title), 'the detail page for ' + title);
-      })
-      /* Every copy is checked as the page opens; nothing can be chosen
+    return (
+      searchFor(title)
+        .then(function () {
+          return page.keyboard.press('Enter');
+        })
+        .then(function () {
+          return waitFor(
+            '!document.getElementById("detail").classList.contains("hidden") &&' +
+              ' document.getElementById("dt-title").textContent.trim() === ' +
+              JSON.stringify(title),
+            'the detail page for ' + title,
+          );
+        })
+        /* Every copy is checked as the page opens; nothing can be chosen
          meaningfully until at least the selected one has a verdict, and Play's
          caption is where that verdict is said. */
-      .then(function () {
-        return waitFor('(function(){var c=document.querySelector("#dt-actions .dt-act-cap");' +
-                       'return c && !/checking/.test(c.textContent);})()',
-                       'a verdict on the selected copy', 15000);
-      });
+        .then(function () {
+          return waitFor(
+            '(function(){var c=document.querySelector("#dt-actions .dt-act-cap");' +
+              'return c && !/checking/.test(c.textContent);})()',
+            'a verdict on the selected copy',
+            15000,
+          );
+        })
+    );
   }
 
   /* ---- the film page's action row ----
@@ -763,14 +987,18 @@ function drive(page, titles, port) {
 
   function actionRow() {
     return page.evaluate(function () {
-      return Array.prototype.map.call(document.querySelectorAll('#dt-actions .dt-act'),
+      return Array.prototype.map.call(
+        document.querySelectorAll('#dt-actions .dt-act'),
         function (a) {
-          return { on: a.classList.contains('on'),
-                   act: a.getAttribute('data-act'),
-                   primary: a.classList.contains('primary'),
-                   button: a.querySelector('.dt-act-btn').textContent.trim(),
-                   caption: a.querySelector('.dt-act-cap').textContent.trim() };
-        });
+          return {
+            on: a.classList.contains('on'),
+            act: a.getAttribute('data-act'),
+            primary: a.classList.contains('primary'),
+            button: a.querySelector('.dt-act-btn').textContent.trim(),
+            caption: a.querySelector('.dt-act-cap').textContent.trim(),
+          };
+        },
+      );
     });
   }
 
@@ -784,30 +1012,46 @@ function drive(page, titles, port) {
   function pressButton(which) {
     function walk(n) {
       return actionRow().then(function (row) {
-        let at = 0, to = -1;
+        let at = 0,
+          to = -1;
         for (let i = 0; i < row.length; i++) {
           if (row[i].on) at = i;
           if (row[i].act === which) to = i;
         }
         if (to < 0) {
-          throw new Error('no ' + which + ' button: ' +
-                          row.map(function (a) { return a.act; }).join(', '));
+          throw new Error(
+            'no ' +
+              which +
+              ' button: ' +
+              row
+                .map(function (a) {
+                  return a.act;
+                })
+                .join(', '),
+          );
         }
         if (to === at) return;
         if (n <= 0) throw new Error('the ' + which + ' button would not take the focus');
-        return press(to > at ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - at))
-          .then(function () { return walk(n - 1); });
+        return press(to > at ? 'ArrowRight' : 'ArrowLeft', Math.abs(to - at)).then(function () {
+          return walk(n - 1);
+        });
       });
     }
     return walk(4)
-      .then(function () { return page.keyboard.press('Enter'); })
-      .then(function () { return page.waitForTimeout(80); });
+      .then(function () {
+        return page.keyboard.press('Enter');
+      })
+      .then(function () {
+        return page.waitForTimeout(80);
+      });
   }
 
   function openChooser(which) {
     return pressButton(which).then(function () {
-      return waitFor('!document.getElementById("dt-menu").classList.contains("hidden")',
-                     'the ' + which + ' chooser');
+      return waitFor(
+        '!document.getElementById("dt-menu").classList.contains("hidden")',
+        'the ' + which + ' chooser',
+      );
     });
   }
 
@@ -822,12 +1066,15 @@ function drive(page, titles, port) {
           const parts = r.querySelector('.menu-label').textContent.trim().split(' \u00b7 ');
           const preferred = parts[parts.length - 1] === 'preferred';
           if (preferred) parts.pop();
-          return { on: r.classList.contains('on'),
-                   preferred: preferred,
-                   server: parts.pop(),
-                   version: parts.join(' \u00b7 '),
-                   verdict: note ? note.textContent.trim() : '' };
-        });
+          return {
+            on: r.classList.contains('on'),
+            preferred: preferred,
+            server: parts.pop(),
+            version: parts.join(' \u00b7 '),
+            verdict: note ? note.textContent.trim() : '',
+          };
+        },
+      );
     });
   }
 
@@ -852,7 +1099,7 @@ function drive(page, titles, port) {
         chips: texts('#dt-chips .dt-chip'),
         ratings: texts('#dt-ratings .dt-rating'),
         glyphs: document.querySelectorAll('#dt-ratings .dt-rating svg').length,
-        page: document.getElementById('detail').textContent
+        page: document.getElementById('detail').textContent,
       };
     });
   }
@@ -865,7 +1112,9 @@ function drive(page, titles, port) {
     parts.forEach(function (p) {
       if (!p.trim()) throw new Error('an empty part in the kicker: "' + kicker + '"');
     });
-    return parts.map(function (p) { return p.trim(); });
+    return parts.map(function (p) {
+      return p.trim();
+    });
   }
 
   /* ---- a run of episodes ----
@@ -875,11 +1124,16 @@ function drive(page, titles, port) {
 
   function openShowPage(title) {
     return searchFor(title)
-      .then(function () { return page.keyboard.press('Enter'); })
       .then(function () {
-        return waitFor('!document.getElementById("show").classList.contains("hidden") &&' +
-                       ' document.querySelectorAll(".sh-episode").length > 1',
-                       'the series page for ' + title, 20000);
+        return page.keyboard.press('Enter');
+      })
+      .then(function () {
+        return waitFor(
+          '!document.getElementById("show").classList.contains("hidden") &&' +
+            ' document.querySelectorAll(".sh-episode").length > 1',
+          'the series page for ' + title,
+          20000,
+        );
       });
   }
 
@@ -888,11 +1142,16 @@ function drive(page, titles, port) {
      opened it, still focused. */
   function reopenShowPage(title) {
     return press('Backspace')
-      .then(function () { return page.keyboard.press('Enter'); })
       .then(function () {
-        return waitFor('!document.getElementById("show").classList.contains("hidden") &&' +
-                       ' document.querySelectorAll(".sh-episode").length > 1',
-                       'the series page for ' + title + ' again', 20000);
+        return page.keyboard.press('Enter');
+      })
+      .then(function () {
+        return waitFor(
+          '!document.getElementById("show").classList.contains("hidden") &&' +
+            ' document.querySelectorAll(".sh-episode").length > 1',
+          'the series page for ' + title + ' again',
+          20000,
+        );
       });
   }
 
@@ -915,9 +1174,9 @@ function drive(page, titles, port) {
           return {
             title: (title || c).textContent.trim(),
             art: thumb ? getComputedStyle(thumb).backgroundImage : 'none',
-            length: len ? len.textContent.trim() : ''
+            length: len ? len.textContent.trim() : '',
           };
-        })
+        }),
       };
     });
   }
@@ -939,15 +1198,18 @@ function drive(page, titles, port) {
      OK. The numbers are read off the page rather than counted from an assumed
      start, because where the page lands is its own decision. */
   function playEpisode(seasonN, episodeN) {
-    return press('ArrowUp', 30)                  // out of the episodes, onto the chips
+    return press('ArrowUp', 30) // out of the episodes, onto the chips
       .then(function () {
-        return waitFor('document.querySelector("#sh-seasons .chip.on") !== null',
-                       'the series chips');
+        return waitFor(
+          'document.querySelector("#sh-seasons .chip.on") !== null',
+          'the series chips',
+        );
       })
       .then(function () {
         return page.evaluate(function (want) {
           const chips = document.querySelectorAll('#sh-seasons .chip');
-          let on = 0, to = -1;
+          let on = 0,
+            to = -1;
           for (let i = 0; i < chips.length; i++) {
             if (chips[i].classList.contains('on')) on = i;
             if (chips[i].textContent.trim() === 'Season ' + want) to = i;
@@ -960,10 +1222,15 @@ function drive(page, titles, port) {
         return press(idx[1] > idx[0] ? 'ArrowRight' : 'ArrowLeft', Math.abs(idx[1] - idx[0]));
       })
       .then(function () {
-        return waitFor('document.querySelectorAll(".sh-episode").length > 1',
-                       'the episodes of series ' + seasonN, 15000);
+        return waitFor(
+          'document.querySelectorAll(".sh-episode").length > 1',
+          'the episodes of series ' + seasonN,
+          15000,
+        );
       })
-      .then(function () { return press('ArrowDown'); })     // into the episode list
+      .then(function () {
+        return press('ArrowDown');
+      }) // into the episode list
       .then(focusedEpisode)
       .then(function (at) {
         if (at === null) throw new Error('no focused episode row');
@@ -971,32 +1238,40 @@ function drive(page, titles, port) {
         return press(episodeN > at ? 'ArrowDown' : 'ArrowUp', Math.abs(episodeN - at))
           .then(focusedEpisode)
           .then(function (now) {
-            if (now !== episodeN) throw new Error('landed on episode ' + now + ', wanted ' + episodeN);
+            if (now !== episodeN)
+              throw new Error('landed on episode ' + now + ', wanted ' + episodeN);
           });
       })
       .then(function () {
         /* OK on an episode with no verdict yet opens the copy chooser rather
            than playing, so wait for the check to land first. */
-        return waitFor('(function(){var e=document.querySelector(".sh-episode.on");' +
-                       'return e && e.querySelector(".sh-verdict") !== null;})()',
-                       'a verdict on S' + seasonN + 'E' + episodeN, 20000);
+        return waitFor(
+          '(function(){var e=document.querySelector(".sh-episode.on");' +
+            'return e && e.querySelector(".sh-verdict") !== null;})()',
+          'a verdict on S' + seasonN + 'E' + episodeN,
+          20000,
+        );
       })
-      .then(function () { return page.keyboard.press('Enter'); });
+      .then(function () {
+        return page.keyboard.press('Enter');
+      });
   }
 
   /* Run the file out rather than sitting through it: the offer is made on the
      element's own `ended`, which is the event we want to see fire. */
   function playToEnd() {
-    return waitFor('(function(){var v=document.getElementById("video");' +
-                   'return !v.classList.contains("hidden") && v.duration > 0 &&' +
-                   ' v.currentTime > 0 && !v.error;})()',
-                   'playback to get going', 25000)
-      .then(function () {
-        return page.evaluate(function () {
-          const v = document.getElementById('video');
-          v.currentTime = Math.max(0, v.duration - 0.15);
-        });
+    return waitFor(
+      '(function(){var v=document.getElementById("video");' +
+        'return !v.classList.contains("hidden") && v.duration > 0 &&' +
+        ' v.currentTime > 0 && !v.error;})()',
+      'playback to get going',
+      25000,
+    ).then(function () {
+      return page.evaluate(function () {
+        const v = document.getElementById('video');
+        v.currentTime = Math.max(0, v.duration - 0.15);
       });
+    });
   }
 
   function upNext() {
@@ -1006,67 +1281,127 @@ function drive(page, titles, port) {
         show: document.getElementById('un-show').textContent.trim(),
         title: document.getElementById('un-title').textContent.trim(),
         hint: document.getElementById('un-hint').textContent.trim(),
-        video: !document.getElementById('video').classList.contains('hidden')
+        video: !document.getElementById('video').classList.contains('hidden'),
       };
     });
   }
 
   function waitForOffer() {
-    return waitFor('!document.getElementById("upnext").classList.contains("hidden")',
-                   'the up-next offer', 25000).then(upNext);
+    return waitFor(
+      '!document.getElementById("upnext").classList.contains("hidden")',
+      'the up-next offer',
+      25000,
+    ).then(upNext);
   }
 
   /* Linked, with the rail painted and nothing else on top of it: where every
      area but link begins, so one can be run without the ones before it. */
   function ready() {
-    return waitFor('(function(){var t=document.querySelectorAll("#rows .tile:not(.hidden)");' +
-                   'var n=0,i;for(i=0;i<t.length;i++) if(t[i].textContent.trim()) n++;' +
-                   'return n > 5;})()', 'filled tiles', 20000)
-      .then(backToLibrary);
+    return waitFor(
+      '(function(){var t=document.querySelectorAll("#rows .tile:not(.hidden)");' +
+        'var n=0,i;for(i=0;i<t.length;i++) if(t[i].textContent.trim()) n++;' +
+        'return n > 5;})()',
+      'filled tiles',
+      20000,
+    ).then(backToLibrary);
   }
 
   /* Everything an area file is given. The steps live in dev/smoke/*.js; the
      harness stays here, so there is one browser, one mock and one set of
      collectors however many areas are asked for. */
   const h = {
-    page, titles, ready, FILMS, hasFixture,
-    step, press, waitFor, shot, visible, debugLine, trace, tracedThat,
-    artLookups, tilePosters, timelines, ytCalls, ytSearches, deckWrites,
-    menuLabels, menuChoose, controlRow,
-    openSidebar, sidebarRows, sidebarPick, watchingPick,
-    deckRow, focusDeck, onMain, onBackup, onBoth,
-    waitForConfirm, takeConfirm, cachedRows, reloadDeck, focusedRowTypes,
-    shown, backToLibrary, searchFor, pictures, openTitle,
-    actionRow, pressButton, openChooser, sourceRows, playable,
-    detailFace, kickerParts, openShowPage, reopenShowPage,
-    recapStrip, intoRecaps, playEpisode, playToEnd, upNext, waitForOffer
+    page,
+    titles,
+    ready,
+    FILMS,
+    hasFixture,
+    step,
+    press,
+    waitFor,
+    shot,
+    visible,
+    debugLine,
+    trace,
+    tracedThat,
+    artLookups,
+    tilePosters,
+    timelines,
+    ytCalls,
+    ytSearches,
+    deckWrites,
+    menuLabels,
+    menuChoose,
+    controlRow,
+    openSidebar,
+    sidebarRows,
+    sidebarPick,
+    watchingPick,
+    deckRow,
+    focusDeck,
+    onMain,
+    onBackup,
+    onBoth,
+    waitForConfirm,
+    takeConfirm,
+    cachedRows,
+    reloadDeck,
+    focusedRowTypes,
+    shown,
+    backToLibrary,
+    searchFor,
+    pictures,
+    openTitle,
+    actionRow,
+    pressButton,
+    openChooser,
+    sourceRows,
+    playable,
+    detailFace,
+    kickerParts,
+    openShowPage,
+    reopenShowPage,
+    recapStrip,
+    intoRecaps,
+    playEpisode,
+    playToEnd,
+    upNext,
+    waitForOffer,
   };
 
   /* One area after another, never two at once: several of them depend on the
      app being left where the one before it left it. */
-  return page.goto('http://localhost:' + port + '/')
+  return (
+    page
+      .goto('http://localhost:' + port + '/')
 
-    .then(function () {
-      return RUNNING.reduce(function (p, area) {
-        return p.then(function () { return require('./smoke/' + area)(h); });
-      }, Promise.resolve());
-    })
+      .then(function () {
+        return RUNNING.reduce(function (p, area) {
+          return p.then(function () {
+            return require('./smoke/' + area)(h);
+          });
+        }, Promise.resolve());
+      })
 
-    /* Last, whatever ran: it is about the whole session rather than any one
+      /* Last, whatever ran: it is about the whole session rather than any one
        area. */
-    .then(function () {
-      return step('no console errors and nothing left this machine', function () {
-        if (errors.length) throw new Error(errors.slice(0, 4).join('\n        '));
-        if (offSite.length) {
-          throw new Error('requests escaped the mock: ' + offSite.slice(0, 3).join(', '));
-        }
-      }).then(function () {
-        if (expected404) {
-          console.log('        ignored ' + expected404 + ' × 404 on the converted stream: ' +
-                      'no dev/fixtures/sample.*, so there is nothing to convert');
-        }
-      });
-    });
+      .then(function () {
+        return step('no console errors and nothing left this machine', function () {
+          if (errors.length) throw new Error(errors.slice(0, 4).join('\n        '));
+          if (offSite.length) {
+            throw new Error('requests escaped the mock: ' + offSite.slice(0, 3).join(', '));
+          }
+        }).then(function () {
+          if (expected404) {
+            console.log(
+              '        ignored ' +
+                expected404 +
+                ' × 404 on the converted stream: ' +
+                'no dev/fixtures/sample.*, so there is nothing to convert',
+            );
+          }
+        });
+      })
+  );
 }
 
 run();

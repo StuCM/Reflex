@@ -13,25 +13,27 @@ var Sidebar = (function () {
 
   const el = document.getElementById('sidebar-list');
 
-  const VIEW_H = 968;     // the panel less its top padding and a little breathing room
-  let offset = 0;       // how far the list is wound up, in px
+  const VIEW_H = 968; // the panel less its top padding and a little breathing room
+  let offset = 0; // how far the list is wound up, in px
 
-  let secs = [];        // { title, categories: [string], current }
-  let watching = null;  // { current, type } — the Continue watching entry's state
-  let rows = [];        // the flattened list the d-pad walks
+  let secs = []; // { title, categories: [string], current }
+  let watching = null; // { current, type } — the Continue watching entry's state
+  let rows = []; // the flattened list the d-pad walks
   let idx = 0;
   let showing = false;
-  const NONE = -2;        // nothing expanded; sections are 0-up and watching is -1
-  let expanded = NONE;  // which entry's children are listed, if any
+  const NONE = -2; // nothing expanded; sections are 0-up and watching is -1
+  let expanded = NONE; // which entry's children are listed, if any
   let onPick = null;
-  let atMode = '';      // the mode showing, so it can be marked as the sections are
+  let atMode = ''; // the mode showing, so it can be marked as the sections are
 
   /* Kids, discovery and search are modes rather than sections; the last three
      are the settings the chip row used to carry. */
   function modes() {
-    const out = [{ label: 'Discovery', kind: 'discover', current: atMode === 'discover' },
-               { label: 'Kids', kind: 'kids', current: atMode === 'kids' },
-               { label: 'Search', kind: 'search' }];
+    const out = [
+      { label: 'Discovery', kind: 'discover', current: atMode === 'discover' },
+      { label: 'Kids', kind: 'kids', current: atMode === 'kids' },
+      { label: 'Search', kind: 'search' },
+    ];
     if (Servers.count() > 1) {
       const pref = Servers.get(Servers.preferred());
       out.push({ label: `Prefer ${pref ? pref.name : '?'}`, kind: 'prefer' });
@@ -55,13 +57,33 @@ var Sidebar = (function () {
   function watchingRows() {
     if (!watching) return [];
     const type = watching.type || null;
-    const out = [{ label: 'Continue watching', kind: 'watching', index: -1, type: null,
-                 opens: true, current: !!watching.current && type === null }];
+    const out = [
+      {
+        label: 'Continue watching',
+        kind: 'watching',
+        index: -1,
+        type: null,
+        opens: true,
+        current: !!watching.current && type === null,
+      },
+    ];
     if (expanded !== -1) return out;
-    out.push({ label: 'Movies', kind: 'watching', index: -1, type: 'movie', sub: true,
-               current: !!watching.current && type === 'movie' });
-    out.push({ label: 'TV Shows', kind: 'watching', index: -1, type: 'episode', sub: true,
-               current: !!watching.current && type === 'episode' });
+    out.push({
+      label: 'Movies',
+      kind: 'watching',
+      index: -1,
+      type: 'movie',
+      sub: true,
+      current: !!watching.current && type === 'movie',
+    });
+    out.push({
+      label: 'TV Shows',
+      kind: 'watching',
+      index: -1,
+      type: 'episode',
+      sub: true,
+      current: !!watching.current && type === 'episode',
+    });
     return out;
   }
 
@@ -69,8 +91,13 @@ var Sidebar = (function () {
     const out = watchingRows();
     for (let i = 0; i < secs.length; i++) {
       const cats = secs[i].categories || [];
-      out.push({ label: secs[i].title, kind: 'section', index: i,
-                 opens: cats.length > 0, current: !!secs[i].current });
+      out.push({
+        label: secs[i].title,
+        kind: 'section',
+        index: i,
+        opens: cats.length > 0,
+        current: !!secs[i].current,
+      });
       if (i !== expanded) continue;
       for (let j = 0; j < cats.length; j++) {
         /* Continue watching has its own entry above, and every section builds
@@ -86,9 +113,13 @@ var Sidebar = (function () {
     let html = '';
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      html += `<div class="sb-row${r.sub ? ' sub' : ''}` +
-              (r.current ? ' cur' : '') + (i === idx ? ' on' : '') + '">' +
-              UI.escapeHtml(r.label) + '</div>';
+      html +=
+        `<div class="sb-row${r.sub ? ' sub' : ''}` +
+        (r.current ? ' cur' : '') +
+        (i === idx ? ' on' : '') +
+        '">' +
+        UI.escapeHtml(r.label) +
+        '</div>';
     }
     el.innerHTML = html;
     reveal();
@@ -148,7 +179,9 @@ var Sidebar = (function () {
     el.parentNode.classList.remove('open');
   }
 
-  function isOpen() { return showing; }
+  function isOpen() {
+    return showing;
+  }
 
   /* True for every key: an overlay that lets some keys through to the rail
      behind it would move a selection you cannot see. */
@@ -156,9 +189,20 @@ var Sidebar = (function () {
     const K = UI.KEY;
     const r = rows[idx];
 
-    if (UI.isBack(code) || code === K.LEFT) { close(); return true; }
-    if (code === K.UP) { idx = UI.clamp(idx - 1, 0, rows.length - 1); render(); return true; }
-    if (code === K.DOWN) { idx = UI.clamp(idx + 1, 0, rows.length - 1); render(); return true; }
+    if (UI.isBack(code) || code === K.LEFT) {
+      close();
+      return true;
+    }
+    if (code === K.UP) {
+      idx = UI.clamp(idx - 1, 0, rows.length - 1);
+      render();
+      return true;
+    }
+    if (code === K.DOWN) {
+      idx = UI.clamp(idx + 1, 0, rows.length - 1);
+      render();
+      return true;
+    }
     if (code !== K.RIGHT && code !== K.OK) return true;
     if (!r) return true;
 

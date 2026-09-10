@@ -14,16 +14,30 @@
      checks each one before you choose. Playing is a decision made there, with
      the verdict already on screen. */
 
-  function toBrowse() { UI.show('browse'); Browse.render(); }
-  function toShow() { UI.show('show'); }
+  function toBrowse() {
+    UI.show('browse');
+    Browse.render();
+  }
+  function toShow() {
+    UI.show('show');
+  }
 
   /* A film opens its detail page; a show and an episode both open the series
      page, and an episode chosen there opens the same detail page a film would. */
   function openItem(item) {
     if (!item) return;
-    if (Discovery.isEntry(item)) { openDiscovered(item); return; }
-    if (item.type === 'show') { openShow(item); return; }
-    if (item.type === 'episode') { openEpisode(item); return; }
+    if (Discovery.isEntry(item)) {
+      openDiscovered(item);
+      return;
+    }
+    if (item.type === 'show') {
+      openShow(item);
+      return;
+    }
+    if (item.type === 'episode') {
+      openEpisode(item);
+      return;
+    }
     openDetail(item, toBrowse);
   }
 
@@ -33,10 +47,16 @@
      so rather than opening a page about nothing. */
   function openDiscovered(item) {
     Discovery.resolve(item).then((found) => {
-      if (found) { openItem(found); return; }
-      UI.message('Not in your library',
-        item.title + (item.year ? ` (${item.year})` : '') +
-        ' is on neither server.  ·  BACK to the rows');
+      if (found) {
+        openItem(found);
+        return;
+      }
+      UI.message(
+        'Not in your library',
+        item.title +
+          (item.year ? ` (${item.year})` : '') +
+          ' is on neither server.  ·  BACK to the rows',
+      );
     });
   }
 
@@ -51,8 +71,14 @@
          rather than a listener, because the failure mode is two sources on one
          ARC link — BACK goes through ShowPage's own close, and playback stops
          it in playChecked. */
-      onChoose: (episode) => { ShowPage.silence(); openDetail(episode, toShow); },
-      onRecap: (video) => { ShowPage.silence(); openRecap(video); }
+      onChoose: (episode) => {
+        ShowPage.silence();
+        openDetail(episode, toShow);
+      },
+      onRecap: (video) => {
+        ShowPage.silence();
+        openRecap(video);
+      },
     });
   }
 
@@ -61,8 +87,8 @@
      A recap is a YouTube video, not library content: it never reaches Guard,
      Player or the timeline, and it opens nothing on anyone's Plex server. */
 
-  let recapVideo = null;         // playing in the overlay, or null
-  let recapOffer = null;         // the panel refused it; OK opens the app instead
+  let recapVideo = null; // playing in the overlay, or null
+  let recapOffer = null; // the panel refused it; OK opens the app instead
   let recapTimer = null;
 
   /* Chromium 53 is nine years old and YouTube's embed drops old browsers over
@@ -72,9 +98,15 @@
     const frame = document.getElementById('recap-frame');
     recapVideo = video;
     clearTimeout(recapTimer);
-    recapTimer = setTimeout(() => { recapFailed('did not load'); }, 8000);
-    frame.onload = () => { clearTimeout(recapTimer); };
-    frame.onerror = () => { recapFailed('would not load'); };
+    recapTimer = setTimeout(() => {
+      recapFailed('did not load');
+    }, 8000);
+    frame.onload = () => {
+      clearTimeout(recapTimer);
+    };
+    frame.onerror = () => {
+      recapFailed('would not load');
+    };
     frame.src = Config.youtubeEmbedBase + video.id + '?autoplay=1';
     document.getElementById('recap').classList.remove('hidden');
   }
@@ -84,7 +116,7 @@
     clearTimeout(recapTimer);
     frame.onload = null;
     frame.onerror = null;
-    frame.src = 'about:blank';                 // stops it playing on the way out
+    frame.src = 'about:blank'; // stops it playing on the way out
     document.getElementById('recap').classList.add('hidden');
     recapVideo = null;
   }
@@ -94,8 +126,10 @@
     if (!video) return;
     closeRecap();
     recapOffer = video;
-    UI.message(`This panel ${why}`, video.title +
-               '  ·  OK opens it in the YouTube app  ·  BACK to the recaps');
+    UI.message(
+      `This panel ${why}`,
+      video.title + '  ·  OK opens it in the YouTube app  ·  BACK to the recaps',
+    );
   }
 
   /* webOS only; on the laptop there is no app to hand it to. */
@@ -103,7 +137,7 @@
     if (!window.webOS || !window.webOS.service) return;
     window.webOS.service.request('luna://com.webos.applicationManager', {
       method: 'launch',
-      parameters: { id: 'youtube.leanback.v4', params: { contentTarget: `v=${id}` } }
+      parameters: { id: 'youtube.leanback.v4', params: { contentTarget: `v=${id}` } },
     });
   }
 
@@ -113,17 +147,20 @@
      nothing happening. */
   function openEpisode(item) {
     UI.toast(`Opening ${item.grandparentTitle || 'series'}…`);
-    Shows.entryFor(item).then((entry) => {
-      if (!entry) {
-        UI.debug(`no series for ${item.grandparentTitle || item.ratingKey}`);
+    Shows.entryFor(item).then(
+      (entry) => {
+        if (!entry) {
+          UI.debug(`no series for ${item.grandparentTitle || item.ratingKey}`);
+          openDetail(item, toBrowse);
+          return;
+        }
+        openShow(entry, { season: item.parentIndex, episode: item.index });
+      },
+      (e) => {
+        UI.debug(`series: ${e.message}`);
         openDetail(item, toBrowse);
-        return;
-      }
-      openShow(entry, { season: item.parentIndex, episode: item.index });
-    }, (e) => {
-      UI.debug(`series: ${e.message}`);
-      openDetail(item, toBrowse);
-    });
+      },
+    );
   }
 
   function openDetail(item, back) {
@@ -143,10 +180,18 @@
          when Play was, which is the difference between starting again and
          picking up. */
       onPlay: (entry, verdict, isExtra, subLang, resumeAt) => {
-        playChecked(entry, verdict, isExtra, resumeAt,
-                    () => { openDetail(item, back); }, subLang);
+        playChecked(
+          entry,
+          verdict,
+          isExtra,
+          resumeAt,
+          () => {
+            openDetail(item, back);
+          },
+          subLang,
+        );
       },
-      onExit: back || toBrowse
+      onExit: back || toBrowse,
     });
   }
 
@@ -171,10 +216,17 @@
     /* Only an episode has a next. A film does not, and a trailer or an extra is
        not the thing you sat down to watch. */
     const hasNext = !isExtra && md.type === 'episode';
-    const goBack = back || (() => { openDetail(item, toBrowse); });
+    const goBack =
+      back ||
+      (() => {
+        openDetail(item, toBrowse);
+      });
     /* A trailer is not the film: resuming it 40 minutes in would be absurd. */
-    md.viewOffset = isExtra ? 0
-      : (resumeAt !== undefined ? resumeAt * 1000 : (item.viewOffset || md.viewOffset || 0));
+    md.viewOffset = isExtra
+      ? 0
+      : resumeAt !== undefined
+        ? resumeAt * 1000
+        : item.viewOffset || md.viewOffset || 0;
     UI.debug(`starting at ${Math.round(md.viewOffset / 1000)}s`);
     UI.show('player');
     Player.play({
@@ -197,38 +249,49 @@
          nothing to switch client-side. Subtitles are not here — they are drawn
          over the video and never restart anything. */
       onSwitch: (change) => {
-        Guard.check(verdict.md, change.mediaIndex, change.audioId,
-                    { maxBitrate: change.maxBitrate, forceStream: change.forceStream })
-          .then((v2) => {
-            if (!v2.ok) {
-              /* Refusing a switch must not end the film. Say why in a line and
+        Guard.check(verdict.md, change.mediaIndex, change.audioId, {
+          maxBitrate: change.maxBitrate,
+          forceStream: change.forceStream,
+        }).then((v2) => {
+          if (!v2.ok) {
+            /* Refusing a switch must not end the film. Say why in a line and
                  leave what is already playing alone — the full explanation is
                  on the detail page, and stopping playback to deliver it is a
                  worse answer than not switching. */
-              UI.toast(`Kept as it was — ${Guard.label(v2)}`);
-              UI.debug(`switch refused: ${Guard.refusal(item, v2)[1]}`);
-              return;
-            }
-            Player.stop('stopped', true);
-            playChecked(item, v2, isExtra, change.at, back, change.subLang);
-          });
+            UI.toast(`Kept as it was — ${Guard.label(v2)}`);
+            UI.debug(`switch refused: ${Guard.refusal(item, v2)[1]}`);
+            return;
+          }
+          Player.stop('stopped', true);
+          playChecked(item, v2, isExtra, change.at, back, change.subLang);
+        });
       },
       /* Direct play reads the file itself. Otherwise the server has to serve a
          converted stream, which means HLS and an actual session on it. */
       url: verdict.transcode
-        ? Plex.transcodeUrl(server, md, verdict.mediaIndex || 0, 0,
-                            verdict.audio && verdict.audio.id,
-                            { maxBitrate: verdict.maxBitrate,
-                              forceStream: verdict.forceStream })
+        ? Plex.transcodeUrl(
+            server,
+            md,
+            verdict.mediaIndex || 0,
+            0,
+            verdict.audio && verdict.audio.id,
+            { maxBitrate: verdict.maxBitrate, forceStream: verdict.forceStream },
+          )
         : null,
       transcode: !!verdict.transcode,
       /* What the player offers when this one ends, and what it does when the
          offer is taken. Kept apart because finding the next episode costs a
          request or two and playing it has to go through the guard. */
       onNext: hasNext ? Shows.nextAfter : null,
-      onPlayNext: hasNext ? ((episode) => { playNext(episode, goBack); }) : null,
+      onPlayNext: hasNext
+        ? (episode) => {
+            playNext(episode, goBack);
+          }
+        : null,
       onExit: goBack,
-      onError: (msg) => { UI.message('Playback failed', msg); }
+      onError: (msg) => {
+        UI.message('Playback failed', msg);
+      },
     });
   }
 
@@ -262,18 +325,34 @@
     /* The recap overlay sits over the show page, which is still the view: BACK
        closes it and leaves the rail exactly where it was. */
     if (recapVideo) {
-      if (UI.isBack(code)) { closeRecap(); e.preventDefault(); }
+      if (UI.isBack(code)) {
+        closeRecap();
+        e.preventDefault();
+      }
       return;
     }
 
     switch (UI.view()) {
-      case 'search':  handled = Browse.searchKey(code); break;
-      case 'devices': handled = Devices.key(code); break;
-      case 'detail':  handled = Detail.key(code); break;
-      case 'show':    handled = ShowPage.key(code); break;
-      case 'message': handled = messageKey(code); break;
-      case 'browse':  handled = Browse.key(code); break;
-      default:        handled = false;             // the link screen waits, that is all
+      case 'search':
+        handled = Browse.searchKey(code);
+        break;
+      case 'devices':
+        handled = Devices.key(code);
+        break;
+      case 'detail':
+        handled = Detail.key(code);
+        break;
+      case 'show':
+        handled = ShowPage.key(code);
+        break;
+      case 'message':
+        handled = messageKey(code);
+        break;
+      case 'browse':
+        handled = Browse.key(code);
+        break;
+      default:
+        handled = false; // the link screen waits, that is all
     }
     if (handled) e.preventDefault();
   }
@@ -308,52 +387,76 @@
   function doLink() {
     UI.show('link');
     UI.debug('requesting a pin from plex.tv…');
-    Plex.linkStart().then((pin) => {
-      document.getElementById('link-code').textContent = pin.code;
-      UI.debug(`pin ${pin.id} · client ${String(Plex.state.clientId).substring(0, 8)}` +
-               ' · code ' + pin.code);
-      return Plex.linkPoll(pin.id, Date.now() + 15 * 60 * 1000, UI.debug);
-    }).then((token) => {
-      if (!token) {                          // pin expired, issue a fresh one
-        UI.debug('pin expired after 15 min, requesting another');
-        doLink();
-        return;
-      }
-      UI.show('browse');
-      start();
-    }).catch((e) => {
-      UI.message('Could not reach plex.tv', e.message + '  ·  BACK to retry');
-    });
+    Plex.linkStart()
+      .then((pin) => {
+        document.getElementById('link-code').textContent = pin.code;
+        UI.debug(
+          `pin ${pin.id} · client ${String(Plex.state.clientId).substring(0, 8)}` +
+            ' · code ' +
+            pin.code,
+        );
+        return Plex.linkPoll(pin.id, Date.now() + 15 * 60 * 1000, UI.debug);
+      })
+      .then((token) => {
+        if (!token) {
+          // pin expired, issue a fresh one
+          UI.debug('pin expired after 15 min, requesting another');
+          doLink();
+          return;
+        }
+        UI.show('browse');
+        start();
+      })
+      .catch((e) => {
+        UI.message('Could not reach plex.tv', e.message + '  ·  BACK to retry');
+      });
   }
 
   function start() {
     UI.show('browse');
     /* Paint from cache before any network work — the whole point of the app. */
-    Cache.sections.get().then((cached) => {
-      if (cached && cached.length && Servers.count()) {
-        Browse.loadSection(Browse.setSections(rehydrate(cached)), false);
-      }
-      return Plex.discover();
-    }).then((servers) => {
-      UI.debug(`servers: ${servers.map((sv) => { return sv.name; }).join(', ')}`);
-      /* Each server's own section list. They may not agree on what exists —
+    Cache.sections
+      .get()
+      .then((cached) => {
+        if (cached && cached.length && Servers.count()) {
+          Browse.loadSection(Browse.setSections(rehydrate(cached)), false);
+        }
+        return Plex.discover();
+      })
+      .then((servers) => {
+        UI.debug(
+          `servers: ${servers
+            .map((sv) => {
+              return sv.name;
+            })
+            .join(', ')}`,
+        );
+        /* Each server's own section list. They may not agree on what exists —
          Browse folds them by type into one Movies and one TV Shows. */
-      return Promise.all(servers.map((sv) => {
-        return Plex.sections(sv).then((secs) => {
-          return { server: sv, sections: secs };
+        return Promise.all(
+          servers.map((sv) => {
+            return Plex.sections(sv).then((secs) => {
+              return { server: sv, sections: secs };
+            });
+          }),
+        );
+      })
+      .then((perServer) => {
+        const any = perServer.filter((r) => {
+          return r.sections.length;
         });
-      }));
-    }).then((perServer) => {
-      const any = perServer.filter((r) => { return r.sections.length; });
-      if (!any.length) {
-        UI.message('No libraries', 'Neither server shares a film or show section.');
-        return;
-      }
-      Cache.sections.put(perServer.map((r) => {
-        return { serverId: r.server.id, sections: r.sections };
-      }));
-      Browse.loadSection(Browse.setSections(perServer), true);
-    }).catch(startFailed);
+        if (!any.length) {
+          UI.message('No libraries', 'Neither server shares a film or show section.');
+          return;
+        }
+        Cache.sections.put(
+          perServer.map((r) => {
+            return { serverId: r.server.id, sections: r.sections };
+          }),
+        );
+        Browse.loadSection(Browse.setSections(perServer), true);
+      })
+      .catch(startFailed);
   }
 
   /* Cached sections name their server by id; turn them back into the server
@@ -379,16 +482,21 @@
          login loop. */
       if (e.message.indexOf(Config.plexTvBase) >= 0) {
         Plex.signOut();
-        UI.message('Plex rejected the login', e.message +
-          '  ·  The stored login is no longer valid. BACK to link again.');
+        UI.message(
+          'Plex rejected the login',
+          e.message + '  ·  The stored login is no longer valid. BACK to link again.',
+        );
       } else {
         Plex.forgetServers();
-        UI.message('A server rejected the token', e.message +
-          '  ·  Dropped the cached servers. BACK to retry.');
+        UI.message(
+          'A server rejected the token',
+          e.message + '  ·  Dropped the cached servers. BACK to retry.',
+        );
       }
       return;
     }
-    if (!Browse.hasRows()) UI.message('Could not reach the servers', e.message + '  ·  BACK to retry');
+    if (!Browse.hasRows())
+      UI.message('Could not reach the servers', e.message + '  ·  BACK to retry');
     else UI.toast('Offline — showing cache');
   }
 
@@ -404,9 +512,12 @@
       UI.debug(`localStorage THROWS: ${e.message}`);
       return;
     }
-    UI.debug(`localStorage ${ok ? 'ok' : 'SILENTLY DROPS WRITES'}` +
-             ' · token ' + (Plex.hasToken() ? 'present' : 'absent') +
-             (Config.dev ? ' · dev server' : ''));
+    UI.debug(
+      `localStorage ${ok ? 'ok' : 'SILENTLY DROPS WRITES'}` +
+        ' · token ' +
+        (Plex.hasToken() ? 'present' : 'absent') +
+        (Config.dev ? ' · dev server' : ''),
+    );
   }
 
   window.onerror = (msg, url, line) => {
@@ -420,5 +531,6 @@
   Plex.init();
   Devices.init();
   storageSelfTest();
-  if (Plex.hasToken()) start(); else doLink();
+  if (Plex.hasToken()) start();
+  else doLink();
 })();

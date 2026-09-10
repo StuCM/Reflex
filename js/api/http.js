@@ -43,15 +43,23 @@ var Http = (function () {
           reject(new Error(label + ' -> ' + xhr.status + (opts.explain ? opts.explain(xhr) : '')));
           return;
         }
-        if (!xhr.responseText) { resolve(null); return; }
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch (e) {
+        if (!xhr.responseText) {
+          resolve(null);
+          return;
+        }
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (e) {
           if (opts.text) resolve(xhr.responseText);
           else reject(new Error(label + ' bad json'));
         }
       };
-      xhr.ontimeout = () => { reject(new Error(label + ' timeout')); };
-      xhr.onerror = () => { reject(new Error(label + ' network')); };
+      xhr.ontimeout = () => {
+        reject(new Error(label + ' timeout'));
+      };
+      xhr.onerror = () => {
+        reject(new Error(label + ' network'));
+      };
       xhr.send(opts.body || null);
     });
   }

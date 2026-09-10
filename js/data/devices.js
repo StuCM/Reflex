@@ -19,24 +19,42 @@ var Devices = (function () {
      history entries are fat. */
   const HISTORY = 100;
 
-  let played = null;             // 'serverId:ratingKey' -> 'serverId:deviceID'
-  let claimed = null;            // null = never configured, so don't filter
+  let played = null; // 'serverId:ratingKey' -> 'serverId:deviceID'
+  let claimed = null; // null = never configured, so don't filter
   let list = [];
   let idx = 0;
   let onClose = null;
 
   const elList = document.getElementById('device-list');
 
-  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-  function lsSet(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* full */ } }
+  function lsGet(storageKey) {
+    try {
+      return localStorage.getItem(storageKey);
+    } catch (e) {
+      return null;
+    }
+  }
+  function lsSet(storageKey, value) {
+    try {
+      localStorage.setItem(storageKey, value);
+    } catch (e) {
+      /* full */
+    }
+  }
 
   function init() {
     const raw = lsGet('myDevices');
     if (!raw) return;
-    try { claimed = JSON.parse(raw); } catch (e) { claimed = null; }
+    try {
+      claimed = JSON.parse(raw);
+    } catch (e) {
+      claimed = null;
+    }
   }
 
-  function itemKey(server, ratingKey) { return server.id + ':' + ratingKey; }
+  function itemKey(server, ratingKey) {
+    return server.id + ':' + ratingKey;
+  }
 
   /* One history fetch per server per session gives us "which device last played
      this". onDeck carries no device information of its own, so this is the only
@@ -44,30 +62,42 @@ var Devices = (function () {
   function ensureHistory() {
     if (played) return Promise.resolve(played);
     const servers = Servers.all();
-    return Promise.all(servers.map((sv) => {
-      return Plex.history(sv, HISTORY).then((entries) => {
-        return { server: sv, entries: entries };
-      });
-    })).then((perServer) => {
-      const map = {};
-      let count = 0;
-      perServer.forEach((res) => {
-        /* Sorted newest first, so the first entry per item is the latest. */
-        res.entries.forEach((e) => {
-          if (!e.ratingKey || e.deviceID === undefined) return;
-          const k = itemKey(res.server, e.ratingKey);
-          if (map[k] === undefined) { map[k] = res.server.id + ':' + e.deviceID; count++; }
+    return Promise.all(
+      servers.map((sv) => {
+        return Plex.history(sv, HISTORY).then((entries) => {
+          return { server: sv, entries: entries };
         });
+      }),
+    )
+      .then((perServer) => {
+        const map = {};
+        let count = 0;
+        perServer.forEach((res) => {
+          /* Sorted newest first, so the first entry per item is the latest. */
+          res.entries.forEach((e) => {
+            if (!e.ratingKey || e.deviceID === undefined) return;
+            const k = itemKey(res.server, e.ratingKey);
+            if (map[k] === undefined) {
+              map[k] = res.server.id + ':' + e.deviceID;
+              count++;
+            }
+          });
+        });
+        played = map;
+        UI.debug(
+          `history: ${count} items across ${servers.length} server` +
+            (servers.length === 1 ? '' : 's') +
+            ', ' +
+            countDevices(map) +
+            ' devices',
+        );
+        return map;
+      })
+      .catch((e) => {
+        UI.debug(`history unavailable: ${e.message}`);
+        played = {}; // don't retry all session; filtering just stays off
+        return played;
       });
-      played = map;
-      UI.debug(`history: ${count} items across ${servers.length} server` +
-               (servers.length === 1 ? '' : 's') + ', ' + countDevices(map) + ' devices');
-      return map;
-    }).catch((e) => {
-      UI.debug(`history unavailable: ${e.message}`);
-      played = {};                 // don't retry all session; filtering just stays off
-      return played;
-    });
   }
 
   function countDevices(map) {
@@ -100,9 +130,13 @@ var Devices = (function () {
     const servers = Servers.all();
     Promise.all([
       ensureHistory(),
-      Promise.all(servers.map((sv) => {
-        return Plex.devices(sv).then((d) => { return { server: sv, devices: d }; });
-      }))
+      Promise.all(
+        servers.map((sv) => {
+          return Plex.devices(sv).then((d) => {
+            return { server: sv, devices: d };
+          });
+        }),
+      ),
     ]).then((res) => {
       const map = res[0] || {};
       const named = res[1] || [];
@@ -110,17 +144,27 @@ var Devices = (function () {
       const counts = {};
       const keys = Object.keys(map);
       named.forEach((n) => {
-        n.devices.forEach((d) => { names[n.server.id + ':' + d.id] = d.name; });
+        n.devices.forEach((d) => {
+          names[n.server.id + ':' + d.id] = d.name;
+        });
       });
       for (let i = 0; i < keys.length; i++) {
         counts[map[keys[i]]] = (counts[map[keys[i]]] || 0) + 1;
       }
-      list = Object.keys(counts).map((k) => {
-        const server = Servers.get(k.split(':')[0]);
-        return { key: k, name: names[k] || (`device ${k.split(':')[1]}`),
-                 server: Servers.label(server), count: counts[k],
-                 mine: claimed ? !!claimed[k] : true };
-      }).sort((a, b) => { return b.count - a.count; });
+      list = Object.keys(counts)
+        .map((k) => {
+          const server = Servers.get(k.split(':')[0]);
+          return {
+            key: k,
+            name: names[k] || `device ${k.split(':')[1]}`,
+            server: Servers.label(server),
+            count: counts[k],
+            mine: claimed ? !!claimed[k] : true,
+          };
+        })
+        .sort((a, b) => {
+          return b.count - a.count;
+        });
       render();
     });
   }
@@ -134,11 +178,14 @@ var Devices = (function () {
     let html = '';
     for (let i = 0; i < list.length; i++) {
       const d = list[i];
-      html += `<div class="device-row${i === idx ? ' on' : ''}">` +
-              (d.mine ? '[x] ' : '[ ] ') + UI.escapeHtml(d.name) +
-              (d.server ? ` <span class="device-count">on ${UI.escapeHtml(d.server)}` +
-                          '</span>' : '') +
-              ' <span class="device-count">' + d.count + ' items</span></div>';
+      html +=
+        `<div class="device-row${i === idx ? ' on' : ''}">` +
+        (d.mine ? '[x] ' : '[ ] ') +
+        UI.escapeHtml(d.name) +
+        (d.server ? ` <span class="device-count">on ${UI.escapeHtml(d.server)}` + '</span>' : '') +
+        ' <span class="device-count">' +
+        d.count +
+        ' items</span></div>';
     }
     elList.innerHTML = html;
   }
@@ -160,15 +207,26 @@ var Devices = (function () {
 
   /* Returns true if it handled the key. */
   function key(code) {
-    if (code === UI.KEY.UP && idx > 0) { idx--; render(); return true; }
-    if (code === UI.KEY.DOWN && idx < list.length - 1) { idx++; render(); return true; }
+    if (code === UI.KEY.UP && idx > 0) {
+      idx--;
+      render();
+      return true;
+    }
+    if (code === UI.KEY.DOWN && idx < list.length - 1) {
+      idx++;
+      render();
+      return true;
+    }
     if (code === UI.KEY.OK && list[idx]) {
       list[idx].mine = !list[idx].mine;
       render();
       return true;
     }
-    if (UI.isBack(code)) { save(); return true; }
-    return true;                    // this screen swallows everything else
+    if (UI.isBack(code)) {
+      save();
+      return true;
+    }
+    return true; // this screen swallows everything else
   }
 
   return { init: init, ensureHistory: ensureHistory, mine: mine, open: open, key: key };

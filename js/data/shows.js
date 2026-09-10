@@ -9,20 +9,28 @@
 var Shows = (function () {
   'use strict';
 
-  const entries = {};              // '<server>:<showKey>' -> Promise<entry|null>
+  const entries = {}; // '<server>:<showKey>' -> Promise<entry|null>
 
   /* Seasons of a merged show entry, in order.
      Each returned season carries its own per-server copies, which is what the
      episode fetch then walks. */
   function seasons(entry) {
     const copies = Merge.sources(entry);
-    return Promise.all(copies.map((copy) => {
-      return Plex.children(Servers.of(copy), copy.ratingKey);
-    })).then((perServer) => {
-      const merged = Merge.lists(perServer.map((list) => {
-        return list.filter((m) => { return m.type === 'season'; });
-      }));
-      merged.sort((a, b) => { return (a.index || 0) - (b.index || 0); });
+    return Promise.all(
+      copies.map((copy) => {
+        return Plex.children(Servers.of(copy), copy.ratingKey);
+      }),
+    ).then((perServer) => {
+      const merged = Merge.lists(
+        perServer.map((list) => {
+          return list.filter((m) => {
+            return m.type === 'season';
+          });
+        }),
+      );
+      merged.sort((a, b) => {
+        return (a.index || 0) - (b.index || 0);
+      });
       return merged;
     });
   }
@@ -30,13 +38,21 @@ var Shows = (function () {
   /* Episodes of a merged season, in order. */
   function episodes(season) {
     const copies = Merge.sources(season);
-    return Promise.all(copies.map((copy) => {
-      return Plex.children(Servers.of(copy), copy.ratingKey);
-    })).then((perServer) => {
-      const merged = Merge.lists(perServer.map((list) => {
-        return list.filter((m) => { return m.type === 'episode'; });
-      }));
-      merged.sort((a, b) => { return (a.index || 0) - (b.index || 0); });
+    return Promise.all(
+      copies.map((copy) => {
+        return Plex.children(Servers.of(copy), copy.ratingKey);
+      }),
+    ).then((perServer) => {
+      const merged = Merge.lists(
+        perServer.map((list) => {
+          return list.filter((m) => {
+            return m.type === 'episode';
+          });
+        }),
+      );
+      merged.sort((a, b) => {
+        return (a.index || 0) - (b.index || 0);
+      });
       return merged;
     });
   }
@@ -52,19 +68,24 @@ var Shows = (function () {
   }
 
   function resolve(episode) {
-    return Meta.load({ ratingKey: episode.grandparentRatingKey,
-                       _server: episode._server }).then((md) => {
-      if (!md) return null;
-      /* Up to the show and out from there: episodes rarely carry ids of their
+    return Meta.load({ ratingKey: episode.grandparentRatingKey, _server: episode._server })
+      .then((md) => {
+        if (!md) return null;
+        /* Up to the show and out from there: episodes rarely carry ids of their
          own, but the show does, so its ids are what the other servers are asked
          for. Its own server's copy leads the fold, so a show only one server
          has is simply a one-source entry and the page is happy with that. */
-      return Promise.all(Servers.all().map((sv) => {
-        return Plex.allVersions(sv, md);
-      })).then((perServer) => {
-        return Merge.lists([[md]].concat(perServer))[0];
+        return Promise.all(
+          Servers.all().map((sv) => {
+            return Plex.allVersions(sv, md);
+          }),
+        ).then((perServer) => {
+          return Merge.lists([[md]].concat(perServer))[0];
+        });
+      })
+      .catch(() => {
+        return null;
       });
-    }).catch(() => { return null; });
   }
 
   /* Is this merged entry a copy of that episode? Matched by rating key across
@@ -80,10 +101,10 @@ var Shows = (function () {
 
   /* The episode after `current` in a season's list, or null at the end of it or
      when `current` is not in the list at all. Pure, so it is unit tested. */
-  function nextInList(episodes, current) {
-    if (!episodes || !current) return null;
-    for (let i = 0; i < episodes.length; i++) {
-      if (isCopyOf(episodes[i], current)) return episodes[i + 1] || null;
+  function nextInList(list, current) {
+    if (!list || !current) return null;
+    for (let i = 0; i < list.length; i++) {
+      if (isCopyOf(list[i], current)) return list[i + 1] || null;
     }
     return null;
   }
@@ -93,25 +114,32 @@ var Shows = (function () {
      unattended chain rolling across a season boundary. */
   function nextAfter(episode) {
     if (!episode) return Promise.resolve(null);
-    return entryFor(episode).then((entry) => {
-      if (!entry) return null;
-      return seasons(entry).then((list) => {
-        let at = -1;
-        for (let i = 0; i < list.length; i++) {
-          if (list[i].index === episode.parentIndex) { at = i; break; }
-        }
-        if (at < 0) return null;
-        return episodes(list[at]).then((eps) => {
-          const next = nextInList(eps, episode);
-          if (next) return { episode: next, newSeason: false };
-          /* seasons() is sorted by index, so the one after is simply the next. */
-          if (at + 1 >= list.length) return null;
-          return episodes(list[at + 1]).then((more) => {
-            return more.length ? { episode: more[0], newSeason: true } : null;
+    return entryFor(episode)
+      .then((entry) => {
+        if (!entry) return null;
+        return seasons(entry).then((list) => {
+          let at = -1;
+          for (let i = 0; i < list.length; i++) {
+            if (list[i].index === episode.parentIndex) {
+              at = i;
+              break;
+            }
+          }
+          if (at < 0) return null;
+          return episodes(list[at]).then((eps) => {
+            const next = nextInList(eps, episode);
+            if (next) return { episode: next, newSeason: false };
+            /* seasons() is sorted by index, so the one after is simply the next. */
+            if (at + 1 >= list.length) return null;
+            return episodes(list[at + 1]).then((more) => {
+              return more.length ? { episode: more[0], newSeason: true } : null;
+            });
           });
         });
+      })
+      .catch(() => {
+        return null;
       });
-    }).catch(() => { return null; });
   }
 
   /* "4 series · 38 episodes", or as much of it as the server told us. */
@@ -139,7 +167,13 @@ var Shows = (function () {
     return 0;
   }
 
-  return { seasons: seasons, episodes: episodes, entryFor: entryFor,
-           nextInList: nextInList, nextAfter: nextAfter,
-           summary: summary, openAt: openAt };
+  return {
+    seasons: seasons,
+    episodes: episodes,
+    entryFor: entryFor,
+    nextInList: nextInList,
+    nextAfter: nextAfter,
+    summary: summary,
+    openAt: openAt,
+  };
 })();

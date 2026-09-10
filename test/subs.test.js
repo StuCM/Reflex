@@ -24,7 +24,7 @@ var SRT = [
   '3',
   '01:02:03,250 --> 01:02:05,000',
   '{\\an8}A sign, high on the screen.',
-  ''
+  '',
 ].join('\n');
 
 var cues = Subs.parse(SRT);
@@ -54,7 +54,8 @@ assert.strictEqual(Subs.parse('not a subtitle file at all').length, 0);
 
 // A cue whose number sits on the line before the next timestamp belongs to that
 // next cue, not to the end of this one — otherwise every line ends in a digit.
-var RUN_ON = '1\n00:00:01,000 --> 00:00:02,000\nFirst.\n2\n00:00:03,000 --> 00:00:04,000\nSecond.\n';
+var RUN_ON =
+  '1\n00:00:01,000 --> 00:00:02,000\nFirst.\n2\n00:00:03,000 --> 00:00:04,000\nSecond.\n';
 var runOn = Subs.parse(RUN_ON);
 assert.strictEqual(runOn.length, 2);
 assert.strictEqual(runOn[0].text, 'First.');
@@ -72,19 +73,30 @@ assert.strictEqual(Subs.textAt([], 10), '');
 
 // Overlapping cues — two speakers, or a translated sign over dialogue — are
 // both on screen, in time order.
-var OVERLAP = Subs.parse([
-  '1', '00:00:01,000 --> 00:00:09,000', 'A long one.', '',
-  '2', '00:00:03,000 --> 00:00:04,000', 'A short one.', ''
-].join('\n'));
+var OVERLAP = Subs.parse(
+  [
+    '1',
+    '00:00:01,000 --> 00:00:09,000',
+    'A long one.',
+    '',
+    '2',
+    '00:00:03,000 --> 00:00:04,000',
+    'A short one.',
+    '',
+  ].join('\n'),
+);
 assert.strictEqual(Subs.textAt(OVERLAP, 3.5), 'A long one.\nA short one.');
 assert.strictEqual(Subs.textAt(OVERLAP, 8), 'A long one.');
 
 // Straight after a seek to the far end of a two-hour film, the search still has
 // to land on the right cue rather than walk there.
 function hms(sec) {
-  var p = function (n) { return (n < 10 ? '0' : '') + n; };
-  return p(Math.floor(sec / 3600)) + ':' + p(Math.floor(sec / 60) % 60) + ':' +
-         p(sec % 60) + ',000';
+  var p = function (n) {
+    return (n < 10 ? '0' : '') + n;
+  };
+  return (
+    p(Math.floor(sec / 3600)) + ':' + p(Math.floor(sec / 60) % 60) + ':' + p(sec % 60) + ',000'
+  );
 }
 var many = [];
 for (var i = 0; i < 4000; i++) {
@@ -97,9 +109,11 @@ assert.strictEqual(Subs.textAt(big, 7000.5), 'Cue 3500');
 /* ---------- which track ---------- */
 
 function part(streams) {
-  return { Stream: streams.map(function (s, n) {
-    return Object.assign({ id: 500 + n, streamType: 3 }, s);
-  }) };
+  return {
+    Stream: streams.map(function (s, n) {
+      return Object.assign({ id: 500 + n, streamType: 3 }, s);
+    }),
+  };
 }
 
 // A picture of words can only reach the screen by the server painting it into
@@ -110,29 +124,52 @@ assert.strictEqual(Media.isTextSub({ codec: 'pgs' }), false);
 assert.strictEqual(Media.isTextSub({ codec: 'vobsub' }), false);
 assert.strictEqual(Media.isTextSub(null), false);
 
-var tracks = part([{ codec: 'pgs', languageCode: 'eng' },
-                   { codec: 'subrip', languageCode: 'fre' },
-                   { codec: 'subrip', languageCode: 'eng', selected: true }]);
+var tracks = part([
+  { codec: 'pgs', languageCode: 'eng' },
+  { codec: 'subrip', languageCode: 'fre' },
+  { codec: 'subrip', languageCode: 'eng', selected: true },
+]);
 assert.strictEqual(Media.subtitleTracks(tracks).length, 3, 'all of them are listed…');
 assert.strictEqual(Media.pickSubtitle(tracks).languageCode, 'eng', '…but only text is picked');
-assert.strictEqual(Media.pickSubtitle(tracks, 'fre').languageCode, 'fre',
-                   'a language the user asked for wins over the selected flag');
-assert.strictEqual(Media.pickSubtitle(tracks, 'deu').languageCode, 'eng',
-                   'a language the file does not have falls back rather than failing');
-assert.strictEqual(Media.pickSubtitle(part([{ codec: 'pgs' }])), null,
-                   'image tracks only means no subtitles');
+assert.strictEqual(
+  Media.pickSubtitle(tracks, 'fre').languageCode,
+  'fre',
+  'a language the user asked for wins over the selected flag',
+);
+assert.strictEqual(
+  Media.pickSubtitle(tracks, 'deu').languageCode,
+  'eng',
+  'a language the file does not have falls back rather than failing',
+);
+assert.strictEqual(
+  Media.pickSubtitle(part([{ codec: 'pgs' }])),
+  null,
+  'image tracks only means no subtitles',
+);
 assert.strictEqual(Media.pickSubtitle(part([])), null);
 
 // A forced track is the foreign-dialogue captions on an English film, which is
 // the right default when nothing is marked selected.
 assert.strictEqual(
-  Media.pickSubtitle(part([{ codec: 'subrip', languageCode: 'eng' },
-                           { codec: 'subrip', languageCode: 'eng', forced: true }])).forced, true);
+  Media.pickSubtitle(
+    part([
+      { codec: 'subrip', languageCode: 'eng' },
+      { codec: 'subrip', languageCode: 'eng', forced: true },
+    ]),
+  ).forced,
+  true,
+);
 
 // Commentary subtitles exist too, and are no more the film than the audio kind.
 assert.strictEqual(
-  Media.pickSubtitle(part([{ codec: 'subrip', languageCode: 'eng', title: 'Director commentary' },
-                           { codec: 'subrip', languageCode: 'eng', title: 'Full' }])).title, 'Full');
+  Media.pickSubtitle(
+    part([
+      { codec: 'subrip', languageCode: 'eng', title: 'Director commentary' },
+      { codec: 'subrip', languageCode: 'eng', title: 'Full' },
+    ]),
+  ).title,
+  'Full',
+);
 
 // Named for a menu, not for a badge.
 assert.ok(/French/.test(Media.subLabel({ codec: 'subrip', languageCode: 'fre' })));
@@ -146,11 +183,20 @@ assert.strictEqual(Media.langName({ languageCode: 'xyz' }), 'XYZ');
 
 var film = {
   duration: 7200000,
-  Marker: [{ type: 'intro', startTimeOffset: 30000, endTimeOffset: 90000 },
-           { type: 'credits', startTimeOffset: 7000000, endTimeOffset: 7200000 }],
-  Chapter: [{ index: 2, tag: 'Two', startTimeOffset: 600000, endTimeOffset: 1200000,
-              thumb: '/library/metadata/1/chapterImages/2' },
-            { index: 1, tag: 'One', startTimeOffset: 0, endTimeOffset: 600000 }]
+  Marker: [
+    { type: 'intro', startTimeOffset: 30000, endTimeOffset: 90000 },
+    { type: 'credits', startTimeOffset: 7000000, endTimeOffset: 7200000 },
+  ],
+  Chapter: [
+    {
+      index: 2,
+      tag: 'Two',
+      startTimeOffset: 600000,
+      endTimeOffset: 1200000,
+      thumb: '/library/metadata/1/chapterImages/2',
+    },
+    { index: 1, tag: 'One', startTimeOffset: 0, endTimeOffset: 600000 },
+  ],
 };
 
 assert.strictEqual(Media.markerAt(film, 10), null);
@@ -183,10 +229,15 @@ assert.ok(qualities.length > 1);
 qualities.slice(1).forEach(function (q) {
   assert.ok(q.bitrate < hd.bitrate, 'never offer a cap above what the file already is');
 });
-assert.strictEqual(Media.qualities({ bitrate: 500 }).length, 1,
-                   'a file already below every cap has nothing to choose');
-assert.strictEqual(Media.versionLabel({ videoResolution: '4k', videoCodec: 'hevc', bitrate: 48000 }),
-                   '4K HEVC · 48 Mbps');
+assert.strictEqual(
+  Media.qualities({ bitrate: 500 }).length,
+  1,
+  'a file already below every cap has nothing to choose',
+);
+assert.strictEqual(
+  Media.versionLabel({ videoResolution: '4k', videoCodec: 'hevc', bitrate: 48000 }),
+  '4K HEVC · 48 Mbps',
+);
 assert.strictEqual(Media.bitrateLabel(720), '720 Kbps');
 
 console.log('subtitles, markers and quality: all assertions passed');

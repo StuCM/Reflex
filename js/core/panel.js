@@ -25,49 +25,55 @@ var Panel = (function () {
   const BASE = {
     container: { mkv: true, mp4: true, mpegts: true },
     video: { h264: true, hevc: true },
-    audio: { aac: true, ac3: true, eac3: true, mp3: true }
+    audio: { aac: true, ac3: true, eac3: true, mp3: true },
   };
 
   /* Candidates worth asking about, each with the mime the pipeline understands.
      Nothing here is claimed unless the answer comes back "probably". */
   const CANDIDATES = [
-    { kind: 'video', name: 'vp9',   mime: 'video/webm; codecs="vp9"' },
-    { kind: 'video', name: 'vp8',   mime: 'video/webm; codecs="vp8"' },
-    { kind: 'video', name: 'av1',   mime: 'video/mp4; codecs="av01.0.05M.08"' },
+    { kind: 'video', name: 'vp9', mime: 'video/webm; codecs="vp9"' },
+    { kind: 'video', name: 'vp8', mime: 'video/webm; codecs="vp8"' },
+    { kind: 'video', name: 'av1', mime: 'video/mp4; codecs="av01.0.05M.08"' },
     { kind: 'video', name: 'mpeg2video', mime: 'video/mpeg' },
-    { kind: 'video', name: 'vc1',   mime: 'video/x-ms-wmv' },
+    { kind: 'video', name: 'vc1', mime: 'video/x-ms-wmv' },
     { kind: 'video', name: 'mpeg4', mime: 'video/mp4; codecs="mp4v.20.8"' },
 
     { kind: 'container', name: 'webm', mime: 'video/webm' },
-    { kind: 'container', name: 'avi',  mime: 'video/x-msvideo' },
-    { kind: 'container', name: 'mov',  mime: 'video/quicktime' },
-    { kind: 'container', name: 'asf',  mime: 'video/x-ms-asf' },
+    { kind: 'container', name: 'avi', mime: 'video/x-msvideo' },
+    { kind: 'container', name: 'mov', mime: 'video/quicktime' },
+    { kind: 'container', name: 'asf', mime: 'video/x-ms-asf' },
 
     /* Audio is asked about for the report only — what the panel can decode is a
        different question from what survives HDMI ARC, and js/media.js owns
        that one. */
-    { kind: 'audio', name: 'flac',   mime: 'audio/flac' },
-    { kind: 'audio', name: 'opus',   mime: 'audio/ogg; codecs="opus"' },
+    { kind: 'audio', name: 'flac', mime: 'audio/flac' },
+    { kind: 'audio', name: 'opus', mime: 'audio/ogg; codecs="opus"' },
     { kind: 'audio', name: 'vorbis', mime: 'audio/ogg; codecs="vorbis"' },
-    { kind: 'audio', name: 'dts',    mime: 'audio/vnd.dts' },
-    { kind: 'audio', name: 'truehd', mime: 'audio/true-hd' }
+    { kind: 'audio', name: 'dts', mime: 'audio/vnd.dts' },
+    { kind: 'audio', name: 'truehd', mime: 'audio/true-hd' },
   ];
 
-  let answers = null;          // [{ kind, name, mime, said }]
-  let caps = null;             // BASE plus whatever the probe added
-  let features = null;         // what the media element exposes beyond src/play
+  let answers = null; // [{ kind, name, mime, said }]
+  let caps = null; // BASE plus whatever the probe added
+  let features = null; // what the media element exposes beyond src/play
 
   function ask(mime) {
     const el = document.getElementById('video');
     if (!el || !el.canPlayType) return '';
-    try { return el.canPlayType(mime) || ''; } catch (e) { return ''; }
+    try {
+      return el.canPlayType(mime) || '';
+    } catch (e) {
+      return '';
+    }
   }
 
   function probe() {
     if (answers) return answers;
     answers = [];
     caps = {
-      container: {}, video: {}, audio: {}
+      container: {},
+      video: {},
+      audio: {},
     };
     const kinds = ['container', 'video', 'audio'];
     let i;
@@ -101,17 +107,25 @@ var Panel = (function () {
   function probeFeatures() {
     if (features) return features;
     const el = document.getElementById('video');
-    function has(name) { return !!(el && name in el); }
+    function has(name) {
+      return !!(el && name in el);
+    }
     features = {
       audioTracks: has('audioTracks') ? String((el.audioTracks || {}).length) : 'no',
       videoTracks: has('videoTracks') ? 'yes' : 'no',
       textTracks: has('textTracks') ? 'yes' : 'no',
-      playbackQuality: !!(el && (el.getVideoPlaybackQuality ||
-                                 el.webkitDecodedFrameCount !== undefined)),
-      mediaSource: (typeof window !== 'undefined' && !!window.MediaSource),
-      webOS: (typeof window !== 'undefined' && !!window.webOS),
-      webOSVersion: (typeof window !== 'undefined' && window.webOS &&
-                     window.webOS.device && window.webOS.device.platformVersion) || '?'
+      playbackQuality: !!(
+        el &&
+        (el.getVideoPlaybackQuality || el.webkitDecodedFrameCount !== undefined)
+      ),
+      mediaSource: typeof window !== 'undefined' && !!window.MediaSource,
+      webOS: typeof window !== 'undefined' && !!window.webOS,
+      webOSVersion:
+        (typeof window !== 'undefined' &&
+          window.webOS &&
+          window.webOS.device &&
+          window.webOS.device.platformVersion) ||
+        '?',
     };
     return features;
   }
@@ -136,13 +150,23 @@ var Panel = (function () {
     const audio = list('audio').join(',');
     const out = [];
     for (let i = 0; i < containers.length; i++) {
-      out.push(`add-direct-play-profile(type=videoProfile&container=${containers[i]}` +
-               '&codec=' + video + '&audioCodec=' + audio + ')');
+      out.push(
+        `add-direct-play-profile(type=videoProfile&container=${containers[i]}` +
+          '&codec=' +
+          video +
+          '&audioCodec=' +
+          audio +
+          ')',
+      );
     }
     /* The two limits that are about this panel rather than about codecs: H.264
        above level 5.1 and HEVC above 10-bit are beyond it. */
-    out.push('add-limitation(scope=videoCodec&scopeName=h264&type=upperBound&name=video.level&value=51&isRequired=false)');
-    out.push('add-limitation(scope=videoCodec&scopeName=hevc&type=upperBound&name=video.bitDepth&value=10&isRequired=false)');
+    out.push(
+      'add-limitation(scope=videoCodec&scopeName=h264&type=upperBound&name=video.level&value=51&isRequired=false)',
+    );
+    out.push(
+      'add-limitation(scope=videoCodec&scopeName=hevc&type=upperBound&name=video.bitDepth&value=10&isRequired=false)',
+    );
     return out.join('+');
   }
 
@@ -163,22 +187,37 @@ var Panel = (function () {
       for (let i = 0; i < rows.length; i++) {
         if (rows[i].kind === kinds[k]) said.push(rows[i].name + '=' + (rows[i].said || 'no'));
       }
-      lines.push(kinds[k] + (kinds[k] === 'video' ? '        ' : (kinds[k] === 'audio' ? '        ' : '    ')) +
-                 said.join('  '));
+      lines.push(
+        kinds[k] +
+          (kinds[k] === 'video' ? '        ' : kinds[k] === 'audio' ? '        ' : '    ') +
+          said.join('  '),
+      );
     }
     const f = probeFeatures();
     lines.push('');
     lines.push('PIPELINE');
-    lines.push(`audioTracks  ${f.audioTracks}    textTracks ${f.textTracks}` +
-               '    MediaSource ' + (f.mediaSource ? 'yes' : 'no'));
-    lines.push(`webOS ${f.webOS ? f.webOSVersion : 'no'}` +
-               '    frame stats ' + (f.playbackQuality ? 'yes' : 'no'));
+    lines.push(
+      `audioTracks  ${f.audioTracks}    textTracks ${f.textTracks}` +
+        '    MediaSource ' +
+        (f.mediaSource ? 'yes' : 'no'),
+    );
+    lines.push(
+      `webOS ${f.webOS ? f.webOSVersion : 'no'}` +
+        '    frame stats ' +
+        (f.playbackQuality ? 'yes' : 'no'),
+    );
     lines.push('');
     lines.push('Audio over ARC is a separate question: TrueHD and DTS-HD MA never');
     lines.push('pass, whatever the panel decodes.');
     return lines.join('\n');
   }
 
-  return { probe: probe, supports: supports, list: list, features: probeFeatures,
-           clientProfile: clientProfile, report: report };
+  return {
+    probe: probe,
+    supports: supports,
+    list: list,
+    features: probeFeatures,
+    clientProfile: clientProfile,
+    report: report,
+  };
 })();

@@ -15,8 +15,11 @@ var dir = path.join(root, '.claude', 'tasks');
 
 var ORDER = ['blocked', 'pending-tv', 'draft', 'review', 'building', 'approved', 'done'];
 
-var tasks = fs.readdirSync(dir)
-  .filter(function (f) { return /^\d{3}-.*\.md$/.test(f); })
+var tasks = fs
+  .readdirSync(dir)
+  .filter(function (f) {
+    return /^\d{3}-.*\.md$/.test(f);
+  })
   .map(function (f) {
     var text = fs.readFileSync(path.join(dir, f), 'utf8');
     return {
@@ -26,7 +29,7 @@ var tasks = fs.readdirSync(dir)
       env: field(text, 'env') || '?',
       branch: field(text, 'branch') || '',
       model: field(text, 'model') || '',
-      title: title(text) || f
+      title: title(text) || f,
     };
   })
   .sort(function (a, b) {
@@ -107,8 +110,16 @@ function reason(status) {
 
 function branches() {
   try {
-    return execSync('git branch --list "crew/*" --format="%(refname:short)"',
-                    { cwd: root, encoding: 'utf8' })
-      .split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
-  } catch (e) { return []; }
+    return execSync('git branch --list "crew/*" --format="%(refname:short)"', {
+      cwd: root,
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
 }

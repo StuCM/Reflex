@@ -35,15 +35,25 @@ module.exports = function load(files) {
        which is exactly the set the tests are written against. */
     document: {
       getElementById: function () {
-        return { canPlayType: function () { return ''; } };
-      }
+        return {
+          canPlayType: function () {
+            return '';
+          },
+        };
+      },
     },
     /* servers.js persists the server list and the preference. */
     localStorage: {
-      getItem: function (k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
-      setItem: function (k, v) { store[k] = String(v); },
-      removeItem: function (k) { delete store[k]; }
-    }
+      getItem: function (k) {
+        return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null;
+      },
+      setItem: function (k, v) {
+        store[k] = String(v);
+      },
+      removeItem: function (k) {
+        delete store[k];
+      },
+    },
   };
   vm.createContext(ctx);
   files.forEach(function (f) {

@@ -7,6 +7,11 @@
    on the TV, so the mistake this catches is the one you cannot see: code that
    is fine in the browser you tested in and a blank screen on the panel.
 
+   The CSS feature bans moved to .stylelintrc.json, which parses declarations
+   and reads the same browserslist as the build. What is left here is the JS
+   scan and the index.html manifest, both of which retire when the bundler
+   lands — see docs/refactor-plan.md.
+
    This is a text scan, not a parser. It knows the constructs that have actually
    come up, and it will not catch everything — treat a clean run as "nothing
    obviously wrong", not as proof. dev/, test/ and tools/ are not scanned; they
@@ -24,7 +29,11 @@ const JS_RULES = [
   [/\bawait\s+[\w({[]/, 'await', 'Chrome 55'],
   [/\{\s*\.\.\./, 'object spread', 'Chrome 60'],
   [/,\s*\.\.\.\w+\s*\}/, 'object rest', 'Chrome 60'],
-  [/\bObject\.(entries|values|fromEntries|getOwnPropertyDescriptors)\s*\(/, 'Object.entries/values', 'Chrome 54'],
+  [
+    /\bObject\.(entries|values|fromEntries|getOwnPropertyDescriptors)\s*\(/,
+    'Object.entries/values',
+    'Chrome 54',
+  ],
   [/\bPromise\.(any|allSettled)\s*\(/, 'Promise.any / allSettled', 'Chrome 76+'],
   [/\.finally\s*\(/, 'Promise.prototype.finally', 'Chrome 63'],
   [/\.(padStart|padEnd)\s*\(/, 'String.padStart/padEnd', 'Chrome 57'],
@@ -46,30 +55,16 @@ const JS_RULES = [
      sits at column 0: that is the module's own binding, and only var puts a
      property on the global object for index.html's next script tag and for
      test/load.js. */
-  [/^\s+var\s/, 'var inside a module', 'house rule: const/let, Chrome 49']
-];
-
-const CSS_RULES = [
-  [/display\s*:\s*(inline-)?grid/, 'CSS Grid', 'Chrome 57'],
-  [/\bgrid-(template|area|column|row|gap)/, 'CSS Grid', 'Chrome 57'],
-  [/position\s*:\s*sticky/, 'position: sticky', 'Chrome 56'],
-  [/(^|[;{\s])gap\s*:/, 'flexbox gap', 'Chrome 84'],
-  [/\baspect-ratio\s*:/, 'aspect-ratio', 'Chrome 88'],
-  [/backdrop-filter\s*:/, 'backdrop-filter', 'Chrome 76'],
-  [/:\s*(clamp|min|max)\(/, 'CSS clamp()/min()/max()', 'Chrome 79'],
-  [/:(is|where)\s*\(/, ':is() / :where()', 'Chrome 88'],
-  /* CLAUDE.md: animate transform and opacity only — everything else forces
-     layout or paint on a 2018 SoC. */
-  [/transition[^;]*:[^;]*\b(filter|box-shadow|blur|all)\b/, 'transition on filter/shadow/all',
-   'house rule: transform and opacity only'],
-  [/animation[^;]*:[^;]*\b(filter|box-shadow|blur)\b/, 'animation on filter/shadow',
-   'house rule: transform and opacity only']
+  [/^\s+var\s/, 'var inside a module', 'house rule: const/let, Chrome 49'],
 ];
 
 /* Comment and string noise this scan should not trip over: a rule name quoted
    inside a comment is not a use of it. Crude, but it keeps the output honest. */
 function stripNoise(line) {
-  return line.replace(/\/\*.*?\*\//g, '').replace(/^\s*\*.*$/, '').replace(/\/\/.*$/, '');
+  return line
+    .replace(/\/\*.*?\*\//g, '')
+    .replace(/^\s*\*.*$/, '')
+    .replace(/\/\/.*$/, '');
 }
 
 const problems = [];
@@ -94,8 +89,17 @@ function scan(file, rules) {
     line = stripNoise(line);
     rules.forEach(function (rule) {
       if (rule[0].test(line)) {
-        problems.push(rel + ':' + (i + 1) + '  ' + rule[1] + '  (' + rule[2] + ')\n      ' +
-                      raw.trim().slice(0, 100));
+        problems.push(
+          rel +
+            ':' +
+            (i + 1) +
+            '  ' +
+            rule[1] +
+            '  (' +
+            rule[2] +
+            ')\n      ' +
+            raw.trim().slice(0, 100),
+        );
       }
     });
   });
@@ -123,22 +127,18 @@ const LAYER_RULES = {
   'js/rules': [
     [/\bdocument\./, 'the DOM in rules/', 'rules/ is pure: no DOM, no request, no cache'],
     [/\bXMLHttpRequest\b/, 'a request in rules/', 'rules/ is pure: call it from data/'],
-    [/\b(Store|Cache)\./, 'the cache in rules/', 'rules/ is pure: read it in data/']
+    [/\b(Store|Cache)\./, 'the cache in rules/', 'rules/ is pure: read it in data/'],
   ],
-  'js/api': [
-    [/\bdocument\./, 'the DOM in api/', 'api/ speaks to servers, not to the screen']
-  ],
+  'js/api': [[/\bdocument\./, 'the DOM in api/', 'api/ speaks to servers, not to the screen']],
   'js/view': [
     [/\bXMLHttpRequest\b/, 'a raw request in view/', 'go through api/'],
-    [/\bStore\./, 'the store in view/', 'go through Cache, in data/']
+    [/\bStore\./, 'the store in view/', 'go through Cache, in data/'],
   ],
   'js/screen': [
     [/\bXMLHttpRequest\b/, 'a raw request in screen/', 'go through api/'],
-    [/\bStore\./, 'the store in screen/', 'go through Cache, in data/']
+    [/\bStore\./, 'the store in screen/', 'go through Cache, in data/'],
   ],
-  'js/core': [
-    [/\bXMLHttpRequest\b/, 'a raw request in core/', 'go through api/']
-  ]
+  'js/core': [[/\bXMLHttpRequest\b/, 'a raw request in core/', 'go through api/']],
 };
 
 /* http.js is the one file whose whole job is the thing api/ owns. */
@@ -158,7 +158,6 @@ jsFiles.forEach(function (f) {
   if (extra) scan(f, extra);
 });
 const cssFiles = listFiles(path.join(ROOT, 'css'), '.css');
-cssFiles.forEach(function (f) { scan(f, CSS_RULES); });
 
 /* Every module in js/ has to be in index.html, in one of the script tags, and
    every stylesheet in one of the link tags, or it simply is not in the app —
@@ -170,11 +169,15 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
    naming the right file in the wrong layer is exactly the mistake a move
    like that makes. */
 function loaded(dir, files, tags) {
-  const referenced = (html.match(tags) || [])
-    .map(function (s) { return s.replace(/"$/, '').replace(/^.*"/, ''); });
-  const present = files.map(function (f) { return path.relative(ROOT, f).split(path.sep).join('/'); });
+  const referenced = (html.match(tags) || []).map(function (s) {
+    return s.replace(/"$/, '').replace(/^.*"/, '');
+  });
+  const present = files.map(function (f) {
+    return path.relative(ROOT, f).split(path.sep).join('/');
+  });
   present.forEach(function (f) {
-    if (referenced.indexOf(f) < 0) problems.push('index.html  ' + f + ' exists but is never loaded');
+    if (referenced.indexOf(f) < 0)
+      problems.push('index.html  ' + f + ' exists but is never loaded');
   });
   referenced.forEach(function (f) {
     if (present.indexOf(f) < 0) problems.push('index.html  loads ' + f + ', which does not exist');
@@ -186,12 +189,24 @@ const scripts = loaded('js/', jsFiles, /<script src="js\/[^"]+"/g);
 const sheets = loaded('css/', cssFiles, /<link rel="stylesheet" href="css\/[^"]+"/g);
 
 if (problems.length) {
-  console.log('\n  ' + problems.length + ' problem' + (problems.length === 1 ? '' : 's') +
-              ' for Chromium 53:\n');
-  problems.forEach(function (p) { console.log('  ' + p); });
+  console.log(
+    '\n  ' +
+      problems.length +
+      ' problem' +
+      (problems.length === 1 ? '' : 's') +
+      ' for Chromium 53:\n',
+  );
+  problems.forEach(function (p) {
+    console.log('  ' + p);
+  });
   console.log('');
   process.exit(1);
 }
 
-console.log('  chromium 53: ' + scripts.length + ' scripts, ' +
-            sheets.length + ' stylesheets, nothing unsupported');
+console.log(
+  '  chromium 53: ' +
+    scripts.length +
+    ' scripts, ' +
+    sheets.length +
+    ' stylesheets, nothing unsupported',
+);

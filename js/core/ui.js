@@ -11,9 +11,15 @@ var UI = (function () {
   /* Remote keycodes. The TV sends 461 for Back; a desktop browser sends 8 or
      27, which is what lets the whole app be driven from a keyboard in dev. */
   const KEY = {
-    LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
-    OK: 13, RED: 403,
-    BACK: 461, ESC: 27, BACKSPACE: 8
+    LEFT: 37,
+    UP: 38,
+    RIGHT: 39,
+    DOWN: 40,
+    OK: 13,
+    RED: 403,
+    BACK: 461,
+    ESC: 27,
+    BACKSPACE: 8,
   };
 
   const els = {};
@@ -37,7 +43,9 @@ var UI = (function () {
     }
   }
 
-  function view() { return current; }
+  function view() {
+    return current;
+  }
 
   /* The bottom line of the screen. WAM doesn't forward console.log anywhere
      readable on this set, so during bring-up the same text can be posted to a
@@ -46,21 +54,25 @@ var UI = (function () {
      of the first load — which is the only way to tell a slow server from a slow
      panel without a profiler. */
   function debug(msg) {
-    const stamped = (Date.now() - bootedAt) + 'ms  ' + msg;
+    const stamped = Date.now() - bootedAt + 'ms  ' + msg;
     elDebug.textContent = stamped;
     if (window.console && console.log) console.log(`REFLEX ${stamped}`);
     if (!Config.beacon) return;
     /* Never let logging break the app: the answer is thrown away, and so is
        any failure to deliver it. */
-    Http.request(Config.beacon + '?m=' + encodeURIComponent(msg), { label: 'beacon' })
-      .then(null, () => {});
+    Http.request(Config.beacon + '?m=' + encodeURIComponent(msg), { label: 'beacon' }).then(
+      null,
+      () => {},
+    );
   }
 
   function toast(msg) {
     elToast.textContent = msg;
     elToast.classList.remove('hidden');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { elToast.classList.add('hidden'); }, 4000);
+    toastTimer = setTimeout(() => {
+      elToast.classList.add('hidden');
+    }, 4000);
   }
 
   function message(title, body) {
@@ -70,14 +82,25 @@ var UI = (function () {
   }
 
   function escapeHtml(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
-  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+  }
 
   return {
-    KEY: KEY, isBack: isBack,
-    show: show, view: view, message: message, toast: toast, debug: debug,
-    escapeHtml: escapeHtml, clamp: clamp
+    KEY: KEY,
+    isBack: isBack,
+    show: show,
+    view: view,
+    message: message,
+    toast: toast,
+    debug: debug,
+    escapeHtml: escapeHtml,
+    clamp: clamp,
   };
 })();

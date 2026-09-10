@@ -22,7 +22,7 @@ var Cache = (function () {
     return {
       get: (id) => Store.get(prefix + (id === undefined ? '' : id)),
       put: (id, value) => Store.put(prefix + (id === undefined ? '' : id), value),
-      drop: (id) => Store.put(prefix + (id === undefined ? '' : id), null)
+      drop: (id) => Store.put(prefix + (id === undefined ? '' : id), null),
     };
   }
 
@@ -30,16 +30,18 @@ var Cache = (function () {
   function one(key) {
     return {
       get: () => Store.get(key),
-      put: (value) => Store.put(key, value)
+      put: (value) => Store.put(key, value),
     };
   }
 
   /* Cached for maxAge, hit or miss. */
   function daily(prefix, maxAge) {
     return {
-      get: (id) => Store.get(prefix + id).then((hit) =>
-        (hit && Date.now() - hit.at < maxAge) ? hit.value : undefined),
-      put: (id, value) => Store.put(prefix + id, { at: Date.now(), value: value })
+      get: (id) =>
+        Store.get(prefix + id).then((hit) =>
+          hit && Date.now() - hit.at < maxAge ? hit.value : undefined,
+        ),
+      put: (id, value) => Store.put(prefix + id, { at: Date.now(), value: value }),
     };
   }
 
@@ -47,26 +49,27 @@ var Cache = (function () {
      "never asked", null for "asked, and there is none". */
   function misses(prefix, maxAge) {
     return {
-      get: (id) => Store.get(prefix + id).then((hit) => {
-        if (!hit) return undefined;
-        if (hit.value) return hit.value;
-        return Date.now() - hit.at < maxAge ? null : undefined;
-      }),
-      put: (id, value) => Store.put(prefix + id, { at: Date.now(), value: value })
+      get: (id) =>
+        Store.get(prefix + id).then((hit) => {
+          if (!hit) return undefined;
+          if (hit.value) return hit.value;
+          return Date.now() - hit.at < maxAge ? null : undefined;
+        }),
+      put: (id, value) => Store.put(prefix + id, { at: Date.now(), value: value }),
     };
   }
 
   return {
-    sections:  one('sections'),             // the servers' library lists
-    rows:      kept('rows:'),               // a section's built rows, by section title
-    total:     kept('total:'),              // a library part's length, by server:key:tag
-    art:       kept('art:'),                // TMDB art and facts, by TMDB id
-    meta:      kept('meta:'),               // full metadata, by server:ratingKey
-    recaps:    kept('recaps:'),             // YouTube recaps for a show, by identity
-    ytChannel: kept('youtube:channel:'),    // the recap channel's id, by handle
+    sections: one('sections'), // the servers' library lists
+    rows: kept('rows:'), // a section's built rows, by section title
+    total: kept('total:'), // a library part's length, by server:key:tag
+    art: kept('art:'), // TMDB art and facts, by TMDB id
+    meta: kept('meta:'), // full metadata, by server:ratingKey
+    recaps: kept('recaps:'), // YouTube recaps for a show, by identity
+    ytChannel: kept('youtube:channel:'), // the recap channel's id, by handle
     /* A film can be added to a library but is rarely taken out, so a hit
        stands and only a miss is ever asked again. */
-    lookup:    misses('tmdb:', 7 * DAY),    // do the servers hold this TMDB title
-    catalogue: daily('disc:', DAY)          // a discovery category's films
+    lookup: misses('tmdb:', 7 * DAY), // do the servers hold this TMDB title
+    catalogue: daily('disc:', DAY), // a discovery category's films
   };
 })();

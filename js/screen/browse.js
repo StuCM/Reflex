@@ -21,23 +21,23 @@ var Browse = (function () {
   let secIdx = 0;
   let rows = [];
   let rowIdx = 0;
-  const cats = {};                          // section title -> its row titles, for the sidebar
-  let deckItems = [];                     // Continue watching, before any type filter
-  let watchingType = null;                // the cut applied to it: null, movie or episode
-  let wantRow = 0;                        // row to land on once the next section is built
-  let mode = 'library';                   // library | kids | discover
-  let savedRows = null;                   // rows parked while showing search results
-  let searchQuery = null;                 // non-null while the results page is showing
-  let generation = 0;                     // bumps on any row change, kills stale paints
+  const cats = {}; // section title -> its row titles, for the sidebar
+  let deckItems = []; // Continue watching, before any type filter
+  let watchingType = null; // the cut applied to it: null, movie or episode
+  let wantRow = 0; // row to land on once the next section is built
+  let mode = 'library'; // library | kids | discover
+  let savedRows = null; // rows parked while showing search results
+  let searchQuery = null; // non-null while the results page is showing
+  let generation = 0; // bumps on any row change, kills stale paints
   let pageTimer = null;
-  let resolveTimer = null;                // a Discovery tile, once you stop on it
-  const RESOLVE_HOLD = 420;                 // the stillness the backdrop also waits for
-  const MAX_SEEDS = 8;                      // titles the recommended row is built from
+  let resolveTimer = null; // a Discovery tile, once you stop on it
+  const RESOLVE_HOLD = 420; // the stillness the backdrop also waits for
+  const MAX_SEEDS = 8; // titles the recommended row is built from
   let opts = {};
 
-  let picking = false;                    // green has the deck row in select mode
-  let picks = [];                         // the entries picked, while it has
-  let pickAt = -1;                        // the row that is happening on
+  let picking = false; // green has the deck row in select mode
+  let picks = []; // the entries picked, while it has
+  let pickAt = -1; // the row that is happening on
 
   const RESULTS_PER_ROW = 10;
   const WATCHING = 'Continue watching';
@@ -56,25 +56,40 @@ var Browse = (function () {
        It must not go on to reach the browse key handler: runSearch switches
        back to the browse view synchronously, so by the time the event bubbled
        up it would read as OK on whatever was focused before the search. */
-    elInput.addEventListener('keydown', (e) => {
-      if (e.keyCode !== UI.KEY.OK) return;
-      e.preventDefault();
-      e.stopPropagation();
-      runSearch();
-    }, false);
+    elInput.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.keyCode !== UI.KEY.OK) return;
+        e.preventDefault();
+        e.stopPropagation();
+        runSearch();
+      },
+      false,
+    );
   }
 
   /* ---------- state the rest of the app asks about ---------- */
 
-  function focusedRow() { return rows[rowIdx]; }
-  function focusedItem() { const r = focusedRow(); return r ? Rows.itemAt(r, r.focus) : null; }
-  function hasRows() { return rows.length > 0; }
-  function currentSection() { return sections[secIdx] || null; }
+  function focusedRow() {
+    return rows[rowIdx];
+  }
+  function focusedItem() {
+    const r = focusedRow();
+    return r ? Rows.itemAt(r, r.focus) : null;
+  }
+  function hasRows() {
+    return rows.length > 0;
+  }
+  function currentSection() {
+    return sections[secIdx] || null;
+  }
 
   /* A guard any in-flight load can check before it paints. */
   function generationGuard() {
     const gen = generation;
-    return () => { return gen === generation; };
+    return () => {
+      return gen === generation;
+    };
   }
 
   function render() {
@@ -110,8 +125,11 @@ var Browse = (function () {
         type = sec.type;
         if (!SECTION_TITLES[type]) continue;
         if (!byType[type]) byType[type] = { title: SECTION_TITLES[type], type: type, parts: [] };
-        byType[type].parts.push({ server: perServer[i].server, key: sec.key,
-                                  updatedAt: sec.updatedAt || 0 });
+        byType[type].parts.push({
+          server: perServer[i].server,
+          key: sec.key,
+          updatedAt: sec.updatedAt || 0,
+        });
       }
     }
     const merged = [];
@@ -146,15 +164,25 @@ var Browse = (function () {
     /* Continue watching is per account rather than per section, so it heads the
        list on its own rather than once under every section. */
     const at = watchingRowIdx();
-    const watching = { current: mode === 'library' && rowIdx === at,
-                     type: watchingType,
-                     has: at >= 0 && rows[at].total > 0 };
-    Sidebar.open(sections.map((sec, i) => {
-      /* Category titles are the row titles of a section we have already built,
+    const watching = {
+      current: mode === 'library' && rowIdx === at,
+      type: watchingType,
+      has: at >= 0 && rows[at].total > 0,
+    };
+    Sidebar.open(
+      sections.map((sec, i) => {
+        /* Category titles are the row titles of a section we have already built,
          so this fetches nothing. A section never visited simply lists none. */
-      return { title: sec.title, categories: cats[sec.title] || [],
-               current: mode === 'library' && i === secIdx };
-    }), activate, mode, watching);
+        return {
+          title: sec.title,
+          categories: cats[sec.title] || [],
+          current: mode === 'library' && i === secIdx,
+        };
+      }),
+      activate,
+      mode,
+      watching,
+    );
   }
 
   /* Select mode renames the row, so while it is on the row is known by where it
@@ -167,7 +195,9 @@ var Browse = (function () {
 
   function deckCut() {
     if (!watchingType) return deckItems;
-    return deckItems.filter((m) => { return m.type === watchingType; });
+    return deckItems.filter((m) => {
+      return m.type === watchingType;
+    });
   }
 
   /* Continue watching, cut to films or episodes. The unfiltered deck is kept so
@@ -176,7 +206,10 @@ var Browse = (function () {
      crash. */
   function showWatching(type) {
     const at = watchingRowIdx();
-    if (at < 0) { UI.toast('Nothing part-watched there'); return; }
+    if (at < 0) {
+      UI.toast('Nothing part-watched there');
+      return;
+    }
     watchingType = type || null;
     const items = deckCut();
     rows[at] = Rows.list(WATCHING, items);
@@ -194,8 +227,8 @@ var Browse = (function () {
      confirmation, and nothing leaves the row before the server has agreed. */
 
   function pickIndex(item) {
-    const key = Media.identity(item);
-    for (let i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === key) return i;
+    const wanted = Media.identity(item);
+    for (let i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === wanted) return i;
     return -1;
   }
 
@@ -205,8 +238,7 @@ var Browse = (function () {
     const tiles = document.querySelectorAll('#rows .tile');
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      tile.classList.toggle('picked',
-        !!(picking && tile._item && pickIndex(tile._item) >= 0));
+      tile.classList.toggle('picked', !!(picking && tile._item && pickIndex(tile._item) >= 0));
     }
   }
 
@@ -214,19 +246,28 @@ var Browse = (function () {
     const row = rows[pickAt];
     /* A new row object rather than a renamed one: the rail repaints a label
        only when the row it is handed changes identity. */
-    rows[pickAt] = Rows.list(picking ? `Select to remove — ${picks.length} picked`
-                                     : WATCHING, row.items);
+    rows[pickAt] = Rows.list(
+      picking ? `Select to remove — ${picks.length} picked` : WATCHING,
+      row.items,
+    );
     rows[pickAt].focus = row.focus;
-    elHint.textContent = '◀ ▶ move  ·  OK picks one  ·  green removes what is picked  ·  ' +
-                         'BACK leaves it all as it was';
+    elHint.textContent =
+      '◀ ▶ move  ·  OK picks one  ·  green removes what is picked  ·  ' +
+      'BACK leaves it all as it was';
     elHint.classList.toggle('hidden', !picking);
     render();
   }
 
   function startPicking() {
     const at = watchingRowIdx();
-    if (at < 0 || at !== rowIdx) { UI.toast('Green clears things out of Continue watching'); return; }
-    if (!rows[at].total) { UI.toast('Nothing part-watched to remove'); return; }
+    if (at < 0 || at !== rowIdx) {
+      UI.toast('Green clears things out of Continue watching');
+      return;
+    }
+    if (!rows[at].total) {
+      UI.toast('Nothing part-watched to remove');
+      return;
+    }
     picking = true;
     pickAt = at;
     picks = [];
@@ -245,30 +286,36 @@ var Browse = (function () {
     let at;
     if (!item) return;
     at = pickIndex(item);
-    if (at >= 0) picks.splice(at, 1); else picks.push(item);
+    if (at >= 0) picks.splice(at, 1);
+    else picks.push(item);
     paintPicking();
   }
 
   /* The confirmation, in the shared menu shell — a title saying what will
      happen and to how many, the action, and Cancel. Cancel is what it lands on:
      the action is one key away and never the default. */
-  function askThen(count, mode, go) {
-    const hide = mode === 'hide';
+  function askThen(count, action, go) {
+    const hide = action === 'hide';
     Menu.open({
       host: elConfirm,
-      tabs: [{
-        label: hide ? `Remove ${count} from Continue watching`
-                    : `Mark ${count} watched`,
-        note: hide ? 'They stay part-watched.'
-                   : 'This server cannot hide them. Marking a show watched marks ' +
-                     'every episode.',
-        rows: () => {
-          return [{ label: hide ? 'Remove them' : 'Mark them watched', value: 'go' },
-                  { label: 'Cancel', on: true, value: null }];
-        }
-      }],
-      onChoose: (value) => { if (value === 'go') go(); },
-      onClose: render
+      tabs: [
+        {
+          label: hide ? `Remove ${count} from Continue watching` : `Mark ${count} watched`,
+          note: hide
+            ? 'They stay part-watched.'
+            : 'This server cannot hide them. Marking a show watched marks ' + 'every episode.',
+          rows: () => {
+            return [
+              { label: hide ? 'Remove them' : 'Mark them watched', value: 'go' },
+              { label: 'Cancel', on: true, value: null },
+            ];
+          },
+        },
+      ],
+      onChoose: (value) => {
+        if (value === 'go') go();
+      },
+      onClose: render,
     });
   }
 
@@ -289,7 +336,9 @@ var Browse = (function () {
     const gone = Media.identity(entry);
     let at;
     let row;
-    deckItems = deckItems.filter((m) => { return Media.identity(m) !== gone; });
+    deckItems = deckItems.filter((m) => {
+      return Media.identity(m) !== gone;
+    });
     for (let i = 0; i < sections.length; i++) Cache.rows.drop(sections[i].title);
     at = watchingRowIdx();
     if (at < 0) return;
@@ -301,34 +350,45 @@ var Browse = (function () {
   /* A job is an entry and the copies of it still to be dealt with — a film on
      both servers is still in the row if only one of them is told, and a copy
      that has already been hidden must not then be marked watched as well. */
-  function jobFor(entry) { return { entry: entry, copies: Merge.sources(entry) }; }
+  function jobFor(entry) {
+    return { entry: entry, copies: Merge.sources(entry) };
+  }
 
   /* The entry leaves the row only once every copy of it has gone; whatever a
      server would not hide comes back as `copies` for the caller to ask about. */
-  function clearFromDeck(job, mode) {
-    return Promise.all(job.copies.map((copy) => {
-      const server = Servers.of(copy);
-      if (mode !== 'watched') return Plex.hideFromDeck(server, copy.ratingKey);
-      return Plex.scrobble(server, watchedKey(copy)).then(() => { return true; });
-    })).then((done) => {
-      const refused = [];
-      for (let i = 0; i < done.length; i++) if (!done[i]) refused.push(job.copies[i]);
-      if (refused.length) return { needsWatched: true, copies: refused };
-      dropFromDeck(job.entry);
-      return { ok: true };
-    }, (e) => {
-      UI.debug(`clear: ${e.message}`);
-      return { ok: false };
-    });
+  function clearFromDeck(job, action) {
+    return Promise.all(
+      job.copies.map((copy) => {
+        const server = Servers.of(copy);
+        if (action !== 'watched') return Plex.hideFromDeck(server, copy.ratingKey);
+        return Plex.scrobble(server, watchedKey(copy)).then(() => {
+          return true;
+        });
+      }),
+    ).then(
+      (done) => {
+        const refused = [];
+        for (let i = 0; i < done.length; i++) if (!done[i]) refused.push(job.copies[i]);
+        if (refused.length) return { needsWatched: true, copies: refused };
+        dropFromDeck(job.entry);
+        return { ok: true };
+      },
+      (e) => {
+        UI.debug(`clear: ${e.message}`);
+        return { ok: false };
+      },
+    );
   }
 
   /* Clear a list of jobs, asking again about only the copies the server would
      not hide. A server that refuses both leaves its item in the row and says
      so. */
-  function clearAll(jobs, mode, after) {
-    Promise.all(jobs.map((job) => {
-      return clearFromDeck(job, mode);
-    })).then((res) => {
+  function clearAll(jobs, action, after) {
+    Promise.all(
+      jobs.map((job) => {
+        return clearFromDeck(job, action);
+      }),
+    ).then((res) => {
       const again = [];
       let failed = 0;
       for (let i = 0; i < res.length; i++) {
@@ -337,14 +397,18 @@ var Browse = (function () {
         else failed++;
       }
       if (picking) {
-        picks = again.map((job) => { return job.entry; });
+        picks = again.map((job) => {
+          return job.entry;
+        });
         paintPicking();
       } else render();
       if (failed) {
         UI.toast(failed + (failed === 1 ? ' was' : ' were') + ' refused — still in the row');
       }
       if (again.length) {
-        askThen(again.length, 'watched', () => { clearAll(again, 'watched', after); });
+        askThen(again.length, 'watched', () => {
+          clearAll(again, 'watched', after);
+        });
         return;
       }
       stopPicking();
@@ -355,28 +419,38 @@ var Browse = (function () {
   /* Green a second time: confirm everything picked. */
   function confirmPicks() {
     const chosen = picks.map(jobFor);
-    if (!chosen.length) { UI.toast('Nothing picked — OK picks the tile you are on'); return; }
-    askThen(chosen.length, 'hide', () => { clearAll(chosen, 'hide', null); });
+    if (!chosen.length) {
+      UI.toast('Nothing picked — OK picks the tile you are on');
+      return;
+    }
+    askThen(chosen.length, 'hide', () => {
+      clearAll(chosen, 'hide', null);
+    });
   }
 
   /* The same action for one title, from its own page. */
   function clearOne(entry, after) {
-    askThen(1, 'hide', () => { clearAll([jobFor(entry)], 'hide', after); });
+    askThen(1, 'hide', () => {
+      clearAll([jobFor(entry)], 'hide', after);
+    });
   }
 
   /* Is this on Continue watching? The detail page only offers to clear
      something the row actually holds. */
   function isOnDeck(item) {
-    const key = item && Media.identity(item);
-    if (!key) return false;
+    const wanted = item && Media.identity(item);
+    if (!wanted) return false;
     for (let i = 0; i < deckItems.length; i++) {
-      if (Media.identity(deckItems[i]) === key) return true;
+      if (Media.identity(deckItems[i]) === wanted) return true;
     }
     return false;
   }
 
   function activate(choice) {
-    if (choice.kind === 'search') { openSearch(); return; }
+    if (choice.kind === 'search') {
+      openSearch();
+      return;
+    }
     if (choice.kind === 'watching') {
       /* Kids and discovery have no Continue watching row, so the library comes
          back first — it lands on row 0, which is it. */
@@ -389,13 +463,22 @@ var Browse = (function () {
          first: a mode you then have to go and find is not reachable, which is
          the whole reason this entry exists beside the green key. */
       const deckAt = watchingRowIdx();
-      if (deckAt < 0) { UI.toast('Nothing part-watched to remove'); return; }
+      if (deckAt < 0) {
+        UI.toast('Nothing part-watched to remove');
+        return;
+      }
       rowIdx = deckAt;
       startPicking();
       return;
     }
-    if (choice.kind === 'kids') { loadKids(); return; }
-    if (choice.kind === 'discover') { loadDiscover(); return; }
+    if (choice.kind === 'kids') {
+      loadKids();
+      return;
+    }
+    if (choice.kind === 'discover') {
+      loadDiscover();
+      return;
+    }
     if (choice.kind === 'prefer') {
       const now = Servers.get(Servers.cyclePreferred());
       UI.debug(`preferring ${now ? now.name : '?'} where both servers have a film`);
@@ -423,7 +506,8 @@ var Browse = (function () {
     if (choice.kind === 'devices') {
       Devices.open((changed) => {
         UI.show('browse');
-        if (changed) loadSection(secIdx, true); else render();
+        if (changed) loadSection(secIdx, true);
+        else render();
       });
       return;
     }
@@ -444,7 +528,9 @@ var Browse = (function () {
   /* Row titles are what the sidebar lists under a section, and their positions
      are what picking one jumps to, so the two must be the same list. */
   function noteCategories(sec) {
-    cats[sec.title] = rows.map((r) => { return r.title; });
+    cats[sec.title] = rows.map((r) => {
+      return r.title;
+    });
   }
 
   /* ---------- building rows ---------- */
@@ -470,14 +556,17 @@ var Browse = (function () {
     for (let i = 0; i < built.length; i++) {
       if (built[i].title === WATCHING) deckItems = built[i].items;
     }
-    return built.map((r) => { return Rows.list(r.title, r.items); });
+    return built.map((r) => {
+      return Rows.list(r.title, r.items);
+    });
   }
 
   /* One page of one server's section, for the merge walk. */
   function pageFetcher() {
     return (part, offset) => {
-      return Plex.items(part.server, part.key, offset, Rows.PAGE, part.filter)
-        .then((res) => { return { items: res.items, total: res.total }; });
+      return Plex.items(part.server, part.key, offset, Rows.PAGE, part.filter).then((res) => {
+        return { items: res.items, total: res.total };
+      });
     };
   }
 
@@ -489,11 +578,13 @@ var Browse = (function () {
       for (let i = 0; i < keys.length; i++) base[keys[i]] = filter[keys[i]];
     }
     const parts = sec.parts.map((p) => {
-      return { server: p.server, key: p.key, updatedAt: p.updatedAt,
-               filter: base, tag: tag || '' };
+      return { server: p.server, key: p.key, updatedAt: p.updatedAt, filter: base, tag: tag || '' };
     });
-    return Rows.merged(title || (sec.type === 'show' ? 'All shows' : 'All films'),
-                       parts, pageFetcher());
+    return Rows.merged(
+      title || (sec.type === 'show' ? 'All shows' : 'All films'),
+      parts,
+      pageFetcher(),
+    );
   }
 
   /* A section's length, cheaply: size=0 returns totalSize and no items, once
@@ -504,24 +595,35 @@ var Browse = (function () {
     const jobs = row.state.streams.map((s) => {
       if (s.total) return Promise.resolve();
       const ck = s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
-      return Cache.total.get(ck).then((cached) => {
-        if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
-          s.total = cached.total;
-          return;
-        }
-        return Plex.items(s.part.server, s.part.key, 0, 0, s.part.filter).then((res) => {
-          s.total = res.total;
-          Cache.total.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
+      return Cache.total
+        .get(ck)
+        .then((cached) => {
+          if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
+            s.total = cached.total;
+            return;
+          }
+          return Plex.items(s.part.server, s.part.key, 0, 0, s.part.filter).then((res) => {
+            s.total = res.total;
+            Cache.total.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
+          });
+        })
+        .catch((e) => {
+          UI.debug(`count: ${e.message}`);
         });
-      }).catch((e) => { UI.debug(`count: ${e.message}`); });
     });
     Promise.all(jobs).then(() => {
       if (!isCurrent()) return;
       row.total = Merge.estimate(row.state);
       render();
-      UI.debug(row.title + ': about ' + row.total + ' across ' +
-               row.state.streams.length + ' server' +
-               (row.state.streams.length === 1 ? '' : 's'));
+      UI.debug(
+        row.title +
+          ': about ' +
+          row.total +
+          ' across ' +
+          row.state.streams.length +
+          ' server' +
+          (row.state.streams.length === 1 ? '' : 's'),
+      );
     });
   }
 
@@ -534,56 +636,78 @@ var Browse = (function () {
     reset('library');
     const isCurrent = generationGuard();
     const sec = sections[i];
-    Cache.rows.get(sec.title).then((cached) => {
-      if (!isCurrent()) return;
-      if (cached && cached.rows && cached.rows.length) {
-        rows = listRows(cached.rows);
-        rows.push(allRow(sec));
-        noteCategories(sec);
-        rowIdx = UI.clamp(wantRow, 0, rows.length - 1);
-        primeTotals(rows[rows.length - 1], isCurrent);
-        render();
-        UI.debug(sec.title + ': rows from cache');
-      }
-      if (!allowFetch) return;
+    Cache.rows
+      .get(sec.title)
+      .then((cached) => {
+        if (!isCurrent()) return;
+        if (cached && cached.rows && cached.rows.length) {
+          rows = listRows(cached.rows);
+          rows.push(allRow(sec));
+          noteCategories(sec);
+          rowIdx = UI.clamp(wantRow, 0, rows.length - 1);
+          primeTotals(rows[rows.length - 1], isCurrent);
+          render();
+          UI.debug(sec.title + ': rows from cache');
+        }
+        if (!allowFetch) return;
 
-      /* Continue watching is per server; the category rows are per section. Two
+        /* Continue watching is per server; the category rows are per section. Two
          requests per server for the whole browse screen, however big the
          library is. */
-      const servers = serversOf(sec);
-      return Promise.all([
-        Promise.all(servers.map((sv) => { return Plex.onDeck(sv); })),
-        Promise.all(sec.parts.map((p) => { return Plex.hubs(p.server, p.key); })),
-        Devices.ensureHistory()
-      ]).then((res) => {
-        if (!isCurrent()) return;
-        const built = [];
+        const servers = serversOf(sec);
+        return Promise.all([
+          Promise.all(
+            servers.map((sv) => {
+              return Plex.onDeck(sv);
+            }),
+          ),
+          Promise.all(
+            sec.parts.map((p) => {
+              return Plex.hubs(p.server, p.key);
+            }),
+          ),
+          Devices.ensureHistory(),
+        ]).then((res) => {
+          if (!isCurrent()) return;
+          const built = [];
 
-        /* onDeck is per server, not per section, and hands back films and
+          /* onDeck is per server, not per section, and hands back films and
            episodes together — which is what you want to carry on with, so it is
            kept whole rather than cut to the section's own type. Most recently
            watched first. */
-        const deck = Devices.mine(Merge.lists(res[0]));
-        deck.sort((a, b) => { return (b.lastViewedAt || 0) - (a.lastViewedAt || 0); });
-        if (deck.length) built.push({ title: WATCHING, items: deck });
+          const deck = Devices.mine(Merge.lists(res[0]));
+          deck.sort((a, b) => {
+            return (b.lastViewedAt || 0) - (a.lastViewedAt || 0);
+          });
+          if (deck.length) built.push({ title: WATCHING, items: deck });
 
-        mergeHubs(res[1]).forEach((hub) => { built.push(hub); });
+          mergeHubs(res[1]).forEach((hub) => {
+            built.push(hub);
+          });
 
-        Cache.rows.put(sec.title, { rows: built });
-        rows = listRows(built);
-        rows.push(allRow(sec));
-        noteCategories(sec);
-        rowIdx = UI.clamp(rowIdx || wantRow, 0, rows.length - 1);
-        primeTotals(rows[rows.length - 1], isCurrent);
-        render();
-        UI.debug(sec.title + ': ' + rows.length + ' rows from ' + servers.length + ' server' +
-                 (servers.length === 1 ? '' : 's'));
+          Cache.rows.put(sec.title, { rows: built });
+          rows = listRows(built);
+          rows.push(allRow(sec));
+          noteCategories(sec);
+          rowIdx = UI.clamp(rowIdx || wantRow, 0, rows.length - 1);
+          primeTotals(rows[rows.length - 1], isCurrent);
+          render();
+          UI.debug(
+            sec.title +
+              ': ' +
+              rows.length +
+              ' rows from ' +
+              servers.length +
+              ' server' +
+              (servers.length === 1 ? '' : 's'),
+          );
+        });
+      })
+      .catch((e) => {
+        if (!isCurrent()) return;
+        UI.debug(`rows: ${e.message}`);
+        if (!rows.length) UI.toast('Could not reach the servers');
       });
-    }).catch((e) => {
-      if (!isCurrent()) return;
-      UI.debug(`rows: ${e.message}`);
-      if (!rows.length) UI.toast('Could not reach the servers');
-    });
   }
 
   /* Both servers offer a "Recently Added"; they are one row, deduplicated.
@@ -595,13 +719,20 @@ var Browse = (function () {
     for (let i = 0; i < perPart.length; i++) {
       const list = perPart[i] || [];
       for (let j = 0; j < list.length; j++) {
-        if (!byTitle[list[j].title]) { byTitle[list[j].title] = []; order.push(list[j].title); }
+        if (!byTitle[list[j].title]) {
+          byTitle[list[j].title] = [];
+          order.push(list[j].title);
+        }
         byTitle[list[j].title].push(list[j].items);
       }
     }
-    return order.map((title) => {
-      return { title: title, items: Merge.lists(byTitle[title]) };
-    }).filter((hub) => { return hub.items.length > 0; });
+    return order
+      .map((title) => {
+        return { title: title, items: Merge.lists(byTitle[title]) };
+      })
+      .filter((hub) => {
+        return hub.items.length > 0;
+      });
   }
 
   /* ---------- walking the merge ---------- */
@@ -617,18 +748,20 @@ var Browse = (function () {
       const isCurrent = generationGuard();
       const had = Rows.haveUpTo(row);
       const was = row.total;
-      Merge.advance(row.state, Rows.needsUpTo(row)).then(() => {
-        if (!isCurrent()) return;
-        row.total = Merge.estimate(row.state);
-        /* Only repaint if the walk actually produced something, or this would
+      Merge.advance(row.state, Rows.needsUpTo(row))
+        .then(() => {
+          if (!isCurrent()) return;
+          row.total = Merge.estimate(row.state);
+          /* Only repaint if the walk actually produced something, or this would
            schedule itself for ever once the servers are exhausted. */
-        if (Rows.haveUpTo(row) === had && row.total === was) return;
-        Rail.invalidateEmpty();
-        render();
-      }).catch((e) => {
-        if (!isCurrent()) return;
-        UI.debug(`walk: ${e.message}`);
-      });
+          if (Rows.haveUpTo(row) === had && row.total === was) return;
+          Rail.invalidateEmpty();
+          render();
+        })
+        .catch((e) => {
+          if (!isCurrent()) return;
+          UI.debug(`walk: ${e.message}`);
+        });
     }, 150);
   }
 
@@ -641,51 +774,70 @@ var Browse = (function () {
 
     /* Ask each library which certificates it uses, keep the ones at or below
        the cutoff, and let the servers do the filtering. */
-    Promise.all(sec.parts.map((p) => {
-      return Plex.contentRatings(p.server, p.key);
-    })).then((perPart) => {
-      if (!isCurrent()) return;
-      const kid = [];
-      const seen = {};
-      perPart.forEach((list) => {
-        list.filter(Media.isKidsRating).forEach((r) => {
-          if (!seen[r]) { seen[r] = true; kid.push(r); }
-        });
-      });
-      UI.debug(`kids certificates: ${kid.join(', ') || 'none'}`);
-
-      const servers = serversOf(sec);
-      return Promise.all([
-        Promise.all(servers.map((sv) => { return Plex.onDeck(sv); })),
-        Devices.ensureHistory()
-      ]).then((res) => {
+    Promise.all(
+      sec.parts.map((p) => {
+        return Plex.contentRatings(p.server, p.key);
+      }),
+    )
+      .then((perPart) => {
         if (!isCurrent()) return;
-        const kidsWant = sec.type === 'show' ? 'episode' : 'movie';
-        const watching = Devices.mine(Merge.lists(res[0])).filter((m) => {
-          return m.type === kidsWant && Media.isKidsRating(m.contentRating);
+        const kid = [];
+        const seen = {};
+        perPart.forEach((list) => {
+          list.filter(Media.isKidsRating).forEach((r) => {
+            if (!seen[r]) {
+              seen[r] = true;
+              kid.push(r);
+            }
+          });
         });
-        rows = [];
-        if (watching.length) rows.push(Rows.list('Kids · carry on watching', watching));
+        UI.debug(`kids certificates: ${kid.join(', ') || 'none'}`);
 
-        if (kid.length) {
-          const row = allRow(sec, 'Kids · all films',
-                           { contentRating: kid.join(',') }, `kids${Media.KIDS_MAX_AGE}`);
-          rows.push(row);
+        const servers = serversOf(sec);
+        return Promise.all([
+          Promise.all(
+            servers.map((sv) => {
+              return Plex.onDeck(sv);
+            }),
+          ),
+          Devices.ensureHistory(),
+        ]).then((res) => {
+          if (!isCurrent()) return;
+          const kidsWant = sec.type === 'show' ? 'episode' : 'movie';
+          const watching = Devices.mine(Merge.lists(res[0])).filter((m) => {
+            return m.type === kidsWant && Media.isKidsRating(m.contentRating);
+          });
+          rows = [];
+          if (watching.length) rows.push(Rows.list('Kids · carry on watching', watching));
+
+          if (kid.length) {
+            const row = allRow(
+              sec,
+              'Kids · all films',
+              { contentRating: kid.join(',') },
+              `kids${Media.KIDS_MAX_AGE}`,
+            );
+            rows.push(row);
+            render();
+            primeTotals(row, isCurrent);
+            return;
+          }
           render();
-          primeTotals(row, isCurrent);
-          return;
-        }
-        render();
-        if (!watching.length) {
-          UI.message('No age ratings', sec.title + ' has no certificate data, so ' +
-            'there is nothing to filter on. BACK to return.');
-        }
+          if (!watching.length) {
+            UI.message(
+              'No age ratings',
+              sec.title +
+                ' has no certificate data, so ' +
+                'there is nothing to filter on. BACK to return.',
+            );
+          }
+        });
+      })
+      .catch((e) => {
+        if (!isCurrent()) return;
+        UI.debug(`kids: ${e.message}`);
+        UI.toast('Could not load the kids list');
       });
-    }).catch((e) => {
-      if (!isCurrent()) return;
-      UI.debug(`kids: ${e.message}`);
-      UI.toast('Could not load the kids list');
-    });
   }
 
   /* ---------- discovery ---------- */
@@ -721,9 +873,11 @@ var Browse = (function () {
 
     if (!Discovery.enabled()) {
       mode = 'library';
-      UI.message('Discovery needs a TMDB key',
+      UI.message(
+        'Discovery needs a TMDB key',
         'Curated rows come from TMDB. Put a free v3 API key in tmdbKey in ' +
-        'js/config.js. Everything else works without it.');
+          'js/config.js. Everything else works without it.',
+      );
       return;
     }
 
@@ -735,12 +889,14 @@ var Browse = (function () {
       add: (title, items) => {
         rows.push(Rows.list(title, items));
         render();
-      }
+      },
     }).then(() => {
       if (!isCurrent() || rows.length) return;
-      UI.message('Nothing to show',
+      UI.message(
+        'Nothing to show',
         'TMDB returned no titles for any of the categories in js/config.js. ' +
-        'Check the debug line for which came back empty.');
+          'Check the debug line for which came back empty.',
+      );
     });
   }
 
@@ -757,7 +913,9 @@ var Browse = (function () {
     elInput.value = '';
     /* webOS raises its own on-screen keyboard when an input takes focus —
        no need to build a letter grid. */
-    setTimeout(() => { elInput.focus(); }, 50);
+    setTimeout(() => {
+      elInput.focus();
+    }, 50);
   }
 
   function closeSearch() {
@@ -771,33 +929,40 @@ var Browse = (function () {
      asked, and a film on both appears once. */
   function runSearch() {
     const q = elInput.value.trim();
-    if (!q) { closeSearch(); return; }
+    if (!q) {
+      closeSearch();
+      return;
+    }
     elInput.blur();
     UI.show('browse');
     UI.toast('Searching…');
     const isCurrent = generationGuard();
-    Promise.all(Servers.all().map((sv) => {
-      return Plex.search(sv, q);
-    })).then((perServer) => {
-      if (!isCurrent()) return;
-      const found = Merge.lists(perServer);
-      if (!savedRows) savedRows = rows;
-      searchQuery = q;
-      const noun = countNoun(found);
-      /* The results page has no chips to head it any more, so the first row's
+    Promise.all(
+      Servers.all().map((sv) => {
+        return Plex.search(sv, q);
+      }),
+    )
+      .then((perServer) => {
+        if (!isCurrent()) return;
+        const found = Merge.lists(perServer);
+        if (!savedRows) savedRows = rows;
+        searchQuery = q;
+        const noun = countNoun(found);
+        /* The results page has no chips to head it any more, so the first row's
          own title carries what was asked, what came back, and the way out. */
-      const header = q + '  ·  ' + found.length + ' ' + noun + '  ·  BACK to library';
-      rows = [];
-      for (let i = 0; i < found.length; i += RESULTS_PER_ROW) {
-        rows.push(Rows.list(i === 0 ? header : '', found.slice(i, i + RESULTS_PER_ROW)));
-      }
-      if (!rows.length) rows = [Rows.list(header, [])];
-      rowIdx = 0;
-      render();
-      UI.debug(`search "${q}": ${found.length} ${noun}`);
-    }).catch((e) => {
-      UI.message('Search failed', e.message);
-    });
+        const header = q + '  ·  ' + found.length + ' ' + noun + '  ·  BACK to library';
+        rows = [];
+        for (let i = 0; i < found.length; i += RESULTS_PER_ROW) {
+          rows.push(Rows.list(i === 0 ? header : '', found.slice(i, i + RESULTS_PER_ROW)));
+        }
+        if (!rows.length) rows = [Rows.list(header, [])];
+        rowIdx = 0;
+        render();
+        UI.debug(`search "${q}": ${found.length} ${noun}`);
+      })
+      .catch((e) => {
+        UI.message('Search failed', e.message);
+      });
   }
 
   /* "3 films", "1 show", or "7 results" when it is both. Saying "films" over a
@@ -807,7 +972,8 @@ var Browse = (function () {
     let films = 0;
     let shows = 0;
     for (let i = 0; i < found.length; i++) {
-      if (found[i].type === 'show') shows++; else films++;
+      if (found[i].type === 'show') shows++;
+      else films++;
     }
     if (shows && films) return 'results';
     if (shows) return `show${shows === 1 ? '' : 's'}`;
@@ -830,7 +996,10 @@ var Browse = (function () {
   /* The search view: the system keyboard owns every key, OK included — pressing
      OK picks a letter. Only Back is ours; Enter is handled on the input. */
   function searchKey(code) {
-    if (UI.isBack(code)) { closeSearch(); return true; }
+    if (UI.isBack(code)) {
+      closeSearch();
+      return true;
+    }
     return false;
   }
 
@@ -846,31 +1015,49 @@ var Browse = (function () {
         /* Left off the front of a row is the way to the sections — there is
            nowhere else for it to go, and the rail has no header any more.
            Not while picking: the way out of the mode is BACK, not wandering. */
-        if (row && row.focus > 0) { row.focus--; render(); }
-        else if (!picking) openSidebar();
+        if (row && row.focus > 0) {
+          row.focus--;
+          render();
+        } else if (!picking) openSidebar();
         break;
       case K.RIGHT:
-        if (row && row.focus < row.total - 1) { row.focus++; render(); }
+        if (row && row.focus < row.total - 1) {
+          row.focus++;
+          render();
+        }
         break;
       case K.UP:
-        if (!picking && rowIdx > 0) { rowIdx--; render(); }
+        if (!picking && rowIdx > 0) {
+          rowIdx--;
+          render();
+        }
         break;
       case K.DOWN:
-        if (!picking && rowIdx < rows.length - 1) { rowIdx++; render(); }
+        if (!picking && rowIdx < rows.length - 1) {
+          rowIdx++;
+          render();
+        }
         break;
       case K.OK:
-        if (picking) { togglePick(); break; }
+        if (picking) {
+          togglePick();
+          break;
+        }
         if (opts.onOpen) opts.onOpen(focusedItem());
         break;
-      case K.RED:                                 // red, on remotes that have it
+      case K.RED: // red, on remotes that have it
         openSearch();
         break;
-      case GREEN:                                 // enter the mode, then confirm it
-        if (picking) confirmPicks(); else startPicking();
+      case GREEN: // enter the mode, then confirm it
+        if (picking) confirmPicks();
+        else startPicking();
         break;
       default:
         if (!UI.isBack(code)) return false;
-        if (picking) { stopPicking(); break; }
+        if (picking) {
+          stopPicking();
+          break;
+        }
         if (!clearResults() && !leaveMode() && opts.onExit) opts.onExit();
         break;
     }
@@ -878,9 +1065,16 @@ var Browse = (function () {
   }
 
   return {
-    init: init, render: render, key: key, searchKey: searchKey,
-    setSections: setSections, currentSection: currentSection,
-    loadSection: loadSection, focusedItem: focusedItem, hasRows: hasRows,
-    clearOne: clearOne, isOnDeck: isOnDeck
+    init: init,
+    render: render,
+    key: key,
+    searchKey: searchKey,
+    setSections: setSections,
+    currentSection: currentSection,
+    loadSection: loadSection,
+    focusedItem: focusedItem,
+    hasRows: hasRows,
+    clearOne: clearOne,
+    isOnDeck: isOnDeck,
   };
 })();

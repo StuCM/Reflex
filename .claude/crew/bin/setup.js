@@ -20,9 +20,13 @@ if (!fs.existsSync(path.join(root, hooks))) process.exit(0);
 try {
   var current = '';
   try {
-    current = execFileSync('git', ['config', '--get', 'core.hooksPath'],
-                           { cwd: root, encoding: 'utf8' }).trim();
-  } catch (e) { /* unset — git exits 1 */ }
+    current = execFileSync('git', ['config', '--get', 'core.hooksPath'], {
+      cwd: root,
+      encoding: 'utf8',
+    }).trim();
+  } catch (e) {
+    /* unset — git exits 1 */
+  }
 
   if (current === hooks) process.exit(0);
 
