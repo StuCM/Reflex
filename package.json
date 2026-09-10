@@ -31,6 +31,7 @@
     "eslint-plugin-unicorn": "^74.0.0",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.82.0",
+    "playwright": "^1.63.0",
     "stylelint": "^17.15.0",
     "stylelint-no-unsupported-browser-features": "^8.1.2",
     "typescript": "^5.9.3",

@@ -1,0 +1,70 @@
+name: verify
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A second push to the same branch cancels the first: nothing here is worth
+# finishing for a commit that has already been replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Cheap and independent, so they all run even after one fails: a red run
+      # should list everything wrong, not the first thing wrong.
+      - name: chromium 53 scan
+        if: '!cancelled()'
+        run: npm run check
+
+      - name: lint
+        if: '!cancelled()'
+        run: npm run lint
+
+      - name: naming rules
+        if: '!cancelled()'
+        run: npm run lint:names
+
+      - name: css against browserslist
+        if: '!cancelled()'
+        run: npm run lint:css
+
+      - name: formatting
+        if: '!cancelled()'
+        run: npm run format:check
+
+      - name: types
+        if: '!cancelled()'
+        run: npm run typecheck
+
+      - name: unit tests
+        if: '!cancelled()'
+        run: npm test
+
+      # The suite drives the real app against the mock servers, so it needs a
+      # browser and a video fixture. Without the fixture the player steps skip
+      # rather than fail, which would be a silent loss of a third of the suite.
+      - name: install chromium
+        if: '!cancelled()'
+        run: npx playwright install --with-deps chromium
+
+      - name: fixture
+        if: '!cancelled()'
+        run: npm run fixture
+
+      - name: smoke
+        if: '!cancelled()'
+        run: npm run smoke

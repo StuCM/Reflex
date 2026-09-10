@@ -12,3 +12,5 @@ dev/screenshots/
 !.claude/crew.config.json
 !.claude/tasks/
 .claude/settings.local.json
+build/
+dist/

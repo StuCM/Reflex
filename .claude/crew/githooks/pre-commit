@@ -1,0 +1,4 @@
+#!/bin/sh
+# Format and lint the staged files, in milliseconds. The full gate is CI.
+# Enable with: git config core.hooksPath .claude/crew/githooks
+exec node "$(git rev-parse --show-toplevel)/.claude/crew/bin/pre-commit.js"
