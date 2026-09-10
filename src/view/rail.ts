@@ -78,6 +78,11 @@ const container: HTMLElement = rowsElement;
 const pool: RailRowElement[] = [];
 let settleTimer: ReturnType<typeof setTimeout> | null = null;
 
+/* Every picture the rail has fetched. The settle exists to stop a sweep asking
+   a server we do not own for posters it will scroll past — not to blank ones
+   the browser already has, which is what made a second pass grey. */
+const drawn = new Set<string>();
+
 function translate(element: HTMLElement, across: number, down: number): void {
   element.style.setProperty('--tx', `${across}px`);
   element.style.setProperty('--ty', `${down}px`);
@@ -150,9 +155,15 @@ function repaint(id: string): void {
     rowElement._tiles.forEach((tile) => {
       if (!tile._item || tile._deferred || tile._wait || tmdbId(tile._item) !== id) return;
       const url = art.tile(tile._item, TILE_W, TILE_H);
-      if (url) tile._img.src = url;
+      if (url) draw(tile, url);
     });
   });
+}
+
+/* Assigning src to what is already there re-decodes the poster on a 2018 SoC. */
+function draw(tile: RailTileElement, url: string): void {
+  if (tile._img.getAttribute('src') !== url) tile._img.src = url;
+  drawn.add(url);
 }
 
 /* A tile showing a placeholder must re-render once its page lands. One that
@@ -171,8 +182,22 @@ function paint(tile: RailTileElement): void {
   tile._wait = false;
   art.warm(tile._item);
   const url = art.tile(tile._item, TILE_W, TILE_H);
-  if (url) tile._img.src = url;
+  if (url) draw(tile, url);
   else tile._img.removeAttribute('src');
+}
+
+/* The tile's own picture, if the rail has been past it before. A cache hit
+   costs nothing, so a row walked a second time stays filled while it moves;
+   anything else is left blank for the settle rather than wearing the poster of
+   the film this slot was showing. Says whether the tile now has one. */
+function drawHeld(tile: RailTileElement): boolean {
+  const url = art.tile(tile._item, TILE_W, TILE_H);
+  if (!drawn.has(url)) {
+    tile._img.removeAttribute('src');
+    return false;
+  }
+  draw(tile, url);
+  return true;
 }
 
 /* The rail has stopped moving, so the tiles still on it can have their
@@ -247,10 +272,6 @@ function drawRow(
     }
     tile._idx = index;
     const item = itemAt(row, index);
-    /* A slot in the pool is not an identity. Sweeping hands this element the
-       item its neighbour was showing, and keeping the picture then draws one
-       film's poster over another film's title until the settle catches up. */
-    const held = !!item && item === tile._item;
     tile._filled = !!item;
     tile._item = item;
 
@@ -283,12 +304,12 @@ function drawRow(
     }
     tile._deferred = false;
     /* The focused tile is the one being looked at and the one the hero is about
-       to draw, so it pays immediately. The rest wait for the movement to
-       settle: one still holding the same item keeps its picture, and one handed
-       a different film shows the surface colour rather than the film it was. */
-    tile._wait = !focused;
-    if (focused) paint(tile);
-    else if (!held) tile._img.removeAttribute('src');
+       to draw, so it pays the lookup immediately whatever the rail is doing. */
+    if (focused) {
+      paint(tile);
+      return;
+    }
+    tile._wait = !drawHeld(tile);
   });
 }
 
