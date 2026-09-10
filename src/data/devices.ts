@@ -5,6 +5,7 @@ import { devices as serverDevices, history } from '../api/plex/library';
 import { KEY, debug, isBack, show } from '../core/ui';
 import * as merge from './merge';
 import * as servers from './servers';
+import { fill, put } from '../view/dom';
 
 /* Fetched per server on the first paint's critical path, and Plex history
    entries are fat. */
@@ -122,7 +123,7 @@ export function mine(items: PlexItem[]): PlexItem[] {
 function row(className: string, ...parts: (string | Node)[]): HTMLDivElement {
   const element = document.createElement('div');
   element.className = className;
-  element.append(...parts);
+  put(element, ...parts);
   return element;
 }
 
@@ -135,15 +136,16 @@ function badge(text: string): HTMLSpanElement {
 
 function render(): void {
   if (!list.length) {
-    listElement.replaceChildren(row('device-row', 'No device history available on these servers.'));
+    fill(listElement, row('device-row', 'No device history available on these servers.'));
     return;
   }
-  listElement.replaceChildren(
+  fill(
+    listElement,
     ...list.map((claim, at) => {
       const line = row('device-row' + (at === selected ? ' on' : ''), claim.mine ? '[x] ' : '[ ] ');
-      line.append(claim.name);
-      if (claim.server) line.append(' ', badge(`on ${claim.server}`));
-      line.append(' ', badge(`${claim.count} items`));
+      put(line, claim.name);
+      if (claim.server) put(line, ' ', badge(`on ${claim.server}`));
+      put(line, ' ', badge(`${claim.count} items`));
       return line;
     }),
   );
@@ -153,7 +155,7 @@ export function open(onSaved: (changed: boolean) => void): void {
   onClose = onSaved;
   show('devices');
   selected = 0;
-  listElement.replaceChildren(row('device-row', 'Reading history…'));
+  fill(listElement, row('device-row', 'Reading history…'));
 
   const reachable = servers.all();
   void Promise.all([
