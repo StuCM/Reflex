@@ -1,5 +1,6 @@
 /* The plex.tv/link PIN flow. */
 import { local, plexTv, state } from './client';
+import * as servers from '../../data/servers';
 
 interface Pin {
   id: number;
@@ -56,11 +57,11 @@ export function linkPoll(
 /* A 401 from a media server says nothing about the plex.tv login — drop the
    server list and rediscover rather than making the user link again. */
 export function forgetServers(): void {
-  Servers.forget();
+  servers.forget();
 }
 
 export function signOut(): void {
   state.token = null;
   local('token', null);
-  Servers.forget();
+  servers.forget();
 }

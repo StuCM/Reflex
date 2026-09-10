@@ -4,16 +4,12 @@
    file leaves this list when it moves to src/. */
 
 import '../js/core/config.js';
-import '../js/data/store.js';
-import '../js/data/cached.js';
 import '../js/core/panel.js';
 
 /* rules/ has moved to src/. This publishes it under the name js/ still uses,
    and sits exactly where js/rules/media.js did in the order. */
 import './legacy';
 
-import '../js/data/servers.js';
-import '../js/data/merge.js';
 import '../js/data/art.js';
 import '../js/core/ui.js';
 import '../js/view/glyphs.js';

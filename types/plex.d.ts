@@ -120,8 +120,10 @@ interface PlexItem {
 
   /* Reflex's own, stamped on the way through. Underscored so nothing
      confuses them with something the server sent. */
-  _server?: PlexServer;
+  /** The id of the server it came from — Servers.stamp sets this. */
+  _server?: string;
   _sources?: PlexItem[];
+  _part?: string;
 }
 
 interface PlexServer {
@@ -153,9 +155,26 @@ type MergeFetch = (
   offset: number,
 ) => Promise<{ items: PlexItem[]; total: number }>;
 
-/** Opaque to everything but js/data/merge.js. */
+interface MergeIndex {
+  map: Record<string, number>;
+  out: PlexItem[];
+  dupes: number;
+}
+
+interface MergeStream {
+  part: MergePart;
+  offset: number;
+  buffer: PlexItem[];
+  total: number;
+  done: boolean;
+}
+
 interface MergeState {
-  streams: { total: number }[];
+  fetch: MergeFetch;
+  streams: MergeStream[];
+  idx: MergeIndex;
+  exhausted: boolean;
+  busy: Promise<PlexItem[]> | null;
 }
 
 interface ListRow {

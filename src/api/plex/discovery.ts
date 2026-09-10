@@ -2,6 +2,7 @@
    Relay is never used — direct only. All of them are kept: the same film is
    often on more than one, and the app deduplicates rather than picking. */
 import { ask, plexTv, queryString, request, state } from './client';
+import * as servers from '../../data/servers';
 
 function ping(uri: string, token: string): Promise<string> {
   return request('GET', `${uri}/identity`, { timeout: 4000, token }).then(() => uri);
@@ -52,7 +53,7 @@ function reach(resource: PlexResource): Promise<PlexServer | null> {
 }
 
 export function discover(): Promise<PlexServer[]> {
-  const cached = Servers.all();
+  const cached = servers.all();
   if (cached.length) {
     return Promise.all(
       cached.map((server) =>
@@ -64,10 +65,10 @@ export function discover(): Promise<PlexServer[]> {
     ).then((live) => {
       const reachable = live.filter((server): server is PlexServer => !!server);
       if (reachable.length) {
-        Servers.set(reachable);
+        servers.set(reachable);
         return reachable;
       }
-      Servers.forget();
+      servers.forget();
       return discover();
     });
   }
@@ -90,7 +91,7 @@ export function discover(): Promise<PlexServer[]> {
       if (!reachable.length) throw new Error('no direct server connection');
       /* Stable order, so rows do not reshuffle between launches. */
       reachable.sort((one, two) => (one.name < two.name ? -1 : one.name > two.name ? 1 : 0));
-      Servers.set(reachable);
+      servers.set(reachable);
       return reachable;
     });
 }

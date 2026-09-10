@@ -7,6 +7,10 @@ import { langName } from './rules/language';
 import * as quality from './rules/quality';
 import * as ratings from './rules/ratings';
 import * as http from './api/http';
+import * as cached from './data/cached';
+import * as merge from './data/merge';
+import * as servers from './data/servers';
+import * as store from './data/store';
 import * as plexAuth from './api/plex/auth';
 import { hasToken, init, state } from './api/plex/client';
 import { discover } from './api/plex/discovery';
@@ -56,6 +60,10 @@ declare global {
     Tmdb: Mutable<typeof tmdb>;
     Youtube: Mutable<typeof youtube>;
     Plex: Mutable<typeof Plex>;
+    Store: Mutable<typeof store>;
+    Cached: Mutable<typeof cached>;
+    Servers: Mutable<typeof servers>;
+    Merge: Mutable<typeof merge>;
   }
 }
 
@@ -69,3 +77,7 @@ window.Http = { ...http };
 window.Tmdb = { ...tmdb };
 window.Youtube = { ...youtube };
 window.Plex = { ...Plex };
+window.Store = { ...store };
+window.Cached = { ...cached };
+window.Servers = { ...servers };
+window.Merge = { ...merge };

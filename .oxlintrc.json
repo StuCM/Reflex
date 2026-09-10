@@ -55,7 +55,7 @@
       "error",
       {
         "min": 3,
-        "exceptions": ["i", "j", "id", "at", "to", "UI", "T", "K"],
+        "exceptions": ["i", "j", "id", "at", "to", "UI", "T", "K", "of"],
         "properties": "never"
       }
     ],
