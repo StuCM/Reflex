@@ -128,6 +128,10 @@ let forceStream = false;
 let ticker: ReturnType<typeof setInterval> | null = null;
 let osdTimer: ReturnType<typeof setTimeout> | null = null;
 let resumeMs = 0;
+/* Still owed. A seek made before the panel has a seekable range is dropped
+   without an error — the film just starts at zero — so the resume is issued
+   and then checked rather than assumed. */
+let owedResume = false;
 
 /* A stall is the thing you actually see as a blip, and it is over before the
    ten-second sample comes round. Count them instead. */
@@ -481,6 +485,7 @@ function seekBy(seconds: number): void {
 }
 
 function seekTo(seconds: number): void {
+  owedResume = false;
   const total = duration();
   pending = Math.max(0, total ? Math.min(seconds, total - 2) : seconds);
   dismissSkip();
@@ -496,6 +501,26 @@ function seekNow(to: number): void {
   } catch {
     /* not seekable yet */
   }
+}
+
+/* Issued from every event that could mean the element is finally ready. */
+function resumeSeek(): void {
+  if (!owedResume || pending !== null) return;
+  const total = videoElement.duration * 1000;
+  const to = resumeMs / 1000;
+  /* Landed, not worth resuming, a film you finished, or one the viewer has
+     already watched past — every case means stop asking. */
+  if (
+    resumeMs <= 10000 ||
+    !total ||
+    resumeMs >= total - 30000 ||
+    Math.abs(videoElement.currentTime - to) < 2 ||
+    videoElement.currentTime > 15
+  ) {
+    owedResume = false;
+    return;
+  }
+  seekNow(to);
 }
 
 function applySeek(): void {
@@ -1130,12 +1155,7 @@ function fail(text: string): void {
    goes on reporting a film nobody is watching. */
 function listen(): void {
   videoElement.onloadedmetadata = () => {
-    /* Only now does currentTime mean anything. Don't resume within half a
-       minute of the end — that is a film you finished. */
-    const total = videoElement.duration * 1000;
-    if (resumeMs > 10000 && total && resumeMs < total - 30000) {
-      videoElement.currentTime = resumeMs / 1000;
-    }
+    resumeSeek();
     paintTicks();
     applyChosenTrack();
     showOsd();
@@ -1150,14 +1170,19 @@ function listen(): void {
   /* The track list is not always populated by loadedmetadata, so try again
      once the picture is actually running. */
   videoElement.onplaying = () => {
+    resumeSeek();
     applyChosenTrack();
     showOsd();
+  };
+  videoElement.oncanplay = () => {
+    resumeSeek();
   };
   /* 'waiting' is the panel telling us it has run dry. */
   videoElement.onwaiting = () => {
     stalls++;
   };
   videoElement.ontimeupdate = () => {
+    resumeSeek();
     if (osdShowing()) paintOsd();
     paintSub();
     checkMarker();
@@ -1179,6 +1204,7 @@ export function play(options: PlayOptions): void {
   onNext = options.onNext || null;
   onPlayNext = options.onPlayNext || null;
   resumeMs = options.item.viewOffset || 0;
+  owedResume = resumeMs > 0;
   clearNext();
 
   stalls = 0;
