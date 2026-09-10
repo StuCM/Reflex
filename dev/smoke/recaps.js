@@ -29,11 +29,12 @@ module.exports = function (h) {
            The harness always sets a key; a shipped app usually will not. */
         return openShowPage(titles.recapShow)
           .then(function () {
+            /* The real condition, not a stubbed function: Youtube.enabled()
+               reads the key at call time, so clearing it is what a shipped
+               build without one actually looks like. */
             return page.evaluate(function () {
-              Youtube._enabled = Youtube.enabled;
-              Youtube.enabled = function () {
-                return false;
-              };
+              Youtube._key = Config.youtubeKey;
+              Config.youtubeKey = '';
             });
           })
           .then(function () {
@@ -47,7 +48,7 @@ module.exports = function (h) {
           })
           .then(function () {
             return page.evaluate(function () {
-              Youtube.enabled = Youtube._enabled;
+              Config.youtubeKey = Youtube._key;
             });
           });
       });

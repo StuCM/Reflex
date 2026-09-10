@@ -5,7 +5,6 @@ import { queryString, request } from './http';
 import settings from '../core/config';
 import { debug } from '../core/ui';
 
-const KEY = settings.youtubeKey;
 const API = settings.youtubeBase;
 
 /* The channel by handle, not by id: a guessed id in source would be wrong and
@@ -14,13 +13,15 @@ const HANDLE = '@ManOfRecaps';
 
 const SEASON = /\b(?:season|series|s)\s*0*(\d{1,2})\b/i;
 
-/** Is there a key at all? Without one the recaps action never appears. */
+/* Read at call time, not snapshotted at load: a keyless build is a real state
+   the show page has to draw, and the dev harness sets the key after this
+   module is evaluated. */
 export function enabled(): boolean {
-  return !!KEY;
+  return !!settings.youtubeKey;
 }
 
 function ask(path: string, parameters: Record<string, string | number>): Promise<YoutubeResponse> {
-  return request(`${API}${path}?${queryString({ ...parameters, key: KEY })}`, {
+  return request(`${API}${path}?${queryString({ ...parameters, key: settings.youtubeKey })}`, {
     label: `YouTube ${path}`,
   }) as Promise<YoutubeResponse>;
 }
