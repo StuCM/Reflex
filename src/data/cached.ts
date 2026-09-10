@@ -55,7 +55,7 @@ function misses<T>(prefix: string, maxAge: number) {
   };
 }
 
-export const sections = one<unknown[]>('sections');
+export const sections = one<CachedSections[]>('sections');
 export const rows = kept<{ rows: unknown[] } | null>('rows:');
 export const total = kept<{ updatedAt?: number; total: number }>('total:');
 export const art = kept<unknown>('art:');

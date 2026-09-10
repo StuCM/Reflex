@@ -15,5 +15,11 @@ interface Window {
   REFLEX_CONFIG?: Record<string, unknown>;
   /* webOS is injected by the TV's WAM runtime and absent on the laptop, which
      is why every use of it is guarded. */
-  webOS?: { platform?: { tv?: boolean } };
+  webOS?: {
+    platform?: { tv?: boolean };
+    platformBack?: () => void;
+    service?: {
+      request(uri: string, options: { method: string; parameters: unknown }): void;
+    };
+  };
 }

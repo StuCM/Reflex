@@ -89,18 +89,6 @@
         "max-depth": "off",
         "unicorn/no-array-sort": "off"
       }
-    },
-    {
-      // THE MIGRATION RATCHET. Every layer still written as global scripts
-      // sits here. As each is converted to ESM + TypeScript (see
-      // docs/refactor-plan.md) delete its line, and the strict rules start
-      // applying to it. When this list is empty, so is the migration.
-      "files": ["js/app.js"],
-      "rules": {
-        "id-length": "off",
-        "unicorn/prefer-add-event-listener": "off",
-        "unicorn/consistent-function-scoping": "off"
-      }
     }
   ]
 }

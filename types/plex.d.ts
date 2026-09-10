@@ -299,6 +299,13 @@ interface PlexSection {
   server: string;
 }
 
+/** A server's section list as the cache holds it: named by id, because the
+    server object itself is rebuilt by discovery on every launch. */
+interface CachedSections {
+  serverId: string;
+  sections: PlexSection[];
+}
+
 /** One of a section's own category rows. */
 interface PlexHub {
   title: string;

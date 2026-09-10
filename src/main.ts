@@ -1,10 +1,8 @@
 /* The one entry. index.html loads this and nothing else.
-   The order below was index.html's script list and is still the dependency
-   graph: each legacy module publishes itself on `window` on the way past. A
-   file leaves this list when it moves to src/. */
 
-/* rules/ has moved to src/. This publishes it under the name js/ still uses,
-   and sits exactly where js/rules/media.js did in the order. */
+   js/ is gone, so this is no longer a dependency order — the import graph is.
+   legacy.ts stays only while anything still reaches for a global. */
 import './legacy';
 
-import '../js/app.js';
+/* Last: the boot runs once everything it wires is defined. */
+import './app';
