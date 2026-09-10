@@ -42,6 +42,7 @@
   --r-panel: 8px;
   --r-tag:   6px;
   --r-badge: 4px;
+  --r-row:   18px;   /* a row inside a panel, per 7b */
 
   /* Controls. The film page's round button. The player sizes its own transport
      in css/player.css and Play is a content-sized pill, so this no longer has
@@ -161,10 +162,10 @@ html, body {
 }
 
 .menu-row {
-  height: 56px; line-height: 56px; padding: 0 16px;
+  height: 56px; line-height: 56px; padding: 0 18px;
   font-size: 26px; color: var(--dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  border-radius: var(--r-badge);
+  border-radius: var(--r-row);
 }
 .menu-row.sel { background: var(--raised); color: var(--fg); }
 .menu-row.off { color: var(--dim2); }

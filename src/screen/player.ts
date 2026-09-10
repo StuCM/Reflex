@@ -73,6 +73,7 @@ interface Control {
   glyph: string;
   caption?: string;
   run?: () => void;
+  primary?: boolean;
 }
 
 const videoElement = must('video') as PanelVideoElement;
@@ -227,7 +228,7 @@ function paintOsd(): void {
   osdFill.style.setProperty('--fill', `${across}px`);
   /* transform, not left: the knob moves on every timeupdate and this is the
      one property the panel can move without a layout pass. */
-  osdKnob.style.setProperty('--at', `${Math.min(across, BAR_W - 6)}px`);
+  osdKnob.style.setProperty('--at', `${Math.min(across, BAR_W)}px`);
 
   const ahead = bufferedEnd() ?? 0;
   osdBuffered.style.setProperty(
@@ -436,7 +437,7 @@ function controls(): Control[] {
         seekBy(-JUMP);
       },
     },
-    { glyph: videoElement.paused ? glyphs.play : glyphs.pause, run: togglePlay },
+    { glyph: videoElement.paused ? glyphs.play : glyphs.pause, run: togglePlay, primary: true },
     {
       glyph: glyphs.forward,
       run: () => {
@@ -456,6 +457,7 @@ function paintControls(): void {
   controls().forEach((control, at) => {
     const element = div(
       `osd-ctl${focus === 'row' && at === controlIndex ? ' foc' : ''}` +
+        (control.primary ? ' primary' : '') +
         (control.id && control.id === openPanel ? ' on' : ''),
     );
     if (control.id) element.id = `osd-ctl-${control.id}`;

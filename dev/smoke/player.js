@@ -300,11 +300,12 @@ module.exports = function (h) {
               return { left: widths('#osd-left .osd-btn'), right: widths('#osd-right .osd-btn') };
             })
             .then(function (w) {
-              /* 7a: one size for the transport, so Play and the two jumps read as
-               one control, and a size down for the four choices. */
-              if (w.left.join() !== '80,80,80') {
+              /* 7a: Play is 104 and filled, the two jumps 80 either side of it,
+               the four choices 76. It read as three of 80 until 2026-09-10 —
+               the backlog asked for one size, the design source does not. */
+              if (w.left.join() !== '80,104,80') {
                 throw new Error(
-                  'the transport buttons are ' + w.left.join(', ') + ', not three of 80',
+                  'the transport buttons are ' + w.left.join(', ') + ', not 80/104/80',
                 );
               }
               if (w.right.join() !== '76,76,76,76') {

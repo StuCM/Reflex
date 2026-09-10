@@ -142,10 +142,20 @@ starting any of the steps below; they are the summary, it is the spec.
   the palette and the timings, used everywhere and documented in CLAUDE.md, so
   "the same radius" is one number rather than a habit. To be settled against
   `design/Mantis Screens.dc.html`, which the user is supplying.
-- **The player does not match the design**: Play and the next/previous controls
-  are different sizes when they should match, the option panels are not rounded
-  enough, the buttons are too big, and the panels should not be translucent —
-  the user does not want opacity there.
+- ~~**The player does not match the design**~~ — done 2026-09-10, against
+  `design/Mantis Screens.dc.html` 7a/7b rather than by eye. The trackbar is 8px
+  with a 26px accent knob, the option rows carry `--r-row` (18px, was 4), and
+  both panels — the player's and the film page's — are opaque with a hairline
+  ring; `#dt-menu` was `rgba(22,24,38,.94)`, which was the translucency
+  complained about.
+
+  **One item was reversed rather than done, and it needs a decision.** This
+  entry asked for Play and the two jumps to be the *same* size, and they were:
+  three of 80, asserted in `dev/smoke/player.js`. 7a does not agree — Play is
+  **104 and filled with `--ac`**, the jumps 80 either side. The design source
+  won, because the request was "merge the updated player design". If the
+  original complaint was the intent, it is one CSS rule and one assertion to
+  put back.
 - **The player's keys are wrong.** Wanted: ▲ controls the **trackbar** (scrub),
   and a menu opens **only** on OK on its button. Today ▲ focuses the control row
   and a second press opens a panel. Needs the reachability of the buttons

@@ -21,49 +21,54 @@
 #osd-track { display: -webkit-flex; display: flex;
              -webkit-align-items: center; align-items: center;
              height: 40px; margin-top: 18px; }
+/* 7a: an 8px bar over the picture, so the track and the buffered run are
+   white at low alpha rather than palette greys — a solid grey reads as a
+   second UI layer on top of the film. */
 #osd-bar {
-  position: relative; height: 10px; width: 1300px;
-  background: var(--raised); border-radius: var(--r-pill);
+  position: relative; height: 8px; width: 1300px;
+  background: rgba(238, 241, 243, 0.16); border-radius: var(--r-pill);
 }
 /* The two widths and the knob's offset are the only numbers on this screen
    JavaScript really computes per frame, so they arrive as custom properties
    and the shape stays here. */
 #osd-buffered {
-  position: absolute; top: 0; left: 0; height: 10px; width: var(--buffered, 0);
-  background: var(--soft); border-radius: var(--r-pill);
+  position: absolute; top: 0; left: 0; height: 8px; width: var(--buffered, 0);
+  background: rgba(238, 241, 243, 0.28); border-radius: var(--r-pill);
 }
 #osd-fill {
-  position: absolute; top: 0; left: 0; height: 10px; width: var(--fill, 0);
+  position: absolute; top: 0; left: 0; height: 8px; width: var(--fill, 0);
   background: var(--ac); border-radius: var(--r-pill);
 }
 
 /* Chapters as ticks, intro and credits as bands — where you can jump to, and
    what is worth jumping over. Drawn once when the duration is known. */
 #osd-ticks {
-  position: absolute; top: 0; left: 0; height: 10px; width: 1300px;
+  position: absolute; top: 0; left: 0; height: 8px; width: 1300px;
   /* A file whose chapters run past what the element reports as its duration
      would otherwise scatter ticks across the picture. */
   overflow: hidden;
 }
 .osd-tick {
-  position: absolute; top: 0; left: var(--at, 0); width: 2px; height: 10px;
+  position: absolute; top: 0; left: var(--at, 0); width: 2px; height: 8px;
   background: var(--bg);
 }
 .osd-band {
-  position: absolute; top: 0; left: var(--at, 0); width: var(--wide, 0); height: 10px;
+  position: absolute; top: 0; left: var(--at, 0); width: var(--wide, 0); height: 8px;
   background: rgba(255, 255, 255, 0.22);
 }
 
 /* The one thing that moves every frame, so it moves on transform alone. */
 #osd-knob {
-  position: absolute; top: -4px; left: 0; width: 6px; height: 18px;
-  background: #fff; border-radius: var(--r-pill);
+  position: absolute; top: -9px; left: 0; margin-left: -13px;
+  width: 26px; height: 26px;
+  background: var(--ac); border-radius: var(--r-pill);
+  box-shadow: 0 0 0 8px rgba(157, 147, 214, 0.22);
   -webkit-transform: translateX(var(--at, 0)); transform: translateX(var(--at, 0));
 }
 /* The trackbar has the focus, and 7a's ring round the knob is what says so —
    scrubbing has to look like a mode rather than another nudge. Toggled, never
    transitioned: a shadow that animated would repaint over the video. */
-#osd-bar.foc #osd-knob { box-shadow: 0 0 0 8px rgba(157, 147, 214, .28); }
+#osd-bar.foc #osd-knob { box-shadow: 0 0 0 12px rgba(157, 147, 214, 0.34); }
 
 /* Wide enough for a three-part clock and the SEEKING marker beside it: the
    elapsed wrapping onto a second line pushes the bar off centre. */
@@ -86,11 +91,15 @@
   text-align: center; white-space: normal;
 }
 
-/* 7a's sizes, smaller than the 88px button base.css shares with the film page:
-   the transport is one size, so Play and the two jumps read as one control,
-   and the four choices are a size down from it. */
+/* 7a's sizes. Play is the one you reach for, so it is bigger and filled; the
+   two jumps flank it at 80, and the four choices sit a size down again. */
 #osd-left .osd-btn { width: 80px; height: 80px; }
 #osd-left .osd-btn svg { margin-top: 17px; }
+#osd-left .osd-ctl.primary .osd-btn {
+  width: 104px; height: 104px;
+  background: var(--ac); color: var(--bg);
+}
+#osd-left .osd-ctl.primary .osd-btn svg { margin-top: 29px; }
 #osd-right .osd-btn { width: 76px; height: 76px; }
 #osd-right .osd-btn svg { margin-top: 15px; }
 
@@ -194,10 +203,15 @@
    is the one place translucency costs more than it buys. The radius is a
    literal because no token in css/base.css carries it, and that file belongs to
    every screen rather than this one. */
+/* 7b: opaque, with a hairline to lift it off the picture. The panel sits over
+   a moving image, and anything translucent there reads as a smear rather than
+   a surface. Static, never transitioned — a shadow that animated would repaint
+   over the video every frame. */
 #menu {
   position: absolute; left: var(--menu-left, var(--sp-page)); bottom: 330px; width: 860px;
-  padding: 22px 26px 18px; border-radius: 26px;
+  padding: 26px 18px; border-radius: 26px;
   background: var(--surface);
+  box-shadow: 0 0 0 1px rgba(238, 241, 243, 0.1), 0 40px 90px rgba(0, 0, 0, 0.55);
 }
 #menu .menu-list { height: auto; max-height: 392px; }
 
