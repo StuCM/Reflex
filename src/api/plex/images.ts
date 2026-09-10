@@ -1,6 +1,7 @@
 /* Poster and backdrop URLs. Items are stamped with the server they came from,
    so callers do not carry it around just to draw a picture. */
 import { queryString } from './client';
+import * as servers from '../../data/servers';
 
 export function photoUrl(
   server: PlexServer | null | undefined,
@@ -25,12 +26,12 @@ export function posterUrl(
   height: number,
 ): string {
   if (!item?.thumb) return '';
-  return photoUrl(Servers.of(item), item.thumb, width, height);
+  return photoUrl(servers.of(item), item.thumb, width, height);
 }
 
 export function artUrl(item: PlexItem | null | undefined, width: number, height: number): string {
   if (!item?.art) return '';
-  return photoUrl(Servers.of(item), item.art, width, height);
+  return photoUrl(servers.of(item), item.art, width, height);
 }
 
 /* A show's theme tune, or '' when it has none — most do not, and that is

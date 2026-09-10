@@ -3,6 +3,7 @@
    argument. There is deliberately no "current server": the account has more
    than one, the same film is on both, and each must be askable separately. */
 import { queryString, request as httpRequest } from '../http';
+import * as servers from '../../data/servers';
 
 const PLEX_TV = Config.plexTvBase;
 const PRODUCT = 'Reflex';
@@ -128,7 +129,7 @@ export function init(): void {
     local('clientId', state.clientId);
   }
   state.token = local('token');
-  Servers.load();
+  servers.load();
 }
 
 export function hasToken(): boolean {

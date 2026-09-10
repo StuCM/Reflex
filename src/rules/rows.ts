@@ -1,6 +1,8 @@
 /* The row model. A 'list' row holds its items; a 'merge' row is virtual over
    the servers' own totals and walks them as you scroll. */
 
+import * as merge from '../data/merge';
+
 /** Items held outright. */
 export function list(title: string, items: PlexItem[]): ListRow {
   return { kind: 'list', title, items, total: items.length, focus: 0 };
@@ -14,7 +16,7 @@ export function merged(title: string, parts: MergePart[], fetch: MergeFetch): Me
     focus: 0,
     total: 0,
     parts,
-    state: Merge.stream(parts, fetch),
+    state: merge.stream(parts, fetch),
   };
 }
 
@@ -22,7 +24,7 @@ export function merged(title: string, parts: MergePart[], fetch: MergeFetch): Me
 export function itemAt(row: Row | null | undefined, index: number): PlexItem | null {
   if (!row || index < 0 || index >= row.total) return null;
   if (row.kind === 'list') return row.items[index] ?? null;
-  return Merge.items(row.state)[index] ?? null;
+  return merge.items(row.state)[index] ?? null;
 }
 
 /* A screenful, plus enough that holding a key does not outrun the walk. */
@@ -36,5 +38,5 @@ export function needsUpTo(row: Row): number {
 }
 
 export function haveUpTo(row: Row): number {
-  return row.kind === 'merge' ? Merge.items(row.state).length : row.total;
+  return row.kind === 'merge' ? merge.items(row.state).length : row.total;
 }

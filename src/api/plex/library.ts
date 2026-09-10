@@ -1,6 +1,7 @@
 /* Reading the library: sections, paging, hubs, search, history, and the guid
    lookups that let a curated external list be joined to what a server holds. */
 import { ask, queryString, request } from './client';
+import * as servers from '../../data/servers';
 
 /** Items per category row. The rail shows ten across, and this is on the
     critical path of the first paint. */
@@ -65,7 +66,7 @@ export function items(
     const container = (response as Container).MediaContainer ?? {};
     return {
       total: container.totalSize ?? container.size ?? 0,
-      items: Servers.stamp(container.Metadata ?? [], server),
+      items: servers.stamp(container.Metadata ?? [], server),
     };
   });
 }
@@ -88,7 +89,7 @@ export function contentRatings(server: PlexServer, sectionKey: string): Promise<
 export function onDeck(server: PlexServer): Promise<PlexItem[]> {
   return ask(server, `/library/onDeck?${queryString({ includeGuids: 1 })}`)
     .then((response) =>
-      Servers.stamp(
+      servers.stamp(
         metadataOf(response).filter((item) => item.type === 'movie' || item.type === 'episode'),
         server,
       ),
@@ -146,7 +147,7 @@ export function children(server: PlexServer, ratingKey: string): Promise<PlexIte
       timeout: 20000,
     },
   )
-    .then((response) => Servers.stamp(metadataOf(response), server))
+    .then((response) => servers.stamp(metadataOf(response), server))
     .catch(() => []);
 }
 
@@ -161,7 +162,7 @@ export function hubs(server: PlexServer, sectionKey: string): Promise<PlexHub[]>
     .then((response) =>
       ((response as Container).MediaContainer?.Hub ?? [])
         .filter((hub) => hub.Metadata?.length && (hub.type === 'movie' || hub.type === 'show'))
-        .map((hub) => ({ title: hub.title, items: Servers.stamp(hub.Metadata ?? [], server) })),
+        .map((hub) => ({ title: hub.title, items: servers.stamp(hub.Metadata ?? [], server) })),
     )
     .catch(() => []);
 }
@@ -175,7 +176,7 @@ export function search(server: PlexServer, query: string): Promise<PlexItem[]> {
           if (item.type === 'movie' || item.type === 'show') found.push(item);
         });
       });
-      return Servers.stamp(found, server);
+      return servers.stamp(found, server);
     })
     .catch(() => []);
 }
@@ -212,7 +213,7 @@ export function devices(server: PlexServer): Promise<PlexDevice[]> {
    that lets a curated external list be asked about, instead of crawling. */
 export function copiesByGuid(server: PlexServer, guid: string): Promise<PlexItem[]> {
   return ask(server, `/library/all?${queryString({ guid, includeGuids: 1 })}`, { timeout: 15000 })
-    .then((response) => Servers.stamp(metadataOf(response), server))
+    .then((response) => servers.stamp(metadataOf(response), server))
     .catch(() => []);
 }
 
@@ -271,7 +272,7 @@ export function metadata(server: PlexServer, ratingKey: string): Promise<PlexIte
     /* Extras arrive nested and are playable in their own right, so they need
        stamping too or nothing can tell which server they came from. */
     const extras = (item as { Extras?: { Metadata?: PlexItem[] } }).Extras?.Metadata;
-    if (extras) Servers.stamp(extras, server);
-    return Servers.stamp(found, server)[0] ?? null;
+    if (extras) servers.stamp(extras, server);
+    return servers.stamp(found, server)[0] ?? null;
   });
 }
