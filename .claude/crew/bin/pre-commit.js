@@ -17,13 +17,22 @@ const staged = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-f
   encoding: 'utf8',
 })
   .split('\n')
-  .filter((file) => /\.(js|mjs|cjs|ts|mts|cts)$/.test(file));
+  .filter(Boolean);
 
-if (!staged.length) process.exit(0);
+// oxfmt formats JSON as well as JavaScript, so a version bump in package.json
+// is its business too — filtering to .js here is how one slipped past into CI.
+const SCRIPT = /\.(js|mjs|cjs|ts|mts|cts)$/;
+const FORMATTED = /\.(js|mjs|cjs|ts|mts|cts|json|jsonc)$/;
 
-function run(tool, args) {
+const toFormat = staged.filter((file) => FORMATTED.test(file));
+const toLint = staged.filter((file) => SCRIPT.test(file));
+
+if (!toFormat.length && !toLint.length) process.exit(0);
+
+function run(tool, args, files) {
+  if (!files.length) return true;
   try {
-    execFileSync(path.join(root, 'node_modules', '.bin', tool), args.concat(staged), {
+    execFileSync(path.join(root, 'node_modules', '.bin', tool), args.concat(files), {
       cwd: root,
       stdio: 'inherit',
     });
@@ -37,9 +46,8 @@ function run(tool, args) {
   }
 }
 
-const formatted = run('oxfmt', ['--check']);
-if (!formatted) {
+if (!run('oxfmt', ['--check'], toFormat)) {
   console.error('\n  Run `npm run format` and stage the result.\n');
   process.exit(1);
 }
-if (!run('oxlint', [])) process.exit(1);
+if (!run('oxlint', [], toLint)) process.exit(1);

@@ -54,7 +54,9 @@ interface PlexMedia {
   Part?: PlexPart[];
 }
 
-interface PlexGuid { id: string; }
+interface PlexGuid {
+  id: string;
+}
 
 /** A film, show, season or episode. */
 interface PlexItem {

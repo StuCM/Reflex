@@ -39,10 +39,10 @@
     "vite": "^8.2.2",
     "vitest": "^5.0.0"
   },
-  "engines": {
-    "node": ">=22"
-  },
   "browserslist": [
     "chrome 53"
-  ]
+  ],
+  "engines": {
+    "node": ">=22"
+  }
 }
