@@ -17,8 +17,47 @@ trap 'rm -rf "$STAGE"' EXIT
 
 # Everything the app needs at runtime, and nothing else. appinfo.json names
 # index.html, icon.png and largeIcon.png; index.html names css/ and js/.
-cp "$ROOT/appinfo.json" "$ROOT/index.html" "$ROOT/icon.png" "$ROOT/largeIcon.png" "$STAGE/"
-cp -r "$ROOT/css" "$ROOT/js" "$STAGE/"
+# Build first: what ships is the bundle, not the source tree. The keys are read
+# from the environment (or a gitignored .env) and baked in by Vite, so the repo
+# never holds one — see js/core/config.js.
+bake_env() {
+  eval "value=\$$1"
+  if [ -z "$value" ] && [ -f "$ROOT/.env" ]; then
+    value="$(sed -n "s/^$1=//p" "$ROOT/.env" | tail -1)"
+  fi
+  if [ -z "$value" ]; then
+    echo "  no $1: $3"
+    return
+  fi
+  export "$2=$value"
+  echo "  $2 from $1 (...${value#"${value%????}"})"
+}
+
+bake_env TMDB_KEY VITE_TMDB_KEY "artwork falls back to plex, discovery rows stay hidden"
+bake_env YOUTUBE_KEY VITE_YOUTUBE_KEY "no season recaps on a show page"
+
+(cd "$ROOT" && npx vite build >/dev/null) || {
+  echo "  refusing to package: vite build failed" >&2
+  exit 1
+}
+
+cp "$ROOT/appinfo.json" "$ROOT/icon.png" "$ROOT/largeIcon.png" "$STAGE/"
+cp -r "$ROOT/build/." "$STAGE/"
+
+# The guard belongs on the artifact, not on the file that was patched. Baking
+# into js/core/config.js and then checking js/core/config.js is exactly how a
+# bundled build shipped with both keys empty and every check still passing.
+check_baked() {
+  eval "want=\$$1"
+  [ -z "$want" ] && return
+  if ! grep -rqF "$want" "$STAGE/assets"; then
+    echo "  refusing to package: $1 is set but is not in the bundle — $2 would be dead" >&2
+    exit 1
+  fi
+}
+
+check_baked VITE_TMDB_KEY "discovery rows and TMDB artwork"
+check_baked VITE_YOUTUBE_KEY "season recaps"
 
 # The dev server injects its shim into index.html in memory, never on disk.
 # If one ever lands on disk it would ship to the TV, so check. (js/core/config.js
@@ -29,33 +68,6 @@ if grep -q "__dev/" "$STAGE/index.html"; then
   exit 1
 fi
 
-# The TV has no environment and no build step: whatever js/core/config.js says on
-# disk is what the panel gets. So each key is read from the environment or from
-# a gitignored .env and written into the *staged* copy — the repo's stays empty,
-# which is what keeps it out of a public history.
-#
-#   bake <env var> <js/core/config.js field> <what is lost without it>
-bake() {
-  eval "value=\$$1"
-  if [ -z "$value" ] && [ -f "$ROOT/.env" ]; then
-    value="$(sed -n "s/^$1=//p" "$ROOT/.env" | tail -1)"
-  fi
-  if [ -z "$value" ]; then
-    echo "  no $1: $3"
-    return
-  fi
-  sed -i "s|$2: '',|$2: '$value',|" "$STAGE/js/core/config.js"
-  # A silent miss ships an app with a dead feature and no explanation, which is
-  # the exact failure this file exists to make impossible.
-  if ! grep -q "$2: '$value'," "$STAGE/js/core/config.js"; then
-    echo "  refusing to package: $1 set but js/core/config.js has no $2: '' to replace" >&2
-    exit 1
-  fi
-  echo "  $2 baked in (...${value#"${value%????}"})"
-}
-
-bake TMDB_KEY tmdbKey "artwork falls back to plex, discovery rows stay hidden"
-bake YOUTUBE_KEY youtubeKey "no season recaps on a show page"
 
 rm -f "$ROOT"/*.ipk
 ares-package "$STAGE" -o "$ROOT" >/dev/null

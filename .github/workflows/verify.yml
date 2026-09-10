@@ -68,3 +68,10 @@ jobs:
       - name: smoke
         if: '!cancelled()'
         run: npm run smoke
+
+      # Dev serves a module graph; the TV gets one classic IIFE. Only this
+      # proves the two behave the same — it caught a palette assertion that
+      # compared `340ms` against the minifier's `.34s`.
+      - name: smoke against the built bundle
+        if: '!cancelled()'
+        run: npm run smoke:built

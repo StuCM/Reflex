@@ -159,35 +159,6 @@ jsFiles.forEach(function (f) {
 });
 const cssFiles = listFiles(path.join(ROOT, 'css'), '.css');
 
-/* Every module in js/ has to be in index.html, in one of the script tags, and
-   every stylesheet in one of the link tags, or it simply is not in the app —
-   there is no bundler to notice. The stylesheets are one file per screen, so
-   this is now the way a whole screen loses its styling in silence. */
-const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-
-/* Compared by path, not by basename: js/ is layered now, and a script tag
-   naming the right file in the wrong layer is exactly the mistake a move
-   like that makes. */
-function loaded(dir, files, tags) {
-  const referenced = (html.match(tags) || []).map(function (s) {
-    return s.replace(/"$/, '').replace(/^.*"/, '');
-  });
-  const present = files.map(function (f) {
-    return path.relative(ROOT, f).split(path.sep).join('/');
-  });
-  present.forEach(function (f) {
-    if (referenced.indexOf(f) < 0)
-      problems.push('index.html  ' + f + ' exists but is never loaded');
-  });
-  referenced.forEach(function (f) {
-    if (present.indexOf(f) < 0) problems.push('index.html  loads ' + f + ', which does not exist');
-  });
-  return present;
-}
-
-const scripts = loaded('js/', jsFiles, /<script src="js\/[^"]+"/g);
-const sheets = loaded('css/', cssFiles, /<link rel="stylesheet" href="css\/[^"]+"/g);
-
 if (problems.length) {
   console.log(
     '\n  ' +
@@ -205,8 +176,8 @@ if (problems.length) {
 
 console.log(
   '  chromium 53: ' +
-    scripts.length +
+    jsFiles.length +
     ' scripts, ' +
-    sheets.length +
+    cssFiles.length +
     ' stylesheets, nothing unsupported',
 );

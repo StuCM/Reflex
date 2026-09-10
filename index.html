@@ -200,37 +200,7 @@
 <!-- No bundler, so load order is the dependency graph: settings, then the
      services, then the pieces of screen, then the app that wires them up.
      tools/check-es5.js fails if a file in js/ is missing from this list. -->
-<script src="js/core/config.js"></script>
-<script src="js/api/http.js"></script>
-<script src="js/data/store.js"></script>
-<script src="js/data/cache.js"></script>
-<script src="js/core/panel.js"></script>
-<script src="js/rules/subs.js"></script>
-<script src="js/rules/media.js"></script>
-<script src="js/data/servers.js"></script>
-<script src="js/data/merge.js"></script>
-<script src="js/api/plex.js"></script>
-<script src="js/api/tmdb.js"></script>
-<script src="js/api/youtube.js"></script>
-<script src="js/data/art.js"></script>
+<script type="module" src="/src/main.ts"></script>
 
-<script src="js/core/ui.js"></script>
-<script src="js/view/glyphs.js"></script>
-<script src="js/view/menu.js"></script>
-<script src="js/rules/rows.js"></script>
-<script src="js/view/rail.js"></script>
-<script src="js/data/meta.js"></script>
-<script src="js/data/guard.js"></script>
-<script src="js/data/shows.js"></script>
-<script src="js/view/masthead.js"></script>
-<script src="js/screen/detail.js"></script>
-<script src="js/screen/showpage.js"></script>
-<script src="js/data/devices.js"></script>
-<script src="js/data/discovery.js"></script>
-<script src="js/view/sidebar.js"></script>
-<script src="js/screen/browse.js"></script>
-<script src="js/screen/player.js"></script>
-
-<script src="js/app.js"></script>
 </body>
 </html>

@@ -67,3 +67,8 @@ var Store = (function () {
 
   return { get: get, put: put };
 })();
+
+/* Bridge, deleted with this file when it becomes a module. index.html now
+   loads one entry, so a top-level `var` here is module-scoped rather than
+   global — and every other file still reaches this one by bare name. */
+window.Store = Store;

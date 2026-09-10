@@ -12,7 +12,7 @@ var Config = (function () {
 
     /* Free TMDB v3 API key. Empty means the discovery rows don't appear and
        the artwork stays whatever Plex has; nothing else is affected. */
-    tmdbKey: '',
+    tmdbKey: import.meta.env.VITE_TMDB_KEY || '',
 
     /* The Discovery page, in the order they appear on screen. `kind` is what
        js/tmdb.js dispatches on; a genre id comes from TMDB's
@@ -31,7 +31,7 @@ var Config = (function () {
 
     /* Free YouTube Data API v3 key, for the season recaps on a show page. Empty
        means the Find recaps action does not appear; nothing else is affected. */
-    youtubeKey: '',
+    youtubeKey: import.meta.env.VITE_YOUTUBE_KEY || '',
 
     /* YouTube's API and its embed player, unless something is standing in. */
     youtubeBase: 'https://www.googleapis.com/youtube/v3',
@@ -55,3 +55,8 @@ var Config = (function () {
   }
   return cfg;
 })();
+
+/* Bridge, deleted with this file when it becomes a module. index.html now
+   loads one entry, so a top-level `var` here is module-scoped rather than
+   global — and every other file still reaches this one by bare name. */
+window.Config = Config;

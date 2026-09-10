@@ -23,7 +23,9 @@
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
     "typecheck": "tsc --noEmit",
-    "lint:names": "eslint"
+    "lint:names": "eslint",
+    "build": "vite build",
+    "smoke:built": "npm run build && node dev/smoke.js --built"
   },
   "devDependencies": {
     "eslint": "^10.10.0",
