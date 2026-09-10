@@ -1,15 +1,7 @@
 /* One XHR, for every client that talks to something.
- *
- * Plex, TMDB and YouTube each grew their own copy of the same forty lines —
- * open, timeout, status check, parse, three error paths — and the copies had
- * started to drift. They differ in three things only, and those are the
- * options: the headers to send, the name to put in an error, and whether a body
- * that is not JSON is an answer or a failure.
- *
- * No fetch(): Chromium 53 has it, but not with the timeout this needs, and a
- * request to a server on the other side of the country that never returns is
- * worse than one that fails.
- */
+   Not fetch(): Chromium 53 has it, but without the timeout this needs, and a
+   request to a distant server that never returns is worse than one that
+   fails. */
 
 export interface RequestOptions {
   method?: string;

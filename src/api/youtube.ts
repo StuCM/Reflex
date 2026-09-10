@@ -1,12 +1,6 @@
-/* Season recaps, from one YouTube channel.
- *
- * 100 quota units a search against a daily 10,000, so this is only ever called
- * from a keypress — never from a page opening. A quota refusal answers with
- * nothing rather than an error, because "none today" is the truth the screen
- * has to show.
- *
- * Inert without a key: the Find recaps action simply does not appear.
- */
+/* Season recaps, from one channel.
+   100 quota units a search against a daily 10,000, so this is only ever
+   called from a keypress. A refusal answers with nothing, not an error. */
 import { queryString, request } from './http';
 
 const KEY = Config.youtubeKey;

@@ -1,13 +1,6 @@
 /* TMDB, for the curated rows and the artwork.
- *
- * Deliberately external-first: fetch a small curated list from TMDB (one
- * request, ~20 titles), then ask Plex which of them it has, by TMDB id. The
- * opposite direction — indexing 30k library items against TMDB — would need a
- * full crawl of a server we do not own, and a backend to run it on.
- *
- * Needs a free TMDB v3 API key. Without one the discovery rows simply do not
- * appear; nothing else is affected.
- */
+   External-first on purpose: fetch ~20 titles, then ask Plex which it has.
+   The other direction would mean crawling a server we do not own. */
 import { queryString, request } from './http';
 
 const KEY = Config.tmdbKey;
