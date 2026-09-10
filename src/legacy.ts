@@ -17,6 +17,7 @@ import * as menu from './view/menu';
 import * as rail from './view/rail';
 import * as sidebar from './view/sidebar';
 import * as cached from './data/cached';
+import * as devices from './data/devices';
 import * as discovery from './data/discovery';
 import * as guard from './data/guard';
 import * as meta from './data/meta';
@@ -82,6 +83,7 @@ declare global {
     Art: Mutable<typeof art>;
     Shows: Mutable<typeof shows>;
     Discovery: Mutable<typeof discovery>;
+    Devices: Mutable<typeof devices>;
     Config: typeof settings;
     /* js/ calls it Panel.features(); the module exports probeFeatures. */
     Panel: Mutable<typeof panel> & { features: typeof panel.probeFeatures };
@@ -114,6 +116,7 @@ window.Guard = { ...guard };
 window.Art = { ...art };
 window.Shows = { ...shows };
 window.Discovery = { ...discovery };
+window.Devices = { ...devices };
 window.Config = settings;
 window.Panel = { ...panel, features: panel.probeFeatures };
 window.UI = { ...userInterface };

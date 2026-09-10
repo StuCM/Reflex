@@ -9,7 +9,6 @@ import './legacy';
 
 import '../js/screen/detail.js';
 import '../js/screen/showpage.js';
-import '../js/data/devices.js';
 import '../js/screen/browse.js';
 import '../js/screen/player.js';
 import '../js/app.js';
