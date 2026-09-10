@@ -3,6 +3,7 @@
    It knows nothing about playback or copies — a row carries a `value` and the
    caller decides what that means. */
 import { clamp, isBack } from '../core/ui';
+import { span, fill, put } from './dom';
 
 /** .menu-row, in CSS pixels. */
 const ROW_H = 56;
@@ -48,29 +49,24 @@ function land(): void {
   selected = at < 0 ? 0 : at;
 }
 
-function span(className: string, text: string): HTMLSpanElement {
-  const element = document.createElement('span');
-  element.className = className;
-  element.textContent = text;
-  return element;
-}
-
 function paint(): void {
   if (!tabsElement || !innerElement || !noteElement) return;
 
-  tabsElement.replaceChildren(
+  fill(
+    tabsElement,
     ...tabs.map((entry, at) => span(`menu-tab${at === tab ? ' on' : ''}`, entry.label)),
   );
 
-  innerElement.replaceChildren(
+  fill(
+    innerElement,
     ...built.map((row, at) => {
       const line = document.createElement('div');
       line.className =
         `menu-row${at === selected ? ' sel' : ''}` +
         (row.on ? ' on' : '') +
         (row.off ? ' off' : '');
-      line.append(span('menu-mark', row.on ? '●' : ''), span('menu-label', row.label));
-      if (row.note) line.append(span('menu-note-inline', row.note));
+      put(line, span('menu-mark', row.on ? '●' : ''), span('menu-label', row.label));
+      if (row.note) put(line, span('menu-note-inline', row.note));
       return line;
     }),
   );
@@ -88,7 +84,7 @@ function shell(): HTMLElement[] {
   list.className = 'menu-list';
   const inner = document.createElement('div');
   inner.className = 'menu-inner';
-  list.append(inner);
+  put(list, inner);
   const note = document.createElement('div');
   note.className = 'menu-note';
   return [tabsRow, list, note];
@@ -112,7 +108,7 @@ export function open(options: {
 
   /* Built once per host and then kept: the winding transition lives on
      .menu-inner, and an element replaced on every paint never runs one. */
-  if (!host.firstChild) host.replaceChildren(...shell());
+  if (!host.firstChild) fill(host, ...shell());
 
   tabsElement = host.querySelector('.menu-tabs');
   innerElement = host.querySelector('.menu-inner');

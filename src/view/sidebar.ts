@@ -5,6 +5,7 @@
 import * as servers from '../data/servers';
 import { themeLabel } from '../screen/showpage';
 import { KEY, clamp, isBack } from '../core/ui';
+import { fill } from './dom';
 
 /** The panel less its top padding and a little breathing room. */
 const VIEW_H = 968;
@@ -151,7 +152,8 @@ function reveal(): void {
 }
 
 function render(): void {
-  listElement.replaceChildren(
+  fill(
+    listElement,
     ...rows.map((row, position) => {
       const line = document.createElement('div');
       line.className =

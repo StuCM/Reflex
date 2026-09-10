@@ -12,12 +12,7 @@ import * as merge from '../data/merge';
 import * as servers from '../data/servers';
 import * as shows from '../data/shows';
 import { identity } from '../rules/identity';
-
-function must(id: string): HTMLElement {
-  const element = document.getElementById(id);
-  if (!element) throw new Error(`index.html has no #${id}`);
-  return element;
-}
+import { div, span, fill, put, must } from '../view/dom';
 
 const titleElement = must('sh-title');
 const metaElement = must('sh-meta');
@@ -61,20 +56,6 @@ let generation = 0;
 let verdicts: Record<string, Verdict> = {};
 let checkTimer: ReturnType<typeof setTimeout> | null = null;
 
-function div(className: string, text?: string): HTMLDivElement {
-  const element = document.createElement('div');
-  element.className = className;
-  if (text !== undefined) element.textContent = text;
-  return element;
-}
-
-function span(className: string, text?: string): HTMLSpanElement {
-  const element = document.createElement('span');
-  element.className = className;
-  if (text !== undefined) element.textContent = text;
-  return element;
-}
-
 function verdictKey(episode: PlexItem): string {
   return `${episode._server}:${episode.ratingKey}`;
 }
@@ -95,7 +76,8 @@ function paintHeader(): void {
 }
 
 function renderSeasons(): void {
-  seasonsElement.replaceChildren(
+  fill(
+    seasonsElement,
     ...seasons.map((season, at) =>
       span(
         `chip${at === seasonIndex ? ' cur' : ''}` +
@@ -125,7 +107,7 @@ function hint(): string {
 
 function renderEpisodes(): void {
   if (!episodes.length) {
-    episodesElement.replaceChildren(div('sh-episode', 'No episodes in this series.'));
+    fill(episodesElement, div('sh-episode', 'No episodes in this series.'));
     return;
   }
   /* A window, not the lot: a 24-episode series is common and drawing all of
@@ -150,7 +132,8 @@ function renderEpisodes(): void {
     const url = posterUrl(episode, 160, 90);
     if (url) still.style.setProperty('--still', `url("${url}")`);
 
-    row.append(
+    put(
+      row,
       still,
       span('sh-ep-num', episode.index === undefined ? '·' : String(episode.index)),
       span('sh-ep-title', episode.title ?? ''),
@@ -158,11 +141,11 @@ function renderEpisodes(): void {
       span('sh-ep-seen', watched),
     );
     const badge = verdictBadge(episode);
-    if (badge) row.append(badge);
+    if (badge) put(row, badge);
     drawn.push(row);
   }
 
-  episodesElement.replaceChildren(...drawn);
+  fill(episodesElement, ...drawn);
   hintElement.textContent = hint();
 }
 
@@ -171,7 +154,7 @@ function renderEpisodes(): void {
    list to make room — a transform, not a height. */
 function renderRecaps(): void {
   if (!youtube.enabled()) {
-    recapsElement.replaceChildren();
+    fill(recapsElement);
     return;
   }
   const showing = zone === 'recaps';
@@ -183,7 +166,8 @@ function renderRecaps(): void {
   episodesElement.classList.toggle('lifted', showing);
 
   if (!recaps?.length) {
-    recapsElement.replaceChildren(
+    fill(
+      recapsElement,
       div(
         `sh-recap sh-recap-action${showing ? ' on' : ''}`,
         searching ? 'Searching…' : recaps ? 'No recaps found' : 'Find recaps',
@@ -200,10 +184,10 @@ function renderRecaps(): void {
     const card = div(`sh-recap${showing && at === recapIndex ? ' on' : ''}`);
     const thumb = span('sh-recap-thumb');
     if (recap.thumb) thumb.style.setProperty('--thumb', `url("${recap.thumb}")`);
-    card.append(thumb, span('sh-recap-title', recap.title), span('sh-recap-len', recap.length));
+    put(card, thumb, span('sh-recap-title', recap.title), span('sh-recap-len', recap.length));
     drawn.push(card);
   }
-  recapsElement.replaceChildren(...drawn);
+  fill(recapsElement, ...drawn);
 }
 
 /* A search is 100 units of the day's 10,000, so it happens on a press and never
@@ -346,7 +330,7 @@ function loadEpisodes(): void {
   wantEpisode = null;
   episodes = [];
   episodeIndex = 0;
-  episodesElement.replaceChildren(div('sh-episode', 'Loading…'));
+  fill(episodesElement, div('sh-episode', 'Loading…'));
 
   void shows
     .episodes(season)
@@ -367,7 +351,7 @@ function loadEpisodes(): void {
     .catch((error: Error) => {
       if (mine !== generation) return;
       debug(`episodes: ${error.message}`);
-      episodesElement.replaceChildren(div('sh-episode', 'Could not read the episode list.'));
+      fill(episodesElement, div('sh-episode', 'Could not read the episode list.'));
     });
 }
 
@@ -420,8 +404,8 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   silence(); // whatever the last series was, it is over
   playTheme();
   renderRecaps();
-  seasonsElement.replaceChildren();
-  episodesElement.replaceChildren(div('sh-episode', 'Loading…'));
+  fill(seasonsElement);
+  fill(episodesElement, div('sh-episode', 'Loading…'));
 
   const mine = generation;
   void shows
@@ -432,9 +416,7 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
       seasonIndex = openSeason(list);
       renderSeasons();
       if (!list.length) {
-        episodesElement.replaceChildren(
-          div('sh-episode', 'This server lists no series for this show.'),
-        );
+        fill(episodesElement, div('sh-episode', 'This server lists no series for this show.'));
         return;
       }
       loadEpisodes();
@@ -442,7 +424,7 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
     .catch((error: Error) => {
       if (mine !== generation) return;
       debug(`seasons: ${error.message}`);
-      episodesElement.replaceChildren(div('sh-episode', 'Could not read the series list.'));
+      fill(episodesElement, div('sh-episode', 'Could not read the series list.'));
     });
 }
 

@@ -5,6 +5,7 @@ import { clamp } from '../core/ui';
 import * as art from '../data/art';
 import { railSub, railTitle } from '../rules/labels';
 import { itemAt } from '../rules/rows';
+import { div, put } from './dom';
 
 /** 2:3, so seven fit across at 1920: 96 margin + 7×209 + 6×44 = 1823. */
 const TILE_W = 209;
@@ -71,18 +72,12 @@ function place(element: HTMLElement, across: number, animate: boolean): void {
   element.classList.remove('no-anim');
 }
 
-function div(className: string): HTMLDivElement {
-  const element = document.createElement('div');
-  element.className = className;
-  return element;
-}
-
 export function build(): void {
   for (let slot = 0; slot < ROW_POOL; slot++) {
     const rowElement = div('row hidden') as RailRowElement;
     const label = div('row-label');
     const strip = div('strip');
-    rowElement.append(label, strip);
+    put(rowElement, label, strip);
     rowElement._label = label;
     rowElement._strip = strip;
     rowElement._row = -1;
@@ -102,8 +97,8 @@ export function build(): void {
          own title already, and text on top of it is unreadable. */
       const name = div('tile-title');
       const sub = div('tile-sub');
-      inner.append(image, progress);
-      tile.append(inner, name, sub);
+      put(inner, image, progress);
+      put(tile, inner, name, sub);
       tile._img = image;
       tile._name = name;
       tile._sub = sub;
@@ -113,10 +108,10 @@ export function build(): void {
       tile._item = null;
       tile._wait = false;
       tile._deferred = false;
-      strip.append(tile);
+      put(strip, tile);
       rowElement._tiles.push(tile);
     }
-    container.append(rowElement);
+    put(container, rowElement);
     pool.push(rowElement);
   }
   art.onReady(repaint);

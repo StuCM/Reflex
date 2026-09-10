@@ -80,6 +80,16 @@ export default tseslint.config(
          stylesheet. Both have an answer: createElement/textContent, and a
          class. Where a value really is computed per frame — a scroll offset, a
          progress width — set a custom property and let CSS use it. */
+      /* Chromium 53 has neither. They read so much like ordinary DOM that
+         nothing catches them: `lib` governs ES built-ins, and the DOM lib is
+         one unversioned blob. src/view/dom.ts is the way through. */
+      'no-restricted-properties': [
+        'error',
+        { property: 'replaceChildren', message: 'Chrome 86. Use fill() from view/dom.' },
+        { property: 'append', message: 'Chrome 54. Use put() from view/dom.' },
+        { property: 'prepend', message: 'Chrome 54. Use insertBefore.' },
+      ],
+
       'no-restricted-syntax': [
         'error',
         {
@@ -95,6 +105,11 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    /* The one file allowed to say `appendChild` and friends. */
+    files: ['src/view/dom.ts'],
+    rules: { 'no-restricted-properties': 'off' },
   },
   {
     /* The bridge exists to publish `Media`, `Subs` and `Rows` under the exact
