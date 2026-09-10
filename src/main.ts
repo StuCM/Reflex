@@ -11,7 +11,6 @@ import '../js/view/rail.js';
 import '../js/screen/detail.js';
 import '../js/screen/showpage.js';
 import '../js/data/devices.js';
-import '../js/view/sidebar.js';
 import '../js/screen/browse.js';
 import '../js/screen/player.js';
 import '../js/app.js';
