@@ -3,6 +3,7 @@
    the fold behind a scrollbar nothing can reach — the list is wound instead,
    the way the rail moves a strip. */
 import * as servers from '../data/servers';
+import { themeLabel } from '../screen/showpage';
 import { KEY, clamp, isBack } from '../core/ui';
 
 /** The panel less its top padding and a little breathing room. */
@@ -71,7 +72,7 @@ function modes(): SidebarRow[] {
     { label: 'Devices', kind: 'devices' },
     { label: 'Panel', kind: 'panel' },
     { label: `Autoplay next: ${Player.autoplayLabel()}`, kind: 'autoplay' },
-    { label: `Theme music: ${ShowPage.themeLabel()}`, kind: 'theme' },
+    { label: `Theme music: ${themeLabel()}`, kind: 'theme' },
   );
   return out;
 }

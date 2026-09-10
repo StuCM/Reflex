@@ -44,6 +44,3 @@ declare const Cached: CacheGlobal;
 
 /** js/screen/player.js — still legacy. */
 declare const Player: { autoplayLabel(): string };
-
-/** js/screen/showpage.js — still legacy. */
-declare const ShowPage: { themeLabel(): string };
