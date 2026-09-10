@@ -26,7 +26,7 @@ default, not an opt-in.
 | `vitest` | 5.0 | unit tests; replaces `node:test` and deletes `test/load.js` |
 | `oxlint` | 1.82 | the fast linter — everything except two rules it does not have |
 | `oxfmt` | 0.67 | formatting, `printWidth: 100`, `singleQuote: true` |
-| `eslint` + `typescript-eslint` + `eslint-plugin-unicorn` | latest | **only** the two naming rules oxlint lacks |
+| `eslint` + `typescript-eslint` + `eslint-plugin-unicorn` + `eslint-plugin-jsdoc` | latest | **only** the three rules oxlint lacks |
 | `stylelint` + `stylelint-no-unsupported-browser-features` | latest | the CSS bans, from browserslist |
 | `typescript` | 5.x | `strict: true` from the first file |
 
@@ -219,8 +219,7 @@ during the migration, when each one is being rewritten anyway.
 
 ### Naming
 
-No abbreviations. `unicorn/prevent-abbreviations` with a project replacement
-map, plus `id-length` as a floor:
+No abbreviations. `unicorn/name-replacements` with a project replacement map, plus `id-length` as a floor:
 
 | was | becomes |
 |---|---|
@@ -270,12 +269,12 @@ checks on it.
 | today | becomes | why it is better |
 |---|---|---|
 | `check-es5.js` JS syntax rules | `build.target: 'chrome53'` | a compiler, not a regex |
-| — nothing — | `eslint-plugin-compat` via browserslist | catches `Object.entries`, `padStart`, `.finally` — runtime APIs a bundler does **not** polyfill |
+| — nothing — | **`tsconfig` `lib: ["ES2015", "DOM"]`** | catches `Object.entries`, `padStart`, `.finally`, `flat` — runtime APIs a bundler does **not** polyfill. No compat plugin needed: holding the *library* surface at ES2015 makes them type errors, verified against a probe |
 | `check-es5.js` layer rules | `import/no-cycle` + import restrictions | resolves real imports |
 | `check-es5.js` manifest check | the import graph | a file not imported is not in the bundle |
 | `check-es5.js` CSS rules | `stylelint` + browserslist | parses declarations |
 | nothing | `max-lines`, `max-depth`, `complexity` | size stops being a judgement call |
-| nothing | `unicorn/prevent-abbreviations` | the thing that prompted all this |
+| nothing | `unicorn/name-replacements` | the thing that prompted all this |
 
 `tools/check-es5.js` is deleted once every row above is green.
 
@@ -310,14 +309,71 @@ Probed against oxlint 1.82:
 ```
 present  max-lines · max-lines-per-function · max-depth · complexity
 present  id-length · unicorn/filename-case · import/no-cycle
-MISSING  unicorn/prevent-abbreviations
+MISSING  unicorn/name-replacements   (a.k.a. prevent-abbreviations)
 MISSING  typescript/naming-convention
+MISSING  jsdoc/no-types
 ```
 
-Both missing rules are the naming ones — the exact thing this refactor was
+**The rule was renamed under us.** unicorn 74 renamed
+`prevent-abbreviations` to `name-replacements` and left a stub at the old name
+that accepts *no options* — so the config written above was silently invalid
+and ESLint refused to start. Neither name exists in oxlint.
+
+The missing rules are the naming ones — the exact thing this refactor was
 asked for. So ESLint runs alongside, configured to those two rules and nothing
 else, in CI only. Two linters is not good, and it is temporary: the ESLint half
 deletes itself the day oxlint ships `prevent-abbreviations`.
+
+---
+
+## What step 1 actually found
+
+Step 1 landed on 2026-09-10 (branch `refactor/step-1-toolchain`). Five things
+the spec above had wrong, all found by running the tools rather than reading
+about them:
+
+- **`unicorn/prevent-abbreviations` no longer exists** under that name. See
+  above — it is `name-replacements` in unicorn 74, and the old name is a stub
+  that takes no options, so the config in this document would have started
+  ESLint and enforced nothing.
+- **oxlint's own defaults will push code off-target.**
+  `unicorn/no-array-sort` recommends `Array#toSorted()`, which is Chrome 110.
+  It is off, with the reason in `.oxlintrc.json`. Assume there are others of
+  this class and read a new rule's advice before enabling it.
+- **`no-useless-concat` is wrong for this codebase.** A formatter cannot
+  re-wrap a string literal, so splitting a long SVG or HTML string across `+`
+  is the only way to hold it inside `printWidth`. Joining them, as the rule
+  asks, produced 135-character lines oxfmt then had to leave alone. Off, with
+  the reason.
+- **stylelint's feature database is incomplete.** The browserslist plugin
+  catches grid, flexbox `gap`, sticky, `clamp()` and `backdrop-filter` at
+  `chrome 53` — but **not `aspect-ratio`**, which is on the ban list. The
+  config carries explicit `property-disallowed-list` and
+  `declaration-property-value-disallowed-list` rules alongside it, and every
+  ban was proved to fire against a planted probe.
+- **The formatter inflates the ratchets.** One property per line grew
+  `player.js` from 1,221 to 1,508 lines, so `max-lines` and
+  `max-lines-per-function` are baselined on the *formatted* tree, not the one
+  the spec measured.
+
+Also settled by running it: **`vite build` is inert until step 2.** It refuses
+every one of the 30 script tags — `can't be bundled without type="module"` —
+and bundles only the CSS. So `vite.config.ts` is committed and correct, but
+`dev/server.js` is *not* rewired yet: putting a bundler in front of the
+92-step suite before there is an import graph to serve risks the most valuable
+asset in the repo for no gain. That wiring is the first task of step 2.
+
+Two smaller things: oxfmt is scoped to JavaScript only — it flattened the
+aligned palette block in `css/base.css` and reformatted 38 markdown files on
+its first run — and Playwright is now a real devDependency rather than a
+global install that `dev/make-fixture.js` located by shelling out to
+`npm root -g`.
+
+What the linters found in the code on their first run, beyond style: dead code
+in `Guard.check` (a `uhd` const whose check had moved inside `Media.allows`),
+and a parameter named `mode` in three `browse.js` functions shadowing the
+module's own `mode` — the first meaning `hide | watched`, the second meaning
+`library | kids | discover`.
 
 ---
 
