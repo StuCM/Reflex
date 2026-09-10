@@ -18,7 +18,7 @@ function hasRecaps(title) { return title.length % 4 !== 0; }
 
 /* An embed that never answers, so the app's 8-second fallback has something to
    fall back from. */
-function stalls(id) { return /-stall$/.test(id); }
+function stalls(id) { return id.endsWith('-stall'); }
 
 function slug(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

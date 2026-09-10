@@ -307,9 +307,9 @@ module.exports = function (h) {
               return Array.prototype.map.call(
                 document.querySelectorAll('#osd-chapters .osd-chap'),
                 function (c) {
-                  const shot = c.querySelector('.osd-chap-shot');
-                  return { h: shot.offsetHeight, w: shot.offsetWidth,
-                           art: shot.style.backgroundImage !== '',
+                  const still = c.querySelector('.osd-chap-shot');
+                  return { h: still.offsetHeight, w: still.offsetWidth,
+                           art: still.style.backgroundImage !== '',
                            imgs: c.querySelectorAll('img').length,
                            time: c.querySelector('.osd-chap-time').textContent.trim(),
                            title: c.querySelector('.osd-chap-title').textContent.trim(),
@@ -499,7 +499,7 @@ module.exports = function (h) {
                lines are the film page re-checking every copy once the harness
                fails to play the stream, and those are direct plays for
                unrelated parts. */
-            const verdict = after.filter(function (l) { return /decision:/.test(l); })[0];
+            const verdict = after.find(function (l) { return l.indexOf('decision:') >= 0; });
             if (!verdict) throw new Error('no second decision call for the new track');
             /* directplay here would mean the same file, every track still in
                it, and the panel going on choosing — which is exactly the bug,

@@ -27,8 +27,8 @@ var Devices = (function () {
 
   const elList = document.getElementById('device-list');
 
-  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-  function lsSet(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* full */ } }
+  function lsGet(storageKey) { try { return localStorage.getItem(storageKey); } catch (e) { return null; } }
+  function lsSet(storageKey, value) { try { localStorage.setItem(storageKey, value); } catch (e) { /* full */ } }
 
   function init() {
     const raw = lsGet('myDevices');

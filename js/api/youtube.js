@@ -60,7 +60,7 @@ var Youtube = (function () {
     }).then((r) => {
       return withLengths((r && r.items) || []);
     }).catch((e) => {
-      if (!/-> 403$/.test(e.message)) throw e;
+      if (!e.message.endsWith('-> 403')) throw e;
       UI.debug(`youtube: ${e.message} (quota)`);
       return [];
     });

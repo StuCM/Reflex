@@ -1,7 +1,7 @@
 'use strict';
 /* search */
 module.exports = function (h) {
-  const { shot, visible, press, waitFor, step, backToLibrary, page, titles } = h;
+  const { shot, press, waitFor, step, backToLibrary, page, titles } = h;
 
   return h.ready()
 

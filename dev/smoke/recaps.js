@@ -66,7 +66,7 @@ module.exports = function (h) {
             if (names.length !== 4) throw new Error('4 recaps expected, got: ' + names.join(' | '));
             /* Season order, with the one that names no season last. */
             if (!/Season 1/.test(names[0]) || !/Season 2/.test(names[1]) ||
-                !/ S3 /.test(names[2] + ' ') || !/^Everything/.test(names[3])) {
+                !/ S3 /.test(names[2] + ' ') || !names[3].startsWith('Everything')) {
               throw new Error('out of season order: ' + names.join(' | '));
             }
             /* The channel's other content came back with them and must not be

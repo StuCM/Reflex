@@ -96,21 +96,21 @@ function findTitles() {
 
   /* A film only one server has, so its verdict is the only one on offer. */
   function only(profile) {
-    const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
+    const hit = main.items['1'].concat(backup.items['1']).find(function (m) {
       return m._profile === profile && copies[m._film].length === 1 && unambiguous(m);
-    })[0];
+    });
     if (!hit) throw new Error('no unambiguous single-server title with profile ' + profile);
     return hit;
   }
 
   /* A film both servers have, in different shapes: one copy direct plays and
      the other cannot. This is the case the whole feature exists for. */
-  const shared = main.items['1'].filter(function (m) {
+  const shared = main.items['1'].find(function (m) {
     if (copies[m._film].length !== 2 || !unambiguous(m)) return false;
     const profiles = copies[m._film].map(function (c) { return c._profile; });
     return profiles.indexOf('hevc-truehd') >= 0 &&
            (profiles.indexOf('hevc-eac3') >= 0 || profiles.indexOf('h264-eac3') >= 0);
-  })[0];
+  });
   if (!shared) throw new Error('no shared film with one playable and one unplayable copy');
 
   /* Two films the TMDB mock treats differently: one with posters and backdrops
@@ -118,9 +118,9 @@ function findTitles() {
      enough to have no poster at all, where the tile falls back to what Plex
      has. Both must have credits, or the header's cast line has nothing to say. */
   function withBackdrops(want) {
-    const hit = main.items['1'].concat(backup.items['1']).filter(function (m) {
+    const hit = main.items['1'].concat(backup.items['1']).find(function (m) {
       return oneBackdrop(m._film) === want && !noCredits(m._film) && unambiguous(m);
-    })[0];
+    });
     if (!hit) throw new Error('no unambiguous film with ' + (want ? 'one' : 'several') +
                               ' TMDB backdrops');
     return hit;
@@ -143,10 +143,10 @@ function findTitles() {
       if (m._profile !== 'h264-eac3' || (m.childCount || 0) < 2) return false;
       /* Shows are searched for by title like films are, so one that another
          title contains is not safe to assert a single result on. */
-      const named = lib.shows.filter(function (sh) { return sh.title.indexOf(m.title) >= 0; });
-      if (named.length !== 1) return false;
+      const matching = lib.shows.filter(function (sh) { return sh.title.indexOf(m.title) >= 0; });
+      if (matching.length !== 1) return false;
       if (lib.films.filter(function (f) { return f.title.indexOf(m.title) >= 0; }).length) return false;
-      const third = episodesOf(m, 1).filter(function (e) { return e.index === 3; })[0];
+      const third = episodesOf(m, 1).find(function (e) { return e.index === 3; });
       return !!third && (third._profile === 'hevc-truehd' || third._profile === 'vc1-avi');
     }
 
@@ -156,7 +156,7 @@ function findTitles() {
       });
     }
 
-    const hit = main.items['3'].concat(backup.items['3']).filter(usable)[0];
+    const hit = main.items['3'].concat(backup.items['3']).find(function (m) { return usable(m); });
     if (!hit) throw new Error('no single-server show that direct plays with an awkward third episode');
     return {
       title: hit.title,
@@ -169,12 +169,12 @@ function findTitles() {
   /* A show the recaps mock answers for, and one it does not — both reached by
      search like everything else here, so both titles have to be unambiguous. */
   function showWithRecaps(want) {
-    const hit = lib.shows.filter(function (sh) {
+    const hit = lib.shows.find(function (sh) {
       if (mockYoutube.hasRecaps(sh.title) !== want) return false;
-      const named = lib.shows.filter(function (o) { return o.title.indexOf(sh.title) >= 0; });
-      if (named.length !== 1) return false;
+      const matching = lib.shows.filter(function (o) { return o.title.indexOf(sh.title) >= 0; });
+      if (matching.length !== 1) return false;
       return !lib.films.filter(function (f) { return f.title.indexOf(sh.title) >= 0; }).length;
-    })[0];
+    });
     if (!hit) throw new Error('no unambiguous show ' + (want ? 'with' : 'without') + ' recaps');
     return hit.title;
   }
@@ -387,13 +387,6 @@ function drive(page, titles, port) {
     }, MENU_ROWS);
   }
 
-  function menuTabs() {
-    return page.evaluate(function (sel) {
-      return Array.prototype.map.call(document.querySelectorAll(sel),
-        function (t) { return t.textContent.trim() + (t.classList.contains('on') ? '*' : ''); });
-    }, MENU_TABS);
-  }
-
   function menuChoose(re) {
     return page.evaluate(function (src) {
       const rows = document.querySelectorAll(
@@ -591,8 +584,8 @@ function drive(page, titles, port) {
     });
   }
 
-  const onMain = function (e) { return e.servers.length === 1 && /main$/.test(e.servers[0]); };
-  const onBackup = function (e) { return e.servers.length === 1 && /backup$/.test(e.servers[0]); };
+  const onMain = function (e) { return e.servers.length === 1 && e.servers[0].endsWith('main'); };
+  const onBackup = function (e) { return e.servers.length === 1 && e.servers[0].endsWith('backup'); };
   const onBoth = function (e) { return e.servers.length === 2; };
 
   /* The confirmation: what it says will happen, and which row it landed on. */

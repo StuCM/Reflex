@@ -10,7 +10,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const dir = __dirname;
-const files = fs.readdirSync(dir).filter(function (f) { return /\.test\.js$/.test(f); }).sort();
+const files = fs.readdirSync(dir).filter(function (f) { return f.endsWith('.test.js'); }).sort();
 
 let failed = 0;
 files.forEach(function (f) {

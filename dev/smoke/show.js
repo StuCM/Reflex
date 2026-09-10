@@ -4,9 +4,9 @@ const buildLibrary = require('../library').build;
 const hasTheme = require('../mock-plex').hasTheme;
 
 module.exports = function (h) {
-  const { shot, visible, press, waitFor, step, sidebarPick, backToLibrary,
+  const { shot, press, waitFor, step, sidebarPick, backToLibrary,
     openShowPage, openSidebar, sidebarRows, playEpisode,
-    detailFace, kickerParts, page, titles } = h;
+    detailFace, kickerParts, page } = h;
 
   /* Two shows to open by name: one TheTVDB gave a theme tune to and one it did
      not, picked out of the same generated library the mock serves — the way
@@ -31,12 +31,12 @@ module.exports = function (h) {
       return inShows.length === 1 && inFilms.length === 0;
     }
 
-    const hit = lib.shows.filter(function (sh) {
+    const hit = lib.shows.find(function (sh) {
       const copies = holders[sh.i] || [];
       if (hasTheme(sh.i) !== want || !copies.length) return false;
       if (want && (copies.length !== 1 || copies[0]._profile !== 'h264-eac3')) return false;
       return unambiguous(sh.title);
-    })[0];
+    });
     if (!hit) throw new Error('no unambiguous show ' + (want ? 'with' : 'without') + ' a theme');
     return hit.title;
   }

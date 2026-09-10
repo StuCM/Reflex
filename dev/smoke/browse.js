@@ -2,8 +2,8 @@
 /* the rail: artwork, paging, the All row, kids */
 module.exports = function (h) {
   const { FILMS, artLookups, tilePosters, shot, debugLine, press, waitFor, step,
-    sidebarPick, shown, backToLibrary, searchFor, pictures, openTitle, openChooser,
-    sourceRows, playable, detailFace, kickerParts, page, titles } = h;
+    sidebarPick, backToLibrary, searchFor, pictures, openTitle, openChooser,
+    sourceRows, detailFace, kickerParts, page, titles } = h;
 
   /* What every tile of the focused row is showing, against what Art says that
      tile's own item should show: fresh is its own picture, stale is one that
@@ -304,10 +304,10 @@ module.exports = function (h) {
             });
           })
           .then(function (st) {
-            if (!/^TMDB overview/.test(st.desc)) {
+            if (!st.desc.startsWith('TMDB overview')) {
               throw new Error('the header description is not TMDB\'s: "' + st.desc + '"');
             }
-            if (!/^Actor /.test(st.cast)) {
+            if (!st.cast.startsWith('Actor ')) {
               throw new Error('the key actors did not come from TMDB: "' + st.cast + '"');
             }
             head = st;

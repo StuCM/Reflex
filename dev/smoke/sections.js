@@ -2,7 +2,7 @@
 /* the sidebar: modes, categories, Continue watching */
 module.exports = function (h) {
   const { shot, press, waitFor, step, openSidebar, sidebarRows, sidebarPick,
-    watchingPick, focusedRowTypes, shown, backToLibrary, pictures, detailFace, page } = h;
+    watchingPick, focusedRowTypes, backToLibrary, detailFace, page } = h;
 
   /* Inside a section and off its Continue watching row, which is where the
      suite arrives from the series pages. It matters: the sidebar nests the

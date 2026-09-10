@@ -194,8 +194,8 @@ var Browse = (function () {
      confirmation, and nothing leaves the row before the server has agreed. */
 
   function pickIndex(item) {
-    const key = Media.identity(item);
-    for (let i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === key) return i;
+    const wanted = Media.identity(item);
+    for (let i = 0; i < picks.length; i++) if (Media.identity(picks[i]) === wanted) return i;
     return -1;
   }
 
@@ -252,8 +252,8 @@ var Browse = (function () {
   /* The confirmation, in the shared menu shell — a title saying what will
      happen and to how many, the action, and Cancel. Cancel is what it lands on:
      the action is one key away and never the default. */
-  function askThen(count, mode, go) {
-    const hide = mode === 'hide';
+  function askThen(count, action, go) {
+    const hide = action === 'hide';
     Menu.open({
       host: elConfirm,
       tabs: [{
@@ -305,10 +305,10 @@ var Browse = (function () {
 
   /* The entry leaves the row only once every copy of it has gone; whatever a
      server would not hide comes back as `copies` for the caller to ask about. */
-  function clearFromDeck(job, mode) {
+  function clearFromDeck(job, action) {
     return Promise.all(job.copies.map((copy) => {
       const server = Servers.of(copy);
-      if (mode !== 'watched') return Plex.hideFromDeck(server, copy.ratingKey);
+      if (action !== 'watched') return Plex.hideFromDeck(server, copy.ratingKey);
       return Plex.scrobble(server, watchedKey(copy)).then(() => { return true; });
     })).then((done) => {
       const refused = [];
@@ -325,9 +325,9 @@ var Browse = (function () {
   /* Clear a list of jobs, asking again about only the copies the server would
      not hide. A server that refuses both leaves its item in the row and says
      so. */
-  function clearAll(jobs, mode, after) {
+  function clearAll(jobs, action, after) {
     Promise.all(jobs.map((job) => {
-      return clearFromDeck(job, mode);
+      return clearFromDeck(job, action);
     })).then((res) => {
       const again = [];
       let failed = 0;
@@ -367,10 +367,10 @@ var Browse = (function () {
   /* Is this on Continue watching? The detail page only offers to clear
      something the row actually holds. */
   function isOnDeck(item) {
-    const key = item && Media.identity(item);
-    if (!key) return false;
+    const wanted = item && Media.identity(item);
+    if (!wanted) return false;
     for (let i = 0; i < deckItems.length; i++) {
-      if (Media.identity(deckItems[i]) === key) return true;
+      if (Media.identity(deckItems[i]) === wanted) return true;
     }
     return false;
   }

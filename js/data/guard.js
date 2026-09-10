@@ -71,7 +71,6 @@ var Guard = (function () {
       const server = Servers.of(md);
       return Plex.decide(server, md, n, 0, audio.id, opts).then((v) => {
         const direct = v.decision === 'directplay';
-        const uhd = Media.isUHD(media);
         /* Only direct play hands the panel the original file. A re-encode
            arrives as H.264, which it always manages — so this check belongs
            here, not before the decision. */

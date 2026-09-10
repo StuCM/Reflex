@@ -59,7 +59,7 @@ module.exports = function (h) {
     const want = ALL.indexOf(label);
     if (want < 0) throw new Error('no category called ' + label);
     return railRows().then(function (rows) {
-      const at = rows.filter(function (r) { return r.on; })[0];
+      const at = rows.find(function (r) { return r.on; });
       const by = want - (at ? at.at : 0);
       return press(by > 0 ? 'ArrowDown' : 'ArrowUp', Math.abs(by));
     });
@@ -158,7 +158,7 @@ module.exports = function (h) {
             })
             .then(masthead)
             .then(function (mh) {
-              if (!/^In your library/.test(mh.meta)) {
+              if (!mh.meta.startsWith('In your library')) {
                 throw new Error('a title both servers hold says "' + mh.meta + '"');
               }
               held = mh.title;
@@ -209,7 +209,7 @@ module.exports = function (h) {
           })
           .then(actionRow)
           .then(function (row) {
-            const play = row.filter(function (a) { return a.act === 'play'; })[0];
+            const play = row.find(function (a) { return a.act === 'play'; });
             if (!play) throw new Error('no Play button on the page');
             if (!play.caption) throw new Error('Play says nothing about what it would do');
           })

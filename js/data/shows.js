@@ -80,10 +80,10 @@ var Shows = (function () {
 
   /* The episode after `current` in a season's list, or null at the end of it or
      when `current` is not in the list at all. Pure, so it is unit tested. */
-  function nextInList(episodes, current) {
-    if (!episodes || !current) return null;
-    for (let i = 0; i < episodes.length; i++) {
-      if (isCopyOf(episodes[i], current)) return episodes[i + 1] || null;
+  function nextInList(list, current) {
+    if (!list || !current) return null;
+    for (let i = 0; i < list.length; i++) {
+      if (isCopyOf(list[i], current)) return list[i + 1] || null;
     }
     return null;
   }

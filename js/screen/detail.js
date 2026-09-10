@@ -148,9 +148,9 @@ var Detail = (function () {
         if (gen !== generation || !found.length) return;
         let added = 0;
         found.forEach((other) => {
-          const key = other._server + ':' + other.ratingKey;
-          if (known[key]) return;
-          known[key] = true;
+          const sourceKey = other._server + ':' + other.ratingKey;
+          if (known[sourceKey]) return;
+          known[sourceKey] = true;
           added++;
           copies.push({ item: other, server: Servers.of(other), versions: null });
           Meta.load(other).then((omd) => {

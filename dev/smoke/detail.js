@@ -115,8 +115,8 @@ module.exports = function (h) {
         let was;
         return sourceRows()
           .then(function (src) {
-            was = src.filter(function (s) { return s.on; })[0];
-            const bad = src.filter(function (s) { return !playable(s.verdict); })[0];
+            was = src.find(function (s) { return s.on; });
+            const bad = src.find(function (s) { return !playable(s.verdict); });
             if (!bad) throw new Error('no refused copy to choose');
             /* By the whole label: two copies of the same film routinely differ
                only in bitrate, so half of one matches the other as well. */
@@ -132,7 +132,7 @@ module.exports = function (h) {
           .then(function () { return openChooser('source'); })
           .then(sourceRows)
           .then(function (src) {
-            const on = src.filter(function (s) { return s.on; })[0];
+            const on = src.find(function (s) { return s.on; });
             if (!on || on.version !== was.version || on.server !== was.server) {
               throw new Error('the refused copy was selected anyway: ' +
                               (on ? on.server + ' ' + on.version : 'nothing'));
@@ -239,12 +239,12 @@ module.exports = function (h) {
                audioTracks, so every track but the one already chosen costs
                direct play — and the one already chosen must not be warned
                about, because choosing it costs nothing at all. */
-            const on = labels.filter(function (l) { return /^\* /.test(l); });
+            const on = labels.filter(function (l) { return l.startsWith('* '); });
             if (on.length !== 1) throw new Error('audio rows: ' + labels.join(' | '));
             if (/\[/.test(on[0])) {
               throw new Error('the track already chosen is warned about: ' + on[0]);
             }
-            const others = labels.filter(function (l) { return !/^\* /.test(l); });
+            const others = labels.filter(function (l) { return !l.startsWith('* '); });
             const quiet = others.filter(function (l) { return !/costs direct play/.test(l); });
             if (quiet.length) {
               throw new Error('a row that does not say it costs direct play: ' +
