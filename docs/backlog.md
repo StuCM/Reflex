@@ -19,6 +19,10 @@ feature that has to be written twice.
 
 Ordered. Each step is green before the next starts.
 
+**The plan is `docs/refactor-plan.md`** — the stack, the layout, the style, the
+configs and the migration order, all settled 2026-09-10. Read it before
+starting any of the steps below; they are the summary, it is the spec.
+
 - **Stage 1 — bundle with esbuild, keep the globals.** No source changes: the
   file list already exists as `index.html`'s script order. `esbuild
   --target=chrome53` is a *real* check where `tools/check-es5.js` is a text
