@@ -366,3 +366,14 @@ interface DiscoveryEntry extends PlexItem {
   _availability?: string;
   _asking?: Promise<PlexItem | null> | null;
 }
+
+/** What the media pipeline exposes past src and play. */
+interface PanelFeatures {
+  audioTracks: string;
+  videoTracks: string;
+  textTracks: string;
+  playbackQuality: boolean;
+  mediaSource: boolean;
+  webOS: boolean;
+  webOSVersion: string;
+}

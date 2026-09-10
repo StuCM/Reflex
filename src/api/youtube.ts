@@ -2,9 +2,11 @@
    100 quota units a search against a daily 10,000, so this is only ever
    called from a keypress. A refusal answers with nothing, not an error. */
 import { queryString, request } from './http';
+import settings from '../core/config';
+import { debug } from '../core/ui';
 
-const KEY = Config.youtubeKey;
-const API = Config.youtubeBase;
+const KEY = settings.youtubeKey;
+const API = settings.youtubeBase;
 
 /* The channel by handle, not by id: a guessed id in source would be wrong and
    unverifiable, and a handle is something a human can check. */
@@ -87,7 +89,7 @@ export function recaps(showTitle: string): Promise<YoutubeItem[]> {
     .then((body) => withLengths(body.items ?? []))
     .catch((error: Error) => {
       if (!error.message.endsWith('-> 403')) throw error;
-      UI.debug(`youtube: ${error.message} (quota)`);
+      debug(`youtube: ${error.message} (quota)`);
       return [];
     });
 }

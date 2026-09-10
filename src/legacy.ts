@@ -7,6 +7,9 @@ import { langName } from './rules/language';
 import * as quality from './rules/quality';
 import * as ratings from './rules/ratings';
 import * as http from './api/http';
+import settings from './core/config';
+import * as panel from './core/panel';
+import * as userInterface from './core/ui';
 import * as art from './data/art';
 import * as cached from './data/cached';
 import * as discovery from './data/discovery';
@@ -74,6 +77,10 @@ declare global {
     Art: Mutable<typeof art>;
     Shows: Mutable<typeof shows>;
     Discovery: Mutable<typeof discovery>;
+    Config: typeof settings;
+    /* js/ calls it Panel.features(); the module exports probeFeatures. */
+    Panel: Mutable<typeof panel> & { features: typeof panel.probeFeatures };
+    UI: Mutable<typeof userInterface>;
   }
 }
 
@@ -96,3 +103,6 @@ window.Guard = { ...guard };
 window.Art = { ...art };
 window.Shows = { ...shows };
 window.Discovery = { ...discovery };
+window.Config = settings;
+window.Panel = { ...panel, features: panel.probeFeatures };
+window.UI = { ...userInterface };

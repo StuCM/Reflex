@@ -3,14 +3,10 @@
    graph: each legacy module publishes itself on `window` on the way past. A
    file leaves this list when it moves to src/. */
 
-import '../js/core/config.js';
-import '../js/core/panel.js';
-
 /* rules/ has moved to src/. This publishes it under the name js/ still uses,
    and sits exactly where js/rules/media.js did in the order. */
 import './legacy';
 
-import '../js/core/ui.js';
 import '../js/view/glyphs.js';
 import '../js/view/menu.js';
 import '../js/view/rail.js';

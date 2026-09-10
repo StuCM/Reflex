@@ -6,6 +6,7 @@ import { tmdbId } from '../api/plex/library';
 import { details, enabled } from '../api/tmdb';
 import * as cached from './cached';
 import * as servers from './servers';
+import settings from '../core/config';
 
 /* The tile is 209 wide, so w342 is the next size up — w500 was for a tile
    nearly twice as wide and is a third of a megabyte per poster wasted. */
@@ -62,7 +63,7 @@ export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
 }
 
 export function url(path: string, size: string): string {
-  return Config.tmdbImageBase + size + path;
+  return settings.tmdbImageBase + size + path;
 }
 
 /* An episode has no film id of its own, and its show's poster already came from

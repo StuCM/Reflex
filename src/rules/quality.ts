@@ -4,6 +4,8 @@
 
 const BITRATES = [20000, 12000, 8000, 4000, 3000, 2000, 720];
 
+import * as panel from '../core/panel';
+
 export function bitrateLabel(kbps: number): string {
   return kbps >= 1000 ? `${kbps / 1000} Mbps` : `${kbps} Kbps`;
 }
@@ -35,7 +37,7 @@ export function qualities(media: PlexMedia | null | undefined): Quality[] {
    black screen. */
 export function canDecode(media: PlexMedia | null | undefined): boolean {
   if (!media) return false;
-  return Panel.supports('video', media.videoCodec) && Panel.supports('container', media.container);
+  return panel.supports('video', media.videoCodec) && panel.supports('container', media.container);
 }
 
 export function isUHD(media: PlexMedia | null | undefined): boolean {

@@ -1,5 +1,6 @@
 /* The decision call, where to play from, and reporting progress. */
 import { ask, queryString, request, uuid } from './client';
+import * as panel from '../../core/panel';
 
 let sessionId: string | null = null;
 function session(): string {
@@ -55,7 +56,7 @@ function playbackParameters(
        URL internally and look for the token in it, refusing with a 400 rather
        than a 401 when it is missing. */
     'X-Plex-Token': server.token,
-    'X-Plex-Client-Profile-Extra': Panel.clientProfile(),
+    'X-Plex-Client-Profile-Extra': panel.clientProfile(),
   };
 }
 
