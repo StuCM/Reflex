@@ -1,14 +1,7 @@
-/* What is in the rails, and where the focus is.
+/* What is in the rails, and where the focus is: sections, rows, focus, mode.
 
-   Browse owns the state the rest of the app reads: the section list, the rows,
-   which row and tile are focused, and which mode is showing (the library, the
-   kids cut of it, the curated rows, or a page of search results).
-
-   Every row is built by asking each server separately and merging the answers,
-   so a film held by both appears once, carrying both copies. Nothing here
-   fetches or holds a whole section: Continue watching and the category rows
-   arrive as small preloaded lists, and the All row is virtual over the servers'
-   own totals, walking them in title order only as far as you scroll. */
+   Nothing here holds a whole section. The All row is virtual over the servers'
+   own totals and walks them in title order only as far as you scroll. */
 import {
   contentRatings as plexContentRatings,
   hideFromDeck as plexHideFromDeck,

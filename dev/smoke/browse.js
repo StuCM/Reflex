@@ -567,18 +567,10 @@ module.exports = function (h) {
 
     .then(function () {
       return step('a cast member with no photograph shows initials', function () {
-        /* Every mock actor has a picture, so the fallback is only reached by
-           taking the pictures away — Plex.photoUrl is what castHtml asks. */
-        return page
-          .evaluate(function () {
-            Plex._photoUrl = Plex.photoUrl;
-            Plex.photoUrl = function () {
-              return '';
-            };
-          })
-          .then(function () {
-            return openTitle(titles.directPlays.title);
-          })
+        /* The mock gives the top billing no thumb, which is what a real server
+           does often enough — so the row holds both branches at once and the
+           disc is checked against the name beside it rather than in isolation. */
+        return openTitle(titles.directPlays.title)
           .then(function () {
             return waitFor(
               'document.querySelectorAll("#dt-cast .dt-actor").length > 0',
@@ -588,47 +580,47 @@ module.exports = function (h) {
           })
           .then(function () {
             return page.evaluate(function () {
-              return {
-                blanks: Array.prototype.map.call(
-                  document.querySelectorAll('#dt-cast .dt-actor-blank'),
-                  function (b) {
-                    return b.textContent.trim();
-                  },
-                ),
-                names: Array.prototype.map.call(
-                  document.querySelectorAll('#dt-cast .dt-actor-name'),
-                  function (n) {
-                    return n.textContent.trim();
-                  },
-                ),
-                broken: document.querySelectorAll('#dt-cast img').length,
-              };
+              return Array.prototype.map.call(
+                document.querySelectorAll('#dt-cast .dt-actor'),
+                function (actor) {
+                  const disc = actor.querySelector('.dt-actor-blank');
+                  return {
+                    name: actor.querySelector('.dt-actor-name').textContent.trim(),
+                    letters: disc ? disc.textContent.trim() : null,
+                    picture: !!actor.querySelector('img'),
+                  };
+                },
+              );
             });
           })
-          .then(function (st) {
-            if (st.broken) throw new Error('an img with no picture behind it');
-            if (st.blanks.length !== st.names.length) {
-              throw new Error(st.blanks.length + ' discs for ' + st.names.length + ' actors');
+          .then(function (row) {
+            if (!row.length) throw new Error('no cast');
+            const discs = row.filter(function (a) {
+              return a.letters !== null;
+            });
+            if (discs.length !== 1) {
+              throw new Error(discs.length + ' discs, expected exactly the top billing');
             }
-            st.blanks.forEach(function (letters, i) {
-              const want = st.names[i]
-                .split(/\s+/)
-                .slice(0, 2)
-                .map(function (w) {
-                  return w.charAt(0).toUpperCase();
-                })
-                .join('');
-              if (letters !== want) {
-                throw new Error('"' + st.names[i] + '" is shown as "' + letters + '"');
-              }
+            const first = row[0];
+            if (first.picture) throw new Error('an img with no picture behind it');
+            const want = first.name
+              .split(/\s+/)
+              .slice(0, 2)
+              .map(function (w) {
+                return w.charAt(0).toUpperCase();
+              })
+              .join('');
+            if (first.letters !== want) {
+              throw new Error('"' + first.name + '" is shown as "' + first.letters + '"');
+            }
+            /* The control: everyone else still gets a photograph, so a change
+               that blanked the whole row would fail here rather than pass. */
+            const missing = row.slice(1).filter(function (a) {
+              return !a.picture;
             });
+            if (missing.length) throw new Error(missing.length + ' actors lost their picture');
           })
-          .then(backToLibrary)
-          .then(function () {
-            return page.evaluate(function () {
-              Plex.photoUrl = Plex._photoUrl;
-            });
-          });
+          .then(backToLibrary);
       });
     })
 

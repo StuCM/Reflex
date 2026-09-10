@@ -7,6 +7,7 @@
 
 #dt-art {
   position: absolute; top: 0; right: 0; width: 1100px; height: 620px;
+  background-image: var(--art, none);
   background-position: center; background-size: cover;
   opacity: 0.5;
 }
@@ -144,7 +145,7 @@
    held to the bottom of the screen so its own height never runs off. Same
    .menu-* shell as the player's, so both screens read as one control. */
 #dt-menu {
-  position: absolute; bottom: 48px; width: 860px;
+  position: absolute; bottom: 48px; left: var(--menu-left, 96px); width: 860px;
   padding: 22px 26px 18px; border-radius: var(--r-panel);
   background: rgba(22, 24, 38, 0.94);
 }
@@ -190,6 +191,7 @@
 .dt-extra-shot {
   position: relative; width: 240px; height: 135px; border-radius: var(--r-card);
   background: var(--surface); background-position: center; background-size: cover;
+  background-image: var(--shot, none);
   border: 3px solid transparent;
   color: var(--dim);
 }

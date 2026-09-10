@@ -517,6 +517,49 @@ module.exports = function (h) {
       })
 
       .then(function () {
+        return step('every icon on the row is a painted SVG, not just markup', function () {
+          /* An icon built in the wrong namespace still reads correctly as text
+             — it is an element with the right tag name and the right children
+             — and paints nothing at all. So this measures, and only a reading
+             taken from the box the browser laid out can tell the difference. */
+          return page
+            .evaluate(function () {
+              return Array.prototype.map.call(
+                document.querySelectorAll('#dt-actions .dt-act'),
+                function (act) {
+                  const icon = act.querySelector('.dt-act-btn > *');
+                  return {
+                    act: act.getAttribute('data-act'),
+                    tag: icon ? icon.tagName.toLowerCase() : null,
+                    svg: !!icon && icon instanceof SVGElement,
+                    width: icon ? Math.round(icon.getBoundingClientRect().width) : 0,
+                  };
+                },
+              );
+            })
+            .then(function (row) {
+              const icons = row.filter(function (a) {
+                return a.tag === 'svg';
+              });
+              /* The control: Play is a word, the other five are icons. A change
+                 that stopped drawing icons entirely would empty this and fail
+                 here rather than pass on nothing. */
+              if (icons.length < 4) {
+                throw new Error(icons.length + ' icons on the row, expected at least 4');
+              }
+              icons.forEach(function (a) {
+                if (!a.svg) {
+                  throw new Error(a.act + "'s icon is a <svg> tag but not an SVGElement");
+                }
+                if (a.width < 20) {
+                  throw new Error(a.act + "'s icon paints " + a.width + 'px wide');
+                }
+              });
+            });
+        });
+      })
+
+      .then(function () {
         return step('the extras are a row you step down to, and step back up from', function () {
           let peek;
           return waitFor(

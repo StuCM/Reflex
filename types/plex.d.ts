@@ -39,12 +39,14 @@ interface PlexPart {
   Stream?: PlexStream[];
 }
 
-/** One version of an item. An item may hold several. */
+/** One version of an item. An item may hold several. Everything is optional
+    because an item with no version at all still needs one to stand in. */
 interface PlexMedia {
-  id: number | string;
+  id?: number | string;
   container?: string;
   videoResolution?: string;
   videoCodec?: string;
+  videoDynamicRange?: string;
   audioCodec?: string;
   audioChannels?: number;
   bitrate?: number;
@@ -56,6 +58,14 @@ interface PlexMedia {
 
 interface PlexGuid {
   id: string;
+}
+
+/** A cast or crew credit, a genre, a country — Plex shapes them all alike. */
+interface PlexTag {
+  tag?: string;
+  role?: string;
+  thumb?: string;
+  id?: number | string;
 }
 
 /** An intro or credits sequence Plex found, in milliseconds. */
@@ -117,6 +127,20 @@ interface PlexItem {
   grandparentGuid?: string;
   childCount?: number;
   Media?: PlexMedia[];
+
+  /* Only the metadata endpoint sends these; a list item never has them. */
+  tagline?: string;
+  studio?: string;
+  rating?: number;
+  audienceRating?: number;
+  Genre?: PlexTag[];
+  Director?: PlexTag[];
+  Writer?: PlexTag[];
+  Role?: PlexTag[];
+  Extras?: { Metadata?: PlexItem[] };
+  /** Trailer, scene, interview — what kind of extra a clip is. */
+  subtype?: string;
+  extraType?: string;
 
   /* Reflex's own, stamped on the way through. Underscored so nothing
      confuses them with something the server sent. */

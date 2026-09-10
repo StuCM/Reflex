@@ -517,10 +517,12 @@ function fullMetadata(item, film) {
       return { tag: g };
     });
     copy.Role = (film.cast || []).map(function (c, n) {
+      /* The top billing has no headshot, which is ordinary on a real server
+         and is the only way the initials fallback is ever reached. */
       return {
         tag: c.name,
         role: c.role,
-        thumb: '/people/' + n + '/' + encodeURIComponent(c.name),
+        thumb: n === 0 ? undefined : '/people/' + n + '/' + encodeURIComponent(c.name),
       };
     });
     return copy;
@@ -621,7 +623,11 @@ function fullMetadata(item, film) {
   if (film.director) copy.Director = [{ tag: film.director }];
   if (film.writer) copy.Writer = [{ tag: film.writer }];
   copy.Role = (film.cast || []).map(function (c, n) {
-    return { tag: c.name, role: c.role, thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
+    return {
+      tag: c.name,
+      role: c.role,
+      thumb: n === 0 ? undefined : '/people/' + n + '/' + encodeURIComponent(c.name),
+    };
   });
   copy.Extras = {
     size: EXTRA_KINDS.length,

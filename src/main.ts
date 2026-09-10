@@ -7,6 +7,5 @@
    and sits exactly where js/rules/media.js did in the order. */
 import './legacy';
 
-import '../js/screen/detail.js';
 import '../js/screen/player.js';
 import '../js/app.js';
