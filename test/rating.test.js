@@ -48,7 +48,10 @@ assert.strictEqual(age('nonsense'), null);
 
 // The cutoff the kids section uses.
 var KIDS_MAX_AGE = 12;
-function allowed(r) { var a = age(r); return a !== null && a <= KIDS_MAX_AGE; }
+function allowed(r) {
+  var a = age(r);
+  return a !== null && a <= KIDS_MAX_AGE;
+}
 
 ['U', 'G', 'PG', '12', '12A', 'TV-Y7', 'TV-PG'].forEach(function (r) {
   assert.strictEqual(allowed(r), true, r + ' should be allowed');

@@ -37,9 +37,14 @@ function parseArgs(argv) {
   /* `|| 8080` would swallow PORT=0, which legitimately means "any free port".
      Absent and empty are the only cases that take the default. */
   const envPort = process.env.PORT;
-  const out = { port: (envPort === undefined || envPort === '') ? 8080 : Number(envPort),
-                films: 2000, latency: 0, pinPolls: 2,
-                proxy: false, quiet: false };
+  const out = {
+    port: envPort === undefined || envPort === '' ? 8080 : Number(envPort),
+    films: 2000,
+    latency: 0,
+    pinPolls: 2,
+    proxy: false,
+    quiet: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--port') out.port = Number(argv[++i]);
@@ -48,14 +53,25 @@ function parseArgs(argv) {
     else if (a === '--pin-polls') out.pinPolls = Number(argv[++i]);
     else if (a === '--proxy') out.proxy = true;
     else if (a === '--quiet') out.quiet = true;
-    else if (a === '--help' || a === '-h') { usage(); process.exit(0); }
-    else { console.error('unknown option ' + a); usage(); process.exit(2); }
+    else if (a === '--help' || a === '-h') {
+      usage();
+      process.exit(0);
+    } else {
+      console.error('unknown option ' + a);
+      usage();
+      process.exit(2);
+    }
   }
   return out;
 }
 
 function usage() {
-  console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\* ?/, ''));
+  console.log(
+    fs
+      .readFileSync(__filename, 'utf8')
+      .split('*/')[0]
+      .replace(/^\/\* ?/, ''),
+  );
 }
 
 const TYPES = {
@@ -66,13 +82,18 @@ const TYPES = {
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
   '.mp4': 'video/mp4',
-  '.webm': 'video/webm'
+  '.webm': 'video/webm',
 };
 
 function start(opts) {
-  const log = opts.quiet ? function () {} : function (m) { console.log('  ' + m); };
+  const log = opts.quiet
+    ? function () {}
+    : function (m) {
+        console.log('  ' + m);
+      };
   /* In proxy mode there is no fake library at all — see the /__plex handler. */
-  const api = opts.proxy ? null
+  const api = opts.proxy
+    ? null
     : mock.create({ films: opts.films, pinPolls: opts.pinPolls, log: log });
   /* TMDB is mocked alongside Plex, and off the same generated library, so the
      artwork path runs without a request leaving the machine. In --proxy mode
@@ -82,13 +103,13 @@ function start(opts) {
   const server = http.createServer(function (req, res) {
     const parsed = url.parse(req.url, true);
     const pathname = decodeURIComponent(parsed.pathname);
-    const origin = 'http://' + (req.headers.host || ('localhost:' + opts.port));
+    const origin = 'http://' + (req.headers.host || 'localhost:' + opts.port);
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS'
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
       });
       res.end();
       return;
@@ -113,8 +134,13 @@ function start(opts) {
 
     if (tmdb && pathname.indexOf('/__tmdb') === 0) {
       if (!tmdb.handle(req, res, pathname, parsed.query)) {
-        console.log('  UNHANDLED ' + req.method + ' ' + pathname +
-                    '  <- the app is calling a TMDB path the mock does not know');
+        console.log(
+          '  UNHANDLED ' +
+            req.method +
+            ' ' +
+            pathname +
+            '  <- the app is calling a TMDB path the mock does not know',
+        );
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('mock: no route for ' + pathname);
       }
@@ -125,8 +151,13 @@ function start(opts) {
        the real YouTube is the only one there is, so nothing is answered here. */
     if (!opts.proxy && pathname.indexOf('/__yt') === 0) {
       if (!mockYoutube.handle(req, res, pathname, parsed.query)) {
-        console.log('  UNHANDLED ' + req.method + ' ' + pathname +
-                    '  <- the app is calling a YouTube path the mock does not know');
+        console.log(
+          '  UNHANDLED ' +
+            req.method +
+            ' ' +
+            pathname +
+            '  <- the app is calling a YouTube path the mock does not know',
+        );
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('mock: no route for ' + pathname);
       }
@@ -136,13 +167,19 @@ function start(opts) {
     if (pathname.indexOf('/__plex') === 0) {
       const run = function () {
         if (!api.handle(req, res, pathname, parsed.query, origin)) {
-          console.log('  UNHANDLED ' + req.method + ' ' + pathname +
-                      '  <- the app is calling something the mock does not know');
+          console.log(
+            '  UNHANDLED ' +
+              req.method +
+              ' ' +
+              pathname +
+              '  <- the app is calling something the mock does not know',
+          );
           res.writeHead(404, { 'Content-Type': 'text/plain' });
           res.end('mock: no route for ' + pathname);
         }
       };
-      if (opts.latency) setTimeout(run, opts.latency); else run();
+      if (opts.latency) setTimeout(run, opts.latency);
+      else run();
       return;
     }
 
@@ -152,7 +189,10 @@ function start(opts) {
     }
 
     /* The TV never asks for this; the browser always does. */
-    if (pathname === '/favicon.ico') { sendFile(res, path.join(ROOT, 'icon.png')); return; }
+    if (pathname === '/favicon.ico') {
+      sendFile(res, path.join(ROOT, 'icon.png'));
+      return;
+    }
 
     /* The app itself, straight off disk. */
     let rel = pathname === '/' ? '/index.html' : pathname;
@@ -162,7 +202,10 @@ function start(opts) {
       res.end('not found');
       return;
     }
-    if (rel === '/index.html') { sendIndex(res, file, opts); return; }
+    if (rel === '/index.html') {
+      sendIndex(res, file, opts);
+      return;
+    }
     sendFile(res, file);
   });
 
@@ -170,7 +213,7 @@ function start(opts) {
     /* The port asked for may be 0, which means "whatever is free" — so report
        the one actually bound, or the banner sends you to localhost:0. */
     var port = server.address().port;
-    opts.port = port;          // so the origin fallback above reports it too
+    opts.port = port; // so the origin fallback above reports it too
     console.log('');
     console.log('  Mantis dev server   http://localhost:' + port);
     if (opts.proxy) {
@@ -183,8 +226,7 @@ function start(opts) {
       console.log('  Firefox has no AC3/E-AC3 and no HEVC, Chrome has no Matroska —');
       console.log('  silence or a decode error here says nothing about the B8.');
     } else {
-      console.log('  mock Plex: two servers sharing ' + opts.films +
-                  ' films, pin claims itself.');
+      console.log('  mock Plex: two servers sharing ' + opts.films + ' films, pin claims itself.');
       console.log('  This is FAKE data — generated titles, generated posters.');
       console.log('  For your own library: npm run dev -- --proxy');
     }
@@ -203,7 +245,11 @@ function start(opts) {
 function sendFile(res, file) {
   const type = TYPES[path.extname(file)] || 'application/octet-stream';
   fs.readFile(file, function (err, buf) {
-    if (err) { res.writeHead(500); res.end(String(err)); return; }
+    if (err) {
+      res.writeHead(500);
+      res.end(String(err));
+      return;
+    }
     res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-store' });
     res.end(buf);
   });
@@ -213,12 +259,16 @@ function sendFile(res, file) {
    the key shim after them. The file on disk stays exactly what ships. */
 function sendIndex(res, file, opts) {
   fs.readFile(file, 'utf8', function (err, html) {
-    if (err) { res.writeHead(500); res.end(String(err)); return; }
+    if (err) {
+      res.writeHead(500);
+      res.end(String(err));
+      return;
+    }
     const config = {
       plexTvBase: '/__plextv',
       dev: true,
       tmdbKey: process.env.TMDB_KEY || '',
-      youtubeKey: process.env.YOUTUBE_KEY || ''
+      youtubeKey: process.env.YOUTUBE_KEY || '',
     };
     /* Against the mock, TMDB and YouTube are mocked too and the keys are only
        switches — the real ones are for --proxy, where the real services are the
@@ -232,8 +282,10 @@ function sendIndex(res, file, opts) {
       config.youtubeEmbedBase = '/__ytembed/';
     }
     const out = html
-      .replace('</head>',
-        '<script>window.REFLEX_CONFIG = ' + JSON.stringify(config) + ';</script>\n</head>')
+      .replace(
+        '</head>',
+        '<script>window.REFLEX_CONFIG = ' + JSON.stringify(config) + ';</script>\n</head>',
+      )
       .replace('</body>', '<script src="/__dev/shim.js"></script>\n</body>');
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
     res.end(out);
@@ -246,7 +298,9 @@ function sendIndex(res, file, opts) {
    directly, same as on the TV. Your token passes through this process. */
 function proxyToPlexTv(req, res, parsed) {
   const chunks = [];
-  req.on('data', function (c) { chunks.push(c); });
+  req.on('data', function (c) {
+    chunks.push(c);
+  });
   req.on('end', function () {
     const headers = Object.assign({}, req.headers);
     delete headers.host;
@@ -254,14 +308,21 @@ function proxyToPlexTv(req, res, parsed) {
     delete headers.referer;
     delete headers['accept-encoding'];
     const target = parsed.path.slice('/__plextv'.length) || '/';
-    const out = https.request({
-      host: 'plex.tv', port: 443, method: req.method, path: target, headers: headers
-    }, function (up) {
-      const h = Object.assign({}, up.headers);
-      h['access-control-allow-origin'] = '*';
-      res.writeHead(up.statusCode, h);
-      up.pipe(res);
-    });
+    const out = https.request(
+      {
+        host: 'plex.tv',
+        port: 443,
+        method: req.method,
+        path: target,
+        headers: headers,
+      },
+      function (up) {
+        const h = Object.assign({}, up.headers);
+        h['access-control-allow-origin'] = '*';
+        res.writeHead(up.statusCode, h);
+        up.pipe(res);
+      },
+    );
     out.on('error', function (e) {
       res.writeHead(502, { 'Content-Type': 'text/plain' });
       res.end('plex.tv proxy failed: ' + e.message);

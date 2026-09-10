@@ -26,8 +26,9 @@ var target = process.argv[2] || 'laptop';
 var env = cfg.environments[target];
 
 if (!env) {
-  console.error('unknown environment "' + target + '" — known: ' +
-                Object.keys(cfg.environments).join(', '));
+  console.error(
+    'unknown environment "' + target + '" — known: ' + Object.keys(cfg.environments).join(', '),
+  );
   process.exit(2);
 }
 
@@ -43,8 +44,12 @@ if (env.reachableFromAgents === false) {
 }
 
 var missing = (cfg.deploy.requires || []).filter(function (bin) {
-  try { execSync('command -v ' + bin, { stdio: 'ignore' }); return false; }
-  catch (e) { return true; }
+  try {
+    execSync('command -v ' + bin, { stdio: 'ignore' });
+    return false;
+  } catch (e) {
+    return true;
+  }
 });
 
 if (missing.length) {
@@ -106,7 +111,9 @@ function doneBranches() {
 function currentBranch() {
   try {
     return execSync('git rev-parse --abbrev-ref HEAD', GIT).trim();
-  } catch (e) { return ''; }
+  } catch (e) {
+    return '';
+  }
 }
 
 function field(text, key) {
@@ -131,6 +138,11 @@ function parseFiles(text) {
 function sh(cmd) {
   try {
     return execSync(cmd, GIT)
-      .split('\n').filter(function (s) { return s.trim() !== ''; });
-  } catch (e) { return []; }
+      .split('\n')
+      .filter(function (s) {
+        return s.trim() !== '';
+      });
+  } catch (e) {
+    return [];
+  }
 }

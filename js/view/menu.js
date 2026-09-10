@@ -10,7 +10,7 @@
 var Menu = (function () {
   'use strict';
 
-  const ROW_H = 56;                  // .menu-row, in CSS pixels
+  const ROW_H = 56; // .menu-row, in CSS pixels
   const ROWS_SHOWN = 7;
 
   let host = null;
@@ -32,14 +32,20 @@ var Menu = (function () {
     built = list.length ? list : [{ label: 'Nothing to choose here', off: true }];
   }
 
-  function rows() { return built; }
+  function rows() {
+    return built;
+  }
 
   /* Land on what is already in use, so OK on the first press is a no-op rather
      than a surprise. */
   function land() {
     const list = rows();
     sel = 0;
-    for (let i = 0; i < list.length; i++) if (list[i].on) { sel = i; return; }
+    for (let i = 0; i < list.length; i++)
+      if (list[i].on) {
+        sel = i;
+        return;
+      }
   }
 
   function paint() {
@@ -47,27 +53,35 @@ var Menu = (function () {
     let html = '';
     let i;
     for (i = 0; i < tabs.length; i++) {
-      html += `<span class="menu-tab${i === tab ? ' on' : ''}">` +
-              UI.escapeHtml(tabs[i].label) + '</span>';
+      html +=
+        `<span class="menu-tab${i === tab ? ' on' : ''}">` +
+        UI.escapeHtml(tabs[i].label) +
+        '</span>';
     }
     elTabs.innerHTML = html;
 
     html = '';
     for (i = 0; i < list.length; i++) {
       const r = list[i];
-      html += `<div class="menu-row${i === sel ? ' sel' : ''}` +
-              (r.on ? ' on' : '') + (r.off ? ' off' : '') + '">' +
-              '<span class="menu-mark">' + (r.on ? '●' : '') + '</span>' +
-              '<span class="menu-label">' + UI.escapeHtml(r.label) + '</span>' +
-              (r.note ? `<span class="menu-note-inline">${UI.escapeHtml(r.note)}</span>` : '') +
-              '</div>';
+      html +=
+        `<div class="menu-row${i === sel ? ' sel' : ''}` +
+        (r.on ? ' on' : '') +
+        (r.off ? ' off' : '') +
+        '">' +
+        '<span class="menu-mark">' +
+        (r.on ? '●' : '') +
+        '</span>' +
+        '<span class="menu-label">' +
+        UI.escapeHtml(r.label) +
+        '</span>' +
+        (r.note ? `<span class="menu-note-inline">${UI.escapeHtml(r.note)}</span>` : '') +
+        '</div>';
     }
     elInner.innerHTML = html;
 
     /* Keep the selection in view without a scrollbar the remote cannot use. */
     const top = UI.clamp(sel - 3, 0, Math.max(0, list.length - ROWS_SHOWN));
-    elInner.style.webkitTransform = elInner.style.transform =
-      `translateY(${-top * ROW_H}px)`;
+    elInner.style.webkitTransform = elInner.style.transform = `translateY(${-top * ROW_H}px)`;
     elNote.textContent = (tabs[tab] && tabs[tab].note) || '';
   }
 
@@ -83,9 +97,10 @@ var Menu = (function () {
     /* Built once per host and then kept: the winding transition lives on
        .menu-inner, and an element replaced on every paint never runs one. */
     if (!host.firstChild) {
-      host.innerHTML = '<div class="menu-tabs"></div>' +
-                       '<div class="menu-list"><div class="menu-inner"></div></div>' +
-                       '<div class="menu-note"></div>';
+      host.innerHTML =
+        '<div class="menu-tabs"></div>' +
+        '<div class="menu-list"><div class="menu-inner"></div></div>' +
+        '<div class="menu-note"></div>';
     }
     elTabs = host.querySelector('.menu-tabs');
     elInner = host.querySelector('.menu-inner');
@@ -100,11 +115,16 @@ var Menu = (function () {
     if (!host) return;
     const done = onClose;
     host.classList.add('hidden');
-    host = null; tabs = []; onChoose = null; onClose = null;
+    host = null;
+    tabs = [];
+    onChoose = null;
+    onClose = null;
     if (done) done();
   }
 
-  function isOpen() { return !!host; }
+  function isOpen() {
+    return !!host;
+  }
 
   /* Closed before the choice is acted on, so a screen that reopens the menu or
      tears itself down in response is not fighting an overlay that is still up. */
@@ -117,8 +137,16 @@ var Menu = (function () {
 
   function key(code) {
     const list = rows();
-    if (code === 38) { sel = (sel + list.length - 1) % list.length; paint(); return true; }
-    if (code === 40) { sel = (sel + 1) % list.length; paint(); return true; }
+    if (code === 38) {
+      sel = (sel + list.length - 1) % list.length;
+      paint();
+      return true;
+    }
+    if (code === 40) {
+      sel = (sel + 1) % list.length;
+      paint();
+      return true;
+    }
     if ((code === 37 || code === 39) && tabs.length > 1) {
       tab = (tab + (code === 39 ? 1 : tabs.length - 1)) % tabs.length;
       build();
@@ -126,9 +154,15 @@ var Menu = (function () {
       paint();
       return true;
     }
-    if (code === 13 || code === 415 || code === 19) { choose(); return true; }
-    if (UI.isBack(code) || code === 413) { close(); return true; }
-    return true;                       // the menu swallows everything else
+    if (code === 13 || code === 415 || code === 19) {
+      choose();
+      return true;
+    }
+    if (UI.isBack(code) || code === 413) {
+      close();
+      return true;
+    }
+    return true; // the menu swallows everything else
   }
 
   return { open: open, close: close, isOpen: isOpen, key: key };

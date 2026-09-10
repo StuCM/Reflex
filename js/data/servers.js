@@ -15,13 +15,20 @@ var Servers = (function () {
   function ls(key, value) {
     try {
       if (value === undefined) return localStorage.getItem(key);
-      if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value);
-    } catch (e) { /* private mode / quota */ }
+      if (value === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch (e) {
+      /* private mode / quota */
+    }
     return null;
   }
 
-  function all() { return list; }
-  function count() { return list.length; }
+  function all() {
+    return list;
+  }
+  function count() {
+    return list.length;
+  }
 
   function get(id) {
     for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
@@ -41,16 +48,25 @@ var Servers = (function () {
 
   function set(found) {
     list = found;
-    ls('servers', JSON.stringify(list.map((sv) => {
-      return { id: sv.id, name: sv.name, base: sv.base, token: sv.token };
-    })));
+    ls(
+      'servers',
+      JSON.stringify(
+        list.map((sv) => {
+          return { id: sv.id, name: sv.name, base: sv.base, token: sv.token };
+        }),
+      ),
+    );
   }
 
   function load() {
     const raw = ls('servers');
     loadPreference();
     if (!raw) return [];
-    try { list = JSON.parse(raw) || []; } catch (e) { list = []; }
+    try {
+      list = JSON.parse(raw) || [];
+    } catch (e) {
+      list = [];
+    }
     return list;
   }
 
@@ -99,11 +115,24 @@ var Servers = (function () {
     return preferred();
   }
 
-  function loadPreference() { preferredId = ls('preferredServer'); }
+  function loadPreference() {
+    preferredId = ls('preferredServer');
+  }
 
-  return { all: all, count: count, get: get, of: of, stamp: stamp,
-           set: set, load: load, forget: forget, label: label,
-           preferred: preferred, isPreferred: isPreferred,
-           setPreferred: setPreferred, cyclePreferred: cyclePreferred,
-           loadPreference: loadPreference };
+  return {
+    all: all,
+    count: count,
+    get: get,
+    of: of,
+    stamp: stamp,
+    set: set,
+    load: load,
+    forget: forget,
+    label: label,
+    preferred: preferred,
+    isPreferred: isPreferred,
+    setPreferred: setPreferred,
+    cyclePreferred: cyclePreferred,
+    loadPreference: loadPreference,
+  };
 })();

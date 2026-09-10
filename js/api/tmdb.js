@@ -10,15 +10,17 @@
 var Tmdb = (function () {
   'use strict';
 
-  const KEY = Config.tmdbKey;                      // see js/config.js
-  const API = Config.tmdbBase;                     // see js/config.js
+  const KEY = Config.tmdbKey; // see js/config.js
+  const API = Config.tmdbBase; // see js/config.js
   const REGION = 'GB';
 
   /* The rubbish filter. Junk has almost no votes, so a floor removes most of it
      without any taste modelling at all. */
   const MIN_VOTES = 500;
 
-  function enabled() { return !!KEY; }
+  function enabled() {
+    return !!KEY;
+  }
 
   function get(path, params) {
     params = params || {};
@@ -33,11 +35,14 @@ var Tmdb = (function () {
   /* Enough to draw a tile with and nothing more: the rest of a TMDB result is
      never shown, and a discovery row holds a dozen of these per category. */
   function film(m) {
-    return { id: String(m.id), title: m.title || '',
-             year: Number(String(m.release_date || '').slice(0, 4)) || null,
-             poster_path: m.poster_path || null,
-             backdrop_path: m.backdrop_path || null,
-             vote_average: m.vote_average || 0 };
+    return {
+      id: String(m.id),
+      title: m.title || '',
+      year: Number(String(m.release_date || '').slice(0, 4)) || null,
+      poster_path: m.poster_path || null,
+      backdrop_path: m.backdrop_path || null,
+      vote_average: m.vote_average || 0,
+    };
   }
 
   function films(results) {
@@ -49,7 +54,9 @@ var Tmdb = (function () {
   }
 
   function trending() {
-    return get('/trending/movie/week').then((r) => { return films(r.results); });
+    return get('/trending/movie/week').then((r) => {
+      return films(r.results);
+    });
   }
 
   /* What's on a streaming service right now, in this region. */
@@ -58,8 +65,10 @@ var Tmdb = (function () {
       with_watch_providers: providerId,
       watch_region: REGION,
       sort_by: 'popularity.desc',
-      'vote_count.gte': MIN_VOTES
-    }).then((r) => { return films(r.results); });
+      'vote_count.gte': MIN_VOTES,
+    }).then((r) => {
+      return films(r.results);
+    });
   }
 
   /* One genre, most popular first. Ids come from /genre/movie/list. */
@@ -67,8 +76,10 @@ var Tmdb = (function () {
     return get('/discover/movie', {
       with_genres: genreId,
       sort_by: 'popularity.desc',
-      'vote_count.gte': MIN_VOTES
-    }).then((r) => { return films(r.results); });
+      'vote_count.gte': MIN_VOTES,
+    }).then((r) => {
+      return films(r.results);
+    });
   }
 
   /* Content-based recommendations: ask TMDB what resembles each thing recently
@@ -80,18 +91,28 @@ var Tmdb = (function () {
     const score = {};
     const seen = {};
     return serial(seeds, (id) => {
-      return get(`/movie/${id}/recommendations`).then((r) => {
-        const list = films(r.results);
-        for (let i = 0; i < list.length; i++) {
-          const m = list[i];
-          if (seeds.indexOf(m.id) >= 0) continue;              // don't suggest the seed
-          seen[m.id] = m;
-          score[m.id] = (score[m.id] || 0) + 1;
-        }
-      }, () => { /* one bad seed shouldn't sink the row */ });
+      return get(`/movie/${id}/recommendations`).then(
+        (r) => {
+          const list = films(r.results);
+          for (let i = 0; i < list.length; i++) {
+            const m = list[i];
+            if (seeds.indexOf(m.id) >= 0) continue; // don't suggest the seed
+            seen[m.id] = m;
+            score[m.id] = (score[m.id] || 0) + 1;
+          }
+        },
+        () => {
+          /* one bad seed shouldn't sink the row */
+        },
+      );
     }).then(() => {
-      return Object.keys(score).sort((a, b) => { return score[b] - score[a]; })
-        .map((id) => { return seen[id]; });
+      return Object.keys(score)
+        .sort((a, b) => {
+          return score[b] - score[a];
+        })
+        .map((id) => {
+          return seen[id];
+        });
     });
   }
 
@@ -114,7 +135,7 @@ var Tmdb = (function () {
   function details(tmdbId) {
     return get(`/movie/${tmdbId}`, {
       append_to_response: 'images,credits',
-      include_image_language: 'en,null'
+      include_image_language: 'en,null',
     });
   }
 
@@ -135,6 +156,6 @@ var Tmdb = (function () {
     byGenre: byGenre,
     recommendedFrom: recommendedFrom,
     catalogue: catalogue,
-    details: details
+    details: details,
   };
 })();

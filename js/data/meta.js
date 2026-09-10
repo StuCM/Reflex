@@ -12,8 +12,8 @@
 var Meta = (function () {
   'use strict';
 
-  const CAP = 500;                 // metadata payloads kept in RAM
-  const HOLD = 280;                // ms of stillness before asking a server
+  const CAP = 500; // metadata payloads kept in RAM
+  const HOLD = 280; // ms of stillness before asking a server
 
   let cache = {};
   let count = 0;
@@ -23,12 +23,17 @@ var Meta = (function () {
     return (item && item._server ? item._server : '?') + ':' + (item && item.ratingKey);
   }
 
-  function get(item) { return cache[keyOf(item)] || null; }
+  function get(item) {
+    return cache[keyOf(item)] || null;
+  }
 
   function remember(key, md) {
     /* ponytail: crude cap, drop the lot when it fills. A 30k library browsed
        hard would otherwise grow this without bound. LRU if it ever matters. */
-    if (count > CAP) { cache = {}; count = 0; }
+    if (count > CAP) {
+      cache = {};
+      count = 0;
+    }
     cache[key] = md;
     count++;
   }
@@ -40,22 +45,26 @@ var Meta = (function () {
     const server = Servers.of(item);
     if (!server) return Promise.resolve(null);
 
-    return Cache.meta.get(key).then((cached) => {
-      if (cached) return cached;
-      return Plex.metadata(server, item.ratingKey).then((md) => {
-        if (md) Cache.meta.put(key, md);
+    return Cache.meta
+      .get(key)
+      .then((cached) => {
+        if (cached) return cached;
+        return Plex.metadata(server, item.ratingKey).then((md) => {
+          if (md) Cache.meta.put(key, md);
+          return md;
+        });
+      })
+      .then((md) => {
+        if (md) {
+          md._server = item._server; // survives the round trip through Store
+          remember(key, md);
+        }
         return md;
+      })
+      .catch((e) => {
+        UI.debug(`meta: ${e.message}`);
+        return null;
       });
-    }).then((md) => {
-      if (md) {
-        md._server = item._server;          // survives the round trip through Store
-        remember(key, md);
-      }
-      return md;
-    }).catch((e) => {
-      UI.debug(`meta: ${e.message}`);
-      return null;
-    });
   }
 
   /* Fetch for whatever is focused now, once the user stops moving. onLoaded is
@@ -69,7 +78,9 @@ var Meta = (function () {
     if (cache[keyOf(item)]) return;
     const ratingKey = item.ratingKey;
     timer = setTimeout(() => {
-      load(item).then((md) => { if (md) onLoaded(ratingKey, md); });
+      load(item).then((md) => {
+        if (md) onLoaded(ratingKey, md);
+      });
     }, HOLD);
   }
 

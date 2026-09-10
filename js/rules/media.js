@@ -52,8 +52,8 @@ var Media = (function () {
     const rank = AUDIO_RANK[codec];
     const ch = st.channels || 2;
     let bonus;
-    if (rank >= 4) bonus = Math.min(ch, 6);          // AC3/E-AC3: 5.1 preferred
-    else bonus = (ch <= 2 ? 6 : 1);                  // AAC and below: stereo preferred
+    if (rank >= 4) bonus = Math.min(ch, 6); // AC3/E-AC3: 5.1 preferred
+    else bonus = ch <= 2 ? 6 : 1; // AAC and below: stereo preferred
     return rank * 100 + bonus * 2 + (st.selected ? 1 : 0);
   }
 
@@ -67,7 +67,10 @@ var Media = (function () {
     for (let i = 0; i < streams.length; i++) {
       if (streams[i].streamType !== 2) continue;
       sc = audioScore(streams[i]);
-      if (sc > bestScore) { bestScore = sc; best = streams[i]; }
+      if (sc > bestScore) {
+        bestScore = sc;
+        best = streams[i];
+      }
     }
     return bestScore < 0 ? null : best;
   }
@@ -84,15 +87,17 @@ var Media = (function () {
     for (let i = 0; i < streams.length; i++) {
       const st = streams[i];
       if (st.streamType !== 2 || isCommentary(st)) continue;
-      sc = Math.min(st.channels || 2, 8) * 10 + (st.selected ? 5 : 0) +
-           (st.default ? 2 : 0);
-      if (sc > bestScore) { bestScore = sc; best = st; }
+      sc = Math.min(st.channels || 2, 8) * 10 + (st.selected ? 5 : 0) + (st.default ? 2 : 0);
+      if (sc > bestScore) {
+        bestScore = sc;
+        best = st;
+      }
     }
     return best;
   }
 
   function channelLabel(st) {
-    return st.channels === 6 ? '5.1' : (st.channels === 8 ? '7.1' : (st.channels || '?') + '.0');
+    return st.channels === 6 ? '5.1' : st.channels === 8 ? '7.1' : (st.channels || '?') + '.0';
   }
 
   function audioLabel(st) {
@@ -108,10 +113,15 @@ var Media = (function () {
      whether it passes over ARC. */
   function audioMenuLabel(st) {
     if (!st) return 'no passable track';
-    return (langName(st) || 'Unknown') + ' · ' +
-           (st.codec || '?').toUpperCase() + ' ' + channelLabel(st) +
-           (isCommentary(st) ? ' · commentary' : '') +
-           (passesArc(st) ? '' : ' · needs re-encoding');
+    return (
+      (langName(st) || 'Unknown') +
+      ' · ' +
+      (st.codec || '?').toUpperCase() +
+      ' ' +
+      channelLabel(st) +
+      (isCommentary(st) ? ' · commentary' : '') +
+      (passesArc(st) ? '' : ' · needs re-encoding')
+    );
   }
 
   /* Every audio track on a part, in file order — what the player cycles
@@ -156,20 +166,69 @@ var Media = (function () {
      back to the code, which is still better than nothing. */
 
   const LANGUAGES = {
-    eng: 'English', fre: 'French', fra: 'French', ger: 'German', deu: 'German',
-    spa: 'Spanish', ita: 'Italian', por: 'Portuguese', dut: 'Dutch', nld: 'Dutch',
-    rus: 'Russian', pol: 'Polish', swe: 'Swedish', nor: 'Norwegian', dan: 'Danish',
-    fin: 'Finnish', ice: 'Icelandic', isl: 'Icelandic', gle: 'Irish', gla: 'Gaelic',
-    cym: 'Welsh', wel: 'Welsh', cze: 'Czech', ces: 'Czech', hun: 'Hungarian',
-    gre: 'Greek', ell: 'Greek', tur: 'Turkish', ara: 'Arabic', heb: 'Hebrew',
-    hin: 'Hindi', ben: 'Bengali', tam: 'Tamil', tel: 'Telugu', urd: 'Urdu',
-    jpn: 'Japanese', kor: 'Korean', chi: 'Chinese', zho: 'Chinese',
-    tha: 'Thai', vie: 'Vietnamese', ind: 'Indonesian', may: 'Malay',
-    ukr: 'Ukrainian', ron: 'Romanian', rum: 'Romanian', bul: 'Bulgarian',
-    hrv: 'Croatian', srp: 'Serbian', slo: 'Slovak', slk: 'Slovak', slv: 'Slovenian',
-    cat: 'Catalan', baq: 'Basque', eus: 'Basque', glg: 'Galician',
-    per: 'Persian', fas: 'Persian', fil: 'Filipino', tgl: 'Tagalog',
-    und: 'Unknown', mul: 'Multiple', zxx: 'None'
+    eng: 'English',
+    fre: 'French',
+    fra: 'French',
+    ger: 'German',
+    deu: 'German',
+    spa: 'Spanish',
+    ita: 'Italian',
+    por: 'Portuguese',
+    dut: 'Dutch',
+    nld: 'Dutch',
+    rus: 'Russian',
+    pol: 'Polish',
+    swe: 'Swedish',
+    nor: 'Norwegian',
+    dan: 'Danish',
+    fin: 'Finnish',
+    ice: 'Icelandic',
+    isl: 'Icelandic',
+    gle: 'Irish',
+    gla: 'Gaelic',
+    cym: 'Welsh',
+    wel: 'Welsh',
+    cze: 'Czech',
+    ces: 'Czech',
+    hun: 'Hungarian',
+    gre: 'Greek',
+    ell: 'Greek',
+    tur: 'Turkish',
+    ara: 'Arabic',
+    heb: 'Hebrew',
+    hin: 'Hindi',
+    ben: 'Bengali',
+    tam: 'Tamil',
+    tel: 'Telugu',
+    urd: 'Urdu',
+    jpn: 'Japanese',
+    kor: 'Korean',
+    chi: 'Chinese',
+    zho: 'Chinese',
+    tha: 'Thai',
+    vie: 'Vietnamese',
+    ind: 'Indonesian',
+    may: 'Malay',
+    ukr: 'Ukrainian',
+    ron: 'Romanian',
+    rum: 'Romanian',
+    bul: 'Bulgarian',
+    hrv: 'Croatian',
+    srp: 'Serbian',
+    slo: 'Slovak',
+    slk: 'Slovak',
+    slv: 'Slovenian',
+    cat: 'Catalan',
+    baq: 'Basque',
+    eus: 'Basque',
+    glg: 'Galician',
+    per: 'Persian',
+    fas: 'Persian',
+    fil: 'Filipino',
+    tgl: 'Tagalog',
+    und: 'Unknown',
+    mul: 'Multiple',
+    zxx: 'None',
   };
 
   function langName(st) {
@@ -192,8 +251,17 @@ var Media = (function () {
      So image tracks are listed and refused, with the reason, rather than
      quietly missing. */
 
-  const TEXT_SUBS = { srt: 1, subrip: 1, ass: 1, ssa: 1, vtt: 1, webvtt: 1,
-                    text: 1, mov_text: 1, subtitle: 1 };
+  const TEXT_SUBS = {
+    srt: 1,
+    subrip: 1,
+    ass: 1,
+    ssa: 1,
+    vtt: 1,
+    webvtt: 1,
+    text: 1,
+    mov_text: 1,
+    subtitle: 1,
+  };
 
   function isTextSub(st) {
     return !!(st && TEXT_SUBS[String(st.codec || '').toLowerCase()]);
@@ -280,13 +348,15 @@ var Media = (function () {
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
       out.push({
-        title: c.tag || c.title || (`Chapter ${c.index || i + 1}`),
+        title: c.tag || c.title || `Chapter ${c.index || i + 1}`,
         start: (c.startTimeOffset || 0) / 1000,
         end: (c.endTimeOffset || 0) / 1000,
-        thumb: c.thumb || null
+        thumb: c.thumb || null,
       });
     }
-    out.sort((a, b) => { return a.start - b.start; });
+    out.sort((a, b) => {
+      return a.start - b.start;
+    });
     return out;
   }
 
@@ -304,13 +374,13 @@ var Media = (function () {
   const BITRATES = [20000, 12000, 8000, 4000, 3000, 2000, 720];
 
   function bitrateLabel(kbps) {
-    return kbps >= 1000 ? (kbps / 1000) + ' Mbps' : kbps + ' Kbps';
+    return kbps >= 1000 ? kbps / 1000 + ' Mbps' : kbps + ' Kbps';
   }
 
   function versionLabel(media) {
     if (!media) return 'this version';
     const res = String(media.videoResolution || '').toLowerCase();
-    const name = res === '4k' ? '4K' : (res ? res + 'p' : (media.height || '?') + 'p');
+    const name = res === '4k' ? '4K' : res ? res + 'p' : (media.height || '?') + 'p';
     let out = name + ' ' + String(media.videoCodec || '?').toUpperCase();
     if (media.bitrate) out += ` · ${bitrateLabel(media.bitrate)}`;
     return out;
@@ -323,8 +393,7 @@ var Media = (function () {
     out.push({ label: `Original (${versionLabel(media)})`, bitrate: null });
     for (let i = 0; i < BITRATES.length; i++) {
       if (!source || BITRATES[i] < source) {
-        out.push({ label: bitrateLabel(BITRATES[i]) + ' — server converts',
-                   bitrate: BITRATES[i] });
+        out.push({ label: bitrateLabel(BITRATES[i]) + ' — server converts', bitrate: BITRATES[i] });
       }
     }
     return out;
@@ -342,8 +411,9 @@ var Media = (function () {
     if (!media) return false;
     /* Whatever we declared to the server, checked again on the way back — the
        two must agree or a widened profile turns into a black screen. */
-    return Panel.supports('video', media.videoCodec) &&
-           Panel.supports('container', media.container);
+    return (
+      Panel.supports('video', media.videoCodec) && Panel.supports('container', media.container)
+    );
   }
 
   /* ---------- resolution ---------- */
@@ -369,10 +439,22 @@ var Media = (function () {
   /* ---------- certificates ---------- */
 
   const RATING_AGE = {
-    u: 0, g: 0, e: 0, ec: 0, 'tv-y': 0, 'tv-g': 0, uc: 0,
-    'tv-y7': 7, pg: 8, 'tv-pg': 8,
-    'pg-13': 13, 'tv-14': 14,
-    r: 17, 'tv-ma': 17, 'nc-17': 18, x: 18
+    u: 0,
+    g: 0,
+    e: 0,
+    ec: 0,
+    'tv-y': 0,
+    'tv-g': 0,
+    uc: 0,
+    'tv-y7': 7,
+    pg: 8,
+    'tv-pg': 8,
+    'pg-13': 13,
+    'tv-14': 14,
+    r: 17,
+    'tv-ma': 17,
+    'nc-17': 18,
+    x: 18,
   };
 
   /* Minimum age a certificate implies, or null if unrated/unrecognised.
@@ -382,8 +464,8 @@ var Media = (function () {
     if (!rating) return null;
     let r = String(rating).toLowerCase().replace(/\s/g, '');
     const slash = r.lastIndexOf('/');
-    if (slash >= 0) r = r.substring(slash + 1);      // strip "gb/", "us/"
-    const m = r.match(/^(\d{1,2})/);                    // 12, 12a, 15, 18, 6, 7
+    if (slash >= 0) r = r.substring(slash + 1); // strip "gb/", "us/"
+    const m = r.match(/^(\d{1,2})/); // 12, 12a, 15, 18, 6, 7
     if (m) return parseInt(m[1], 10);
     return RATING_AGE[r] === undefined ? null : RATING_AGE[r];
   }
@@ -416,21 +498,25 @@ var Media = (function () {
     const g = (item && item.Guid) || [];
     for (let i = 0; i < g.length; i++) {
       const id = String(g[i].id || '').toLowerCase();
-      if (id.indexOf('imdb://') === 0 || id.indexOf('tmdb://') === 0 ||
-          id.indexOf('tvdb://') === 0) out.push(id);
+      if (id.indexOf('imdb://') === 0 || id.indexOf('tmdb://') === 0 || id.indexOf('tvdb://') === 0)
+        out.push(id);
     }
     /* The legacy agent form: com.plexapp.agents.imdb://tt0133093?lang=en */
     const legacy = String((item && item.guid) || '');
     const m = legacy.match(/agents\.(imdb|themoviedb|thetvdb):\/\/([^?/]+)/);
     if (m) {
-      out.push((m[1] === 'themoviedb' ? 'tmdb' : (m[1] === 'thetvdb' ? 'tvdb' : 'imdb')) +
-               '://' + m[2].toLowerCase());
+      out.push(
+        (m[1] === 'themoviedb' ? 'tmdb' : m[1] === 'thetvdb' ? 'tvdb' : 'imdb') +
+          '://' +
+          m[2].toLowerCase(),
+      );
     }
     return out;
   }
 
   function titleKey(item) {
-    const t = String((item && (item.titleSort || item.title)) || '').toLowerCase()
+    const t = String((item && (item.titleSort || item.title)) || '')
+      .toLowerCase()
       .replace(/^(the|a|an)\s+/, '')
       .replace(/[^a-z0-9]+/g, '');
     return `title://${t}/${(item && item.year) || ''}`;
@@ -442,7 +528,9 @@ var Media = (function () {
      number against the show's identity is what actually holds. */
   function episodeKey(item) {
     const show = String(item.grandparentGuid || item.grandparentTitle || '')
-      .toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/[^a-z0-9:/.]+/g, '');
+      .toLowerCase()
+      .replace(/^(the|a|an)\s+/, '')
+      .replace(/[^a-z0-9:/.]+/g, '');
     const season = item.parentIndex === undefined ? '?' : item.parentIndex;
     const number = item.index === undefined ? '?' : item.index;
     return `episode://${show}/${season}/${number}`;
@@ -467,9 +555,13 @@ var Media = (function () {
     const s = item.parentIndex;
     const e = item.index;
     if (s === undefined && e === undefined) return item.grandparentTitle || '';
-    return (item.grandparentTitle || '') +
-           '  ·  S' + (s === undefined ? '?' : s) +
-           'E' + (e === undefined ? '?' : (e < 10 ? `0${e}` : e));
+    return (
+      (item.grandparentTitle || '') +
+      '  ·  S' +
+      (s === undefined ? '?' : s) +
+      'E' +
+      (e === undefined ? '?' : e < 10 ? `0${e}` : e)
+    );
   }
 
   /* The name of the thing, for the rail tile and the hero over it. An episode
@@ -503,22 +595,43 @@ var Media = (function () {
   }
 
   /* One stable key, for caching and for saying "this film" in a log line. */
-  function identity(item) { return identities(item)[0]; }
+  function identity(item) {
+    return identities(item)[0];
+  }
 
   return {
-    pickAudio: pickAudio, audioLabel: audioLabel, isUHD: isUHD, canDecode: canDecode,
-    audioMenuLabel: audioMenuLabel, passesArc: passesArc,
-    isCommentary: isCommentary, audioSummary: audioSummary, bestAudio: bestAudio,
-    audioTracks: audioTracks, streamById: streamById,
+    pickAudio: pickAudio,
+    audioLabel: audioLabel,
+    isUHD: isUHD,
+    canDecode: canDecode,
+    audioMenuLabel: audioMenuLabel,
+    passesArc: passesArc,
+    isCommentary: isCommentary,
+    audioSummary: audioSummary,
+    bestAudio: bestAudio,
+    audioTracks: audioTracks,
+    streamById: streamById,
     allows: allows,
-    langName: langName, isTextSub: isTextSub, subtitleTracks: subtitleTracks,
-    subLabel: subLabel, pickSubtitle: pickSubtitle,
-    markerAt: markerAt, markerLabel: markerLabel, chapters: chapters,
-    versionLabel: versionLabel, qualities: qualities, bitrateLabel: bitrateLabel,
-    ageLimit: ageLimit, isKidsRating: isKidsRating, KIDS_MAX_AGE: KIDS_MAX_AGE,
-    identities: identities, identity: identity, episodeLabel: episodeLabel,
-    railTitle: railTitle, railSub: railSub
+    langName: langName,
+    isTextSub: isTextSub,
+    subtitleTracks: subtitleTracks,
+    subLabel: subLabel,
+    pickSubtitle: pickSubtitle,
+    markerAt: markerAt,
+    markerLabel: markerLabel,
+    chapters: chapters,
+    versionLabel: versionLabel,
+    qualities: qualities,
+    bitrateLabel: bitrateLabel,
+    ageLimit: ageLimit,
+    isKidsRating: isKidsRating,
+    KIDS_MAX_AGE: KIDS_MAX_AGE,
+    identities: identities,
+    identity: identity,
+    episodeLabel: episodeLabel,
+    railTitle: railTitle,
+    railSub: railSub,
   };
 })();
 
-if (typeof module !== 'undefined') module.exports = Media;   // for the unit tests
+if (typeof module !== 'undefined') module.exports = Media; // for the unit tests

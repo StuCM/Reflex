@@ -21,10 +21,10 @@ var Art = (function () {
   const POSTER_SIZE = 'w342';
   const HERO_SIZE = 'w1280';
   const MAX_IN_FLIGHT = 4;
-  const CAST = 4;          // names in the header's key actors line
+  const CAST = 4; // names in the header's key actors line
 
-  const cache = {};        // tmdbId -> { hero: path|null, poster: path|null, facts: {} }
-  const pending = {};      // tmdbId -> true while a lookup is queued or running
+  const cache = {}; // tmdbId -> { hero: path|null, poster: path|null, facts: {} }
+  const pending = {}; // tmdbId -> true while a lookup is queued or running
   const queue = [];
   let active = 0;
   const listeners = [];
@@ -61,17 +61,19 @@ var Art = (function () {
     for (let i = 0; i < billing.length && cast.length < CAST; i++) {
       if (billing[i] && billing[i].name) cast.push(billing[i].name);
     }
-    const score = (payload && typeof payload.vote_average === 'number') ? payload.vote_average : 0;
+    const score = payload && typeof payload.vote_average === 'number' ? payload.vote_average : 0;
     return {
-      overview: (payload && typeof payload.overview === 'string') ? payload.overview : '',
-      runtime: (payload && typeof payload.runtime === 'number') ? payload.runtime : null,
+      overview: payload && typeof payload.overview === 'string' ? payload.overview : '',
+      runtime: payload && typeof payload.runtime === 'number' ? payload.runtime : null,
       /* Out of ten, one decimal. Zero is TMDB's "nobody has voted", not a score. */
       rating: score ? Math.round(score * 10) / 10 : null,
-      cast: cast
+      cast: cast,
     };
   }
 
-  function url(path, size) { return Config.tmdbImageBase + size + path; }
+  function url(path, size) {
+    return Config.tmdbImageBase + size + path;
+  }
 
   /* An episode has no film id of its own, and its show's poster already came
      from Plex for nothing, so it is never looked up. */
@@ -82,7 +84,7 @@ var Art = (function () {
 
   function picked(item) {
     const id = idOf(item);
-    return id ? (cache[id] || null) : null;
+    return id ? cache[id] || null : null;
   }
 
   /* The tile picture, always a poster: TMDB's, else for an episode its show's
@@ -93,8 +95,9 @@ var Art = (function () {
     const got = picked(item);
     if (got && got.poster) return url(got.poster, POSTER_SIZE);
     if (item.type === 'episode') {
-      return Plex.photoUrl(Servers.of(item), item.grandparentThumb, w, h) ||
-             Plex.posterUrl(item, w, h);
+      return (
+        Plex.photoUrl(Servers.of(item), item.grandparentThumb, w, h) || Plex.posterUrl(item, w, h)
+      );
     }
     return Plex.posterUrl(item, w, h);
   }
@@ -125,7 +128,9 @@ var Art = (function () {
   }
 
   /* Whoever wants to know a title's art has landed. Called with the TMDB id. */
-  function onReady(fn) { listeners.push(fn); }
+  function onReady(fn) {
+    listeners.push(fn);
+  }
 
   function pump() {
     while (active < MAX_IN_FLIGHT && queue.length) {
@@ -135,18 +140,27 @@ var Art = (function () {
   }
 
   function fetchOne(id) {
-    Cache.art.get(id).then((hit) => {
-      /* An entry cached before the facts or the poster existed is a miss for
+    Cache.art
+      .get(id)
+      .then((hit) => {
+        /* An entry cached before the facts or the poster existed is a miss for
          them, or an old cache would leave a title short of one for ever. */
-      if (hit && hit.facts && hit.poster !== undefined) return hit;
-      return Tmdb.details(id).then((payload) => {
-        const got = pick(payload);
-        got.facts = facts(payload);
-        Cache.art.put(id, got);
-        return got;
-      });
-    }).then((got) => { landed(id, got); },
-            () => { landed(id, { hero: null, poster: null }); });
+        if (hit && hit.facts && hit.poster !== undefined) return hit;
+        return Tmdb.details(id).then((payload) => {
+          const got = pick(payload);
+          got.facts = facts(payload);
+          Cache.art.put(id, got);
+          return got;
+        });
+      })
+      .then(
+        (got) => {
+          landed(id, got);
+        },
+        () => {
+          landed(id, { hero: null, poster: null });
+        },
+      );
   }
 
   /* A title with no usable backdrops is cached too, or an obscure one costs a
@@ -159,6 +173,14 @@ var Art = (function () {
     for (let i = 0; i < listeners.length; i++) listeners[i](id);
   }
 
-  return { pick: pick, facts: facts, url: url, tile: tile, hero: hero,
-           factsFor: factsFor, warm: warm, onReady: onReady };
+  return {
+    pick: pick,
+    facts: facts,
+    url: url,
+    tile: tile,
+    hero: hero,
+    factsFor: factsFor,
+    warm: warm,
+    onReady: onReady,
+  };
 })();

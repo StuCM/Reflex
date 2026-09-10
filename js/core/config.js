@@ -19,10 +19,10 @@ var Config = (function () {
        /genre/movie/list and a provider id from JustWatch as TMDB exposes it. */
     categories: [
       { title: 'Trending this week', kind: 'trending' },
-      { title: 'On Netflix',         kind: 'provider', id: 8 },
-      { title: 'On Prime Video',     kind: 'provider', id: 9 },
-      { title: 'Science fiction',    kind: 'genre',    id: 878 },
-      { title: 'Because of what you have been watching', kind: 'recommended' }
+      { title: 'On Netflix', kind: 'provider', id: 8 },
+      { title: 'On Prime Video', kind: 'provider', id: 9 },
+      { title: 'Science fiction', kind: 'genre', id: 878 },
+      { title: 'Because of what you have been watching', kind: 'recommended' },
     ],
 
     /* TMDB's API and its image CDN, unless something is standing in for them. */
@@ -45,7 +45,7 @@ var Config = (function () {
 
     /* True only under the dev server. Nothing should behave differently because
        of it; it exists so the debug line can say where it is running. */
-    dev: false
+    dev: false,
   };
 
   const over = (typeof window !== 'undefined' && window.REFLEX_CONFIG) || null;

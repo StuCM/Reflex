@@ -43,12 +43,12 @@ var Player = (function () {
   const subEl = document.getElementById('subtitle');
   const menuEl = document.getElementById('menu');
 
-  const BAR_W = 1300;                // #osd-bar, in CSS pixels
-  const CARD_W = 260;                // .osd-chap plus its margin
+  const BAR_W = 1300; // #osd-bar, in CSS pixels
+  const CARD_W = 260; // .osd-chap plus its margin
   const CARDS_SHOWN = 6;
-  const SEEK_SETTLE = 400;           // ms of stillness before a seek is applied
-  const NUDGE = 30;                  // left / right, seconds
-  const JUMP = 300;                  // rewind / fast forward, seconds
+  const SEEK_SETTLE = 400; // ms of stillness before a seek is applied
+  const NUDGE = 30; // left / right, seconds
+  const JUMP = 300; // rewind / fast forward, seconds
 
   let item = null;
   let server = null;
@@ -111,7 +111,7 @@ var Player = (function () {
     const s = sec % 60;
     const mm = (m < 10 ? '0' : '') + m;
     const ss = (s < 10 ? '0' : '') + s;
-    return h ? (h + ':' + mm + ':' + ss) : (m + ':' + ss);
+    return h ? h + ':' + mm + ':' + ss : m + ':' + ss;
   }
 
   /* A live or badly-muxed stream reports Infinity, and every sum here divides
@@ -125,7 +125,7 @@ var Player = (function () {
   /* Where the picture will be once any pending seek lands — that is what the
      user is aiming at, so that is what the bar and the clock have to show. */
   function target() {
-    return pending === null ? (v.currentTime || 0) : pending;
+    return pending === null ? v.currentTime || 0 : pending;
   }
 
   /* ---------- the OSD ----------
@@ -139,22 +139,23 @@ var Player = (function () {
     const dur = duration();
     const left = dur ? Math.max(0, dur - at) : 0;
 
-    osdTime.textContent = fmt(at) +
-      (pending !== null ? '   SEEKING' : (v.paused ? '   PAUSED' : ''));
+    osdTime.textContent = fmt(at) + (pending !== null ? '   SEEKING' : v.paused ? '   PAUSED' : '');
     osdTotal.textContent = fmt(dur) + (dur ? `   ·   ${fmt(left)} left` : '');
 
-    const x = dur ? Math.round(BAR_W * Math.min(at, dur) / dur) : 0;
+    const x = dur ? Math.round((BAR_W * Math.min(at, dur)) / dur) : 0;
     osdFill.style.width = x + 'px';
     /* transform, not left: the knob moves on every timeupdate and this is the
        one property the panel can move without a layout pass. */
-    osdKnob.style.webkitTransform = osdKnob.style.transform =
-      `translateX(${Math.min(x, BAR_W - 6)}px)`;
+    osdKnob.style.webkitTransform =
+      osdKnob.style.transform = `translateX(${Math.min(x, BAR_W - 6)}px)`;
 
     let ahead = 0;
     try {
       if (v.buffered && v.buffered.length) ahead = v.buffered.end(v.buffered.length - 1);
-    } catch (e) { ahead = 0; }
-    osdBuffered.style.width = dur ? Math.round(BAR_W * Math.min(ahead, dur) / dur) + 'px' : '0';
+    } catch (e) {
+      ahead = 0;
+    }
+    osdBuffered.style.width = dur ? Math.round((BAR_W * Math.min(ahead, dur)) / dur) + 'px' : '0';
   }
 
   /* Chapters as ticks, markers as bands. Drawn once, when the duration is
@@ -162,22 +163,30 @@ var Player = (function () {
      the kind of work this panel cannot afford. */
   function paintTicks() {
     const dur = duration();
-    if (!dur) { osdTicks.innerHTML = ''; return; }
+    if (!dur) {
+      osdTicks.innerHTML = '';
+      return;
+    }
     let html = '';
     const list = Media.chapters(item);
     let i;
 
     const markers = (item && item.Marker) || [];
     for (i = 0; i < markers.length; i++) {
-      const at = Math.round(BAR_W * ((markers[i].startTimeOffset || 0) / 1000) / dur);
-      const wide = Math.max(2, Math.round(BAR_W *
-        (((markers[i].endTimeOffset || 0) - (markers[i].startTimeOffset || 0)) / 1000) / dur));
+      const at = Math.round((BAR_W * ((markers[i].startTimeOffset || 0) / 1000)) / dur);
+      const wide = Math.max(
+        2,
+        Math.round(
+          (BAR_W * (((markers[i].endTimeOffset || 0) - (markers[i].startTimeOffset || 0)) / 1000)) /
+            dur,
+        ),
+      );
       html += `<i class="osd-band" style="left:${at}px;width:${wide}px"></i>`;
     }
     for (i = 0; i < list.length; i++) {
       if (list[i].start <= 0) continue;
-      html += '<i class="osd-tick" style="left:' +
-              Math.round(BAR_W * list[i].start / dur) + 'px"></i>';
+      html +=
+        '<i class="osd-tick" style="left:' + Math.round((BAR_W * list[i].start) / dur) + 'px"></i>';
     }
     osdTicks.innerHTML = html;
   }
@@ -192,13 +201,18 @@ var Player = (function () {
        so it stays until the seek lands. The menu keeps it up too — it sits
        above the bar and reads as one panel. */
     osdTimer = setTimeout(() => {
-      if (pending !== null || Menu.isOpen() || openPanel || focus !== 'none') { showOsd(); return; }
+      if (pending !== null || Menu.isOpen() || openPanel || focus !== 'none') {
+        showOsd();
+        return;
+      }
       osd.style.opacity = '0';
       subEl.classList.remove('lifted');
     }, 4000);
   }
 
-  function osdShowing() { return osd.style.opacity !== '0' && !osd.classList.contains('hidden'); }
+  function osdShowing() {
+    return osd.style.opacity !== '0' && !osd.classList.contains('hidden');
+  }
 
   function hint() {
     if (openPanel === 'chapters') {
@@ -210,8 +224,8 @@ var Player = (function () {
     } else if (focus === 'bar') {
       osdHint.textContent = '◀ ▶ scrub · OK seek there · ▼ controls · BACK back to playback';
     } else {
-      osdHint.textContent = `◀ ▶ ${NUDGE}s · ▲ trackbar · ▼ controls · 0–9 jump · ` +
-                            'CH± chapter · OK pause';
+      osdHint.textContent =
+        `◀ ▶ ${NUDGE}s · ▲ trackbar · ▼ controls · 0–9 jump · ` + 'CH± chapter · OK pause';
     }
   }
 
@@ -271,7 +285,7 @@ var Player = (function () {
     const list = panelTracks();
     if (!list || n < 0 || n >= list.length) return false;
     for (let i = 0; i < list.length; i++) {
-      if (list[i]) list[i].enabled = (i === n);
+      if (list[i]) list[i].enabled = i === n;
     }
     /* Trust nothing: read it back. A pipeline that exposes the list read-only
        would otherwise look like a successful switch and sound like the old
@@ -293,9 +307,12 @@ var Player = (function () {
   function applyChosenTrack() {
     if (!currentAudio || transcoding) return;
     const n = panelIndexOf(currentAudio);
-    if (n < 0) { paintControls(); return; }
+    if (n < 0) {
+      paintControls();
+      return;
+    }
     const list = panelTracks();
-    if (list[n] && list[n].enabled) return;          // already right, say nothing
+    if (list[n] && list[n].enabled) return; // already right, say nothing
     if (selectPanelTrack(n)) {
       UI.debug(`audio set on the panel (track ${n}): ${Media.audioLabel(currentAudio)}`);
     }
@@ -328,18 +345,17 @@ var Player = (function () {
      there is no icon font to fetch. */
 
   function audioCaption() {
-    return Media.audioMenuLabel(currentAudio) +
-           (audioIsOurs() ? '' : ' — panel’s choice');
+    return Media.audioMenuLabel(currentAudio) + (audioIsOurs() ? '' : ' — panel’s choice');
   }
 
   function subCaption() {
-    return (currentSub ? Media.subLabel(currentSub) : 'off') +
-           (subNote ? ` — ${subNote}` : '');
+    return (currentSub ? Media.subLabel(currentSub) : 'off') + (subNote ? ` — ${subNote}` : '');
   }
 
   function qualityCaption() {
-    return maxBitrate ? Media.bitrateLabel(maxBitrate) + ' converted'
-                      : Media.versionLabel(currentMedia);
+    return maxBitrate
+      ? Media.bitrateLabel(maxBitrate) + ' converted'
+      : Media.versionLabel(currentMedia);
   }
 
   function chapterCaption() {
@@ -351,13 +367,23 @@ var Player = (function () {
      on screen, and the index into it is what the arrows move. */
   function controls() {
     return [
-      { glyph: Glyphs.rewind, run: () => { seekBy(-JUMP); } },
+      {
+        glyph: Glyphs.rewind,
+        run: () => {
+          seekBy(-JUMP);
+        },
+      },
       { glyph: v.paused ? Glyphs.play : Glyphs.pause, run: togglePlay },
-      { glyph: Glyphs.forward, run: () => { seekBy(JUMP); } },
+      {
+        glyph: Glyphs.forward,
+        run: () => {
+          seekBy(JUMP);
+        },
+      },
       { id: 'audio', glyph: Glyphs.audio, caption: audioCaption() },
       { id: 'subs', glyph: Glyphs.subs, caption: subCaption() },
       { id: 'quality', glyph: Glyphs.quality, caption: qualityCaption() },
-      { id: 'chapters', glyph: Glyphs.chapters, caption: chapterCaption() }
+      { id: 'chapters', glyph: Glyphs.chapters, caption: chapterCaption() },
     ];
   }
 
@@ -368,13 +394,21 @@ var Player = (function () {
     let html;
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
-      html = `<div class="osd-ctl${focus === 'row' && i === ctl ? ' foc' : ''}` +
-             (c.id && c.id === openPanel ? ' on' : '') + '"' +
-             (c.id ? ` id="osd-ctl-${c.id}"` : '') + '>' +
-             '<div class="osd-btn">' + c.glyph + '</div>' +
-             '<div class="osd-cap">' + UI.escapeHtml(c.caption || '') + '</div>' +
-             '</div>';
-      if (c.id) rh += html; else lh += html;
+      html =
+        `<div class="osd-ctl${focus === 'row' && i === ctl ? ' foc' : ''}` +
+        (c.id && c.id === openPanel ? ' on' : '') +
+        '"' +
+        (c.id ? ` id="osd-ctl-${c.id}"` : '') +
+        '>' +
+        '<div class="osd-btn">' +
+        c.glyph +
+        '</div>' +
+        '<div class="osd-cap">' +
+        UI.escapeHtml(c.caption || '') +
+        '</div>' +
+        '</div>';
+      if (c.id) rh += html;
+      else lh += html;
     }
     osdLeft.innerHTML = lh;
     osdRight.innerHTML = rh;
@@ -382,7 +416,8 @@ var Player = (function () {
   }
 
   function togglePlay() {
-    if (v.paused) v.play(); else v.pause();
+    if (v.paused) v.play();
+    else v.pause();
     report(v.paused ? 'paused' : 'playing');
     paintControls();
     showOsd();
@@ -408,7 +443,11 @@ var Player = (function () {
     if (pending === null) return;
     const to = pending;
     pending = null;
-    try { v.currentTime = to; } catch (e) { /* not seekable yet */ }
+    try {
+      v.currentTime = to;
+    } catch (e) {
+      /* not seekable yet */
+    }
     report(v.paused ? 'paused' : 'playing');
     paintSub();
     showOsd();
@@ -419,7 +458,7 @@ var Player = (function () {
   function jumpToTenth(n) {
     const dur = duration();
     if (!dur) return;
-    seekTo(dur * n / 10);
+    seekTo((dur * n) / 10);
   }
 
   /* Chapter skip, falling back to a fixed jump on a file with no chapters —
@@ -429,17 +468,26 @@ var Player = (function () {
     let at = target();
     let i;
     let to = null;
-    if (!list.length) { seekBy(dir * JUMP); return; }
+    if (!list.length) {
+      seekBy(dir * JUMP);
+      return;
+    }
     if (dir > 0) {
       for (i = 0; i < list.length; i++) {
-        if (list[i].start > at + 1) { to = list[i].start; break; }
+        if (list[i].start > at + 1) {
+          to = list[i].start;
+          break;
+        }
       }
       if (to === null) to = Math.max(0, duration() - 5);
     } else {
       /* Back once goes to the start of this chapter, again to the one before —
          which is how every disc player has behaved for twenty years. */
       for (i = list.length - 1; i >= 0; i--) {
-        if (list[i].start < at - 3) { to = list[i].start; break; }
+        if (list[i].start < at - 3) {
+          to = list[i].start;
+          break;
+        }
       }
       if (to === null) to = 0;
     }
@@ -464,7 +512,10 @@ var Player = (function () {
     if (found && skipDismissed === found) found = null;
     if (found === marker) return;
     marker = found;
-    if (!marker) { skipEl.classList.add('hidden'); return; }
+    if (!marker) {
+      skipEl.classList.add('hidden');
+      return;
+    }
     skipEl.textContent = Media.markerLabel(marker) + '   ›   OK';
     skipEl.classList.remove('hidden');
   }
@@ -485,7 +536,11 @@ var Player = (function () {
        that one press gets you past it. */
     pending = null;
     clearTimeout(seekTimer);
-    try { v.currentTime = to; } catch (e) { /* not seekable yet */ }
+    try {
+      v.currentTime = to;
+    } catch (e) {
+      /* not seekable yet */
+    }
     UI.debug(`skipped to ${fmt(to)}`);
     showOsd();
   }
@@ -497,8 +552,8 @@ var Player = (function () {
      night is load on hardware we do not own, put there by someone who fell
      asleep. A season boundary never counts down at all. */
 
-  const AUTOPLAY = [0, 5, 10, 15, 30];        // seconds; 0 is "wait for OK"
-  let autoplay = null;                      // read from storage once, then cached
+  const AUTOPLAY = [0, 5, 10, 15, 30]; // seconds; 0 is "wait for OK"
+  let autoplay = null; // read from storage once, then cached
   let next = null;
   let nextTimer = null;
   let nextLeft = 0;
@@ -508,7 +563,11 @@ var Player = (function () {
   function autoplaySeconds() {
     if (autoplay !== null) return autoplay;
     let stored = 0;
-    try { stored = Number(localStorage.getItem('reflex.autoplay')); } catch (e) { stored = 0; }
+    try {
+      stored = Number(localStorage.getItem('reflex.autoplay'));
+    } catch (e) {
+      stored = 0;
+    }
     autoplay = AUTOPLAY.indexOf(stored) > 0 ? stored : 0;
     return autoplay;
   }
@@ -517,7 +576,11 @@ var Player = (function () {
      d-pad has, which is why the preference is a sidebar entry and not a screen. */
   function cycleAutoplay() {
     autoplay = AUTOPLAY[(AUTOPLAY.indexOf(autoplaySeconds()) + 1) % AUTOPLAY.length];
-    try { localStorage.setItem('reflex.autoplay', String(autoplay)); } catch (e) { /* private mode */ }
+    try {
+      localStorage.setItem('reflex.autoplay', String(autoplay));
+    } catch (e) {
+      /* private mode */
+    }
     return autoplay;
   }
 
@@ -530,20 +593,35 @@ var Player = (function () {
   /* Playback ended on its own. Ask what follows before tearing anything down,
      because with nothing to offer this is an ordinary stop. */
   function offerNext() {
-    if (!onNext || !item) { stop('stopped'); return; }
+    if (!onNext || !item) {
+      stop('stopped');
+      return;
+    }
     const asked = item;
-    onNext(item).then((found) => {
-      if (item !== asked) return;            // stopped while we were asking
-      if (!found || !found.episode) { stop('stopped'); return; }
-      showNext(found);
-    }, () => { stop('stopped'); });
+    onNext(item).then(
+      (found) => {
+        if (item !== asked) return; // stopped while we were asking
+        if (!found || !found.episode) {
+          stop('stopped');
+          return;
+        }
+        showNext(found);
+      },
+      () => {
+        stop('stopped');
+      },
+    );
   }
 
   /* "S1 E5 · Sundown" — where it sits in the series, then what it is called. */
   function nextLabel(ep) {
-    return `S${ep.parentIndex === undefined ? '?' : ep.parentIndex}` +
-           ' E' + (ep.index === undefined ? '?' : ep.index) +
-           '   ·   ' + (ep.title || '');
+    return (
+      `S${ep.parentIndex === undefined ? '?' : ep.parentIndex}` +
+      ' E' +
+      (ep.index === undefined ? '?' : ep.index) +
+      '   ·   ' +
+      (ep.title || '')
+    );
   }
 
   function showNext(found) {
@@ -561,14 +639,16 @@ var Player = (function () {
     paintNext();
     nextEl.classList.remove('hidden');
     if (nextLeft > 0) nextTimer = setInterval(tickNext, 1000);
-    UI.debug(`up next: ${nextLabel(ep)}` +
-             (nextLeft > 0 ? ` in ${nextLeft}s` : ' — waiting for OK'));
+    UI.debug(
+      `up next: ${nextLabel(ep)}` + (nextLeft > 0 ? ` in ${nextLeft}s` : ' — waiting for OK'),
+    );
   }
 
   function paintNext() {
-    nextHintEl.textContent = nextLeft > 0
-      ? `Playing in ${nextLeft}s   ·   OK now   ·   BACK to stop`
-      : 'OK to play   ·   BACK to stop';
+    nextHintEl.textContent =
+      nextLeft > 0
+        ? `Playing in ${nextLeft}s   ·   OK now   ·   BACK to stop`
+        : 'OK to play   ·   BACK to stop';
   }
 
   function tickNext() {
@@ -592,7 +672,10 @@ var Player = (function () {
     const ep = next && next.episode;
     const go = onPlayNext;
     clearNext();
-    if (!ep || !go) { stop('stopped'); return; }
+    if (!ep || !go) {
+      stop('stopped');
+      return;
+    }
     /* The finished episode is reported stopped before the next one starts — a
        session left open on a server we do not own is the rudest thing this app
        can do. Quietly, or onExit would bounce us out mid-handover. */
@@ -601,9 +684,16 @@ var Player = (function () {
   }
 
   function nextKey(code) {
-    if (code === 13 || code === 415 || code === 19 || code === 179) { takeNext(); return true; }
-    if (UI.isBack(code) || code === 413) { clearNext(); stop('stopped'); return true; }
-    return true;                             // the offer swallows everything else
+    if (code === 13 || code === 415 || code === 19 || code === 179) {
+      takeNext();
+      return true;
+    }
+    if (UI.isBack(code) || code === 413) {
+      clearNext();
+      stop('stopped');
+      return true;
+    }
+    return true; // the offer swallows everything else
   }
 
   /* ---------- subtitles ----------
@@ -624,34 +714,41 @@ var Player = (function () {
     subEl.classList.add('hidden');
     currentSub = stream || null;
     wantedLang = stream ? String(stream.languageCode || '') : null;
-    if (!stream) { paintControls(); return; }
+    if (!stream) {
+      paintControls();
+      return;
+    }
 
     if (!Media.isTextSub(stream)) {
       /* A picture of words can only reach the screen by being painted into the
          video, which is a transcode — and on a 4K file that is the one thing
          that gets the session killed. So it is refused, by name. */
       currentSub = null;
-      subNote = String(stream.codec || '').toUpperCase() +
-                ' is an image track — it would need the server to burn it in';
+      subNote =
+        String(stream.codec || '').toUpperCase() +
+        ' is an image track — it would need the server to burn it in';
       paintControls();
       return;
     }
 
     subNote = 'loading…';
     paintControls();
-    Plex.subtitles(server, stream).then((text) => {
-      if (token !== subToken) return;
-      cues = Subs.parse(text);
-      subNote = cues.length ? '' : 'the track came back empty';
-      UI.debug(`subtitles: ${Media.subLabel(stream)} · ${cues.length} cues`);
-      paintControls();
-      paintSub();
-    }, (e) => {
-      if (token !== subToken) return;
-      currentSub = null;
-      subNote = `could not be fetched (${e.message.split(' -> ').pop()})`;
-      paintControls();
-    });
+    Plex.subtitles(server, stream).then(
+      (text) => {
+        if (token !== subToken) return;
+        cues = Subs.parse(text);
+        subNote = cues.length ? '' : 'the track came back empty';
+        UI.debug(`subtitles: ${Media.subLabel(stream)} · ${cues.length} cues`);
+        paintControls();
+        paintSub();
+      },
+      (e) => {
+        if (token !== subToken) return;
+        currentSub = null;
+        subNote = `could not be fetched (${e.message.split(' -> ').pop()})`;
+        paintControls();
+      },
+    );
   }
 
   function paintSub() {
@@ -683,16 +780,30 @@ var Player = (function () {
          is instant; otherwise it restarts against a stream the server has to
          mux, and knowing that before you press OK is the difference between a
          choice and a surprise. */
-      note: (currentAudio && String(currentAudio.id) === String(st.id)) ? ''
-        : (panelIndexOf(st) >= 0 ? '' : 'restarts — the server has to mux this one'),
+      note:
+        currentAudio && String(currentAudio.id) === String(st.id)
+          ? ''
+          : panelIndexOf(st) >= 0
+            ? ''
+            : 'restarts — the server has to mux this one',
       on: !!(currentAudio && String(currentAudio.id) === String(st.id)),
-      value: () => { chooseAudio(st); }
+      value: () => {
+        chooseAudio(st);
+      },
     };
   }
 
   function subRows() {
     const list = Media.subtitleTracks(currentPart);
-    const out = [{ label: 'Off', on: !currentSub, value: () => { setSub(null); } }];
+    const out = [
+      {
+        label: 'Off',
+        on: !currentSub,
+        value: () => {
+          setSub(null);
+        },
+      },
+    ];
     for (let i = 0; i < list.length; i++) out.push(subRow(list[i]));
     return out;
   }
@@ -702,7 +813,9 @@ var Player = (function () {
       label: Media.subLabel(st),
       note: Media.isTextSub(st) ? '' : 'image track — cannot be shown without a transcode',
       on: !!(currentSub && String(currentSub.id) === String(st.id)),
-      value: () => { setSub(st); }
+      value: () => {
+        setSub(st);
+      },
     };
   }
 
@@ -730,7 +843,7 @@ var Player = (function () {
       value: () => {
         if (n === mediaIndex && !maxBitrate) return;
         switchTo({ mediaIndex: n, maxBitrate: null }, Media.versionLabel(media));
-      }
+      },
     };
   }
 
@@ -754,7 +867,7 @@ var Player = (function () {
       value: () => {
         if ((q.bitrate || null) === maxBitrate) return;
         switchTo({ maxBitrate: q.bitrate || null }, q.label);
-      }
+      },
     };
   }
 
@@ -775,16 +888,25 @@ var Player = (function () {
      panel opens and reflects where playback has got to. */
   const PANELS = {
     audio: { label: 'Audio', rows: audioRows },
-    subs: { label: 'Subtitles', rows: subRows,
-            note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.' },
-    quality: { label: 'Quality', rows: qualityRows,
-               note: 'Anything but Original asks the server to re-encode.' }
+    subs: {
+      label: 'Subtitles',
+      rows: subRows,
+      note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.',
+    },
+    quality: {
+      label: 'Quality',
+      rows: qualityRows,
+      note: 'Anything but Original asks the server to re-encode.',
+    },
   };
 
   /* Open the panel belonging to one of the four right-hand buttons, anchored
      over it and clamped so the last button does not push it off the screen. */
   function openPanelFor(id) {
-    if (id === 'chapters') { openChapters(); return; }
+    if (id === 'chapters') {
+      openChapters();
+      return;
+    }
     openPanel = id;
     paintControls();
     const btn = document.getElementById(`osd-ctl-${id}`);
@@ -793,8 +915,14 @@ var Player = (function () {
     Menu.open({
       host: menuEl,
       tabs: [PANELS[id]],
-      onChoose: (act) => { act(); },
-      onClose: () => { openPanel = null; paintControls(); showOsd(); }
+      onChoose: (act) => {
+        act();
+      },
+      onClose: () => {
+        openPanel = null;
+        paintControls();
+        showOsd();
+      },
     });
     showOsd();
   }
@@ -808,7 +936,10 @@ var Player = (function () {
 
   function openChapters() {
     const list = Media.chapters(item);
-    if (!list.length) { UI.toast('This file has no chapters'); return; }
+    if (!list.length) {
+      UI.toast('This file has no chapters');
+      return;
+    }
     openPanel = 'chapters';
     chapSel = Math.max(0, list.indexOf(chapterAt(list, target())));
     paintChapters();
@@ -831,31 +962,48 @@ var Player = (function () {
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
       shot = c.thumb ? Plex.photoUrl(server, c.thumb, 240, 135) : '';
-      html += `<div class="osd-chap${i === chapSel ? ' on' : ''}">` +
-              '<div class="osd-chap-shot"' +
-              (shot ? ` style="background-image: url('${shot}')"` : '') + '>' +
-              '<div class="osd-chap-time">' + UI.escapeHtml(fmt(c.start)) + '</div>' +
-              '</div>' +
-              '<div class="osd-chap-title">' + UI.escapeHtml(c.title) + '</div>' +
-              '</div>';
+      html +=
+        `<div class="osd-chap${i === chapSel ? ' on' : ''}">` +
+        '<div class="osd-chap-shot"' +
+        (shot ? ` style="background-image: url('${shot}')"` : '') +
+        '>' +
+        '<div class="osd-chap-time">' +
+        UI.escapeHtml(fmt(c.start)) +
+        '</div>' +
+        '</div>' +
+        '<div class="osd-chap-title">' +
+        UI.escapeHtml(c.title) +
+        '</div>' +
+        '</div>';
     }
     chapInner.innerHTML = html;
     const first = UI.clamp(chapSel - 2, 0, Math.max(0, list.length - CARDS_SHOWN));
-    chapInner.style.webkitTransform = chapInner.style.transform =
-      `translateX(${-first * CARD_W}px)`;
+    chapInner.style.webkitTransform =
+      chapInner.style.transform = `translateX(${-first * CARD_W}px)`;
   }
 
   function chapterKey(code) {
     const list = Media.chapters(item);
-    if (code === 37) { chapSel = (chapSel + list.length - 1) % list.length; paintChapters(); return true; }
-    if (code === 39) { chapSel = (chapSel + 1) % list.length; paintChapters(); return true; }
+    if (code === 37) {
+      chapSel = (chapSel + list.length - 1) % list.length;
+      paintChapters();
+      return true;
+    }
+    if (code === 39) {
+      chapSel = (chapSel + 1) % list.length;
+      paintChapters();
+      return true;
+    }
     if (code === 13 || code === 415 || code === 19) {
       seekTo(list[chapSel].start);
       closeChapters();
       return true;
     }
-    if (code === 40 || UI.isBack(code) || code === 413) { closeChapters(); return true; }
-    return true;                       // the rail swallows everything else
+    if (code === 40 || UI.isBack(code) || code === 413) {
+      closeChapters();
+      return true;
+    }
+    return true; // the rail swallows everything else
   }
 
   /* Another version, a quality cap, and an audio track the panel will not
@@ -892,15 +1040,27 @@ var Player = (function () {
     const code = err ? err.code : 0;
     const detail = err && err.message ? `  ·  ${err.message}` : '';
     if (code === 1) return `The stream was aborted.${detail}`;
-    if (code === 2) return 'The network dropped the stream — the server stopped ' +
-                           'answering part way through.' + detail;
-    if (code === 3) return 'The panel could not decode this stream (media error 3). ' +
-                           'The server said it would direct play, so the declared ' +
-                           'profile in js/plex.js claims something this panel cannot ' +
-                           'actually decode.' + detail;
-    if (code === 4) return 'The stream would not open (media error 4) — the server ' +
-                           'refused the request, or the container is one the panel ' +
-                           'will not accept at all.' + detail;
+    if (code === 2)
+      return (
+        'The network dropped the stream — the server stopped ' +
+        'answering part way through.' +
+        detail
+      );
+    if (code === 3)
+      return (
+        'The panel could not decode this stream (media error 3). ' +
+        'The server said it would direct play, so the declared ' +
+        'profile in js/plex.js claims something this panel cannot ' +
+        'actually decode.' +
+        detail
+      );
+    if (code === 4)
+      return (
+        'The stream would not open (media error 4) — the server ' +
+        'refused the request, or the container is one the panel ' +
+        'will not accept at all.' +
+        detail
+      );
     return `The stream failed (media error ${code}).${detail}`;
   }
 
@@ -912,11 +1072,16 @@ var Player = (function () {
     if (!Config.dev) return '';
     const codec = (media && media.videoCodec) || '?';
     const container = (media && media.container) || '?';
-    return '  ·  You are on the dev server, so this is a desktop browser, not ' +
-           'the B8. It is playing ' + String(codec).toUpperCase() + ' in ' +
-           String(container).toUpperCase() + ', and browsers do not decode AC3, ' +
-           'E-AC3, HEVC or Matroska the way the panel does. Judge playback on ' +
-           'the TV.';
+    return (
+      '  ·  You are on the dev server, so this is a desktop browser, not ' +
+      'the B8. It is playing ' +
+      String(codec).toUpperCase() +
+      ' in ' +
+      String(container).toUpperCase() +
+      ', and browsers do not decode AC3, ' +
+      'E-AC3, HEVC or Matroska the way the panel does. Judge playback on ' +
+      'the TV.'
+    );
   }
 
   function fail(msg) {
@@ -937,7 +1102,9 @@ var Player = (function () {
     resumeMs = opts.item.viewOffset || 0;
     clearNext();
 
-    stalls = 0; lowest = 999; startedAt = Date.now();
+    stalls = 0;
+    lowest = 999;
+    startedAt = Date.now();
     const url = opts.url || Plex.streamUrl(server, opts.part);
     osdTitle.textContent = opts.item.title || '';
     pending = null;
@@ -949,13 +1116,18 @@ var Player = (function () {
     transcoding = !!opts.transcode;
     forceStream = !!opts.forceStream;
     currentMedia = (item.Media && item.Media[mediaIndex]) || null;
-    marker = null; skipDismissed = null;
+    marker = null;
+    skipDismissed = null;
     skipEl.classList.add('hidden');
     Menu.close();
-    setFocus('none'); openPanel = null;
+    setFocus('none');
+    openPanel = null;
     chapEl.classList.add('hidden');
-    cues = []; currentSub = null; subNote = '';
-    subEl.classList.add('hidden'); subEl.textContent = '';
+    cues = [];
+    currentSub = null;
+    subNote = '';
+    subEl.classList.add('hidden');
+    subEl.textContent = '';
     subEl.setAttribute('data-cue', '');
     wantedLang = opts.subLang === undefined ? null : opts.subLang;
     paintControls();
@@ -965,7 +1137,7 @@ var Player = (function () {
     v.onloadedmetadata = () => {
       /* Only now does currentTime mean anything. Don't resume within half a
          minute of the end — that is a film you finished. */
-      if (resumeMs > 10000 && v.duration && resumeMs < (v.duration * 1000) - 30000) {
+      if (resumeMs > 10000 && v.duration && resumeMs < v.duration * 1000 - 30000) {
         v.currentTime = resumeMs / 1000;
       }
       paintTicks();
@@ -981,15 +1153,22 @@ var Player = (function () {
     };
     /* The track list is not always populated by loadedmetadata, so try again
        once the picture is actually running. */
-    v.onplaying = () => { applyChosenTrack(); showOsd(); };
+    v.onplaying = () => {
+      applyChosenTrack();
+      showOsd();
+    };
     /* 'waiting' is the panel telling us it has run dry. */
-    v.onwaiting = () => { stalls++; };
+    v.onwaiting = () => {
+      stalls++;
+    };
     v.ontimeupdate = () => {
       if (osdShowing()) paintOsd();
       paintSub();
       checkMarker();
     };
-    v.onended = () => { offerNext(); };
+    v.onended = () => {
+      offerNext();
+    };
     v.onerror = () => {
       fail(mediaErrorText(v.error) + laptopNote(currentMedia));
     };
@@ -1001,9 +1180,13 @@ var Player = (function () {
     v.src = url;
     v.load();
     showOsd();
-    UI.debug((transcoding ? 'playing (server converting' +
-              (maxBitrate ? ` at ${Media.bitrateLabel(maxBitrate)}` : '') + ') ' : 'playing ') +
-             String(url).split('?')[0]);
+    UI.debug(
+      (transcoding
+        ? 'playing (server converting' +
+          (maxBitrate ? ` at ${Media.bitrateLabel(maxBitrate)}` : '') +
+          ') '
+        : 'playing ') + String(url).split('?')[0],
+    );
 
     /* Ask directly rather than waiting on loadedmetadata, which need not fire
        on its own, and report a rejected play() rather than sitting on a black
@@ -1011,9 +1194,11 @@ var Player = (function () {
     const started = v.play();
     if (started && started.then) {
       started.then(null, (e) => {
-        fail(`The player refused to start: ${(e && (e.name + ' ' + e.message)) || 'unknown'}` +
-             '. If this is the TV, it is usually the media pipeline rejecting the ' +
-             'container rather than the codec.');
+        fail(
+          `The player refused to start: ${(e && e.name + ' ' + e.message) || 'unknown'}` +
+            '. If this is the TV, it is usually the media pipeline rejecting the ' +
+            'container rather than the codec.',
+        );
       });
     }
 
@@ -1035,7 +1220,9 @@ var Player = (function () {
       if (v.buffered && v.buffered.length) {
         ahead = Math.round(v.buffered.end(v.buffered.length - 1) - v.currentTime);
       }
-    } catch (e) { ahead = -1; }
+    } catch (e) {
+      ahead = -1;
+    }
 
     let dropped = v.webkitDroppedFrameCount;
     let decoded = v.webkitDecodedFrameCount;
@@ -1044,13 +1231,23 @@ var Player = (function () {
       dropped = q.droppedVideoFrames;
       decoded = q.totalVideoFrames;
     }
-    const frames = (decoded === undefined) ? 'frames n/a'
-      : (`dropped ${dropped}/${decoded}`);
+    const frames = decoded === undefined ? 'frames n/a' : `dropped ${dropped}/${decoded}`;
 
     if (ahead >= 0 && ahead < lowest) lowest = ahead;
 
-    return fmt(v.currentTime) + '  buffered +' + ahead + 's (low ' + lowest + 's)' +
-           '  stalls ' + stalls + '  ' + frames + (v.paused ? '  PAUSED' : '');
+    return (
+      fmt(v.currentTime) +
+      '  buffered +' +
+      ahead +
+      's (low ' +
+      lowest +
+      's)' +
+      '  stalls ' +
+      stalls +
+      '  ' +
+      frames +
+      (v.paused ? '  PAUSED' : '')
+    );
   }
 
   /* Said once when playback ends, because that is when the whole picture
@@ -1058,8 +1255,11 @@ var Player = (function () {
      the answer is the 1080p copy on the film page rather than anything here. */
   function summary() {
     const mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
-    return `played ${mins} min · ${stalls} stall${stalls === 1 ? '' : 's'}` +
-           ' · buffer low ' + (lowest === 999 ? '?' : lowest + 's');
+    return (
+      `played ${mins} min · ${stalls} stall${stalls === 1 ? '' : 's'}` +
+      ' · buffer low ' +
+      (lowest === 999 ? '?' : lowest + 's')
+    );
   }
 
   /* quiet: tear down without telling the caller we are done — used when
@@ -1068,11 +1268,13 @@ var Player = (function () {
   function stop(state, quiet) {
     if (!item) return;
     Menu.close();
-    setFocus('none'); openPanel = null;
+    setFocus('none');
+    openPanel = null;
     chapEl.classList.add('hidden');
     UI.debug(summary());
     report(state || 'stopped');
-    clearInterval(ticker); ticker = null;
+    clearInterval(ticker);
+    ticker = null;
     clearTimeout(osdTimer);
     clearTimeout(seekTimer);
     clearNext();
@@ -1087,15 +1289,26 @@ var Player = (function () {
     osd.classList.add('hidden');
     skipEl.classList.add('hidden');
     subEl.classList.add('hidden');
-    marker = null; cues = [];
+    marker = null;
+    cues = [];
     const done = quiet ? null : onExit;
-    item = null; server = null; onExit = null; onError = null; onSwitch = null;
-    onNext = null; onPlayNext = null;
-    currentPart = null; currentAudio = null; currentMedia = null; currentSub = null;
+    item = null;
+    server = null;
+    onExit = null;
+    onError = null;
+    onSwitch = null;
+    onNext = null;
+    onPlayNext = null;
+    currentPart = null;
+    currentAudio = null;
+    currentMedia = null;
+    currentSub = null;
     if (done) done();
   }
 
-  function playing() { return !!item; }
+  function playing() {
+    return !!item;
+  }
 
   function indexOfCtl(id) {
     const list = controls();
@@ -1115,20 +1328,39 @@ var Player = (function () {
      same aim-then-seek as a nudge, so holding ◀ still costs one range request;
      OK is what says "stop aiming and go there". */
   function barKey(code) {
-    if (code === 37) { seekBy(-NUDGE); return true; }
-    if (code === 39) { seekBy(NUDGE); return true; }
+    if (code === 37) {
+      seekBy(-NUDGE);
+      return true;
+    }
+    if (code === 39) {
+      seekBy(NUDGE);
+      return true;
+    }
     if (code === 13 || code === 415 || code === 19) {
-      if (marker) { takeSkip(); return true; }
+      if (marker) {
+        takeSkip();
+        return true;
+      }
       applySeek();
       return true;
     }
-    if (code === 40) { setFocus('row'); paintControls(); showOsd(); return true; }
-    if (UI.isBack(code) || code === 413) {
-      if (marker) { dismissSkip(); return true; }
-      setFocus('none'); paintControls(); showOsd();
+    if (code === 40) {
+      setFocus('row');
+      paintControls();
+      showOsd();
       return true;
     }
-    return false;                      // anything else is still playback's
+    if (UI.isBack(code) || code === 413) {
+      if (marker) {
+        dismissSkip();
+        return true;
+      }
+      setFocus('none');
+      paintControls();
+      showOsd();
+      return true;
+    }
+    return false; // anything else is still playback's
   }
 
   /* The control row has the four arrows once it has the focus; everything else
@@ -1137,21 +1369,47 @@ var Player = (function () {
      still dismisses it from the row. */
   function controlKey(code) {
     const n = controls().length;
-    if (code === 37) { ctl = (ctl + n - 1) % n; paintControls(); showOsd(); return true; }
-    if (code === 39) { ctl = (ctl + 1) % n; paintControls(); showOsd(); return true; }
+    if (code === 37) {
+      ctl = (ctl + n - 1) % n;
+      paintControls();
+      showOsd();
+      return true;
+    }
+    if (code === 39) {
+      ctl = (ctl + 1) % n;
+      paintControls();
+      showOsd();
+      return true;
+    }
     if (code === 13) {
       const c = controls()[ctl];
-      if (c.id) openPanelFor(c.id); else c.run();
+      if (c.id) openPanelFor(c.id);
+      else c.run();
       return true;
     }
-    if (code === 38) { setFocus('bar'); paintControls(); showOsd(); return true; }
-    if (code === 40) { setFocus('none'); paintControls(); showOsd(); return true; }
+    if (code === 38) {
+      setFocus('bar');
+      paintControls();
+      showOsd();
+      return true;
+    }
+    if (code === 40) {
+      setFocus('none');
+      paintControls();
+      showOsd();
+      return true;
+    }
     if (UI.isBack(code) || code === 413) {
-      if (marker) { dismissSkip(); return true; }
-      setFocus('none'); paintControls(); showOsd();
+      if (marker) {
+        dismissSkip();
+        return true;
+      }
+      setFocus('none');
+      paintControls();
+      showOsd();
       return true;
     }
-    return false;                      // anything else is still playback's
+    return false; // anything else is still playback's
   }
 
   function key(code) {
@@ -1162,60 +1420,89 @@ var Player = (function () {
     if (Menu.isOpen()) return Menu.key(code);
 
     /* Digits jump by tenths — the cheapest way past a first act there is. */
-    if (code >= 48 && code <= 57) { jumpToTenth(code - 48); return true; }
+    if (code >= 48 && code <= 57) {
+      jumpToTenth(code - 48);
+      return true;
+    }
 
     if (focus === 'bar' && barKey(code)) return true;
     if (focus === 'row' && controlKey(code)) return true;
 
     switch (code) {
-      case 13: case 415: case 19: case 179:      // OK / play / pause
+      case 13:
+      case 415:
+      case 19:
+      case 179: // OK / play / pause
         /* While the skip prompt is up, OK takes it. That is the one moment the
            button means something other than pause, and it is the moment you
            are reaching for it. */
-        if (marker) { takeSkip(); return true; }
+        if (marker) {
+          takeSkip();
+          return true;
+        }
         togglePlay();
         return true;
-      case 37:                                    // left
+      case 37: // left
         seekBy(-NUDGE);
         return true;
-      case 39:                                    // right
+      case 39: // right
         seekBy(NUDGE);
         return true;
-      case 412:                                   // rewind
+      case 412: // rewind
         seekBy(-JUMP);
         return true;
-      case 417:                                   // fast forward
+      case 417: // fast forward
         seekBy(JUMP);
         return true;
-      case 38:                                    // up — the trackbar
+      case 38: // up — the trackbar
         setFocus('bar');
         paintControls();
         showOsd();
         return true;
-      case 40:                                    // down — the control row
+      case 40: // down — the control row
         setFocus('row');
         paintControls();
         showOsd();
         return true;
-      case 33:                                    // channel up — next chapter
+      case 33: // channel up — next chapter
         chapterStep(1);
         return true;
-      case 34:                                    // channel down — previous chapter
+      case 34: // channel down — previous chapter
         chapterStep(-1);
         return true;
-      case 403: focusPanel('audio'); return true;     // red
-      case 404: focusPanel('subs'); return true;      // green
-      case 405: focusPanel('quality'); return true;   // yellow
-      case 406: focusPanel('chapters'); return true;  // blue
-      case 461: case 27: case 8: case 413:        // back / stop
-        if (marker) { dismissSkip(); return true; }
+      case 403:
+        focusPanel('audio');
+        return true; // red
+      case 404:
+        focusPanel('subs');
+        return true; // green
+      case 405:
+        focusPanel('quality');
+        return true; // yellow
+      case 406:
+        focusPanel('chapters');
+        return true; // blue
+      case 461:
+      case 27:
+      case 8:
+      case 413: // back / stop
+        if (marker) {
+          dismissSkip();
+          return true;
+        }
         stop('stopped');
         return true;
     }
     return false;
   }
 
-  return { play: play, stop: stop, playing: playing, key: key,
-           autoplaySeconds: autoplaySeconds, cycleAutoplay: cycleAutoplay,
-           autoplayLabel: autoplayLabel };
+  return {
+    play: play,
+    stop: stop,
+    playing: playing,
+    key: key,
+    autoplaySeconds: autoplaySeconds,
+    cycleAutoplay: cycleAutoplay,
+    autoplayLabel: autoplayLabel,
+  };
 })();

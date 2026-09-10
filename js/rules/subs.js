@@ -21,22 +21,26 @@ var Subs = (function () {
     const m = String(stamp).match(/(?:(\d+):)?(\d{1,2}):(\d{1,2})(?:[.,](\d{1,3}))?/);
     if (!m) return null;
     const frac = m[4] ? parseInt(m[4], 10) / Math.pow(10, m[4].length) : 0;
-    return (m[1] ? parseInt(m[1], 10) : 0) * 3600 +
-           parseInt(m[2], 10) * 60 + parseInt(m[3], 10) + frac;
+    return (
+      (m[1] ? parseInt(m[1], 10) : 0) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10) + frac
+    );
   }
 
   /* Markup a TV has no business rendering: SRT's HTML-ish tags, ASS override
      blocks that survive a conversion, and the position hints WebVTT puts after
      the timestamp. Plain text is what the overlay draws. */
   function strip(line) {
-    return line.replace(/<[^>]*>/g, '')
-               .replace(/\{\\[^}]*\}/g, '')
-               .replace(/\s+$/, '');
+    return line
+      .replace(/<[^>]*>/g, '')
+      .replace(/\{\\[^}]*\}/g, '')
+      .replace(/\s+$/, '');
   }
 
   /* Cues, in time order: [{ start, end, text }] in seconds. */
   function parse(text) {
-    const lines = String(text || '').replace(/\r/g, '').split('\n');
+    const lines = String(text || '')
+      .replace(/\r/g, '')
+      .split('\n');
     const cues = [];
     let start;
     let end;
@@ -56,15 +60,19 @@ var Subs = (function () {
         if (line.replace(/\s/g, '') === '') break;
         /* A cue number on its own line belongs to the NEXT cue, so stop before
            swallowing it — otherwise every cue ends with a stray digit. */
-        if (/^\d+$/.test(line.trim()) && lines[i + 1] &&
-            lines[i + 1].indexOf('-->') >= 0) { i--; break; }
+        if (/^\d+$/.test(line.trim()) && lines[i + 1] && lines[i + 1].indexOf('-->') >= 0) {
+          i--;
+          break;
+        }
         line = strip(line);
         if (line !== '') body.push(line);
       }
       if (body.length) cues.push({ start: start, end: end, text: body.join('\n') });
     }
 
-    cues.sort((a, b) => { return a.start - b.start; });
+    cues.sort((a, b) => {
+      return a.start - b.start;
+    });
     return cues;
   }
 
@@ -75,7 +83,8 @@ var Subs = (function () {
     let hi = cues.length;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (cues[mid].start <= t) lo = mid + 1; else hi = mid;
+      if (cues[mid].start <= t) lo = mid + 1;
+      else hi = mid;
     }
     return lo;
   }
@@ -83,7 +92,7 @@ var Subs = (function () {
   /* What should be on screen at t, or '' for nothing. Cues overlap — two
      speakers, or a sign translated over dialogue — so this collects every one
      still open rather than the newest. */
-  const OVERLAP = 12;                     // how far back an open cue can start
+  const OVERLAP = 12; // how far back an open cue can start
 
   function textAt(cues, t) {
     if (!cues || !cues.length) return '';
@@ -99,4 +108,4 @@ var Subs = (function () {
   return { parse: parse, textAt: textAt, seconds: seconds };
 })();
 
-if (typeof module !== 'undefined') module.exports = Subs;   // for the unit tests
+if (typeof module !== 'undefined') module.exports = Subs; // for the unit tests

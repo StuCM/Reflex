@@ -24,43 +24,185 @@
 'use strict';
 
 const ADJECTIVES = [
-  'Absent', 'Amber', 'Ancient', 'Bitter', 'Blue', 'Broken', 'Careless',
-  'Certain', 'Cold', 'Crimson', 'Distant', 'Eastern', 'Empty', 'Endless',
-  'Faint', 'Final', 'Golden', 'Grey', 'Hidden', 'Hollow', 'Idle', 'Iron',
-  'Kindly', 'Last', 'Level', 'Lonely', 'Long', 'Loud', 'Narrow', 'Northern',
-  'Open', 'Patient', 'Quiet', 'Rapid', 'Roman', 'Salt', 'Second', 'Silent',
-  'Slow', 'Small', 'Southern', 'Sudden', 'Tall', 'Third', 'Tidal', 'Uneasy',
-  'Vacant', 'Warm', 'Western', 'Winter', 'Yellow'
+  'Absent',
+  'Amber',
+  'Ancient',
+  'Bitter',
+  'Blue',
+  'Broken',
+  'Careless',
+  'Certain',
+  'Cold',
+  'Crimson',
+  'Distant',
+  'Eastern',
+  'Empty',
+  'Endless',
+  'Faint',
+  'Final',
+  'Golden',
+  'Grey',
+  'Hidden',
+  'Hollow',
+  'Idle',
+  'Iron',
+  'Kindly',
+  'Last',
+  'Level',
+  'Lonely',
+  'Long',
+  'Loud',
+  'Narrow',
+  'Northern',
+  'Open',
+  'Patient',
+  'Quiet',
+  'Rapid',
+  'Roman',
+  'Salt',
+  'Second',
+  'Silent',
+  'Slow',
+  'Small',
+  'Southern',
+  'Sudden',
+  'Tall',
+  'Third',
+  'Tidal',
+  'Uneasy',
+  'Vacant',
+  'Warm',
+  'Western',
+  'Winter',
+  'Yellow',
 ];
 
 const NOUNS = [
-  'Anchor', 'Argument', 'Bridge', 'Cargo', 'Circuit', 'Coast', 'Compass',
-  'Corridor', 'Crossing', 'Current', 'Dispatch', 'Engine', 'Estate', 'Ferry',
-  'Garden', 'Harbour', 'Highway', 'Hotel', 'Inventory', 'Junction', 'Ladder',
-  'Lantern', 'Letter', 'Machine', 'Meridian', 'Motel', 'Orchard', 'Passage',
-  'Pattern', 'Pier', 'Quarry', 'Radio', 'Railway', 'Reservoir', 'Signal',
-  'Station', 'Summer', 'Terminal', 'Tower', 'Traveller', 'Tunnel', 'Valley',
-  'Verdict', 'Village', 'Voyage', 'Wharf', 'Window', 'Winter', 'Witness'
+  'Anchor',
+  'Argument',
+  'Bridge',
+  'Cargo',
+  'Circuit',
+  'Coast',
+  'Compass',
+  'Corridor',
+  'Crossing',
+  'Current',
+  'Dispatch',
+  'Engine',
+  'Estate',
+  'Ferry',
+  'Garden',
+  'Harbour',
+  'Highway',
+  'Hotel',
+  'Inventory',
+  'Junction',
+  'Ladder',
+  'Lantern',
+  'Letter',
+  'Machine',
+  'Meridian',
+  'Motel',
+  'Orchard',
+  'Passage',
+  'Pattern',
+  'Pier',
+  'Quarry',
+  'Radio',
+  'Railway',
+  'Reservoir',
+  'Signal',
+  'Station',
+  'Summer',
+  'Terminal',
+  'Tower',
+  'Traveller',
+  'Tunnel',
+  'Valley',
+  'Verdict',
+  'Village',
+  'Voyage',
+  'Wharf',
+  'Window',
+  'Winter',
+  'Witness',
 ];
 
 const FIRST_NAMES = [
-  'Alma', 'Bernard', 'Cissy', 'Dara', 'Edwin', 'Fenella', 'Gordon', 'Hester',
-  'Ivor', 'Juno', 'Keir', 'Lorna', 'Magnus', 'Nell', 'Orla', 'Peregrine',
-  'Quentin', 'Rosalind', 'Silas', 'Tamsin', 'Ulric', 'Verity', 'Wilf', 'Yvonne'
+  'Alma',
+  'Bernard',
+  'Cissy',
+  'Dara',
+  'Edwin',
+  'Fenella',
+  'Gordon',
+  'Hester',
+  'Ivor',
+  'Juno',
+  'Keir',
+  'Lorna',
+  'Magnus',
+  'Nell',
+  'Orla',
+  'Peregrine',
+  'Quentin',
+  'Rosalind',
+  'Silas',
+  'Tamsin',
+  'Ulric',
+  'Verity',
+  'Wilf',
+  'Yvonne',
 ];
 
 const LAST_NAMES = [
-  'Ackroyd', 'Baird', 'Cattermole', 'Dunphy', 'Eastwick', 'Fairbairn',
-  'Gallacher', 'Hollingsworth', 'Inchbald', 'Jardine', 'Kettleborough',
-  'Lachlan', 'Mainwaring', 'Nesbitt', 'Ollerenshaw', 'Pargeter', 'Quiller',
-  'Rutherford', 'Standish', 'Thirlwell', 'Urquhart', 'Vane', 'Wollaston'
+  'Ackroyd',
+  'Baird',
+  'Cattermole',
+  'Dunphy',
+  'Eastwick',
+  'Fairbairn',
+  'Gallacher',
+  'Hollingsworth',
+  'Inchbald',
+  'Jardine',
+  'Kettleborough',
+  'Lachlan',
+  'Mainwaring',
+  'Nesbitt',
+  'Ollerenshaw',
+  'Pargeter',
+  'Quiller',
+  'Rutherford',
+  'Standish',
+  'Thirlwell',
+  'Urquhart',
+  'Vane',
+  'Wollaston',
 ];
 
-const GENRES = ['Drama', 'Thriller', 'Comedy', 'Science Fiction', 'Crime',
-                'Documentary', 'Romance', 'Horror', 'Adventure', 'Mystery'];
+const GENRES = [
+  'Drama',
+  'Thriller',
+  'Comedy',
+  'Science Fiction',
+  'Crime',
+  'Documentary',
+  'Romance',
+  'Horror',
+  'Adventure',
+  'Mystery',
+];
 
-const STUDIOS = ['Harbour Pictures', 'Northlight', 'Verdigris Films',
-                 'Coldwater', 'Two Rivers', 'Ashgrove'];
+const STUDIOS = [
+  'Harbour Pictures',
+  'Northlight',
+  'Verdigris Films',
+  'Coldwater',
+  'Two Rivers',
+  'Ashgrove',
+];
 
 /* Certificates the fake library uses, weighted so the kids filter has both
    plenty to show and plenty to exclude. `null` means unrated, which must stay
@@ -68,18 +210,70 @@ const STUDIOS = ['Harbour Pictures', 'Northlight', 'Verdigris Films',
 const RATINGS = ['U', 'U', 'PG', 'PG', '12A', '12', '15', '15', '18', null];
 
 const PROFILES = [
-  { id: 'h264-eac3',  res: '1080', w: 1920, h: 1080, codec: 'h264', container: 'mkv',
-    audio: [['eac3', 6, ''], ['ac3', 6, ''], ['aac', 2, '']] },
-  { id: 'h264-aac',   res: '1080', w: 1920, h: 1080, codec: 'h264', container: 'mp4',
-    audio: [['aac', 2, '']] },
-  { id: 'hevc-eac3',  res: '4k',   w: 3840, h: 2160, codec: 'hevc', container: 'mkv',
-    audio: [['eac3', 6, '']] },
-  { id: 'hevc-mixed', res: '4k',   w: 3840, h: 2160, codec: 'hevc', container: 'mkv',
-    audio: [['truehd', 8, ''], ['ac3', 6, '']] },
-  { id: 'hevc-truehd', res: '4k',  w: 3840, h: 2160, codec: 'hevc', container: 'mkv',
-    audio: [['truehd', 8, ''], ['dca', 8, 'ma']] },
-  { id: 'vc1-avi',    res: '1080', w: 1920, h: 1080, codec: 'vc1', container: 'avi',
-    audio: [['mp3', 2, '']] }
+  {
+    id: 'h264-eac3',
+    res: '1080',
+    w: 1920,
+    h: 1080,
+    codec: 'h264',
+    container: 'mkv',
+    audio: [
+      ['eac3', 6, ''],
+      ['ac3', 6, ''],
+      ['aac', 2, ''],
+    ],
+  },
+  {
+    id: 'h264-aac',
+    res: '1080',
+    w: 1920,
+    h: 1080,
+    codec: 'h264',
+    container: 'mp4',
+    audio: [['aac', 2, '']],
+  },
+  {
+    id: 'hevc-eac3',
+    res: '4k',
+    w: 3840,
+    h: 2160,
+    codec: 'hevc',
+    container: 'mkv',
+    audio: [['eac3', 6, '']],
+  },
+  {
+    id: 'hevc-mixed',
+    res: '4k',
+    w: 3840,
+    h: 2160,
+    codec: 'hevc',
+    container: 'mkv',
+    audio: [
+      ['truehd', 8, ''],
+      ['ac3', 6, ''],
+    ],
+  },
+  {
+    id: 'hevc-truehd',
+    res: '4k',
+    w: 3840,
+    h: 2160,
+    codec: 'hevc',
+    container: 'mkv',
+    audio: [
+      ['truehd', 8, ''],
+      ['dca', 8, 'ma'],
+    ],
+  },
+  {
+    id: 'vc1-avi',
+    res: '1080',
+    w: 1920,
+    h: 1080,
+    codec: 'vc1',
+    container: 'avi',
+    audio: [['mp3', 2, '']],
+  },
 ];
 
 /* Weighted so the awkward cases are a minority but always present: roughly
@@ -98,7 +292,9 @@ function rand(seed) {
   };
 }
 
-function pick(rng, list) { return list[Math.floor(rng() * list.length)]; }
+function pick(rng, list) {
+  return list[Math.floor(rng() * list.length)];
+}
 
 /* One version of one item: what the server says it holds, minus the streams,
    which only appear on the full metadata payload. */
@@ -113,14 +309,21 @@ function mediaFor(profile, ratingKey, duration) {
     height: profile.h,
     duration: duration,
     bitrate: profile.res === '4k' ? 48000 : 9000,
-    Part: [{
-      id: Number(ratingKey) + 500000,
-      key: '/library/parts/' + (Number(ratingKey) + 500000) + '/' +
-           ratingKey + '/file.' + profile.container,
-      container: profile.container,
-      duration: duration,
-      size: profile.res === '4k' ? 62000000000 : 9000000000
-    }]
+    Part: [
+      {
+        id: Number(ratingKey) + 500000,
+        key:
+          '/library/parts/' +
+          (Number(ratingKey) + 500000) +
+          '/' +
+          ratingKey +
+          '/file.' +
+          profile.container,
+        container: profile.container,
+        duration: duration,
+        size: profile.res === '4k' ? 62000000000 : 9000000000,
+      },
+    ],
   };
 }
 
@@ -128,14 +331,17 @@ function mediaFor(profile, ratingKey, duration) {
    servers agree on all of this, which is what makes deduplication possible. */
 function makeFilm(i) {
   const rng = rand(i * 2654435761);
-  const title = pick(rng, ADJECTIVES) + ' ' + pick(rng, NOUNS) +
-                (rng() < 0.12 ? ' ' + (2 + Math.floor(rng() * 3)) : '');
+  const title =
+    pick(rng, ADJECTIVES) +
+    ' ' +
+    pick(rng, NOUNS) +
+    (rng() < 0.12 ? ' ' + (2 + Math.floor(rng() * 3)) : '');
   const cast = [];
   const castCount = 4 + Math.floor(rng() * 6);
   for (let n = 0; n < castCount; n++) {
     cast.push({
       name: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
-      role: pick(rng, FIRST_NAMES) + (rng() < 0.3 ? ' ' + pick(rng, LAST_NAMES) : '')
+      role: pick(rng, FIRST_NAMES) + (rng() < 0.3 ? ' ' + pick(rng, LAST_NAMES) : ''),
     });
   }
   const genres = [pick(rng, GENRES)];
@@ -151,19 +357,34 @@ function makeFilm(i) {
     year: year,
     duration: (78 + Math.floor(rng() * 92)) * 60000,
     contentRating: pick(rng, RATINGS),
-    tagline: 'A ' + pick(rng, ADJECTIVES).toLowerCase() + ' ' +
-             pick(rng, NOUNS).toLowerCase() + ', and no way back.',
+    tagline:
+      'A ' +
+      pick(rng, ADJECTIVES).toLowerCase() +
+      ' ' +
+      pick(rng, NOUNS).toLowerCase() +
+      ', and no way back.',
     studio: pick(rng, STUDIOS),
-    rating: Math.round((45 + rng() * 55)) / 10,          // critic, out of 10
-    audienceRating: Math.round((40 + rng() * 60)) / 10,
-    genres: genres.filter(function (g, n, a) { return a.indexOf(g) === n; }),
+    rating: Math.round(45 + rng() * 55) / 10, // critic, out of 10
+    audienceRating: Math.round(40 + rng() * 60) / 10,
+    genres: genres.filter(function (g, n, a) {
+      return a.indexOf(g) === n;
+    }),
     director: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
     writer: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
     cast: cast,
-    summary: title + ' (' + year + '). ' +
-             pick(rng, ADJECTIVES).toLowerCase() + ' ' + pick(rng, NOUNS).toLowerCase() +
-             ', a ' + pick(rng, NOUNS).toLowerCase() + ', and one long night in the ' +
-             pick(rng, NOUNS).toLowerCase() + '.'
+    summary:
+      title +
+      ' (' +
+      year +
+      '). ' +
+      pick(rng, ADJECTIVES).toLowerCase() +
+      ' ' +
+      pick(rng, NOUNS).toLowerCase() +
+      ', a ' +
+      pick(rng, NOUNS).toLowerCase() +
+      ', and one long night in the ' +
+      pick(rng, NOUNS).toLowerCase() +
+      '.',
   };
 }
 
@@ -194,7 +415,7 @@ function makeCopy(film, serverIndex) {
     studio: film.studio,
     rating: film.rating,
     audienceRating: film.audienceRating,
-    Media: [mediaFor(profile, ratingKey, film.duration)]
+    Media: [mediaFor(profile, ratingKey, film.duration)],
   };
   if (film.contentRating) item.contentRating = film.contentRating;
   item._profile = profile.id;
@@ -208,7 +429,7 @@ function makeCopy(film, serverIndex) {
    The pair is the case the detail page exists for — the 1080 copy direct plays
    and this one cannot. */
 function makeRemux(copy) {
-  const profile = PROFILES[4];                  // hevc-truehd
+  const profile = PROFILES[4]; // hevc-truehd
   const ratingKey = String(Number(copy.ratingKey) + 500000);
   const remux = JSON.parse(JSON.stringify(copy));
   remux.ratingKey = ratingKey;
@@ -226,10 +447,12 @@ function makeRemux(copy) {
    resolve one without keeping an index. */
 const EXTRA_KINDS = [
   { subtype: 'trailer', title: 'Official Trailer', minutes: 2 },
-  { subtype: 'behindTheScenes', title: 'Behind the Scenes', minutes: 7 }
+  { subtype: 'behindTheScenes', title: 'Behind the Scenes', minutes: 7 },
 ];
 
-function extraKey(parentKey, n) { return String(parentKey) + '00' + n; }
+function extraKey(parentKey, n) {
+  return String(parentKey) + '00' + n;
+}
 
 function makeExtra(parent, n, withStreams) {
   const kind = EXTRA_KINDS[n];
@@ -243,23 +466,40 @@ function makeExtra(parent, n, withStreams) {
     title: kind.title,
     duration: kind.minutes * 60000,
     thumb: parent.thumb,
-    Media: [{
-      id: Number(key),
-      videoResolution: '1080', videoCodec: 'h264', audioCodec: 'aac',
-      container: 'mp4', width: 1920, height: 1080, duration: kind.minutes * 60000,
-      Part: [{
-        id: Number(key) + 1,
-        key: '/library/parts/' + key + '/1600000000/extra.mp4',
-        container: 'mp4', duration: kind.minutes * 60000, size: 40000000
-      }]
-    }]
+    Media: [
+      {
+        id: Number(key),
+        videoResolution: '1080',
+        videoCodec: 'h264',
+        audioCodec: 'aac',
+        container: 'mp4',
+        width: 1920,
+        height: 1080,
+        duration: kind.minutes * 60000,
+        Part: [
+          {
+            id: Number(key) + 1,
+            key: '/library/parts/' + key + '/1600000000/extra.mp4',
+            container: 'mp4',
+            duration: kind.minutes * 60000,
+            size: 40000000,
+          },
+        ],
+      },
+    ],
   };
   /* Extras direct play: h264 + AAC stereo is inside the declared profile. */
   if (withStreams) {
     out.Media[0].Part[0].Stream = [
       { id: Number(key) * 10, streamType: 1, codec: 'h264', width: 1920, height: 1080 },
-      { id: Number(key) * 10 + 1, streamType: 2, codec: 'aac', channels: 2,
-        languageCode: 'eng', selected: true }
+      {
+        id: Number(key) * 10 + 1,
+        streamType: 2,
+        codec: 'aac',
+        channels: 2,
+        languageCode: 'eng',
+        selected: true,
+      },
     ];
   }
   return out;
@@ -273,26 +513,35 @@ function fullMetadata(item, film) {
 
   /* A show has no media of its own — only its episodes do. */
   if (!copy.Media || !copy.Media.length) {
-    copy.Genre = (film.genres || []).map(function (g) { return { tag: g }; });
+    copy.Genre = (film.genres || []).map(function (g) {
+      return { tag: g };
+    });
     copy.Role = (film.cast || []).map(function (c, n) {
-      return { tag: c.name, role: c.role,
-               thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
+      return {
+        tag: c.name,
+        role: c.role,
+        thumb: '/people/' + n + '/' + encodeURIComponent(c.name),
+      };
     });
     return copy;
   }
 
-  const profile = PROFILES.find(function (p) { return p.id === item._profile; });
+  const profile = PROFILES.find(function (p) {
+    return p.id === item._profile;
+  });
   const media = copy.Media[0];
 
-  const streams = [{
-    id: Number(item.ratingKey) * 10,
-    streamType: 1,
-    codec: media.videoCodec,
-    width: media.width,
-    height: media.height,
-    bitDepth: media.videoCodec === 'hevc' ? 10 : 8,
-    default: true
-  }];
+  const streams = [
+    {
+      id: Number(item.ratingKey) * 10,
+      streamType: 1,
+      codec: media.videoCodec,
+      width: media.width,
+      height: media.height,
+      bitDepth: media.videoCodec === 'hevc' ? 10 : 8,
+      default: true,
+    },
+  ];
   profile.audio.forEach(function (a, n) {
     const st = {
       id: Number(item.ratingKey) * 10 + 1 + n,
@@ -300,7 +549,7 @@ function fullMetadata(item, film) {
       codec: a[0],
       channels: a[1],
       languageCode: n === 2 ? 'fra' : 'eng',
-      selected: n === 0
+      selected: n === 0,
     };
     if (a[2]) st.profile = a[2];
     streams.push(st);
@@ -313,13 +562,16 @@ function fullMetadata(item, film) {
   [
     { n: 6, codec: 'subrip', lang: 'eng', name: 'English', selected: true },
     { n: 7, codec: 'subrip', lang: 'fre', name: 'French' },
-    { n: 8, codec: 'pgs', lang: 'eng', name: 'English (PGS)' }
+    { n: 8, codec: 'pgs', lang: 'eng', name: 'English (PGS)' },
   ].forEach(function (s) {
     streams.push({
-      id: base + s.n, streamType: 3, codec: s.codec,
-      languageCode: s.lang, language: s.name,
+      id: base + s.n,
+      streamType: 3,
+      codec: s.codec,
+      languageCode: s.lang,
+      language: s.name,
       key: '/library/streams/' + (base + s.n),
-      selected: !!s.selected
+      selected: !!s.selected,
     });
   });
   copy.Media[0].Part[0].Stream = streams;
@@ -337,35 +589,45 @@ function fullMetadata(item, film) {
   if (runtime) {
     copy.Marker = [
       { id: base + 90, type: 'intro', startTimeOffset: 5000, endTimeOffset: 12000 },
-      { id: base + 91, type: 'credits', final: true,
-        startTimeOffset: Math.max(0, runtime - 180000), endTimeOffset: runtime }
+      {
+        id: base + 91,
+        type: 'credits',
+        final: true,
+        startTimeOffset: Math.max(0, runtime - 180000),
+        endTimeOffset: runtime,
+      },
     ];
 
     /* Chapters, which the trackbar draws as ticks and the menu jumps between. */
     copy.Chapter = [];
     for (let c = 0; c < 8; c++) {
       copy.Chapter.push({
-        id: base + 70 + c, index: c + 1, tag: 'Chapter ' + (c + 1),
-        startTimeOffset: Math.round(runtime * c / 8),
-        endTimeOffset: Math.round(runtime * (c + 1) / 8),
+        id: base + 70 + c,
+        index: c + 1,
+        tag: 'Chapter ' + (c + 1),
+        startTimeOffset: Math.round((runtime * c) / 8),
+        endTimeOffset: Math.round((runtime * (c + 1)) / 8),
         /* Plex only carries a still where it indexed one, so half of these
            have none — the card has to look the same either way. */
-        thumb: c % 2 ? '/library/metadata/' + copy.ratingKey + '/chapterImages/' + (c + 1)
-                     : undefined
+        thumb:
+          c % 2 ? '/library/metadata/' + copy.ratingKey + '/chapterImages/' + (c + 1) : undefined,
       });
     }
   }
 
-  copy.Genre = (film.genres || []).map(function (g) { return { tag: g }; });
+  copy.Genre = (film.genres || []).map(function (g) {
+    return { tag: g };
+  });
   if (film.director) copy.Director = [{ tag: film.director }];
   if (film.writer) copy.Writer = [{ tag: film.writer }];
   copy.Role = (film.cast || []).map(function (c, n) {
-    return { tag: c.name, role: c.role,
-             thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
+    return { tag: c.name, role: c.role, thumb: '/people/' + n + '/' + encodeURIComponent(c.name) };
   });
   copy.Extras = {
     size: EXTRA_KINDS.length,
-    Metadata: EXTRA_KINDS.map(function (k, n) { return makeExtra(item, n, false); })
+    Metadata: EXTRA_KINDS.map(function (k, n) {
+      return makeExtra(item, n, false);
+    }),
   };
   return copy;
 }
@@ -387,7 +649,7 @@ function makeShow(i) {
   for (let n = 0; n < 4 + Math.floor(rng() * 5); n++) {
     cast.push({
       name: pick(rng, FIRST_NAMES) + ' ' + pick(rng, LAST_NAMES),
-      role: pick(rng, FIRST_NAMES)
+      role: pick(rng, FIRST_NAMES),
     });
   }
 
@@ -401,10 +663,17 @@ function makeShow(i) {
         number: en,
         title: pick(rng, ADJECTIVES) + ' ' + pick(rng, NOUNS),
         duration: (22 + Math.floor(rng() * 40)) * 60000,
-        summary: 'Series ' + sn + ', episode ' + en + '. ' +
-                 pick(rng, NOUNS).toLowerCase() + ', and a ' +
-                 pick(rng, NOUNS).toLowerCase() + '.',
-        airedAt: (2000 + sn) + '-0' + (1 + (en % 9)) + '-1' + (en % 10)
+        summary:
+          'Series ' +
+          sn +
+          ', episode ' +
+          en +
+          '. ' +
+          pick(rng, NOUNS).toLowerCase() +
+          ', and a ' +
+          pick(rng, NOUNS).toLowerCase() +
+          '.',
+        airedAt: 2000 + sn + '-0' + (1 + (en % 9)) + '-1' + (en % 10),
       });
     }
     seasons.push({ number: sn, episodes: episodes });
@@ -419,14 +688,20 @@ function makeShow(i) {
     year: year,
     contentRating: pick(rng, RATINGS),
     studio: pick(rng, STUDIOS),
-    rating: Math.round((45 + rng() * 55)) / 10,
-    audienceRating: Math.round((40 + rng() * 60)) / 10,
+    rating: Math.round(45 + rng() * 55) / 10,
+    audienceRating: Math.round(40 + rng() * 60) / 10,
     genres: [pick(rng, GENRES)],
     cast: cast,
     seasons: seasons,
-    summary: title + '. ' + pick(rng, ADJECTIVES).toLowerCase() + ' ' +
-             pick(rng, NOUNS).toLowerCase() + ', across ' + seasonCount +
-             ' series.'
+    summary:
+      title +
+      '. ' +
+      pick(rng, ADJECTIVES).toLowerCase() +
+      ' ' +
+      pick(rng, NOUNS).toLowerCase() +
+      ', across ' +
+      seasonCount +
+      ' series.',
   };
 }
 
@@ -457,10 +732,12 @@ function makeShowCopy(show, serverIndex) {
     thumb: '/library/metadata/' + showKey + '/thumb/' + (1600000000 + show.i),
     art: '/library/metadata/' + showKey + '/art/' + (1600000000 + show.i),
     childCount: show.seasons.length,
-    leafCount: show.seasons.reduce(function (n, s) { return n + s.episodes.length; }, 0),
+    leafCount: show.seasons.reduce(function (n, s) {
+      return n + s.episodes.length;
+    }, 0),
     viewedLeafCount: 0,
     _show: show.i,
-    _profile: profile.id
+    _profile: profile.id,
   };
   if (show.contentRating) item.contentRating = show.contentRating;
 
@@ -480,7 +757,7 @@ function makeShowCopy(show, serverIndex) {
       viewedLeafCount: 0,
       addedAt: item.addedAt,
       _show: show.i,
-      _season: season.number
+      _season: season.number,
     };
   });
 
@@ -490,9 +767,10 @@ function makeShowCopy(show, serverIndex) {
       const epKey = String(base + 700000 + show.i * 1000 + season.number * 100 + ep.number);
       /* One episode per show is deliberately a different encode, so a show that
          otherwise direct plays still has an awkward one in it. */
-      const epProfile = (ep.number === 3)
-        ? PROFILES[PROFILE_PICK[(show.i + serverIndex + 4) % PROFILE_PICK.length]]
-        : profile;
+      const epProfile =
+        ep.number === 3
+          ? PROFILES[PROFILE_PICK[(show.i + serverIndex + 4) % PROFILE_PICK.length]]
+          : profile;
       episodes.push({
         ratingKey: epKey,
         key: '/library/metadata/' + epKey,
@@ -518,7 +796,7 @@ function makeShowCopy(show, serverIndex) {
         art: item.art,
         Media: [mediaFor(epProfile, epKey, ep.duration)],
         _show: show.i,
-        _profile: epProfile.id
+        _profile: epProfile.id,
       });
     });
   });
@@ -531,7 +809,8 @@ function makeShowCopy(show, serverIndex) {
 /* Which films each server holds. Main has most of them; Backup has a third of
    Main's plus a slice of its own, so merging has to both deduplicate and add. */
 function holdings(count) {
-  const main = [], backup = [];
+  const main = [],
+    backup = [];
   for (let i = 0; i < count; i++) {
     if (i % 4 !== 3) main.push(i);
     if (i % 3 === 0 || i % 4 === 3) backup.push(i);
@@ -541,7 +820,12 @@ function holdings(count) {
 
 const SERVERS = [
   { index: 1, id: 'mockmachine00000000000000000000000000main', name: 'Main', prefix: '/__plex' },
-  { index: 2, id: 'mockmachine0000000000000000000000000backup', name: 'Backup', prefix: '/__plex2' }
+  {
+    index: 2,
+    id: 'mockmachine0000000000000000000000000backup',
+    name: 'Backup',
+    prefix: '/__plex2',
+  },
 ];
 
 function build(counts) {
@@ -559,11 +843,13 @@ function build(counts) {
   const showsHeld = holdings(showCount);
 
   function byTitle(a, b) {
-    return a.titleSort < b.titleSort ? -1 : (a.titleSort > b.titleSort ? 1 : 0);
+    return a.titleSort < b.titleSort ? -1 : a.titleSort > b.titleSort ? 1 : 0;
   }
 
   const servers = SERVERS.map(function (spec, n) {
-    const allFilms = filmsHeld[n].map(function (i) { return makeCopy(films[i], spec.index); });
+    const allFilms = filmsHeld[n].map(function (i) {
+      return makeCopy(films[i], spec.index);
+    });
     allFilms.sort(byTitle);
 
     /* Shows, and everything hanging off them. `children` is what
@@ -586,31 +872,47 @@ function build(counts) {
 
     const sections = [
       { key: '1', title: 'Films', type: 'movie', updatedAt: 1700000000 + n },
-      { key: '3', title: 'TV Shows', type: 'show', updatedAt: 1700000200 + n }
+      { key: '3', title: 'TV Shows', type: 'show', updatedAt: 1700000200 + n },
     ];
-    const items = { '1': allFilms, '3': allShows };
+    const items = { 1: allFilms, 3: allShows };
     /* Only Main keeps a second movie library, of 4K remuxes of films it also
        holds at 1080 — one film, two copies, one server, which is what folding
        the libraries into one Movies section has to survive. */
     if (n === 0) {
       sections.splice(1, 0, { key: '2', title: '4K Films', type: 'movie', updatedAt: 1700000100 });
-      items['2'] = allFilms.filter(function (m) { return m._profile === 'h264-eac3'; })
-                           .slice(0, 60).map(makeRemux);
+      items['2'] = allFilms
+        .filter(function (m) {
+          return m._profile === 'h264-eac3';
+        })
+        .slice(0, 60)
+        .map(makeRemux);
     }
 
     const byKey = {};
-    allFilms.forEach(function (m) { byKey[m.ratingKey] = m; });
+    allFilms.forEach(function (m) {
+      byKey[m.ratingKey] = m;
+    });
     /* The remuxes are copies in their own right, so metadata has to resolve
        them too — the detail page fetches every copy it lists. */
-    (items['2'] || []).forEach(function (m) { byKey[m.ratingKey] = m; });
-    allShows.forEach(function (m) { byKey[m.ratingKey] = m; });
+    (items['2'] || []).forEach(function (m) {
+      byKey[m.ratingKey] = m;
+    });
+    allShows.forEach(function (m) {
+      byKey[m.ratingKey] = m;
+    });
     Object.keys(children).forEach(function (k) {
-      children[k].forEach(function (child) { byKey[child.ratingKey] = child; });
+      children[k].forEach(function (child) {
+        byKey[child.ratingKey] = child;
+      });
     });
 
     const byGuid = {};
-    allFilms.forEach(function (m) { byGuid['tmdb://' + films[m._film].tmdb] = m; });
-    allShows.forEach(function (m) { byGuid['tmdb://' + shows[m._show].tmdb] = m; });
+    allFilms.forEach(function (m) {
+      byGuid['tmdb://' + films[m._film].tmdb] = m;
+    });
+    allShows.forEach(function (m) {
+      byGuid['tmdb://' + shows[m._show].tmdb] = m;
+    });
 
     return {
       spec: spec,
@@ -629,7 +931,7 @@ function build(counts) {
           if (m.contentRating) seen[m.contentRating] = true;
         });
         return Object.keys(seen).sort();
-      }
+      },
     };
   });
 
@@ -644,7 +946,9 @@ function build(counts) {
     shows: shows,
     servers: servers,
     subject: subject,
-    fullMetadata: function (item) { return fullMetadata(item, subject(item)); }
+    fullMetadata: function (item) {
+      return fullMetadata(item, subject(item));
+    },
   };
 }
 
@@ -654,10 +958,18 @@ function build(counts) {
    is the whole reason the app refuses it. */
 function stamp(t) {
   const ms = Math.round(t * 1000);
-  const two = function (n) { return (n < 10 ? '0' : '') + n; };
-  return two(Math.floor(ms / 3600000)) + ':' + two(Math.floor(ms / 60000) % 60) + ':' +
-         two(Math.floor(ms / 1000) % 60) + ',' +
-         ('00' + (ms % 1000)).slice(-3);
+  const two = function (n) {
+    return (n < 10 ? '0' : '') + n;
+  };
+  return (
+    two(Math.floor(ms / 3600000)) +
+    ':' +
+    two(Math.floor(ms / 60000) % 60) +
+    ':' +
+    two(Math.floor(ms / 1000) % 60) +
+    ',' +
+    ('00' + (ms % 1000)).slice(-3)
+  );
 }
 
 function subtitleFile(streamId) {
@@ -667,9 +979,16 @@ function subtitleFile(streamId) {
   let out = '';
   for (let i = 0; i < 400; i++) {
     const start = 0.2 + i * 3;
-    out += (i + 1) + '\n' + stamp(start) + ' --> ' + stamp(start + 2.6) + '\n' +
-           (french ? 'Réplique ' + (i + 1) + ' — en français'
-                   : 'Line ' + (i + 1) + ' — in English') + '\n\n';
+    out +=
+      i +
+      1 +
+      '\n' +
+      stamp(start) +
+      ' --> ' +
+      stamp(start + 2.6) +
+      '\n' +
+      (french ? 'Réplique ' + (i + 1) + ' — en français' : 'Line ' + (i + 1) + ' — in English') +
+      '\n\n';
   }
   return out;
 }
@@ -684,5 +1003,10 @@ function resolveExtra(byKey, key) {
   return makeExtra(parent, n, true);
 }
 
-module.exports = { build: build, PROFILES: PROFILES, SERVERS: SERVERS,
-                   resolveExtra: resolveExtra, subtitleFile: subtitleFile };
+module.exports = {
+  build: build,
+  PROFILES: PROFILES,
+  SERVERS: SERVERS,
+  resolveExtra: resolveExtra,
+  subtitleFile: subtitleFile,
+};

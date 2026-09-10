@@ -46,16 +46,15 @@ var Detail = (function () {
     'stroke="currentColor" stroke-width="16" stroke-linejoin="round">' +
     '<circle cx="128" cy="128" r="100"/><polygon points="106,84 178,128 106,172"/></svg>';
 
-
-  let item = null;                 // the merged entry
-  let copies = [];                 // one per server that has it
-  let sources = [];                // flattened: one per server × version
-  let extras = [];                 // trailers and the rest, playable in their own right
-  let sel = 0;                     // which source Play would use
-  let strip = 0;                   // 0 = the action row, 1 = the extras
-  let idx = 0;                     // within that row
-  let headMd = null;               // the first copy's metadata: what the header says
-  let onDeck = false;              // is this in Continue watching, and so clearable
+  let item = null; // the merged entry
+  let copies = []; // one per server that has it
+  let sources = []; // flattened: one per server × version
+  let extras = []; // trailers and the rest, playable in their own right
+  let sel = 0; // which source Play would use
+  let strip = 0; // 0 = the action row, 1 = the extras
+  let idx = 0; // within that row
+  let headMd = null; // the first copy's metadata: what the header says
+  let onDeck = false; // is this in Continue watching, and so clearable
   let opts = {};
   let generation = 0;
 
@@ -82,8 +81,11 @@ var Detail = (function () {
     onDeck = Browse.isOnDeck(entry);
     strip = 0;
     idx = 0;
-    verdict = null; chosenAudio = null; chosenSub = null;
-    maxBitrate = null; forceStream = false;
+    verdict = null;
+    chosenAudio = null;
+    chosenSub = null;
+    maxBitrate = null;
+    forceStream = false;
     rebuild();
 
     UI.show('detail');
@@ -115,12 +117,19 @@ var Detail = (function () {
     sources = [];
     copies.forEach((copy) => {
       if (copy.versions) {
-        copy.versions.forEach((v) => { sources.push(v); });
+        copy.versions.forEach((v) => {
+          sources.push(v);
+        });
         return;
       }
-      sources.push({ copy: copy, server: copy.server, mediaIndex: 0,
-                     media: (copy.item.Media && copy.item.Media[0]) || {},
-                     verdict: null, provisional: true });
+      sources.push({
+        copy: copy,
+        server: copy.server,
+        mediaIndex: 0,
+        media: (copy.item.Media && copy.item.Media[0]) || {},
+        verdict: null,
+        provisional: true,
+      });
     });
     /* Keep the user's choice pinned across a rebuild. */
     sel = 0;
@@ -141,7 +150,9 @@ var Detail = (function () {
   function addOtherVersions(md) {
     const gen = generation;
     const known = {};
-    copies.forEach((c) => { known[c.item._server + ':' + c.item.ratingKey] = true; });
+    copies.forEach((c) => {
+      known[c.item._server + ':' + c.item.ratingKey] = true;
+    });
 
     Servers.all().forEach((sv) => {
       Plex.allVersions(sv, md).then((found) => {
@@ -155,12 +166,22 @@ var Detail = (function () {
           copies.push({ item: other, server: Servers.of(other), versions: null });
           Meta.load(other).then((omd) => {
             if (gen !== generation || !omd) return;
-            expand(copies.find((c) => { return c.item === other; }), omd);
+            expand(
+              copies.find((c) => {
+                return c.item === other;
+              }),
+              omd,
+            );
           });
         });
         if (added) {
-          UI.debug(`found ${added} more version${added === 1 ? '' : 's'}` +
-                   ' of ' + md.title + ' on ' + sv.name);
+          UI.debug(
+            `found ${added} more version${added === 1 ? '' : 's'}` +
+              ' of ' +
+              md.title +
+              ' on ' +
+              sv.name,
+          );
           rebuild();
           render();
         }
@@ -175,20 +196,32 @@ var Detail = (function () {
   function addExtras(md) {
     if (extras.length || !md.Extras || !md.Extras.Metadata) return;
     extras = md.Extras.Metadata.slice(0, 6).map((x) => {
-      return { copy: { item: x }, server: Servers.of(x), mediaIndex: 0,
-               media: (x.Media && x.Media[0]) || {},
-               title: x.title || 'Extra', kind: x.subtype || x.extraType || '',
-               verdict: null, isExtra: true };
+      return {
+        copy: { item: x },
+        server: Servers.of(x),
+        mediaIndex: 0,
+        media: (x.Media && x.Media[0]) || {},
+        title: x.title || 'Extra',
+        kind: x.subtype || x.extraType || '',
+        verdict: null,
+        isExtra: true,
+      };
     });
     render();
     extras.forEach(check);
   }
 
   function expand(copy, md) {
-    const list = (md.Media && md.Media.length ? md.Media : [null]);
+    const list = md.Media && md.Media.length ? md.Media : [null];
     copy.versions = list.map((media, n) => {
-      return { copy: copy, server: copy.server, mediaIndex: n, media: media || {},
-               verdict: null, provisional: false };
+      return {
+        copy: copy,
+        server: copy.server,
+        mediaIndex: n,
+        media: media || {},
+        verdict: null,
+        provisional: false,
+      };
     });
     rebuild();
     render();
@@ -226,25 +259,26 @@ var Detail = (function () {
     const gen = generation;
     const src = sources[next.sel];
     if (!src) return;
-    Guard.check(src.copy.item, src.mediaIndex, next.audio && next.audio.id,
-                { maxBitrate: next.maxBitrate, forceStream: next.forceStream })
-      .then((v) => {
-        if (gen !== generation) return;
-        if (!v.ok) {
-          UI.toast(`Kept as it was — ${Guard.label(v)}`);
-          UI.debug(`choice refused: ${Guard.refusal(item, v)[1]}`);
-          return;
-        }
-        /* By stream id on the copy we came from, so a subtitle language chosen
+    Guard.check(src.copy.item, src.mediaIndex, next.audio && next.audio.id, {
+      maxBitrate: next.maxBitrate,
+      forceStream: next.forceStream,
+    }).then((v) => {
+      if (gen !== generation) return;
+      if (!v.ok) {
+        UI.toast(`Kept as it was — ${Guard.label(v)}`);
+        UI.debug(`choice refused: ${Guard.refusal(item, v)[1]}`);
+        return;
+      }
+      /* By stream id on the copy we came from, so a subtitle language chosen
            here survives a move to a different file with different ids. */
-        chosenSub = chosenSub ? Media.pickSubtitle(v.part, chosenSub.languageCode) : null;
-        sel = next.sel;
-        chosenAudio = next.audio || v.audio;
-        maxBitrate = next.maxBitrate || null;
-        forceStream = !!next.forceStream;
-        verdict = v;
-        render();
-      });
+      chosenSub = chosenSub ? Media.pickSubtitle(v.part, chosenSub.languageCode) : null;
+      sel = next.sel;
+      chosenAudio = next.audio || v.audio;
+      maxBitrate = next.maxBitrate || null;
+      forceStream = !!next.forceStream;
+      verdict = v;
+      render();
+    });
   }
 
   /* ---------- the action row ---------- */
@@ -262,26 +296,35 @@ var Detail = (function () {
     return Panel.features().audioTracks !== 'no';
   }
 
-  function part() { return verdict && verdict.part; }
+  function part() {
+    return verdict && verdict.part;
+  }
 
   function sourceRows() {
     return sources.map((src, n) => {
       let name = (src.server && src.server.name) || 'server';
       if (Servers.count() > 1 && Servers.isPreferred(src.server)) name += ' · preferred';
-      return { label: Media.versionLabel(src.media) + ' · ' + name,
-               note: Guard.label(src.verdict),
-               on: n === sel, value: n };
+      return {
+        label: Media.versionLabel(src.media) + ' · ' + name,
+        note: Guard.label(src.verdict),
+        on: n === sel,
+        value: n,
+      };
     });
   }
 
   function qualityRows() {
     const media = sources[sel] && sources[sel].media;
     return Media.qualities(media).map((q) => {
-      return { label: q.label,
-               note: q.bitrate && Media.isUHD(media)
-                 ? 'a 4K transcode is what gets the stream killed — this will be refused' : '',
-               on: (q.bitrate || null) === maxBitrate,
-               value: q.bitrate || null };
+      return {
+        label: q.label,
+        note:
+          q.bitrate && Media.isUHD(media)
+            ? 'a 4K transcode is what gets the stream killed — this will be refused'
+            : '',
+        on: (q.bitrate || null) === maxBitrate,
+        value: q.bitrate || null,
+      };
     });
   }
 
@@ -298,20 +341,28 @@ var Detail = (function () {
   function audioRows() {
     return Media.audioTracks(part()).map((st) => {
       const on = !!(chosenAudio && String(chosenAudio.id) === String(st.id));
-      return { label: Media.audioMenuLabel(st),
-               note: on ? '' : (needsMux(st) ? 'costs direct play — the server would mux it'
-                                             : 'keeps direct play'),
-               on: on, value: st };
+      return {
+        label: Media.audioMenuLabel(st),
+        note: on
+          ? ''
+          : needsMux(st)
+            ? 'costs direct play — the server would mux it'
+            : 'keeps direct play',
+        on: on,
+        value: st,
+      };
     });
   }
 
   function subRows() {
     const out = [{ label: 'Off', on: !chosenSub, value: null }];
     Media.subtitleTracks(part()).forEach((st) => {
-      out.push({ label: Media.subLabel(st),
-                 note: Media.isTextSub(st) ? '' : 'image track — it would have to be burnt in',
-                 on: !!(chosenSub && String(chosenSub.id) === String(st.id)),
-                 value: st });
+      out.push({
+        label: Media.subLabel(st),
+        note: Media.isTextSub(st) ? '' : 'image track — it would have to be burnt in',
+        on: !!(chosenSub && String(chosenSub.id) === String(st.id)),
+        value: st,
+      });
     });
     return out;
   }
@@ -333,8 +384,11 @@ var Detail = (function () {
      by the buttons beside it. */
   function playCaption() {
     const at = resumeAt();
-    return (at ? `resume at ${atLabel(at)}` : 'from start') +
-           '  ·  ' + (verdict ? Guard.label(verdict) : 'checking…');
+    return (
+      (at ? `resume at ${atLabel(at)}` : 'from start') +
+      '  ·  ' +
+      (verdict ? Guard.label(verdict) : 'checking…')
+    );
   }
 
   function sourceCaption() {
@@ -352,7 +406,10 @@ var Detail = (function () {
      it here, so the page closes onto the rail it has already been dropped
      from. */
   function removeFromDeck() {
-    Browse.clearOne(item, () => { onDeck = false; close(); });
+    Browse.clearOne(item, () => {
+      onDeck = false;
+      close();
+    });
   }
 
   /* Eight at most: Play, starting again where there is something to resume,
@@ -360,31 +417,68 @@ var Detail = (function () {
      Trailer is only here when there is one, and Remove only when the thing is
      actually on the deck. */
   function actions() {
-    const out = [{ act: 'play', label: 'Play', primary: true, caption: playCaption(),
-                 run: () => { start(verdict, false); } }];
+    const out = [
+      {
+        act: 'play',
+        label: 'Play',
+        primary: true,
+        caption: playCaption(),
+        run: () => {
+          start(verdict, false);
+        },
+      },
+    ];
     /* Part way through, resuming and starting again are two different things to
        want. Both are the verdict the buttons already settled — the second only
        says where to begin. */
     if (resumeAt()) {
-      out.push({ act: 'start', label: 'From start', primary: true, quiet: true,
-                 caption: verdict ? Guard.label(verdict) : 'checking…',
-                 run: () => { start(verdict, false, 0); } });
+      out.push({
+        act: 'start',
+        label: 'From start',
+        primary: true,
+        quiet: true,
+        caption: verdict ? Guard.label(verdict) : 'checking…',
+        run: () => {
+          start(verdict, false, 0);
+        },
+      });
     }
     if (extras.length) {
-      out.push({ act: 'trailer', glyph: Glyphs.trailer, caption: extras[0].title,
-                 run: () => { start(extras[0].verdict, true); } });
+      out.push({
+        act: 'trailer',
+        glyph: Glyphs.trailer,
+        caption: extras[0].title,
+        run: () => {
+          start(extras[0].verdict, true);
+        },
+      });
     }
-    out.push({ act: 'quality', glyph: Glyphs.quality, caption: qualityCaption(),
-               run: openQuality });
-    out.push({ act: 'source', glyph: Glyphs.source, caption: sourceCaption(),
-               run: openSource });
-    out.push({ act: 'audio', glyph: Glyphs.audio, run: openAudio,
-               caption: chosenAudio ? Media.audioLabel(chosenAudio) : 'checking…' });
-    out.push({ act: 'subtitles', glyph: Glyphs.subs, caption: Media.subLabel(chosenSub),
-               run: openSubs });
+    out.push({
+      act: 'quality',
+      glyph: Glyphs.quality,
+      caption: qualityCaption(),
+      run: openQuality,
+    });
+    out.push({ act: 'source', glyph: Glyphs.source, caption: sourceCaption(), run: openSource });
+    out.push({
+      act: 'audio',
+      glyph: Glyphs.audio,
+      run: openAudio,
+      caption: chosenAudio ? Media.audioLabel(chosenAudio) : 'checking…',
+    });
+    out.push({
+      act: 'subtitles',
+      glyph: Glyphs.subs,
+      caption: Media.subLabel(chosenSub),
+      run: openSubs,
+    });
     if (onDeck) {
-      out.push({ act: 'remove', glyph: Glyphs.remove, run: removeFromDeck,
-                 caption: 'Remove from Continue watching' });
+      out.push({
+        act: 'remove',
+        glyph: Glyphs.remove,
+        run: removeFromDeck,
+        caption: 'Remove from Continue watching',
+      });
     }
     return out;
   }
@@ -394,12 +488,20 @@ var Detail = (function () {
     let html = '';
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
-      html += `<div class="dt-act${a.primary ? ' primary' : ''}` +
-              (a.quiet ? ' quiet' : '') +
-              (strip === 0 && i === idx ? ' on' : '') + '" data-act="' + a.act + '">' +
-              '<div class="dt-act-btn">' + (a.glyph || UI.escapeHtml(a.label)) + '</div>' +
-              '<div class="dt-act-cap">' + UI.escapeHtml(a.caption) + '</div>' +
-              '</div>';
+      html +=
+        `<div class="dt-act${a.primary ? ' primary' : ''}` +
+        (a.quiet ? ' quiet' : '') +
+        (strip === 0 && i === idx ? ' on' : '') +
+        '" data-act="' +
+        a.act +
+        '">' +
+        '<div class="dt-act-btn">' +
+        (a.glyph || UI.escapeHtml(a.label)) +
+        '</div>' +
+        '<div class="dt-act-cap">' +
+        UI.escapeHtml(a.caption) +
+        '</div>' +
+        '</div>';
     }
     elActions.innerHTML = html;
   }
@@ -413,21 +515,31 @@ var Detail = (function () {
   }
 
   function openSource() {
-    openChooser({ label: 'Play from', rows: sourceRows,
-                  note: 'Every copy on every server, each already checked.' },
+    openChooser(
+      {
+        label: 'Play from',
+        rows: sourceRows,
+        note: 'Every copy on every server, each already checked.',
+      },
       (n) => {
         if (n === sel) return;
         choose({ sel: n, audio: null, maxBitrate: null, forceStream: false });
-      });
+      },
+    );
   }
 
   function openQuality() {
-    openChooser({ label: 'Quality', rows: qualityRows,
-                  note: 'Anything but Original asks the server to re-encode.' },
+    openChooser(
+      {
+        label: 'Quality',
+        rows: qualityRows,
+        note: 'Anything but Original asks the server to re-encode.',
+      },
       (kbps) => {
         if ((kbps || null) === maxBitrate) return;
         choose({ sel: sel, audio: chosenAudio, maxBitrate: kbps, forceStream: forceStream });
-      });
+      },
+    );
   }
 
   function openAudio() {
@@ -445,8 +557,12 @@ var Detail = (function () {
      about the stream. An image track is the exception — the only way to show one
      is to have it burnt in, which is a transcode. */
   function openSubs() {
-    openChooser({ label: 'Subtitles', rows: subRows,
-                  note: 'Drawn over the video as text, so they cost the server nothing.' },
+    openChooser(
+      {
+        label: 'Subtitles',
+        rows: subRows,
+        note: 'Drawn over the video as text, so they cost the server nothing.',
+      },
       (st) => {
         if (st && !Media.isTextSub(st)) {
           UI.toast('Kept as it was — an image track would have to be burnt in');
@@ -454,7 +570,8 @@ var Detail = (function () {
         }
         chosenSub = st;
         render();
-      });
+      },
+    );
   }
 
   /* ---------- the extras strip ---------- */
@@ -463,21 +580,28 @@ var Detail = (function () {
      the verdict under it because a clip is guarded like anything else. */
   function extraCard(src, on) {
     const v = src.verdict;
-    const state = v ? (v.ok ? 'good' : (v.state === 'noaudio' ? 'bad' : 'warn')) : '';
+    const state = v ? (v.ok ? 'good' : v.state === 'noaudio' ? 'bad' : 'warn') : '';
     const clip = src.copy.item;
-    const mins = clip.duration
-      ? Math.max(1, Math.round(clip.duration / 60000)) + ' min' : '';
+    const mins = clip.duration ? Math.max(1, Math.round(clip.duration / 60000)) + ' min' : '';
     const shot = Plex.photoUrl(src.server, clip.thumb, 320, 180);
-    return `<div class="dt-extra${on ? ' on' : ''}">` +
-           '<div class="dt-extra-shot"' +
-           (shot ? ` style="background-image: url('${shot}')"` : '') + '>' +
-           PLAY_GLYPH +
-           (mins ? `<div class="dt-extra-len">${UI.escapeHtml(mins)}</div>` : '') +
-           '</div>' +
-           '<div class="dt-extra-title">' + UI.escapeHtml(src.title) + '</div>' +
-           '<div class="dt-extra-verdict badge ' + state + '">' +
-           UI.escapeHtml(Guard.label(v)) + '</div>' +
-           '</div>';
+    return (
+      `<div class="dt-extra${on ? ' on' : ''}">` +
+      '<div class="dt-extra-shot"' +
+      (shot ? ` style="background-image: url('${shot}')"` : '') +
+      '>' +
+      PLAY_GLYPH +
+      (mins ? `<div class="dt-extra-len">${UI.escapeHtml(mins)}</div>` : '') +
+      '</div>' +
+      '<div class="dt-extra-title">' +
+      UI.escapeHtml(src.title) +
+      '</div>' +
+      '<div class="dt-extra-verdict badge ' +
+      state +
+      '">' +
+      UI.escapeHtml(Guard.label(v)) +
+      '</div>' +
+      '</div>'
+    );
   }
 
   function render() {
@@ -537,8 +661,14 @@ var Detail = (function () {
      photographs further down never contradicts it. */
   function namesLine(md) {
     const got = Art.factsFor(item);
-    const names = (got && got.cast.length) ? got.cast
-      : (md && md.Role ? md.Role.slice(0, 4).map((r) => { return r.tag; }) : []);
+    const names =
+      got && got.cast.length
+        ? got.cast
+        : md && md.Role
+          ? md.Role.slice(0, 4).map((r) => {
+              return r.tag;
+            })
+          : [];
     return names.join('  ·  ');
   }
 
@@ -563,8 +693,7 @@ var Detail = (function () {
      duration is this copy's file. */
   function runtimeChip() {
     const got = Art.factsFor(item);
-    const mins = (got && got.runtime) ||
-               (item.duration ? Math.round(item.duration / 60000) : 0);
+    const mins = (got && got.runtime) || (item.duration ? Math.round(item.duration / 60000) : 0);
     if (!mins) return '';
     if (mins < 60) return mins + 'm';
     return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
@@ -577,7 +706,7 @@ var Detail = (function () {
     const media = (src && src.media) || null;
     const res = String((media && media.videoResolution) || '').toLowerCase();
     if (!res) return '';
-    const name = res === '4k' ? '4K' : (/^\d+$/.test(res) ? res + 'p' : res.toUpperCase());
+    const name = res === '4k' ? '4K' : /^\d+$/.test(res) ? res + 'p' : res.toUpperCase();
     return /hdr|dovi|dolby/i.test(media.videoDynamicRange || '') ? name + ' HDR' : name;
   }
 
@@ -587,8 +716,9 @@ var Detail = (function () {
     const out = [];
     function add(text, outlined) {
       if (!text) return;
-      out.push(`<span class="dt-chip${outlined ? ' out' : ''}">` +
-               UI.escapeHtml(String(text)) + '</span>');
+      out.push(
+        `<span class="dt-chip${outlined ? ' out' : ''}">` + UI.escapeHtml(String(text)) + '</span>',
+      );
     }
     add(item.contentRating, true);
     add(episodeChip(), true);
@@ -605,8 +735,12 @@ var Detail = (function () {
     const got = Art.factsFor(item);
     const out = [];
     function add(text) {
-      out.push(`<span class="dt-rating">${STAR_GLYPH}` +
-               '<span class="dt-rating-text">' + UI.escapeHtml(text) + '</span></span>');
+      out.push(
+        `<span class="dt-rating">${STAR_GLYPH}` +
+          '<span class="dt-rating-text">' +
+          UI.escapeHtml(text) +
+          '</span></span>',
+      );
     }
     if (headMd && headMd.rating) add(Math.round(headMd.rating * 10) + '% Critics');
     if (headMd && headMd.audienceRating) {
@@ -645,7 +779,11 @@ var Detail = (function () {
   function crewHtml(md) {
     const bits = [];
     function names(list) {
-      return (list || []).map((x) => { return UI.escapeHtml(x.tag); }).join(', ');
+      return (list || [])
+        .map((x) => {
+          return UI.escapeHtml(x.tag);
+        })
+        .join(', ');
     }
     if (md.Director && md.Director.length) bits.push(`<b>Director</b> ${names(md.Director)}`);
     if (md.Writer && md.Writer.length) bits.push(`<b>Writer</b> ${names(md.Writer)}`);
@@ -655,7 +793,9 @@ var Detail = (function () {
 
   /* The first letters of the first two words: "Ada Lovelace" is AL. */
   function initials(name) {
-    const words = String(name || '').trim().split(/\s+/);
+    const words = String(name || '')
+      .trim()
+      .split(/\s+/);
     let out = '';
     for (let i = 0; i < words.length && out.length < 2; i++) {
       if (words[i]) out += words[i].charAt(0).toUpperCase();
@@ -671,12 +811,18 @@ var Detail = (function () {
     for (let i = 0; i < roles.length; i++) {
       const r = roles[i];
       url = Plex.photoUrl(Servers.of(md), r.thumb, 120, 120);
-      html += '<div class="dt-actor">' +
-              (url ? `<img src="${url}" alt="">`
-                   : `<div class="dt-actor-blank">${UI.escapeHtml(initials(r.tag))}</div>`) +
-              '<div class="dt-actor-name">' + UI.escapeHtml(r.tag) + '</div>' +
-              '<div class="dt-actor-role">' + UI.escapeHtml(r.role || '') + '</div>' +
-              '</div>';
+      html +=
+        '<div class="dt-actor">' +
+        (url
+          ? `<img src="${url}" alt="">`
+          : `<div class="dt-actor-blank">${UI.escapeHtml(initials(r.tag))}</div>`) +
+        '<div class="dt-actor-name">' +
+        UI.escapeHtml(r.tag) +
+        '</div>' +
+        '<div class="dt-actor-role">' +
+        UI.escapeHtml(r.role || '') +
+        '</div>' +
+        '</div>';
     }
     return html;
   }
@@ -688,14 +834,17 @@ var Detail = (function () {
      user has asked for the whole story. `at` is seconds to begin at, left out
      to pick up wherever the item says. */
   function start(v, isExtra, at) {
-    if (!v) { UI.toast('Still checking that copy…'); return; }
+    if (!v) {
+      UI.toast('Still checking that copy…');
+      return;
+    }
     if (!v.ok) {
       const why = Guard.refusal(item, v);
       UI.message(why[0], why[1]);
       return;
     }
     if (opts.onPlay) {
-      opts.onPlay(item, v, isExtra, isExtra ? null : (chosenSub && chosenSub.languageCode), at);
+      opts.onPlay(item, v, isExtra, isExtra ? null : chosenSub && chosenSub.languageCode, at);
     }
   }
 
@@ -704,24 +853,46 @@ var Detail = (function () {
     if (Menu.isOpen()) return Menu.key(code);
     const last = (strip === 0 ? actions().length : extras.length) - 1;
 
-    if (code === K.LEFT && idx > 0) { idx--; render(); return true; }
-    if (code === K.RIGHT && idx < last) { idx++; render(); return true; }
-    if (code === K.DOWN && strip === 0 && extras.length) {
-      strip = 1; idx = 0; render(); return true;
-    }
-    if (code === K.UP && strip === 1) { strip = 0; idx = 0; render(); return true; }
-    if (code === K.OK) {
-      const a = strip === 0 ? actions()[idx] : null;
-      if (a) a.run(); else start(extras[idx] && extras[idx].verdict, true);
+    if (code === K.LEFT && idx > 0) {
+      idx--;
+      render();
       return true;
     }
-    if (UI.isBack(code)) { close(); return true; }
-    return true;                      // this page swallows everything else
+    if (code === K.RIGHT && idx < last) {
+      idx++;
+      render();
+      return true;
+    }
+    if (code === K.DOWN && strip === 0 && extras.length) {
+      strip = 1;
+      idx = 0;
+      render();
+      return true;
+    }
+    if (code === K.UP && strip === 1) {
+      strip = 0;
+      idx = 0;
+      render();
+      return true;
+    }
+    if (code === K.OK) {
+      const a = strip === 0 ? actions()[idx] : null;
+      if (a) a.run();
+      else start(extras[idx] && extras[idx].verdict, true);
+      return true;
+    }
+    if (UI.isBack(code)) {
+      close();
+      return true;
+    }
+    return true; // this page swallows everything else
   }
 
   /* The film currently open, so the message screen knows to come back here
      rather than dropping to the rail. */
-  function current() { return item; }
+  function current() {
+    return item;
+  }
 
   return { open: open, key: key, current: current };
 })();

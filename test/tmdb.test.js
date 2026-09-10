@@ -18,7 +18,9 @@ let payload = { results: [] };
 
 app.XMLHttpRequest = function () {
   const self = this;
-  self.open = function (method, url) { self.url = url; };
+  self.open = function (method, url) {
+    self.url = url;
+  };
   self.send = function () {
     asked.push(self.url);
     self.status = 200;
@@ -28,10 +30,18 @@ app.XMLHttpRequest = function () {
 };
 
 function result(id, over) {
-  const m = { id: id, title: 'Film ' + id, release_date: '2011-06-01',
-              poster_path: '/p' + id + '.jpg', backdrop_path: '/b' + id + '.jpg',
-              vote_count: 900, vote_average: 7.5 };
-  Object.keys(over || {}).forEach(function (k) { m[k] = over[k]; });
+  const m = {
+    id: id,
+    title: 'Film ' + id,
+    release_date: '2011-06-01',
+    poster_path: '/p' + id + '.jpg',
+    backdrop_path: '/b' + id + '.jpg',
+    vote_count: 900,
+    vote_average: 7.5,
+  };
+  Object.keys(over || {}).forEach(function (k) {
+    m[k] = over[k];
+  });
   return m;
 }
 
@@ -52,7 +62,14 @@ Promise.resolve()
     return fetched({ title: 'Trending this week', kind: 'trending' }).then(function (got) {
       assert.strictEqual(got.asked.length, 1);
       assert.ok(/\/trending\/movie\/week\?/.test(got.asked[0]), got.asked[0]);
-      assert.strictEqual(got.films.map(function (f) { return f.id; }).join(','), '11,22');
+      assert.strictEqual(
+        got.films
+          .map(function (f) {
+            return f.id;
+          })
+          .join(','),
+        '11,22',
+      );
       /* The tile is drawn from these fields alone — an id on its own would put
          the page back to a lookup per title. */
       assert.strictEqual(got.films[0].title, 'Film 11');
@@ -72,8 +89,7 @@ Promise.resolve()
     return fetched({ kind: 'genre', id: 878 }).then(function (got) {
       assert.ok(/\/discover\/movie\?/.test(got.asked[0]), got.asked[0]);
       assert.ok(/with_genres=878/.test(got.asked[0]), got.asked[0]);
-      assert.ok(!/with_watch_providers/.test(got.asked[0]),
-                'a genre row is not a provider row');
+      assert.ok(!/with_watch_providers/.test(got.asked[0]), 'a genre row is not a provider row');
     });
   })
 
@@ -105,21 +121,41 @@ Promise.resolve()
   /* ---- the rubbish filter survived carrying titles about ---- */
 
   .then(function () {
-    payload = { results: [result(1, { vote_count: 4 }), result(2, { vote_count: 500 }),
-                          result(3, { vote_count: 0 }), { title: 'no id', vote_count: 9000 }] };
+    payload = {
+      results: [
+        result(1, { vote_count: 4 }),
+        result(2, { vote_count: 500 }),
+        result(3, { vote_count: 0 }),
+        { title: 'no id', vote_count: 9000 },
+      ],
+    };
     return fetched({ kind: 'trending' }).then(function (got) {
-      assert.strictEqual(got.films.map(function (f) { return f.id; }).join(','), '2',
-                         'only titles over the vote floor, and only ones with an id');
+      assert.strictEqual(
+        got.films
+          .map(function (f) {
+            return f.id;
+          })
+          .join(','),
+        '2',
+        'only titles over the vote floor, and only ones with an id',
+      );
     });
   })
 
   /* ---- and the entry the rail is handed ---- */
 
   .then(function () {
-    const one = Discovery.entry({ id: '603', title: 'The Matrix', year: 1999,
-                                  poster_path: '/m.jpg' });
-    assert.strictEqual(Plex.tmdbId(one), '603',
-                       'js/art.js finds the poster through Plex.tmdbId, or the tile is blank');
+    const one = Discovery.entry({
+      id: '603',
+      title: 'The Matrix',
+      year: 1999,
+      poster_path: '/m.jpg',
+    });
+    assert.strictEqual(
+      Plex.tmdbId(one),
+      '603',
+      'js/art.js finds the poster through Plex.tmdbId, or the tile is blank',
+    );
     assert.strictEqual(one.type, 'movie');
     assert.strictEqual(one.title, 'The Matrix');
     assert.strictEqual(one.year, 1999);
@@ -131,9 +167,12 @@ Promise.resolve()
     assert.strictEqual(Discovery.isEntry(null), false);
   })
 
-  .then(function () {
-    console.log('tmdb.test.js: catalogue dispatch, the vote floor and the Discovery entry');
-  }, function (e) {
-    console.error(e && e.stack || e);
-    process.exit(1);
-  });
+  .then(
+    function () {
+      console.log('tmdb.test.js: catalogue dispatch, the vote floor and the Discovery entry');
+    },
+    function (e) {
+      console.error((e && e.stack) || e);
+      process.exit(1);
+    },
+  );

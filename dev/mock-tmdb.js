@@ -14,11 +14,15 @@
    watching takes every eightieth film, so nothing in it is sparse — the smoke
    test compares the hero against the tile there, and that only means anything
    while both come from TMDB. */
-function oneBackdrop(index) { return index % 5 === 4; }
+function oneBackdrop(index) {
+  return index % 5 === 4;
+}
 
 /* And every seventh has no credits block at all, so the "no cast line rather
    than an empty label" path is walked by something. */
-function noCredits(index) { return index % 7 === 3; }
+function noCredits(index) {
+  return index % 7 === 3;
+}
 
 /* A row's worth. Small on purpose: each id costs the app a guid lookup per
    server, and forty of them make the smoke test crawl for no more coverage. */
@@ -44,10 +48,15 @@ function create(opts) {
     const out = [];
     for (let i = 0; i < ROW && i < films.length; i++) {
       const f = films[(offset + i * 3) % films.length];
-      out.push({ id: f.tmdb, title: f.title, release_date: f.year + '-01-01',
-                 poster_path: '/poster/' + f.tmdb + '/0.svg',
-                 backdrop_path: '/backdrop/' + f.tmdb + '/0.svg',
-                 vote_count: 900, vote_average: 7.5 });
+      out.push({
+        id: f.tmdb,
+        title: f.title,
+        release_date: f.year + '-01-01',
+        poster_path: '/poster/' + f.tmdb + '/0.svg',
+        backdrop_path: '/backdrop/' + f.tmdb + '/0.svg',
+        vote_count: 900,
+        vote_average: 7.5,
+      });
     }
     return { results: out };
   }
@@ -59,11 +68,15 @@ function create(opts) {
     const out = [];
     for (let i = 0; i < ROW; i++) {
       const id = 900000 + Number(genreId) * 100 + i;
-      out.push({ id: id, title: 'Genre ' + genreId + ' Film ' + (i + 1),
-                 release_date: '2019-01-01',
-                 poster_path: '/poster/' + id + '/0.svg',
-                 backdrop_path: '/backdrop/' + id + '/0.svg',
-                 vote_count: 900, vote_average: 7.5 });
+      out.push({
+        id: id,
+        title: 'Genre ' + genreId + ' Film ' + (i + 1),
+        release_date: '2019-01-01',
+        poster_path: '/poster/' + id + '/0.svg',
+        backdrop_path: '/backdrop/' + id + '/0.svg',
+        vote_count: 900,
+        vote_average: 7.5,
+      });
     }
     return { results: out };
   }
@@ -76,7 +89,7 @@ function create(opts) {
       out.push({
         file_path: '/' + kind + '/' + id + '/' + k + '.svg',
         vote_average: 8 - k,
-        vote_count: 400 - k * 10
+        vote_count: 400 - k * 10,
       });
     }
     return out;
@@ -89,7 +102,7 @@ function create(opts) {
       backdrops: shots('backdrop', id, n),
       /* A sparse title has none, so the tile has to fall back to Plex. */
       posters: lonely[id] ? [] : shots('poster', id, n),
-      logos: []
+      logos: [],
     };
   }
 
@@ -99,10 +112,13 @@ function create(opts) {
   function detailsFor(id) {
     const body = {
       id: Number(id),
-      overview: 'TMDB overview for ' + id + '. What this one is actually about, ' +
-                'in the words of a database rather than a file name.',
+      overview:
+        'TMDB overview for ' +
+        id +
+        '. What this one is actually about, ' +
+        'in the words of a database rather than a file name.',
       runtime: 90 + (Number(id) % 60),
-      images: imagesFor(id)
+      images: imagesFor(id),
     };
     if (!creditless[id]) body.credits = { cast: castFor(id) };
     return body;
@@ -119,12 +135,24 @@ function create(opts) {
 
   function api(res, p, query) {
     let m = p.match(/^\/movie\/(\d+)\/recommendations$/);
-    if (m) { json(res, results(Number(m[1]) % Math.max(1, films.length))); return true; }
+    if (m) {
+      json(res, results(Number(m[1]) % Math.max(1, films.length)));
+      return true;
+    }
     m = p.match(/^\/movie\/(\d+)$/);
-    if (m) { json(res, detailsFor(m[1])); return true; }
-    if (p === '/trending/movie/week') { json(res, results(0)); return true; }
+    if (m) {
+      json(res, detailsFor(m[1]));
+      return true;
+    }
+    if (p === '/trending/movie/week') {
+      json(res, results(0));
+      return true;
+    }
     if (p === '/discover/movie') {
-      if (query.with_genres) { json(res, unheld(query.with_genres)); return true; }
+      if (query.with_genres) {
+        json(res, unheld(query.with_genres));
+        return true;
+      }
       json(res, results(Number(query.with_watch_providers || 0)));
       return true;
     }
@@ -138,18 +166,51 @@ function create(opts) {
   function image(res, p) {
     const m = p.match(/^\/(\w+)\/(backdrop|poster)\/(\d+)\/(\d+)\.svg$/);
     if (!m) return false;
-    const size = m[1], kind = m[2], id = m[3], k = Number(m[4]);
+    const size = m[1],
+      kind = m[2],
+      id = m[3],
+      k = Number(m[4]);
     const hue = (Number(id) * 13 + k * 60 + (kind === 'poster' ? 180 : 0)) % 360;
-    const w = kind === 'poster' ? 200 : 320, h = kind === 'poster' ? 300 : 180;
+    const w = kind === 'poster' ? 200 : 320,
+      h = kind === 'poster' ? 300 : 180;
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
-    res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '">' +
-      '<rect width="' + w + '" height="' + h + '" fill="hsl(' + hue + ',44%,' +
-      (18 + k * 8) + '%)"/>' +
-      '<rect x="0" y="0" width="' + w + '" height="10" fill="hsl(' + hue + ',70%,60%)"/>' +
-      '<text x="16" y="' + (h * 0.57) + '" font-family="Helvetica,Arial" font-size="26" ' +
-      'fill="rgba(255,255,255,0.85)">TMDB ' + id + ' #' + k + '</text>' +
-      '<text x="16" y="' + (h * 0.74) + '" font-family="Helvetica,Arial" font-size="18" ' +
-      'fill="rgba(255,255,255,0.5)">' + kind + ' ' + size + '</text></svg>');
+    res.end(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
+        w +
+        ' ' +
+        h +
+        '">' +
+        '<rect width="' +
+        w +
+        '" height="' +
+        h +
+        '" fill="hsl(' +
+        hue +
+        ',44%,' +
+        (18 + k * 8) +
+        '%)"/>' +
+        '<rect x="0" y="0" width="' +
+        w +
+        '" height="10" fill="hsl(' +
+        hue +
+        ',70%,60%)"/>' +
+        '<text x="16" y="' +
+        h * 0.57 +
+        '" font-family="Helvetica,Arial" font-size="26" ' +
+        'fill="rgba(255,255,255,0.85)">TMDB ' +
+        id +
+        ' #' +
+        k +
+        '</text>' +
+        '<text x="16" y="' +
+        h * 0.74 +
+        '" font-family="Helvetica,Arial" font-size="18" ' +
+        'fill="rgba(255,255,255,0.5)">' +
+        kind +
+        ' ' +
+        size +
+        '</text></svg>',
+    );
     return true;
   }
 
@@ -163,7 +224,7 @@ function create(opts) {
         return api(res, pathname.slice('/__tmdb'.length), query || {});
       }
       return false;
-    }
+    },
   };
 }
 

@@ -7,8 +7,8 @@
 var Youtube = (function () {
   'use strict';
 
-  const KEY = Config.youtubeKey;                   // see js/config.js
-  const API = Config.youtubeBase;                  // see js/config.js
+  const KEY = Config.youtubeKey; // see js/config.js
+  const API = Config.youtubeBase; // see js/config.js
 
   /* The channel by handle, not by id: a guessed id in source would be wrong and
      unverifiable, and a handle is something a human can check. */
@@ -17,7 +17,9 @@ var Youtube = (function () {
   const SEASON = /\b(?:season|series|s)\s*0*(\d{1,2})\b/i;
 
   /* Is there a key at all? Without one the recaps action never appears. */
-  function enabled() { return !!KEY; }
+  function enabled() {
+    return !!KEY;
+  }
 
   function request(path, params) {
     params.key = KEY;
@@ -28,7 +30,9 @@ var Youtube = (function () {
      answer one question. */
   let queue = Promise.resolve();
   function get(path, params) {
-    function run() { return request(path, params); }
+    function run() {
+      return request(path, params);
+    }
     queue = queue.then(run, run);
     return queue;
   }
@@ -52,18 +56,24 @@ var Youtube = (function () {
      called from a keypress; a quota refusal answers with nothing rather than an
      error, because "none today" is the truth the screen has to show. */
   function recaps(showTitle) {
-    return channelId().then((id) => {
-      return get('/search', {
-        part: 'snippet', channelId: id, q: showTitle + ' recap',
-        maxResults: 25, type: 'video'
+    return channelId()
+      .then((id) => {
+        return get('/search', {
+          part: 'snippet',
+          channelId: id,
+          q: showTitle + ' recap',
+          maxResults: 25,
+          type: 'video',
+        });
+      })
+      .then((r) => {
+        return withLengths((r && r.items) || []);
+      })
+      .catch((e) => {
+        if (!e.message.endsWith('-> 403')) throw e;
+        UI.debug(`youtube: ${e.message} (quota)`);
+        return [];
       });
-    }).then((r) => {
-      return withLengths((r && r.items) || []);
-    }).catch((e) => {
-      if (!e.message.endsWith('-> 403')) throw e;
-      UI.debug(`youtube: ${e.message} (quota)`);
-      return [];
-    });
   }
 
   /* search carries no duration and videos.list does — one more unit against the
@@ -77,17 +87,22 @@ var Youtube = (function () {
       if (id) ids.push(id);
     }
     if (!ids.length) return Promise.resolve(items);
-    return get('/videos', { part: 'contentDetails', id: ids.join(',') }).then((r) => {
-      const by = {};
-      let k;
-      const list = (r && r.items) || [];
-      for (k = 0; k < list.length; k++) by[list[k].id] = list[k].contentDetails;
-      for (k = 0; k < items.length; k++) {
-        id = items[k].id && items[k].id.videoId;
-        if (by[id]) items[k].contentDetails = by[id];
-      }
-      return items;
-    }, () => { return items; });
+    return get('/videos', { part: 'contentDetails', id: ids.join(',') }).then(
+      (r) => {
+        const by = {};
+        let k;
+        const list = (r && r.items) || [];
+        for (k = 0; k < list.length; k++) by[list[k].id] = list[k].contentDetails;
+        for (k = 0; k < items.length; k++) {
+          id = items[k].id && items[k].id.videoId;
+          if (by[id]) items[k].contentDetails = by[id];
+        }
+        return items;
+      },
+      () => {
+        return items;
+      },
+    );
   }
 
   function seasonOf(title) {
@@ -95,7 +110,9 @@ var Youtube = (function () {
     return m ? Number(m[1]) : null;
   }
 
-  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function pad(n) {
+    return (n < 10 ? '0' : '') + n;
+  }
 
   /* PT1H2M3S -> 1:02:03. Anything else has no length to show. */
   function lengthOf(iso) {
@@ -130,7 +147,7 @@ var Youtube = (function () {
         title: title,
         thumb: thumbOf(it.snippet),
         season: seasonOf(title),
-        length: lengthOf(it.contentDetails && it.contentDetails.duration)
+        length: lengthOf(it.contentDetails && it.contentDetails.duration),
       });
     }
     return bySeason(out);
@@ -156,7 +173,10 @@ var Youtube = (function () {
   }
 
   function normalise(s) {
-    return ` ${String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '')} `;
+    return ` ${String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/^ +| +$/g, '')} `;
   }
 
   /* Only the videos that name this show. The channel covers everything, and a
@@ -164,7 +184,7 @@ var Youtube = (function () {
   function pickForShow(parsed, showTitle) {
     const want = normalise(showTitle);
     const out = [];
-    if (want.length < 3) return [];               // no title left to match on
+    if (want.length < 3) return []; // no title left to match on
     for (let i = 0; i < (parsed || []).length; i++) {
       if (normalise(parsed[i].title).indexOf(want) >= 0) out.push(parsed[i]);
     }
@@ -176,8 +196,8 @@ var Youtube = (function () {
     channelId: channelId,
     recaps: recaps,
     parse: parse,
-    pickForShow: pickForShow
+    pickForShow: pickForShow,
   };
 })();
 
-if (typeof module !== 'undefined') module.exports = Youtube;   // for the unit tests
+if (typeof module !== 'undefined') module.exports = Youtube; // for the unit tests

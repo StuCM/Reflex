@@ -1,0 +1,13 @@
+{
+  "printWidth": 100,
+  "singleQuote": true,
+  "ignorePatterns": [
+    "**/*.md",
+    "**/*.css",
+    "**/*.html",
+    "design/**",
+    "dev/fixtures/**",
+    "build/**",
+    "dist/**"
+  ]
+}

@@ -34,6 +34,12 @@
     // addEventListener buys nothing where a second handler is never added.
     "unicorn/prefer-add-event-listener": "off",
 
+    // A formatter cannot re-wrap a string literal, so splitting a long HTML or
+    // SVG string across `+` is the only way to keep it inside printWidth.
+    // Joining them, as this rule asks, produced 135-character lines that oxfmt
+    // then had to leave alone. The concatenation is layout, not an accident.
+    "no-useless-concat": "off",
+
     // `_server`, `_sources`, `_tmdb`, `_asking` are the documented convention
     // for "this app put it there, the server did not" — see CLAUDE.md.
     "no-underscore-dangle": "off",
@@ -48,9 +54,10 @@
     "import/no-cycle": "error",
 
     // Ratchets. Set at today's worst so nothing is blocked on day one; every
-    // merge may lower a number, none may raise one.
-    "max-lines": ["error", { "max": 1250 }],
-    "max-lines-per-function": ["error", { "max": 100 }],
+    // merge may lower a number, none may raise one. Measured AFTER oxfmt:
+    // one property per line grew player.js from 1221 to 1508.
+    "max-lines": ["error", { "max": 1508 }],
+    "max-lines-per-function": ["error", { "max": 117 }],
     "max-depth": ["error", 4],
     "complexity": ["error", 35]
   },

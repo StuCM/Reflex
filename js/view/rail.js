@@ -15,12 +15,12 @@ var Rail = (function () {
   const TILE_H = 314;
   const GAP = 44;
   const STRIDE = TILE_W + GAP;
-  const ROW_H = 466;               // 44 header + 314 art + 74 two lines + 34 below
-  const VIEWPORT_H = 580;          // css #viewport, well below the 264px header
-  const TILE_POOL = 12;            // tiles per row element
-  const ROW_POOL = 4;              // row elements in the DOM, ever
-  const TILES_VISIBLE = 7;         // tiles across at 1920 wide
-  const LEAD = 1;                  // tiles kept to the left of the focused one
+  const ROW_H = 466; // 44 header + 314 art + 74 two lines + 34 below
+  const VIEWPORT_H = 580; // css #viewport, well below the 264px header
+  const TILE_POOL = 12; // tiles per row element
+  const ROW_POOL = 4; // row elements in the DOM, ever
+  const TILES_VISIBLE = 7; // tiles across at 1920 wide
+  const LEAD = 1; // tiles kept to the left of the focused one
   /* Two different questions, and answering both with one number clipped the
      last row of every section. ROWS_FIT is how many rows fit *whole* in the
      viewport, and is what stops the window scrolling past the end — get it
@@ -28,7 +28,7 @@ var Rail = (function () {
      ROWS_VISIBLE is how many are on screen at all, including the one peeking
      at the bottom, and is only about which posters are worth fetching. */
   const ROWS_FIT = Math.floor(VIEWPORT_H / ROW_H);
-  const ROWS_VISIBLE = ROWS_FIT + 1;   // the last one peeks, so its posters load
+  const ROWS_VISIBLE = ROWS_FIT + 1; // the last one peeks, so its posters load
   /* The tall hero and the header differ by this much, and the rows carry the
      whole move on one transform rather than anything animating a height. The
      figure is the viewport less one row, so the first screen shows Continue
@@ -56,7 +56,10 @@ var Rail = (function () {
      The offsetWidth read commits the jump before the transition comes back —
      without it the browser coalesces both changes and animates anyway. */
   function place(el, x, animate) {
-    if (animate) { translate(el, x, 0); return; }
+    if (animate) {
+      translate(el, x, 0);
+      return;
+    }
     el.style.transition = 'none';
     el.style.webkitTransition = 'none';
     translate(el, x, 0);
@@ -82,8 +85,12 @@ var Rail = (function () {
       strip.className = 'strip';
       rowEl.appendChild(label);
       rowEl.appendChild(strip);
-      rowEl._label = label; rowEl._strip = strip; rowEl._row = -1;
-      rowEl._rowRef = null; rowEl._tiles = []; rowEl._onScreen = false;
+      rowEl._label = label;
+      rowEl._strip = strip;
+      rowEl._row = -1;
+      rowEl._rowRef = null;
+      rowEl._tiles = [];
+      rowEl._onScreen = false;
 
       for (let i = 0; i < TILE_POOL; i++) {
         const tile = document.createElement('div');
@@ -107,8 +114,14 @@ var Rail = (function () {
         tile.appendChild(inner);
         tile.appendChild(name);
         tile.appendChild(sub);
-        tile._img = img; tile._name = name; tile._sub = sub; tile._prog = prog;
-        tile._idx = -1; tile._filled = false; tile._item = null; tile._wait = false;
+        tile._img = img;
+        tile._name = name;
+        tile._sub = sub;
+        tile._prog = prog;
+        tile._idx = -1;
+        tile._filled = false;
+        tile._item = null;
+        tile._wait = false;
         strip.appendChild(tile);
         rowEl._tiles.push(tile);
       }
@@ -150,7 +163,8 @@ var Rail = (function () {
     tile._wait = false;
     Art.warm(tile._item);
     const url = Art.tile(tile._item, TILE_W, TILE_H);
-    if (url) tile._img.src = url; else tile._img.removeAttribute('src');
+    if (url) tile._img.src = url;
+    else tile._img.removeAttribute('src');
   }
 
   /* The rail has stopped moving, so the tiles still on it can have their
@@ -188,7 +202,10 @@ var Rail = (function () {
       rowEl._row = r;
       rowEl._rowRef = row;
       rowEl._label.textContent = row.title;
-      for (i = 0; i < TILE_POOL; i++) { rowEl._tiles[i]._idx = -1; rowEl._tiles[i]._filled = false; }
+      for (i = 0; i < TILE_POOL; i++) {
+        rowEl._tiles[i]._idx = -1;
+        rowEl._tiles[i]._filled = false;
+      }
     }
     /* A merged row's length is an estimate until it has been walked, so the
        count is re-read on every paint rather than only when the row is reused. */
@@ -203,7 +220,12 @@ var Rail = (function () {
     for (i = 0; i < TILE_POOL; i++) {
       const tile = rowEl._tiles[i];
       idx = start + i;
-      if (idx >= row.total) { tile.classList.add('hidden'); tile._idx = -1; tile._item = null; continue; }
+      if (idx >= row.total) {
+        tile.classList.add('hidden');
+        tile._idx = -1;
+        tile._item = null;
+        continue;
+      }
       tile.classList.remove('hidden');
       translate(tile, idx * STRIDE, 0);
       focused = r === rowIdx && idx === row.focus;
@@ -233,8 +255,10 @@ var Rail = (function () {
       }
       tile._name.textContent = Media.railTitle(item);
       tile._sub.textContent = Media.railSub(item);
-      tile._prog.style.width = (item.viewOffset && item.duration)
-        ? Math.round(100 * item.viewOffset / item.duration) + '%' : '0';
+      tile._prog.style.width =
+        item.viewOffset && item.duration
+          ? Math.round((100 * item.viewOffset) / item.duration) + '%'
+          : '0';
       /* Rows below the fold get their titles but not their posters. On a first
          run every poster is generated on demand by a server we do not own, so
          asking for two screens' worth before the first one has painted is the

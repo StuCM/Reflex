@@ -45,61 +45,101 @@ var Guard = (function () {
   function check(item, mediaIndex, forceAudioId, opts) {
     const n = mediaIndex || 0;
     opts = opts || {};
-    return Meta.load(item).then((md) => {
-      if (!md) return { ok: false, state: 'nometa', text: 'No metadata for this copy.' };
+    return Meta.load(item).then(
+      (md) => {
+        if (!md) return { ok: false, state: 'nometa', text: 'No metadata for this copy.' };
 
-      const media = md.Media && md.Media[n];
-      const part = media && media.Part && media.Part[0];
-      if (!part) {
-        return { ok: false, state: 'nopart', md: md, media: media, mediaIndex: n,
-                 text: 'This version has no playable part.' };
-      }
+        const media = md.Media && md.Media[n];
+        const part = media && media.Part && media.Part[0];
+        if (!part) {
+          return {
+            ok: false,
+            state: 'nopart',
+            md: md,
+            media: media,
+            mediaIndex: n,
+            text: 'This version has no playable part.',
+          };
+        }
 
-      /* The track that passes as-is if there is one, otherwise the film's own
+        /* The track that passes as-is if there is one, otherwise the film's own
          audio and the server re-encodes it. */
-      let passes = Media.pickAudio(part);
-      let audio = passes || Media.bestAudio(part);
-      if (forceAudioId) {
-        const wanted = Media.streamById(part, forceAudioId);
-        if (wanted) { audio = wanted; passes = Media.pickAudio(part) === wanted; }
-      }
-      if (!audio) {
-        return { ok: false, state: 'noaudio', md: md, media: media, part: part,
-                 mediaIndex: n, audio: null, text: Media.audioSummary(part) };
-      }
+        let passes = Media.pickAudio(part);
+        let audio = passes || Media.bestAudio(part);
+        if (forceAudioId) {
+          const wanted = Media.streamById(part, forceAudioId);
+          if (wanted) {
+            audio = wanted;
+            passes = Media.pickAudio(part) === wanted;
+          }
+        }
+        if (!audio) {
+          return {
+            ok: false,
+            state: 'noaudio',
+            md: md,
+            media: media,
+            part: part,
+            mediaIndex: n,
+            audio: null,
+            text: Media.audioSummary(part),
+          };
+        }
 
-      const server = Servers.of(md);
-      return Plex.decide(server, md, n, 0, audio.id, opts).then((v) => {
-        const direct = v.decision === 'directplay';
-        /* Only direct play hands the panel the original file. A re-encode
+        const server = Servers.of(md);
+        return Plex.decide(server, md, n, 0, audio.id, opts).then(
+          (v) => {
+            const direct = v.decision === 'directplay';
+            /* Only direct play hands the panel the original file. A re-encode
            arrives as H.264, which it always manages — so this check belongs
            here, not before the decision. */
-        const undecodable = direct && !Media.canDecode(media);
-        const willing = Media.allows(media, direct);
-        UI.debug(`decision: ${v.decision} · ${md.title}` +
-                 (Servers.count() > 1 ? ` on ${server.name}` : '') +
-                 ' · ' + Media.audioLabel(audio) +
-                 (v.video || v.audio ? ` · v:${v.video || '?'} a:${v.audio || '?'}` : '') +
-                 ' ' + v.text);
-        return {
-          /* 4K must direct play or not play. Anything else may transcode. */
-          ok: willing,
-          state: undecodable ? 'codec' : v.decision,
-          transcode: !direct,
-          video: v.video, audioDecision: v.audio,
-          audio: audio, passes: !!passes,
-          maxBitrate: opts.maxBitrate || null,
-          forceStream: !!opts.forceStream,
-          md: md, media: media, part: part, mediaIndex: n,
-          text: v.text || ''
-        };
-      }, (e) => {
-        return { ok: false, state: 'error', md: md, media: media, part: part,
-                 mediaIndex: n, audio: audio, text: e.message };
-      });
-    }, (e) => {
-      return { ok: false, state: 'error', text: e.message };
-    });
+            const undecodable = direct && !Media.canDecode(media);
+            const willing = Media.allows(media, direct);
+            UI.debug(
+              `decision: ${v.decision} · ${md.title}` +
+                (Servers.count() > 1 ? ` on ${server.name}` : '') +
+                ' · ' +
+                Media.audioLabel(audio) +
+                (v.video || v.audio ? ` · v:${v.video || '?'} a:${v.audio || '?'}` : '') +
+                ' ' +
+                v.text,
+            );
+            return {
+              /* 4K must direct play or not play. Anything else may transcode. */
+              ok: willing,
+              state: undecodable ? 'codec' : v.decision,
+              transcode: !direct,
+              video: v.video,
+              audioDecision: v.audio,
+              audio: audio,
+              passes: !!passes,
+              maxBitrate: opts.maxBitrate || null,
+              forceStream: !!opts.forceStream,
+              md: md,
+              media: media,
+              part: part,
+              mediaIndex: n,
+              text: v.text || '',
+            };
+          },
+          (e) => {
+            return {
+              ok: false,
+              state: 'error',
+              md: md,
+              media: media,
+              part: part,
+              mediaIndex: n,
+              audio: audio,
+              text: e.message,
+            };
+          },
+        );
+      },
+      (e) => {
+        return { ok: false, state: 'error', text: e.message };
+      },
+    );
   }
 
   /* A short label for a verdict, for the source list. */
@@ -134,28 +174,44 @@ var Guard = (function () {
   /* Why we are refusing, in full, for the message screen. */
   function refusal(item, v) {
     if (v.state === 'noaudio') {
-      return ['No usable audio track', item.title + ' offers: ' + (v.text || 'nothing') +
-        '.  Nothing there is both passable over plain HDMI ARC and actually the ' +
-        'film — TrueHD and DTS-HD MA cannot pass at all, and a commentary is not ' +
-        'what you asked to watch. Playing it would force an audio transcode on a ' +
-        'server we do not own, so it is refused.'];
+      return [
+        'No usable audio track',
+        item.title +
+          ' offers: ' +
+          (v.text || 'nothing') +
+          '.  Nothing there is both passable over plain HDMI ARC and actually the ' +
+          'film — TrueHD and DTS-HD MA cannot pass at all, and a commentary is not ' +
+          'what you asked to watch. Playing it would force an audio transcode on a ' +
+          'server we do not own, so it is refused.',
+      ];
     }
     if (v.state === 'codec') {
-      return ['This panel cannot decode it', item.title + ' is ' +
-        (v.media && v.media.videoCodec) + ' in ' + (v.media && v.media.container) +
-        '. The B8 decodes H.264 and HEVC in MKV, MP4 or MPEG-TS. Playing it ' +
-        'would give a black screen, so it is refused before asking the server.'];
+      return [
+        'This panel cannot decode it',
+        item.title +
+          ' is ' +
+          (v.media && v.media.videoCodec) +
+          ' in ' +
+          (v.media && v.media.container) +
+          '. The B8 decodes H.264 and HEVC in MKV, MP4 or MPEG-TS. Playing it ' +
+          'would give a black screen, so it is refused before asking the server.',
+      ];
     }
     if (v.state === 'nopart') return ['Nothing to play', 'This copy has no playable part.'];
     if (v.state === 'nometa') return ['No metadata', 'The server returned nothing for this copy.'];
     if (v.state === 'error') return ['Could not check playback', v.text];
 
-    const why = v.text || (`the server returned "${v.state}"`);
+    const why = v.text || `the server returned "${v.state}"`;
     /* The only thing still refused outright. */
-    return ['4K transcode refused', item.title + ' will not direct play — ' + why +
-      '. Starting it would register a 4K transcode on the server, which gets ' +
-      'killed mid-stream. Another copy may direct play — check the list. Or run ' +
-      'probe.py against this file to find which declared capability flips it.'];
+    return [
+      '4K transcode refused',
+      item.title +
+        ' will not direct play — ' +
+        why +
+        '. Starting it would register a 4K transcode on the server, which gets ' +
+        'killed mid-stream. Another copy may direct play — check the list. Or run ' +
+        'probe.py against this file to find which declared capability flips it.',
+    ];
   }
 
   return { check: check, label: label, refusal: refusal };

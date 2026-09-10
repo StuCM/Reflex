@@ -20,16 +20,20 @@ const port = Number(process.argv[2] || 8099);
 
 function stamp() {
   const d = new Date();
-  const p = function (n) { return (n < 10 ? '0' : '') + n; };
+  const p = function (n) {
+    return (n < 10 ? '0' : '') + n;
+  };
   return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
 }
 
-http.createServer(function (req, res) {
-  const q = url.parse(req.url, true).query;
-  if (q.m !== undefined) console.log(stamp() + '  ' + q.m);
-  res.writeHead(204, { 'Access-Control-Allow-Origin': '*' });
-  res.end();
-}).listen(port, '0.0.0.0', function () {
-  console.log('\n  beacon listening on port ' + port);
-  console.log('  set beacon in js/config.js to http://<this machine>:' + port + '/\n');
-});
+http
+  .createServer(function (req, res) {
+    const q = url.parse(req.url, true).query;
+    if (q.m !== undefined) console.log(stamp() + '  ' + q.m);
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*' });
+    res.end();
+  })
+  .listen(port, '0.0.0.0', function () {
+    console.log('\n  beacon listening on port ' + port);
+    console.log('  set beacon in js/config.js to http://<this machine>:' + port + '/\n');
+  });

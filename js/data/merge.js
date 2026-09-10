@@ -17,7 +17,9 @@ var Merge = (function () {
   'use strict';
 
   /* An index from every known identity to the merged entry holding it. */
-  function index() { return { map: {}, out: [], dupes: 0 }; }
+  function index() {
+    return { map: {}, out: [], dupes: 0 };
+  }
 
   function sortKey(item) {
     return String((item && (item.titleSort || item.title)) || '').toLowerCase();
@@ -34,7 +36,9 @@ var Merge = (function () {
      several libraries, and the same film in a 4K library and an LQ one is two
      copies that play differently. Items folded by lists() — onDeck and the hubs
      — carry no part, so they still fold per server, as they always did. */
-  function copyKey(item) { return item._server + '/' + (item._part || ''); }
+  function copyKey(item) {
+    return item._server + '/' + (item._part || '');
+  }
 
   /* Fold a second copy of the same film into the entry, and decide which copy
      the entry should be *shown* as: the preferred server's, when it has one.
@@ -84,7 +88,10 @@ var Merge = (function () {
     let at = -1;
     keys = keys || Media.identities(item);
     for (i = 0; i < keys.length; i++) {
-      if (idx.map[keys[i]] !== undefined) { at = idx.map[keys[i]]; break; }
+      if (idx.map[keys[i]] !== undefined) {
+        at = idx.map[keys[i]];
+        break;
+      }
     }
     if (at >= 0) {
       idx.out[at] = combine(idx.out[at], item);
@@ -120,7 +127,9 @@ var Merge = (function () {
     return [item].concat(item._sources || []);
   }
 
-  function isShared(item) { return !!(item && item._sources && item._sources.length); }
+  function isShared(item) {
+    return !!(item && item._sources && item._sources.length);
+  }
 
   /* ---------- the streaming merge ---------- */
 
@@ -149,16 +158,18 @@ var Merge = (function () {
       guid: item.guid,
       Guid: item.Guid,
       viewOffset: item.viewOffset,
-      lastViewedAt: item.lastViewedAt
+      lastViewedAt: item.lastViewedAt,
     };
     if (media) {
-      out.Media = [{
-        videoResolution: media.videoResolution,
-        videoCodec: media.videoCodec,
-        container: media.container,
-        width: media.width,
-        height: media.height
-      }];
+      out.Media = [
+        {
+          videoResolution: media.videoResolution,
+          videoCodec: media.videoCodec,
+          container: media.container,
+          width: media.width,
+          height: media.height,
+        },
+      ];
     }
     return out;
   }
@@ -173,7 +184,7 @@ var Merge = (function () {
       }),
       idx: index(),
       exhausted: false,
-      busy: null
+      busy: null,
     };
   }
 
@@ -185,27 +196,32 @@ var Merge = (function () {
     return Math.max(st.idx.out.length, total - st.idx.dupes);
   }
 
-  function items(st) { return st.idx.out; }
+  function items(st) {
+    return st.idx.out;
+  }
 
   function fetchInto(st, s) {
-    return st.fetch(s.part, s.offset).then((res) => {
-      const got = (res && res.items) || [];
-      if (res && res.total) s.total = res.total;
-      s.offset += got.length;
-      for (let i = 0; i < got.length; i++) {
-        /* Which library it came from: one section now spans several, and two
+    return st.fetch(s.part, s.offset).then(
+      (res) => {
+        const got = (res && res.items) || [];
+        if (res && res.total) s.total = res.total;
+        s.offset += got.length;
+        for (let i = 0; i < got.length; i++) {
+          /* Which library it came from: one section now spans several, and two
            of them can hold the same film in different shapes. */
-        got[i]._part = s.part.key;
-        s.buffer.push(got[i]);
-      }
-      if (!got.length || (s.total && s.offset >= s.total)) s.done = true;
-      return s;
-    }, () => {
-      /* A server that stops answering drops out of the merge rather than
+          got[i]._part = s.part.key;
+          s.buffer.push(got[i]);
+        }
+        if (!got.length || (s.total && s.offset >= s.total)) s.done = true;
+        return s;
+      },
+      () => {
+        /* A server that stops answering drops out of the merge rather than
          stalling the row. */
-      s.done = true;
-      return s;
-    });
+        s.done = true;
+        return s;
+      },
+    );
   }
 
   /* Materialise the merged list until index `upTo` exists, or the servers run
@@ -213,8 +229,16 @@ var Merge = (function () {
   function advance(st, upTo) {
     if (st.idx.out.length > upTo || st.exhausted) return Promise.resolve(st.idx.out);
     if (st.busy) return st.busy;
-    st.busy = fill(st, upTo).then((out) => { st.busy = null; return out; },
-                                  (e) => { st.busy = null; throw e; });
+    st.busy = fill(st, upTo).then(
+      (out) => {
+        st.busy = null;
+        return out;
+      },
+      (e) => {
+        st.busy = null;
+        throw e;
+      },
+    );
     return st.busy;
   }
 
@@ -230,14 +254,22 @@ var Merge = (function () {
         if (!st.streams[i].done && !st.streams[i].buffer.length) needs.push(st.streams[i]);
       }
       if (needs.length) {
-        return Promise.all(needs.map((s) => { return fetchInto(st, s); }))
-          .then(() => { return fill(st, upTo); });
+        return Promise.all(
+          needs.map((s) => {
+            return fetchInto(st, s);
+          }),
+        ).then(() => {
+          return fill(st, upTo);
+        });
       }
       live = [];
       for (i = 0; i < st.streams.length; i++) {
         if (st.streams[i].buffer.length) live.push(st.streams[i]);
       }
-      if (!live.length) { st.exhausted = true; break; }
+      if (!live.length) {
+        st.exhausted = true;
+        break;
+      }
 
       pick = live[0];
       for (i = 1; i < live.length; i++) {
@@ -252,10 +284,17 @@ var Merge = (function () {
   }
 
   return {
-    lists: lists, sources: sources, isShared: isShared, slim: slim,
-    stream: stream, advance: advance, estimate: estimate, items: items,
+    lists: lists,
+    sources: sources,
+    isShared: isShared,
+    slim: slim,
+    stream: stream,
+    advance: advance,
+    estimate: estimate,
+    items: items,
     /* exported for the tests */
-    push: push, index: index
+    push: push,
+    index: index,
   };
 })();
 

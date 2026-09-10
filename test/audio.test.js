@@ -7,9 +7,11 @@ var assert = require('assert');
 var Media = require('./load.js')(['panel', 'media']).Media;
 
 function part(streams) {
-  return { Stream: streams.map(function (s, i) {
-    return Object.assign({ id: 100 + i, streamType: 2 }, s);
-  }) };
+  return {
+    Stream: streams.map(function (s, i) {
+      return Object.assign({ id: 100 + i, streamType: 2 }, s);
+    }),
+  };
 }
 
 var pick = Media.pickAudio;
@@ -22,37 +24,94 @@ assert.strictEqual(pick(part([{ codec: 'dca', profile: 'ma', channels: 8 }])), n
 
 // TrueHD present but an AC3 track exists -> take the AC3.
 assert.strictEqual(
-  pick(part([{ codec: 'truehd', channels: 8 }, { codec: 'ac3', channels: 6 }])).codec, 'ac3');
+  pick(
+    part([
+      { codec: 'truehd', channels: 8 },
+      { codec: 'ac3', channels: 6 },
+    ]),
+  ).codec,
+  'ac3',
+);
 
 // E-AC3 beats AC3.
 assert.strictEqual(
-  pick(part([{ codec: 'ac3', channels: 6 }, { codec: 'eac3', channels: 6 }])).codec, 'eac3');
+  pick(
+    part([
+      { codec: 'ac3', channels: 6 },
+      { codec: 'eac3', channels: 6 },
+    ]),
+  ).codec,
+  'eac3',
+);
 
 // Among AC3 tracks, prefer 5.1 over stereo.
 assert.strictEqual(
-  pick(part([{ codec: 'ac3', channels: 2 }, { codec: 'ac3', channels: 6 }])).channels, 6);
+  pick(
+    part([
+      { codec: 'ac3', channels: 2 },
+      { codec: 'ac3', channels: 6 },
+    ]),
+  ).channels,
+  6,
+);
 
 // Among AAC tracks, prefer stereo — a 5.1 AAC gets downmixed anyway.
 assert.strictEqual(
-  pick(part([{ codec: 'aac', channels: 6 }, { codec: 'aac', channels: 2 }])).channels, 2);
+  pick(
+    part([
+      { codec: 'aac', channels: 6 },
+      { codec: 'aac', channels: 2 },
+    ]),
+  ).channels,
+  2,
+);
 
 // Plain DTS is a coin flip on this generation of panel, so AAC wins.
 assert.strictEqual(
-  pick(part([{ codec: 'dca', channels: 6 }, { codec: 'aac', channels: 2 }])).codec, 'aac');
+  pick(
+    part([
+      { codec: 'dca', channels: 6 },
+      { codec: 'aac', channels: 2 },
+    ]),
+  ).codec,
+  'aac',
+);
 
 // A commentary is an ordinary AC3 track by codec and channel count, so nothing
 // else in this ranking excludes it — and on a remux whose main track is TrueHD
 // it is the ONLY passable track, which is how it gets picked and ruins the film.
 assert.strictEqual(
-  pick(part([{ codec: 'ac3', channels: 6, title: 'Director\'s Commentary' },
-             { codec: 'ac3', channels: 6, title: 'English' }])).title, 'English');
+  pick(
+    part([
+      { codec: 'ac3', channels: 6, title: "Director's Commentary" },
+      { codec: 'ac3', channels: 6, title: 'English' },
+    ]),
+  ).title,
+  'English',
+);
 assert.strictEqual(
-  pick(part([{ codec: 'truehd', channels: 8, title: 'Surround 7.1' },
-             { codec: 'ac3', channels: 2, title: 'Commentary by the cast' }])), null,
-  'a TrueHD main track plus a commentary leaves nothing worth playing');
+  pick(
+    part([
+      { codec: 'truehd', channels: 8, title: 'Surround 7.1' },
+      { codec: 'ac3', channels: 2, title: 'Commentary by the cast' },
+    ]),
+  ),
+  null,
+  'a TrueHD main track plus a commentary leaves nothing worth playing',
+);
 assert.strictEqual(
-  pick(part([{ codec: 'eac3', channels: 6, extendedDisplayTitle: 'English (EAC3 5.1) - Audio Description' },
-             { codec: 'ac3', channels: 6, title: 'English' }])).codec, 'ac3');
+  pick(
+    part([
+      {
+        codec: 'eac3',
+        channels: 6,
+        extendedDisplayTitle: 'English (EAC3 5.1) - Audio Description',
+      },
+      { codec: 'ac3', channels: 6, title: 'English' },
+    ]),
+  ).codec,
+  'ac3',
+);
 assert.strictEqual(Media.isCommentary({ title: 'Commentary' }), true);
 assert.strictEqual(Media.isCommentary({ displayTitle: 'Audio Description' }), true);
 assert.strictEqual(Media.isCommentary({ title: 'English' }), false);
@@ -60,14 +119,24 @@ assert.strictEqual(Media.isCommentary({ title: 'Surround 5.1' }), false);
 assert.strictEqual(Media.isCommentary(null), false);
 
 // The refusal has to say what the file actually offers, not a fixed sentence.
-var summary = Media.audioSummary(part([
-  { codec: 'truehd', channels: 8 },
-  { codec: 'ac3', channels: 2, title: 'Commentary' }]));
+var summary = Media.audioSummary(
+  part([
+    { codec: 'truehd', channels: 8 },
+    { codec: 'ac3', channels: 2, title: 'Commentary' },
+  ]),
+);
 assert.ok(/TRUEHD 7\.1/.test(summary) && /commentary/.test(summary), summary);
 
 // Subtitle and video streams are not audio candidates.
-assert.strictEqual(pick({ Stream: [{ streamType: 1, codec: 'hevc' },
-                                   { streamType: 3, codec: 'srt' }] }), null);
+assert.strictEqual(
+  pick({
+    Stream: [
+      { streamType: 1, codec: 'hevc' },
+      { streamType: 3, codec: 'srt' },
+    ],
+  }),
+  null,
+);
 assert.strictEqual(pick(null), null);
 
 // What the panel decodes. We identify as Chrome to get a decision at all, so a
@@ -100,14 +169,18 @@ assert.strictEqual(Media.allows(ODD, false), true, 'the server re-encodes it to 
 // Direct play hands the panel the original file, so the decode check applies
 // there and only there.
 assert.strictEqual(Media.allows(ODD, true), false, 'the panel cannot decode VC-1 itself');
-assert.strictEqual(Media.allows({ width: 3840, height: 2160, videoCodec: 'av1',
-                                  container: 'mkv' }, true), false);
+assert.strictEqual(
+  Media.allows({ width: 3840, height: 2160, videoCodec: 'av1', container: 'mkv' }, true),
+  false,
+);
 
 // The 4K guard fires on UHD dimensions, not on 1080p.
 assert.strictEqual(Media.isUHD({ width: 3840, height: 2160 }), true);
 assert.strictEqual(Media.isUHD({ width: 1920, height: 1080 }), false);
 
-assert.strictEqual(Media.audioLabel({ codec: 'eac3', channels: 6, languageCode: 'eng' }),
-                   'EAC3 5.1 ENG');
+assert.strictEqual(
+  Media.audioLabel({ codec: 'eac3', channels: 6, languageCode: 'eng' }),
+  'EAC3 5.1 ENG',
+);
 
 console.log('audio selection: all assertions passed');

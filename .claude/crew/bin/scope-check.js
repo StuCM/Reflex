@@ -41,7 +41,9 @@ var bookkeeping = [taskFile.replace(/^\.\//, ''), '.claude/tasks/BOARD.md'];
 
 var stray = changed.filter(function (f) {
   if (bookkeeping.indexOf(f) !== -1) return false;
-  return !declared.some(function (d) { return match(f, d); });
+  return !declared.some(function (d) {
+    return match(f, d);
+  });
 });
 
 var comments = commentDelta(base);
@@ -49,8 +51,15 @@ var comments = commentDelta(base);
 console.log('base           : ' + base);
 console.log('files declared : ' + declared.length);
 console.log('files changed  : ' + changed.length);
-console.log('comment lines  : +' + comments.added + ' / -' + comments.removed +
-            ' (' + comments.pct + '% of added lines)');
+console.log(
+  'comment lines  : +' +
+    comments.added +
+    ' / -' +
+    comments.removed +
+    ' (' +
+    comments.pct +
+    '% of added lines)',
+);
 
 if (comments.pct > cfg.comments.warnAddedRatio * 100) {
   console.log('\nnote: comments are ' + comments.pct + '% of added lines. Check they');
@@ -59,7 +68,9 @@ if (comments.pct > cfg.comments.warnAddedRatio * 100) {
 
 if (stray.length) {
   console.log('\nOUT OF SCOPE — not declared in the spec:');
-  stray.forEach(function (f) { console.log('  ' + f); });
+  stray.forEach(function (f) {
+    console.log('  ' + f);
+  });
   console.log('\nEither the spec was wrong (amend it, say why) or this is scope creep.');
   process.exit(1);
 }
@@ -73,13 +84,18 @@ console.log('\nin scope');
 // it made every landed commit since the last push read as scope creep. A merge
 // base is right whichever way round they are.
 function defaultBase() {
-  var branch = (cfg.baseBranch || 'main');
+  var branch = cfg.baseBranch || 'main';
   var refs = [branch, 'origin/' + branch];
   for (var i = 0; i < refs.length; i++) {
     try {
-      return execSync('git merge-base HEAD ' + refs[i],
-                      { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    } catch (e) { /* no such ref in this checkout; try the next */ }
+      return execSync('git merge-base HEAD ' + refs[i], {
+        cwd: root,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+    } catch (e) {
+      /* no such ref in this checkout; try the next */
+    }
   }
   return branch;
 }
@@ -111,11 +127,18 @@ function match(file, decl) {
 function commentDelta(ref) {
   var diff = '';
   try {
-    diff = execSync('git diff ' + ref + '...HEAD -- . && git diff HEAD -- .',
-                    { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
-  } catch (e) { return { added: 0, removed: 0, pct: 0 }; }
+    diff = execSync('git diff ' + ref + '...HEAD -- . && git diff HEAD -- .', {
+      cwd: root,
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+    });
+  } catch (e) {
+    return { added: 0, removed: 0, pct: 0 };
+  }
 
-  var added = 0, removed = 0, addedAll = 0;
+  var added = 0,
+    removed = 0,
+    addedAll = 0;
   diff.split('\n').forEach(function (l) {
     if (/^\+\+\+|^---/.test(l)) return;
     if (l.charAt(0) === '+') {
@@ -128,15 +151,22 @@ function commentDelta(ref) {
   return {
     added: added,
     removed: removed,
-    pct: addedAll ? Math.round((added / addedAll) * 100) : 0
+    pct: addedAll ? Math.round((added / addedAll) * 100) : 0,
   };
 }
 
 function sh(cmd) {
   try {
     return execSync(cmd, { cwd: root, encoding: 'utf8' })
-      .split('\n').filter(function (s) { return s.trim() !== ''; });
-  } catch (e) { return []; }
+      .split('\n')
+      .filter(function (s) {
+        return s.trim() !== '';
+      });
+  } catch (e) {
+    return [];
+  }
 }
 
-function unique(v, i, a) { return a.indexOf(v) === i; }
+function unique(v, i, a) {
+  return a.indexOf(v) === i;
+}
