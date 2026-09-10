@@ -10,7 +10,7 @@
     "test": "node test/run.js",
     "check": "node tools/check-es5.js",
     "smoke": "node dev/smoke.js",
-    "verify": "npm run check && npm run lint && npm run lint:css && npm run format:check && npm run typecheck && npm test && npm run fixture && npm run smoke",
+    "verify": "npm run check && npm run lint && npm run lint:names && npm run lint:css && npm run format:check && npm run typecheck && npm test && npm run fixture && npm run smoke",
     "package": "sh tools/package.sh",
     "prepare": "node .claude/crew/bin/setup.js",
     "crew:setup": "git config core.hooksPath .claude/crew/githooks && echo 'commit hook enabled'",
@@ -22,7 +22,8 @@
     "lint:css": "stylelint \"css/**/*.css\"",
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:names": "eslint"
   },
   "devDependencies": {
     "eslint": "^10.10.0",
