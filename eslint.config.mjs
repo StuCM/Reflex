@@ -8,7 +8,7 @@
  */
 import tseslint from 'typescript-eslint';
 import unicorn from 'eslint-plugin-unicorn';
-import jsdoc from 'eslint-plugin-jsdoc';
+import jsdocPlugin from 'eslint-plugin-jsdoc';
 
 export default tseslint.config(
   {
@@ -20,7 +20,7 @@ export default tseslint.config(
       parser: tseslint.parser,
       parserOptions: { projectService: true },
     },
-    plugins: { unicorn, jsdoc, '@typescript-eslint': tseslint.plugin },
+    plugins: { unicorn, jsdoc: jsdocPlugin, '@typescript-eslint': tseslint.plugin },
     rules: {
       'unicorn/name-replacements': [
         'error',
