@@ -14,6 +14,7 @@ import * as art from './data/art';
 import * as glyphs from './view/glyphs';
 import * as masthead from './view/masthead';
 import * as menu from './view/menu';
+import * as browse from './screen/browse';
 import * as showpage from './screen/showpage';
 import * as rail from './view/rail';
 import * as sidebar from './view/sidebar';
@@ -94,6 +95,7 @@ declare global {
     Sidebar: Mutable<typeof sidebar>;
     Rail: Mutable<typeof rail>;
     ShowPage: Mutable<typeof showpage>;
+    Browse: Mutable<typeof browse>;
     /* js/ calls it Masthead.art(); the module exports showArt. */
     Masthead: Mutable<typeof masthead> & { art: typeof masthead.showArt };
   }
@@ -127,4 +129,5 @@ window.Menu = { ...menu };
 window.Sidebar = { ...sidebar };
 window.Rail = { ...rail };
 window.ShowPage = { ...showpage };
+window.Browse = { ...browse };
 window.Masthead = { ...masthead, art: masthead.showArt };
