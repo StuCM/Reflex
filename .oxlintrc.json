@@ -49,7 +49,12 @@
     // only lower-case locals are worth checking.
     "no-unused-vars": ["error", { "varsIgnorePattern": "^[A-Z]", "caughtErrors": "none" }],
 
-    "id-length": ["error", { "min": 3, "exceptions": ["i", "j", "id", "at", "to"] }],
+    // `properties: never` because the short names left are data, not choices:
+    // certificate codes (u, g, r, x), language codes, codec names.
+    "id-length": [
+      "error",
+      { "min": 3, "exceptions": ["i", "j", "id", "at", "to"], "properties": "never" }
+    ],
     "unicorn/filename-case": ["error", { "case": "kebabCase" }],
     "import/no-cycle": "error",
 
@@ -86,15 +91,7 @@
       // sits here. As each is converted to ESM + TypeScript (see
       // docs/refactor-plan.md) delete its line, and the strict rules start
       // applying to it. When this list is empty, so is the migration.
-      "files": [
-        "js/core/**",
-        "js/api/**",
-        "js/data/**",
-        "js/rules/**",
-        "js/view/**",
-        "js/screen/**",
-        "js/app.js"
-      ],
+      "files": ["js/core/**", "js/api/**", "js/data/**", "js/view/**", "js/screen/**", "js/app.js"],
       "rules": {
         "id-length": "off",
         "unicorn/prefer-add-event-listener": "off",

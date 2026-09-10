@@ -58,6 +58,37 @@ interface PlexGuid {
   id: string;
 }
 
+/** An intro or credits sequence Plex found, in milliseconds. */
+interface PlexMarker {
+  type?: string;
+  startTimeOffset?: number;
+  endTimeOffset?: number;
+}
+
+/** Same offsets as a marker. `thumb` is absent far more often than not. */
+interface PlexChapter {
+  tag?: string;
+  title?: string;
+  index?: number;
+  startTimeOffset?: number;
+  endTimeOffset?: number;
+  thumb?: string;
+}
+
+/** A chapter as the trackbar wants it: seconds, in order. */
+interface Chapter {
+  title: string;
+  start: number;
+  end: number;
+  thumb: string | null;
+}
+
+/** A row of the quality menu. A null bitrate is the file as it stands. */
+interface Quality {
+  label: string;
+  bitrate: number | null;
+}
+
 /** A film, show, season or episode. */
 interface PlexItem {
   ratingKey: string;
@@ -80,6 +111,11 @@ interface PlexItem {
       which carries the external imdb/tmdb/tvdb ids. Both are used. */
   guid?: string;
   Guid?: PlexGuid[];
+  Marker?: PlexMarker[];
+  Chapter?: PlexChapter[];
+  titleSort?: string;
+  grandparentGuid?: string;
+  childCount?: number;
   Media?: PlexMedia[];
 
   /* Reflex's own, stamped on the way through. Underscored so nothing
@@ -94,3 +130,48 @@ interface PlexServer {
   uri: string;
   token: string;
 }
+
+/** A subtitle cue, in seconds. */
+interface Cue {
+  start: number;
+  end: number;
+  text: string;
+}
+
+/** One server section a merge row walks. */
+interface MergePart {
+  server: PlexServer;
+  key: string;
+  updatedAt?: number;
+  filter?: string;
+  tag?: string;
+}
+
+type MergeFetch = (
+  part: MergePart,
+  offset: number,
+) => Promise<{ items: PlexItem[]; total: number }>;
+
+/** Opaque to everything but js/data/merge.js. */
+interface MergeState {
+  streams: { total: number }[];
+}
+
+interface ListRow {
+  kind: 'list';
+  title: string;
+  items: PlexItem[];
+  total: number;
+  focus: number;
+}
+
+interface MergeRow {
+  kind: 'merge';
+  title: string;
+  focus: number;
+  total: number;
+  parts: MergePart[];
+  state: MergeState;
+}
+
+type Row = ListRow | MergeRow;

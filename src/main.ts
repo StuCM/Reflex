@@ -14,8 +14,11 @@ import '../js/api/http.js';
 import '../js/data/store.js';
 import '../js/data/cache.js';
 import '../js/core/panel.js';
-import '../js/rules/subs.js';
-import '../js/rules/media.js';
+
+/* rules/ has moved to src/. This publishes it under the name js/ still uses,
+   and sits exactly where js/rules/media.js did in the order. */
+import './legacy';
+
 import '../js/data/servers.js';
 import '../js/data/merge.js';
 import '../js/api/plex.js';
@@ -25,7 +28,6 @@ import '../js/data/art.js';
 import '../js/core/ui.js';
 import '../js/view/glyphs.js';
 import '../js/view/menu.js';
-import '../js/rules/rows.js';
 import '../js/view/rail.js';
 import '../js/data/meta.js';
 import '../js/data/guard.js';

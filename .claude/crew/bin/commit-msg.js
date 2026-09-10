@@ -109,21 +109,29 @@ if (errors.length) {
 function allowedScopes() {
   var out = [];
   try {
-    var dir = require(path.join(root, '.claude', 'crew.config.json')).scopes.fromDir;
+    var dirs = require(path.join(root, '.claude', 'crew.config.json')).scopes.fromDir;
+    if (!Array.isArray(dirs)) dirs = [dirs];
+    dirs.forEach(collect);
+  } catch (e) {
+    /* no source dir — extras only */
+  }
+
+  // js/ shrinks and src/ grows as the migration runs; a scope from either is
+  // valid, and neither list has to be maintained by hand.
+  function collect(dir) {
     // js/ is layered; a scope is the module name, and the layer name too.
     var base = path.join(root, dir);
+    if (!fs.existsSync(base)) return;
     fs.readdirSync(base, { withFileTypes: true }).forEach(function (e) {
       if (e.isDirectory()) {
         out.push(e.name);
         fs.readdirSync(path.join(base, e.name)).forEach(function (f) {
-          if (/\.js$/.test(f)) out.push(f.replace(/\.js$/, ''));
+          if (/\.(js|ts)$/.test(f)) out.push(f.replace(/\.(js|ts)$/, ''));
         });
-      } else if (/\.js$/.test(e.name)) {
-        out.push(e.name.replace(/\.js$/, ''));
+      } else if (/\.(js|ts)$/.test(e.name)) {
+        out.push(e.name.replace(/\.(js|ts)$/, ''));
       }
     });
-  } catch (e) {
-    /* no source dir — extras only */
   }
   var extra = require(path.join(root, '.claude', 'crew.config.json')).scopes.extra || [];
   return out.concat(extra).sort();

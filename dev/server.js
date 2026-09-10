@@ -96,7 +96,10 @@ function vite() {
   return vitePromise;
 }
 
-const VITE_OWNS = /^\/(src\/|@vite|@id\/|@fs\/|node_modules\/)/;
+/* js/ is in the module graph now — main.ts imports it — so Vite has to
+   transform it, not the static branch below. Serving it raw is how
+   import.meta.env in js/core/config.js came back undefined. */
+const VITE_OWNS = /^\/(src\/|js\/|@vite|@id\/|@fs\/|node_modules\/)/;
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
