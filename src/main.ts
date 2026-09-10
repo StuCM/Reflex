@@ -14,7 +14,6 @@ import './legacy';
 
 import '../js/data/servers.js';
 import '../js/data/merge.js';
-import '../js/api/plex.js';
 import '../js/data/art.js';
 import '../js/core/ui.js';
 import '../js/view/glyphs.js';

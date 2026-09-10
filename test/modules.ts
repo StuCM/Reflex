@@ -5,6 +5,12 @@
    static import is hoisted above every `await import` below. */
 import '../js/core/config.js';
 import * as http from '../src/api/http';
+import * as plexAuth from '../src/api/plex/auth';
+import { hasToken, init, state } from '../src/api/plex/client';
+import { discover } from '../src/api/plex/discovery';
+import * as plexImages from '../src/api/plex/images';
+import * as plexLibrary from '../src/api/plex/library';
+import * as plexPlayback from '../src/api/plex/playback';
 import * as tmdb from '../src/api/tmdb';
 import * as youtube from '../src/api/youtube';
 import * as audio from '../src/rules/audio';
@@ -30,6 +36,17 @@ export const Media = {
   langName,
 };
 
+export const Plex = {
+  init,
+  hasToken,
+  state,
+  discover,
+  ...plexAuth,
+  ...plexLibrary,
+  ...plexImages,
+  ...plexPlayback,
+};
+
 export const Subs = cues;
 export const Http = http;
 export const Tmdb = tmdb;
@@ -43,6 +60,7 @@ const globals = globalThis as Record<string, unknown>;
 globals.Media = Media;
 globals.Subs = Subs;
 globals.Http = http;
+globals.Plex = Plex;
 globals.Tmdb = tmdb;
 globals.Youtube = youtube;
 globals.Rows = Rows;
@@ -51,7 +69,6 @@ await import('../js/core/panel.js');
 await import('../js/data/servers.js');
 await import('../js/data/merge.js');
 await import('../js/data/shows.js');
-await import('../js/api/plex.js');
 await import('../js/data/art.js');
 await import('../js/data/discovery.js');
 
@@ -60,6 +77,5 @@ export const Panel = globals.Panel;
 export const Servers = globals.Servers;
 export const Merge = globals.Merge;
 export const Shows = globals.Shows;
-export const Plex = globals.Plex;
 export const Art = globals.Art;
 export const Discovery = globals.Discovery;
