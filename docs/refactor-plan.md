@@ -163,8 +163,8 @@ That reverses the strategy the September codemods ran on, which spliced source
 precisely so alignment and comment layout survived. The trade is bought
 knowingly: layout stops being reviewable material at all.
 
-Comments are untouched by any of this. The house style in CLAUDE.md — one
-concise line on an export, the *why* and never the signature — stands.
+A formatter does not touch what a comment *says*, only where it sits. What it
+says is the next section, and it changes.
 
 ### Comments
 
