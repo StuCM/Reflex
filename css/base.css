@@ -152,6 +152,10 @@ html, body {
 
 .menu-list { height: 392px; overflow: hidden; margin-top: 18px; }
 .menu-inner {
+  /* --wind is how far up the list is scrolled; JavaScript sets the number and
+     the transform stays here. */
+  -webkit-transform: translateY(var(--wind, 0px));
+  transform: translateY(var(--wind, 0px));
   -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
   transition: transform var(--t-quick) var(--ease);
 }
