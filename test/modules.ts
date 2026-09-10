@@ -1,9 +1,11 @@
 /* What the tests import while half the app is js/ and half is src/.
    Converted modules directly; the rest read off the global they set. */
 
-/* First, and statically: src/api reads Config at module evaluation, and a
+/* First, and statically: src/api reads settings at module evaluation, and a
    static import is hoisted above every `await import` below. */
-import '../js/core/config.js';
+import settings from '../src/core/config';
+import * as panel from '../src/core/panel';
+import * as userInterface from '../src/core/ui';
 import * as http from '../src/api/http';
 import * as art from '../src/data/art';
 import * as cached from '../src/data/cached';
@@ -56,6 +58,10 @@ export const Plex = {
   ...plexPlayback,
 };
 
+export const Config = settings;
+export const Panel = panel;
+export const UI = userInterface;
+
 export const Art = art;
 export const Shows = shows;
 export const Discovery = discovery;
@@ -76,6 +82,9 @@ export const Rows = rows;
    js/data/merge.js calls Media.identity — so the globals above must be set
    before those modules are asked anything. */
 const globals = globalThis as Record<string, unknown>;
+globals.Config = settings;
+globals.Panel = { ...panel, features: panel.probeFeatures };
+globals.UI = userInterface;
 globals.Media = Media;
 globals.Subs = Subs;
 globals.Http = http;
@@ -92,8 +101,3 @@ globals.Guard = guard;
 globals.Tmdb = tmdb;
 globals.Youtube = youtube;
 globals.Rows = Rows;
-
-await import('../js/core/panel.js');
-
-export const Config = globals.Config;
-export const Panel = globals.Panel;

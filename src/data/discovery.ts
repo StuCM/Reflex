@@ -8,6 +8,8 @@ import { railSub } from '../rules/labels';
 import * as cached from './cached';
 import * as merge from './merge';
 import * as servers from './servers';
+import settings from '../core/config';
+import { debug } from '../core/ui';
 
 export function enabled(): boolean {
   return tmdb.enabled();
@@ -75,7 +77,7 @@ export function resolve(item: DiscoveryEntry): Promise<PlexItem | null> {
       },
       (error: Error) => {
         item._asking = null; // a failed lookup is worth retrying
-        UI.debug(`resolve ${item.title}: ${error.message}`);
+        debug(`resolve ${item.title}: ${error.message}`);
         return null;
       },
     );
@@ -104,14 +106,14 @@ function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
       (found) => {
         if (!context.isCurrent()) return;
         if (!found.length) {
-          UI.debug(`${category.title}: TMDB returned nothing`);
+          debug(`${category.title}: TMDB returned nothing`);
           return;
         }
         context.add(category.title, found.map(entry));
-        UI.debug(`${category.title}: ${found.length} from TMDB`);
+        debug(`${category.title}: ${found.length} from TMDB`);
       },
       (error: Error) => {
-        UI.debug(`${category.title} failed: ${error.message}`);
+        debug(`${category.title} failed: ${error.message}`);
       },
     );
 }
@@ -121,7 +123,7 @@ function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
    switch mid-flight; seeds are the TMDB ids of what has been watched, which the
    caller already holds. */
 export function load(context: LoadContext): Promise<void> {
-  const categories = Config.categories ?? [];
+  const categories = settings.categories ?? [];
   let at = 0;
   function step(): Promise<void> {
     const category = categories[at++];

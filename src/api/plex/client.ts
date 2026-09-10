@@ -4,8 +4,9 @@
    than one, the same film is on both, and each must be askable separately. */
 import { queryString, request as httpRequest } from '../http';
 import * as servers from '../../data/servers';
+import settings from '../../core/config';
 
-const PLEX_TV = Config.plexTvBase;
+const PLEX_TV = settings.plexTvBase;
 const PRODUCT = 'Reflex';
 const VERSION = '0.0.1';
 

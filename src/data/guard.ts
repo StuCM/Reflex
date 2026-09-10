@@ -6,6 +6,7 @@ import { audioLabel, audioSummary, bestAudio, pickAudio, streamById } from '../r
 import { allows, canDecode, isUHD } from '../rules/quality';
 import { load } from './meta';
 import * as servers from './servers';
+import { debug } from '../core/ui';
 
 /* mediaIndex picks which version of this copy to check: one library item can
    hold several, and a 4K remux and a 1080p encode get different verdicts.
@@ -74,7 +75,7 @@ export function check(
              arrives as H.264, which it always manages — so this check belongs
              here, not before the decision. */
           const undecodable = direct && !canDecode(media);
-          UI.debug(
+          debug(
             `decision: ${verdict.decision} · ${metadata.title}` +
               (servers.count() > 1 ? ` on ${server.name}` : '') +
               ` · ${audioLabel(audio)}` +

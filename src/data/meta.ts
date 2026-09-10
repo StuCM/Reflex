@@ -2,6 +2,7 @@
 import { metadata } from '../api/plex/library';
 import * as cached from './cached';
 import * as servers from './servers';
+import { debug } from '../core/ui';
 
 /** Metadata payloads kept in RAM. */
 const CAP = 500;
@@ -60,7 +61,7 @@ export function load(item: PlexItem | null | undefined): Promise<PlexItem | null
       return found;
     })
     .catch((error: Error) => {
-      UI.debug(`meta: ${error.message}`);
+      debug(`meta: ${error.message}`);
       return null;
     });
 }

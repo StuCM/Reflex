@@ -2,9 +2,10 @@
    External-first on purpose: fetch ~20 titles, then ask Plex which it has.
    The other direction would mean crawling a server we do not own. */
 import { queryString, request } from './http';
+import settings from '../core/config';
 
-const KEY = Config.tmdbKey;
-const API = Config.tmdbBase;
+const KEY = settings.tmdbKey;
+const API = settings.tmdbBase;
 const REGION = 'GB';
 
 /** The rubbish filter. Junk has almost no votes, so a floor removes most of it. */
@@ -109,7 +110,7 @@ export function recommendedFrom(seedTmdbIds: string[] | undefined): Promise<Tmdb
   );
 }
 
-/* One category from Config.categories to its films. An unknown kind is a typo
+/* One category from settings.categories to its films. An unknown kind is a typo
    in the config rather than a crash: it gives an empty row. `seeds` are TMDB
    ids of what has been watched, and only the recommended kind uses them. */
 export function catalogue(
