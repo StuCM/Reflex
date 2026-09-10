@@ -75,4 +75,11 @@ export default tseslint.config(
       'jsdoc/no-types': 'error',
     },
   },
+  {
+    /* The bridge exists to publish `Media`, `Subs` and `Rows` under the exact
+       names js/ still calls them by. Renaming them to satisfy a convention
+       would break the thing the file is for. */
+    files: ['src/legacy.ts'],
+    rules: { '@typescript-eslint/naming-convention': 'off' },
+  },
 );

@@ -1,0 +1,63 @@
+/* What the tests import, while half the app is still js/ and half is src/.
+ *
+ * The converted rules are imported directly. Everything still in js/ is
+ * imported for its side effect — each of those files ends with `window.X = X`
+ * — and read back off the global. A name moves from the bottom half to the top
+ * half as its file converts, and this file goes when the bottom half is empty.
+ */
+import * as audio from '../src/rules/audio';
+import * as cues from '../src/rules/cues';
+import * as identity from '../src/rules/identity';
+import * as labels from '../src/rules/labels';
+import { langName } from '../src/rules/language';
+import * as quality from '../src/rules/quality';
+import * as ratings from '../src/rules/ratings';
+import * as rows from '../src/rules/rows';
+import * as subtitles from '../src/rules/subtitles';
+import * as timeline from '../src/rules/timeline';
+
+/* The seven rules modules were one `Media`, and the assertions still say so. */
+export const Media = {
+  ...audio,
+  ...subtitles,
+  ...timeline,
+  ...quality,
+  ...ratings,
+  ...identity,
+  ...labels,
+  langName,
+};
+
+export const Subs = cues;
+export const Rows = rows;
+
+/* Order matters below: js/core/panel.js is what Media.canDecode asks, and
+   js/data/merge.js calls Media.identity — so the globals above must be set
+   before those modules are asked anything. */
+const globals = globalThis as Record<string, unknown>;
+globals.Media = Media;
+globals.Subs = Subs;
+globals.Rows = Rows;
+
+await import('../js/core/config.js');
+await import('../js/core/panel.js');
+await import('../js/api/http.js');
+await import('../js/data/servers.js');
+await import('../js/data/merge.js');
+await import('../js/data/shows.js');
+await import('../js/api/plex.js');
+await import('../js/api/tmdb.js');
+await import('../js/api/youtube.js');
+await import('../js/data/art.js');
+await import('../js/data/discovery.js');
+
+export const Config = globals.Config;
+export const Panel = globals.Panel;
+export const Servers = globals.Servers;
+export const Merge = globals.Merge;
+export const Shows = globals.Shows;
+export const Plex = globals.Plex;
+export const Tmdb = globals.Tmdb;
+export const Youtube = globals.Youtube;
+export const Art = globals.Art;
+export const Discovery = globals.Discovery;
