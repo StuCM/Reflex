@@ -9,6 +9,9 @@
   position: absolute; left: var(--sp-page); bottom: 72px; width: 1792px;
   -webkit-transition: opacity var(--t-quick) var(--ease); transition: opacity var(--t-quick) var(--ease);
 }
+/* Faded rather than hidden: the OSD goes away on a timer and comes back on a
+   keypress, and only a transition on opacity is free on this panel. */
+#osd.faded { opacity: 0; }
 #osd-title { font-size: 40px; font-weight: 300; line-height: 48px; }
 /* BACK stops playback, and nothing else on this screen says so. */
 .osd-back { display: inline-block; width: 40px; color: var(--dim); }
@@ -22,12 +25,15 @@
   position: relative; height: 10px; width: 1300px;
   background: var(--raised); border-radius: var(--r-pill);
 }
+/* The two widths and the knob's offset are the only numbers on this screen
+   JavaScript really computes per frame, so they arrive as custom properties
+   and the shape stays here. */
 #osd-buffered {
-  position: absolute; top: 0; left: 0; height: 10px; width: 0;
+  position: absolute; top: 0; left: 0; height: 10px; width: var(--buffered, 0);
   background: var(--soft); border-radius: var(--r-pill);
 }
 #osd-fill {
-  position: absolute; top: 0; left: 0; height: 10px; width: 0;
+  position: absolute; top: 0; left: 0; height: 10px; width: var(--fill, 0);
   background: var(--ac); border-radius: var(--r-pill);
 }
 
@@ -40,11 +46,11 @@
   overflow: hidden;
 }
 .osd-tick {
-  position: absolute; top: 0; width: 2px; height: 10px;
+  position: absolute; top: 0; left: var(--at, 0); width: 2px; height: 10px;
   background: var(--bg);
 }
 .osd-band {
-  position: absolute; top: 0; height: 10px;
+  position: absolute; top: 0; left: var(--at, 0); width: var(--wide, 0); height: 10px;
   background: rgba(255, 255, 255, 0.22);
 }
 
@@ -52,6 +58,7 @@
 #osd-knob {
   position: absolute; top: -4px; left: 0; width: 6px; height: 18px;
   background: #fff; border-radius: var(--r-pill);
+  -webkit-transform: translateX(var(--at, 0)); transform: translateX(var(--at, 0));
 }
 /* The trackbar has the focus, and 7a's ring round the knob is what says so —
    scrubbing has to look like a mode rather than another nudge. Toggled, never
@@ -101,6 +108,7 @@
 }
 #osd-chapters-inner {
   white-space: nowrap;
+  -webkit-transform: translateX(var(--wind, 0)); transform: translateX(var(--wind, 0));
   -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
   transition: transform var(--t-quick) var(--ease);
 }
@@ -111,6 +119,7 @@
 .osd-chap-shot {
   position: relative; width: 240px; height: 135px; border-radius: var(--r-card);
   background: var(--surface) no-repeat center; border: 3px solid transparent;
+  background-image: var(--shot, none);
   -webkit-background-size: cover; background-size: cover;
 }
 .osd-chap.on .osd-chap-shot { border-color: var(--ac); }
@@ -150,6 +159,7 @@
   display: inline-block; width: 320px; height: 180px; margin-right: 24px;
   vertical-align: middle;
   background: var(--raised) no-repeat center; border-radius: var(--r-tag);
+  background-image: var(--shot, none);
   -webkit-background-size: cover; background-size: cover;
 }
 #un-text { display: inline-block; width: 440px; vertical-align: middle; }
@@ -176,16 +186,16 @@
 
 /* ---- the in-player menu ---- */
 
-/* One section at a time, over the button that opened it — left is set by
-   js/player.js, as it is on the film page. Both this and the chapter rail sit
-   on the same shelf, clear of the trackbar and the title below them.
+/* One section at a time, over the button that opened it — --menu-left is set by
+   src/screen/player.ts, as it is on the film page. Both this and the chapter
+   rail sit on the same shelf, clear of the trackbar and the title below them.
 
    Opaque, and rounded to 7b's 26px: a list of choices read over moving picture
    is the one place translucency costs more than it buys. The radius is a
    literal because no token in css/base.css carries it, and that file belongs to
    every screen rather than this one. */
 #menu {
-  position: absolute; left: var(--sp-page); bottom: 330px; width: 860px;
+  position: absolute; left: var(--menu-left, var(--sp-page)); bottom: 330px; width: 860px;
   padding: 22px 26px 18px; border-radius: 26px;
   background: var(--surface);
 }

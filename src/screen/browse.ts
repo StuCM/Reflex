@@ -12,6 +12,7 @@ import {
   search as plexSearch,
   tmdbId as plexTmdbId,
 } from '../api/plex/library';
+import { autoplayLabel, cycleAutoplay } from './player';
 import { cycleTheme, themeLabel } from './showpage';
 import { identity } from '../rules/identity';
 
@@ -534,8 +535,8 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
     return;
   }
   if (choice.kind === 'autoplay') {
-    Player.cycleAutoplay();
-    toast(`Autoplay next: ${Player.autoplayLabel()}`);
+    cycleAutoplay();
+    toast(`Autoplay next: ${autoplayLabel()}`);
     render();
     return;
   }

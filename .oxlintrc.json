@@ -65,7 +65,7 @@
     // Ratchets. Set at today's worst so nothing is blocked on day one; every
     // merge may lower a number, none may raise one. Measured AFTER oxfmt:
     // one property per line grew player.js from 1221 to 1508.
-    "max-lines": ["error", { "max": 1513 }],
+    "max-lines": ["error", { "max": 1510 }],
     "max-lines-per-function": ["error", { "max": 117 }],
     "max-depth": ["error", 4],
     "complexity": ["error", 35]
@@ -95,7 +95,7 @@
       // sits here. As each is converted to ESM + TypeScript (see
       // docs/refactor-plan.md) delete its line, and the strict rules start
       // applying to it. When this list is empty, so is the migration.
-      "files": ["js/core/**", "js/api/**", "js/data/**", "js/view/**", "js/screen/**", "js/app.js"],
+      "files": ["js/app.js"],
       "rules": {
         "id-length": "off",
         "unicorn/prefer-add-event-listener": "off",

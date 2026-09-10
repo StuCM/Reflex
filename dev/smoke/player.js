@@ -441,7 +441,7 @@ module.exports = function (h) {
                       return {
                         h: still.offsetHeight,
                         w: still.offsetWidth,
-                        art: still.style.backgroundImage !== '',
+                        art: still.style.getPropertyValue('--shot') !== '',
                         imgs: c.querySelectorAll('img').length,
                         time: c.querySelector('.osd-chap-time').textContent.trim(),
                         title: c.querySelector('.osd-chap-title').textContent.trim(),
