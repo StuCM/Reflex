@@ -327,3 +327,42 @@ interface Verdict {
   part?: PlexPart;
   mediaIndex?: number;
 }
+
+/* ---------- TMDB artwork ---------- */
+
+interface TmdbImage {
+  file_path?: string;
+  vote_average?: number;
+  vote_count?: number;
+}
+
+interface TmdbDetails {
+  images?: { backdrops?: TmdbImage[]; posters?: TmdbImage[] };
+  backdrops?: TmdbImage[];
+  posters?: TmdbImage[];
+  credits?: { cast?: { name?: string }[] };
+  overview?: string;
+  runtime?: number;
+  vote_average?: number;
+}
+
+interface ArtFacts {
+  overview: string;
+  runtime: number | null;
+  rating: number | null;
+  cast: string[];
+}
+
+interface ArtEntry {
+  hero: string | null;
+  poster: string | null;
+  facts?: ArtFacts;
+}
+
+/** A TMDB title on the Discovery page, before anyone asks if we hold it. */
+interface DiscoveryEntry extends PlexItem {
+  _tmdb: TmdbFilm;
+  _resolved?: PlexItem | null;
+  _availability?: string;
+  _asking?: Promise<PlexItem | null> | null;
+}
