@@ -166,6 +166,57 @@ knowingly: layout stops being reviewable material at all.
 Comments are untouched by any of this. The house style in CLAUDE.md — one
 concise line on an export, the *why* and never the signature — stands.
 
+### Comments
+
+Audited 2026-09-10: **22% of the tree is comments**, blocks run to 20 lines,
+and `js/core/config.js` is 42%. CLAUDE.md's rule already said not to do this.
+Nothing enforced it, so it happened anyway — including in the three files
+added that same day, which came in at or above the tree average.
+
+The rule, sharpened, is in CLAUDE.md and in `~/.claude/CLAUDE.md` as a global:
+**would a competent reader delete or simplify this, and be wrong?** Types carry
+what a parameter is. `docs/decisions.md` and the memory graph carry why. What
+survives is the narrow class that stops a mistake — `panelIndexOf` comparing
+two list lengths before trusting the panel's track order, which reads as a
+redundant guard and is not.
+
+Eleven lines to one, from `data/cache.js`, the worst offender written that day:
+
+```ts
+/* Every key the cache holds, and how long a hit lasts. */
+
+/** Cached until replaced. `drop` writes null — Store has no delete. */
+/** Cached for maxAge, hit or miss. */
+/** A hit is kept; a miss is retried after maxAge. */
+```
+
+The `drop` note survives on merit: someone would "fix" it to a real delete.
+
+**Enforcement, and its limit.** Comment *quality* is not lintable, and a length
+cap produces truncated comments rather than better ones. Two things are
+mechanical:
+
+- `jsdoc/no-types` — bans `@param {PlexPart}` once the types are real. Missing
+  from oxlint, so it joins the two naming rules in the ESLint half.
+- **A density ratchet**, the same mechanism as `max-lines`: today's percentage
+  per file is the ceiling, CI fails if a file gets more comment-heavy, and any
+  merge may lower a number. Roughly 30 lines in `tools/`, and worth writing
+  because nothing off the shelf does it.
+
+Baseline to beat, worst first:
+
+| file | today |
+|---|---|
+| `core/config.js` | 42.6% |
+| `rules/rows.js` | 38.5% |
+| `data/guard.js` | 35.3% |
+| `view/masthead.js` | 30.2% |
+| `data/cache.js` | 29.7% |
+| whole tree | **22.0%** across 7,047 lines |
+
+The ratchet only stops it getting worse. Bringing it down happens file by file
+during the migration, when each one is being rewritten anyway.
+
 ### Naming
 
 No abbreviations. `unicorn/prevent-abbreviations` with a project replacement

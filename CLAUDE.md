@@ -359,11 +359,25 @@ as it is; nothing is rewritten.
 
 ### Comments
 
-One concise line on an exported function: what it does, and any non-obvious
-why. Never restate the signature, and never narrate the reasoning that got
-there — that goes in the memory graph and `docs/decisions.md`, where it can be
-traversed and superseded. Source scattered with thinking is harder to read
-than source with none.
+**The test: would a competent reader delete or simplify this, and be wrong?**
+If yes, write the comment. If no, delete it. That is answerable, unlike "is
+this useful", and it is the only reason a comment survives review.
+
+Everything else belongs elsewhere and is already there: what a parameter is,
+say it in the type; why a decision was taken, `docs/decisions.md` and the
+memory graph, where it can be superseded rather than left to rot beside the
+code. A file carrying its own design history has two copies of it, and they
+drift.
+
+One line on an export. Never restate the signature. Audited 2026-09-10: the
+tree was **22% comments** with blocks up to 20 lines, and `js/core/config.js`
+was 42%. The rule above was already written and nothing enforced it, so CI now
+ratchets the density per file — see `docs/refactor-plan.md`.
+
+The comments worth keeping look like `panelIndexOf` in the player: it explains
+why two list lengths are compared before the panel's track order is trusted,
+and without it that check reads as redundant and gets simplified away into a
+silent wrong-track bug. That is the shape.
 
 ## Testing
 
