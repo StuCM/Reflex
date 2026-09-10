@@ -146,7 +146,7 @@ interface MergePart {
   server: PlexServer;
   key: string;
   updatedAt?: number;
-  filter?: string;
+  filter?: Record<string, string | number>;
   tag?: string;
 }
 

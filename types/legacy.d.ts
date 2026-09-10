@@ -43,4 +43,4 @@ interface CacheGlobal {
 declare const Cached: CacheGlobal;
 
 /** js/screen/player.js — still legacy. */
-declare const Player: { autoplayLabel(): string };
+declare const Player: { autoplayLabel(): string; cycleAutoplay(): void };
