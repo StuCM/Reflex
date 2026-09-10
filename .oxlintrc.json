@@ -62,13 +62,12 @@
     "unicorn/filename-case": ["error", { "case": "kebabCase" }],
     "import/no-cycle": "error",
 
-    // Ratchets. Set at today's worst so nothing is blocked on day one; every
-    // merge may lower a number, none may raise one. Measured AFTER oxfmt:
-    // one property per line grew player.js from 1221 to 1508.
+    // Ratchets. Set at today's worst; every merge may lower a number, none may
+    // raise one. Measured after oxfmt, which is what makes them stable.
     "max-lines": ["error", { "max": 1510 }],
-    "max-lines-per-function": ["error", { "max": 117 }],
+    "max-lines-per-function": ["error", { "max": 106 }],
     "max-depth": ["error", 4],
-    "complexity": ["error", 35]
+    "complexity": ["error", 32]
   },
   "overrides": [
     {
