@@ -1,16 +1,5 @@
-/* Subtitles, as text over the video.
- *
- * Burning subtitles into the picture is a transcode, and a transcode of a 4K
- * file is the one thing that gets a session killed on a server we do not own.
- * So they are never burned in: the text track is fetched as an ordinary file,
- * parsed here, and drawn in a div over the video element. That costs the server
- * one small GET and nothing else, and it works identically whether the film is
- * direct playing or being converted.
- *
- * Handles SRT and WebVTT, which are the two things a Plex server hands back for
- * a text subtitle stream. They differ in the decimal separator and a header
- * line, and in nothing else that matters here.
- */
+/* SRT and WebVTT in, cues out.
+   Drawn over the video, never burned in: burning is a transcode. */
 
 /** '01:23:45,678', '01:23:45.678' and '23:45.67' all appear in the wild. */
 export function seconds(stamp: string): number | null {
@@ -21,9 +10,7 @@ export function seconds(stamp: string): number | null {
   return hours * 3600 + parseInt(parts[2], 10) * 60 + parseInt(parts[3], 10) + fraction;
 }
 
-/* Markup a TV has no business rendering: SRT's HTML-ish tags, ASS override
-   blocks that survive a conversion, and the position hints WebVTT puts after
-   the timestamp. Plain text is what the overlay draws. */
+/* SRT tags, ASS override blocks, WebVTT position hints. */
 function strip(line: string): string {
   return line
     .replace(/<[^>]*>/g, '')
@@ -65,8 +52,7 @@ export function parse(text: string | null | undefined): Cue[] {
   return cues.sort((one, two) => one.start - two.start);
 }
 
-/* First cue index starting after `at`. Binary, because a two-hour film has a
-   couple of thousand cues and this runs on every timeupdate. */
+/* Binary: a couple of thousand cues, and this runs on every timeupdate. */
 function after(cues: Cue[], at: number): number {
   let low = 0;
   let high = cues.length;
@@ -81,9 +67,8 @@ function after(cues: Cue[], at: number): number {
 /** How far back an open cue can have started. */
 const OVERLAP = 12;
 
-/* What should be on screen at `at`, or '' for nothing. Cues overlap — two
-   speakers, or a sign translated over dialogue — so this collects every one
-   still open rather than the newest. */
+/* Cues overlap — two speakers, a sign over dialogue — so this collects every
+   one still open, not the newest. */
 export function textAt(cues: Cue[] | null | undefined, at: number): string {
   if (!cues?.length) return '';
   const out: string[] = [];

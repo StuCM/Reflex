@@ -217,6 +217,27 @@ Baseline to beat, worst first:
 The ratchet only stops it getting worse. Bringing it down happens file by file
 during the migration, when each one is being rewritten anyway.
 
+### The DOM, in the layers not yet converted
+
+Two rules, enforced by `eslint.config.mjs` over `src/` and therefore in force
+from the moment a file moves there:
+
+- **No `innerHTML`.** `createElement` and `textContent`. It cannot escape, it
+  re-parses, and it discards the node underneath — which is what the rail's
+  fixed pool exists to avoid.
+- **No `element.style.x = …`.** A class. Where the value really is per-frame,
+  `style.setProperty('--offset', …)` and let CSS read it, so the design stays
+  in `css/`.
+
+The scale, measured 2026-09-10: 33 `innerHTML` assignments — `showpage` 12,
+`detail` 9, `player` 5, `menu` 3, `devices` 3, `sidebar` 1 — and 26 inline
+style writes, of which the 10 `transform`/`webkitTransform` are the rail and
+strip animation and become custom properties rather than disappearing.
+
+This is the largest single piece of work in steps 5 and 6, and it is why
+`view/` and `screen/` are last: they are not a rename, they are a rewrite of
+how the screen is drawn.
+
 ### Naming
 
 No abbreviations. `unicorn/name-replacements` with a project replacement map, plus `id-length` as a floor:

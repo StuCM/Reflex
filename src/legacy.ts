@@ -1,11 +1,5 @@
-/* What `src/` publishes on `window` for the files still in `js/`.
- *
- * Those files reach their neighbours by bare name, so a converted module has to
- * keep answering to the name it had. Each entry disappears when its last caller
- * moves to `src/`; when this file is empty the migration is over.
- *
- * Nothing in `src/` may import from here — it is an exit, not a door.
- */
+/* What src/ publishes on `window` for the files still in js/.
+   Empty means the migration is over. Nothing in src/ may import from here. */
 import * as audio from './rules/audio';
 import * as identity from './rules/identity';
 import * as labels from './rules/labels';

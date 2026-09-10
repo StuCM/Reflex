@@ -1,10 +1,5 @@
-/* What the tests import, while half the app is still js/ and half is src/.
- *
- * The converted rules are imported directly. Everything still in js/ is
- * imported for its side effect — each of those files ends with `window.X = X`
- * — and read back off the global. A name moves from the bottom half to the top
- * half as its file converts, and this file goes when the bottom half is empty.
- */
+/* What the tests import while half the app is js/ and half is src/.
+   Converted modules directly; the rest read off the global they set. */
 import * as audio from '../src/rules/audio';
 import * as cues from '../src/rules/cues';
 import * as identity from '../src/rules/identity';
