@@ -7,12 +7,30 @@ import { langName } from './rules/language';
 import * as quality from './rules/quality';
 import * as ratings from './rules/ratings';
 import * as http from './api/http';
+import * as plexAuth from './api/plex/auth';
+import { hasToken, init, state } from './api/plex/client';
+import { discover } from './api/plex/discovery';
+import * as plexImages from './api/plex/images';
+import * as plexLibrary from './api/plex/library';
+import * as plexPlayback from './api/plex/playback';
 import * as tmdb from './api/tmdb';
 import * as youtube from './api/youtube';
 import * as cues from './rules/cues';
 import * as rows from './rules/rows';
 import * as subtitles from './rules/subtitles';
 import * as timeline from './rules/timeline';
+
+/* plex.js is five modules now; js/ still calls the whole thing Plex. */
+const Plex = {
+  init,
+  hasToken,
+  state,
+  discover,
+  ...plexAuth,
+  ...plexLibrary,
+  ...plexImages,
+  ...plexPlayback,
+};
 
 /* The seven rules modules were one `Media` global, and js/ still calls it that. */
 const Media = {
@@ -37,6 +55,7 @@ declare global {
     Http: Mutable<typeof http>;
     Tmdb: Mutable<typeof tmdb>;
     Youtube: Mutable<typeof youtube>;
+    Plex: Mutable<typeof Plex>;
   }
 }
 
@@ -49,3 +68,4 @@ window.Rows = { ...rows };
 window.Http = { ...http };
 window.Tmdb = { ...tmdb };
 window.Youtube = { ...youtube };
+window.Plex = { ...Plex };

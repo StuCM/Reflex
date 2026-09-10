@@ -118,16 +118,16 @@ function allowedScopes() {
 
   // js/ shrinks and src/ grows as the migration runs; a scope from either is
   // valid, and neither list has to be maintained by hand.
+  // Every module name and every directory name under the source roots, at any
+  // depth: js/ shrinks and src/ grows as the migration runs, and src/api/plex/
+  // is three levels down. Neither list is maintained by hand.
   function collect(dir) {
-    // js/ is layered; a scope is the module name, and the layer name too.
     var base = path.join(root, dir);
     if (!fs.existsSync(base)) return;
     fs.readdirSync(base, { withFileTypes: true }).forEach(function (e) {
       if (e.isDirectory()) {
         out.push(e.name);
-        fs.readdirSync(path.join(base, e.name)).forEach(function (f) {
-          if (/\.(js|ts)$/.test(f)) out.push(f.replace(/\.(js|ts)$/, ''));
-        });
+        collect(path.join(dir, e.name));
       } else if (/\.(js|ts)$/.test(e.name)) {
         out.push(e.name.replace(/\.(js|ts)$/, ''));
       }

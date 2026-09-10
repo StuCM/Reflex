@@ -7,6 +7,7 @@
 
 interface PanelGlobal {
   supports(kind: 'video' | 'audio' | 'container', name: string | undefined): boolean;
+  clientProfile(): string;
 }
 
 declare const Panel: PanelGlobal;
@@ -34,6 +35,19 @@ interface MergeGlobal {
 }
 
 declare const Merge: MergeGlobal;
+
+/** js/data/servers.js — which servers we can reach, and which one an item came from. */
+interface ServersGlobal {
+  load(): void;
+  all(): PlexServer[];
+  set(list: PlexServer[]): void;
+  forget(): void;
+  stamp<T>(items: T[], server: PlexServer): T[];
+  of(item: unknown): PlexServer | null;
+  count(): number;
+}
+
+declare const Servers: ServersGlobal;
 
 /** js/core/ui.js — the debug line, toasts, and which view is showing. */
 interface UiGlobal {

@@ -127,7 +127,8 @@ interface PlexItem {
 interface PlexServer {
   id: string;
   name: string;
-  uri: string;
+  /** Whichever of its addresses answered first. */
+  base: string;
   token: string;
 }
 
@@ -242,4 +243,50 @@ interface Recap {
   thumb: string;
   season: number | null;
   length: string;
+}
+
+/* ---------- what the Plex client hands back ---------- */
+
+/** A library section, as the app groups them. */
+interface PlexSection {
+  key: string;
+  title: string;
+  type: 'movie' | 'show';
+  updatedAt: number;
+  server: string;
+}
+
+/** One of a section's own category rows. */
+interface PlexHub {
+  title: string;
+  items: PlexItem[];
+}
+
+interface PlexDevice {
+  id: string;
+  name: string;
+  platform: string;
+}
+
+/** The verdict from /video/:/transcode/universal/decision, with hasMDE=1. */
+interface PlexDecision {
+  decision: string;
+  video: string;
+  audio: string;
+  text: string;
+  raw: Record<string, unknown>;
+}
+
+interface PlaybackOptions {
+  maxBitrate?: number | null;
+  forceStream?: boolean;
+}
+
+/** What /api/v2/resources says about one server on the account. */
+interface PlexResource {
+  clientIdentifier: string;
+  name?: string;
+  provides?: string;
+  accessToken?: string;
+  connections?: { uri: string; relay?: boolean }[];
 }
