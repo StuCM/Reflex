@@ -211,7 +211,7 @@
        must never share the ARC link. */
     ShowPage.silence();
     if (!verdict || !verdict.ok) return;
-    const md = verdict.md;
+    const md = verdict.metadata;
     const server = Servers.of(md);
     /* Only an episode has a next. A film does not, and a trailer or an extra is
        not the thing you sat down to watch. */
@@ -249,7 +249,7 @@
          nothing to switch client-side. Subtitles are not here — they are drawn
          over the video and never restart anything. */
       onSwitch: (change) => {
-        Guard.check(verdict.md, change.mediaIndex, change.audioId, {
+        Guard.check(verdict.metadata, change.mediaIndex, change.audioId, {
           maxBitrate: change.maxBitrate,
           forceStream: change.forceStream,
         }).then((v2) => {

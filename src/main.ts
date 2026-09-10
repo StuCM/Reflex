@@ -15,8 +15,6 @@ import '../js/core/ui.js';
 import '../js/view/glyphs.js';
 import '../js/view/menu.js';
 import '../js/view/rail.js';
-import '../js/data/meta.js';
-import '../js/data/guard.js';
 import '../js/data/shows.js';
 import '../js/view/masthead.js';
 import '../js/screen/detail.js';
