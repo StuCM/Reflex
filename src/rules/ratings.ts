@@ -1,8 +1,4 @@
-/* What a certificate means, and what counts as kids viewing.
- *
- * Misreading one puts an 18 in front of a child, which is why this is here and
- * unit tested rather than inline somewhere.
- */
+/* What a certificate means, and what counts as kids viewing. */
 
 const RATING_AGE: Record<string, number> = {
   u: 0,

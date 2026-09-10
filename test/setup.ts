@@ -1,10 +1,5 @@
-/* What a module still in js/ expects to find around it.
- *
- * Those files end with `window.X = X`, and several ask the DOM or localStorage
- * a question at load. None of it is what the tests are checking, so it is
- * stubbed rather than emulated — no jsdom, and nothing here grows a feature.
- * Every stub disappears with the last js/ file that needs it.
- */
+/* What a module still in js/ expects to find around it. Stubs, not an
+   emulation — each one goes with the last js/ file that needs it. */
 const store: Record<string, string> = {};
 
 const stubs = {

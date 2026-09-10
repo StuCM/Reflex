@@ -379,6 +379,28 @@ why two list lengths are compared before the panel's track order is trusted,
 and without it that check reads as redundant and gets simplified away into a
 silent wrong-track bug. That is the shape.
 
+### The DOM
+
+**Build nodes; do not spell them.** `innerHTML` with a value interpolated into
+it cannot escape, re-parses the whole subtree, and throws away every node
+underneath — which on a recycled tile pool is the expensive half of drawing.
+`createElement` and `textContent` instead.
+
+**A style belongs in the stylesheet.** `element.style.opacity = …` is a design
+decision that has escaped `css/`, where nobody looking at the design will find
+it. Toggle a class.
+
+The exception is a value genuinely computed per frame — a strip's scroll
+offset, a progress width. Those cannot live in CSS as constants, but they can
+live there as *variables*: set `element.style.setProperty('--offset', …)` and
+let the stylesheet do `transform: translateX(var(--offset))`. The number comes
+from JavaScript; the design stays in CSS.
+
+`eslint.config.mjs` enforces both over `src/`. As of 2026-09-10 `js/` still has
+33 `innerHTML` assignments and 26 inline style writes, all in `view/` and
+`screen/` — they go as those layers convert, which is why the rule is scoped to
+`src/` rather than being a retrofit.
+
 ## Testing
 
 Work on the laptop first. Sideloading an .ipk to see a change is slow enough

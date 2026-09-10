@@ -1,8 +1,6 @@
 /* Which audio track we are willing to play, and what to call it.
- *
- * ARC (not eARC) on a 2018 set. TrueHD and DTS-HD MA can never pass; plain DTS
- * is a coin flip on this generation, so it sits below AAC. See CLAUDE.md.
- */
+   ARC, not eARC: TrueHD and DTS-HD MA can never pass, and plain DTS is a
+   coin flip on this panel, so it ranks below AAC. */
 import { langName } from './language';
 
 const AUDIO_RANK: Record<string, number> = {
@@ -15,14 +13,9 @@ const AUDIO_RANK: Record<string, number> = {
   dts: 1,
 };
 
-/* A director's commentary is a perfectly good AC3 5.1 by every measure this
-   ranking uses, and picking it ruins the film. It is also exactly what gets
-   picked on a remux whose main track is TrueHD, because excluding the TrueHD
-   leaves the commentary as the only passable thing on the file.
-
-   Plex puts the word in the stream's title rather than flagging it, so this is
-   a text match — deliberately broad, because being wrong the other way means
-   two hours of someone talking over the film. */
+/* Plex does not flag commentary, so this is a text match — deliberately
+   broad. On a TrueHD remux the commentary is the only passable track left, so
+   without this it wins. */
 const NOT_THE_FILM =
   /commentar|descriptive|description|narrat|audio ?desc|\bdvs\b|\bad\b sign|karaoke/i;
 
@@ -35,9 +28,7 @@ export function isCommentary(stream: PlexStream | null | undefined): boolean {
   return NOT_THE_FILM.test(text);
 }
 
-/* Can this track reach the amplifier untouched? Anything the ranking does not
-   know about is assumed not to. Says nothing about whether the track is worth
-   playing — that is isCommentary's job. */
+/* Anything the ranking does not know is assumed not to pass. */
 export function passesArc(stream: PlexStream | null | undefined): boolean {
   const codec = (stream?.codec ?? '').toLowerCase();
   const profile = (stream?.profile ?? '').toLowerCase();
@@ -79,10 +70,8 @@ export function pickAudio(part: PlexPart | null | undefined): PlexStream | null 
   return best(audioTracks(part), audioScore);
 }
 
-/* The best track when nothing passes — the film's own audio, transcoded. Still
-   never a commentary: that is about playing the right thing, not about what the
-   link can carry. Channel count wins here because the server is going to
-   re-encode it anyway, so we may as well start from the good one. */
+/* When nothing passes: the film's own audio, re-encoded. Channel count wins
+   because the server is re-encoding anyway. Never a commentary. */
 export function bestAudio(part: PlexPart | null | undefined): PlexStream | null {
   const usable = audioTracks(part).filter((stream) => !isCommentary(stream));
   return best(
@@ -114,10 +103,8 @@ export function audioLabel(stream: PlexStream | null | undefined): string {
   return `${codec} ${channelLabel(stream)}${language}`;
 }
 
-/* The same track, named for a menu the user is reading rather than a badge they
-   are glancing at: language first, because that is what they are choosing
-   between, and the codec after, because that is what decides whether it passes
-   over ARC. */
+/* For a menu rather than a badge: language first, since that is what is being
+   chosen between. */
 export function audioMenuLabel(stream: PlexStream | null | undefined): string {
   if (!stream) return 'no passable track';
   return (
@@ -128,9 +115,7 @@ export function audioMenuLabel(stream: PlexStream | null | undefined): string {
   );
 }
 
-/* What the file actually offers, for a refusal that says something useful.
-   "only TrueHD or DTS-HD MA" was a lie the moment commentary tracks started
-   being excluded too. */
+/* What the file offers, so a refusal can say something useful. */
 export function audioSummary(part: PlexPart | null | undefined): string {
   const listed = audioTracks(part).map(
     (stream) => audioLabel(stream) + (isCommentary(stream) ? ' (commentary)' : ''),

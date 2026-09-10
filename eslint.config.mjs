@@ -73,6 +73,27 @@ export default tseslint.config(
       // A `@param {PlexPart}` in a TypeScript file is a second, unchecked copy
       // of the signature. The type is the documentation.
       'jsdoc/no-types': 'error',
+
+      /* The DOM is built, not spelled. innerHTML with a value in it is an
+         escaping bug waiting to happen and reparses the subtree; a style
+         written from JavaScript is a design decision that has escaped the
+         stylesheet. Both have an answer: createElement/textContent, and a
+         class. Where a value really is computed per frame — a scroll offset, a
+         progress width — set a custom property and let CSS use it. */
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "AssignmentExpression[left.property.name='innerHTML']",
+          message:
+            'Build nodes: createElement and textContent. innerHTML re-parses and cannot escape.',
+        },
+        {
+          selector:
+            "AssignmentExpression[left.object.property.name='style'][left.property.name!='cssText']",
+          message:
+            'Use a class. For a per-frame value, style.setProperty("--name", …) and let CSS read it.',
+        },
+      ],
     },
   },
   {

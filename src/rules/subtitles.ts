@@ -1,15 +1,7 @@
-/* Two kinds of subtitle, and the difference decides whether they can be shown
- * at all.
- *
- * A text subtitle is a file of words: fetch it, parse it, draw it over the
- * video, and the server does no work. An image subtitle (PGS on a Blu-ray
- * remux, VOBSUB on a DVD rip) is a picture of words, and the only way to put it
- * on screen is to have the server paint it into the video — a transcode, which
- * on a 4K file is exactly what gets the session killed.
- *
- * So image tracks are listed and refused, with the reason, rather than quietly
- * missing.
- */
+/* Which subtitle track, and what to call it.
+   An image track (PGS, VOBSUB) can only be shown by having the server paint
+   it into the video — a transcode, which on 4K gets the session killed. So
+   they are listed and refused rather than quietly missing. */
 import { isCommentary } from './audio';
 import { langName } from './language';
 

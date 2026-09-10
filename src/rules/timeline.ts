@@ -1,10 +1,4 @@
-/* Where you are in the film: the intro and credits Plex found, and the
- * chapters the trackbar draws its ticks from.
- *
- * Plex analyses a film and reports both as offsets in milliseconds. "Skip
- * intro" is not detection — there is nothing to work out client side, only
- * something to offer at the right moment.
- */
+/* The intro and credits Plex found, and the chapters the trackbar ticks. */
 
 /** The marker the playhead is inside, or null. */
 export function markerAt(item: PlexItem | null | undefined, seconds: number): PlexMarker | null {

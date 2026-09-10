@@ -1,8 +1,4 @@
-/* Plex reports a stream's language as an ISO 639-2 code and, usually, a
-   `language` field with the name already in it. Usually is not always, and
-   "FRA" on a menu row is a worse answer than "French", so there is a table for
-   the ones a shared library actually turns up. Anything unlisted falls back to
-   the code, which is still better than nothing. */
+/* A stream's language as a reader would say it. */
 
 const LANGUAGES: Record<string, string> = {
   eng: 'English',

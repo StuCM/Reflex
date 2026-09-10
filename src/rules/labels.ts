@@ -1,8 +1,4 @@
-/* What a tile and the hero above it are called.
- *
- * An episode is named by its show: its own title says nothing on its own, and a
- * rail of them all read as unrelated films.
- */
+/* What a tile and the hero above it are called. */
 
 /** "Adventure Time · S2E7" — an episode's title alone says nothing. */
 export function episodeLabel(item: PlexItem | null | undefined): string {

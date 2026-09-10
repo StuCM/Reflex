@@ -1,16 +1,7 @@
 /* Is this the same film as that one, on a different server?
- *
- * Plex itself answers this every time it syncs a watch position between the two
- * servers, and it does it by matching the item's global identifiers. So do we.
- * Every id an item carries is a candidate key, and two items are the same film
- * if they agree on *any* of them — servers running different agent versions
- * expose different subsets, and requiring them all to line up would mean
- * silently showing duplicates.
- *
- * Title and year come last, and only as a fallback. Two genuinely different
- * films sharing both is rare enough to accept; the same film failing to match
- * because one server has no external id is not.
- */
+   Two items match on ANY shared id, not all of them: servers run different
+   agent versions and expose different subsets, and requiring agreement
+   everywhere would show the same film twice. */
 
 function externalIds(item: PlexItem | null | undefined): string[] {
   const out: string[] = [];
@@ -38,10 +29,8 @@ function titleKey(item: PlexItem | null | undefined): string {
   return `title://${title}/${item?.year ?? ''}`;
 }
 
-/* An episode is identified by which show it belongs to and where it sits in it.
-   Episodes often carry no external ids of their own, and their titles are not
-   unique across shows — "Pilot" is everywhere — so season and episode number
-   against the show's identity is what actually holds. */
+/* Episodes rarely carry ids of their own and "Pilot" is not unique, so it is
+   the show's identity plus season and number. */
 function episodeKey(item: PlexItem): string {
   const show = String(item.grandparentGuid ?? item.grandparentTitle ?? '')
     .toLowerCase()
