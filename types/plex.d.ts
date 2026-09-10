@@ -175,3 +175,71 @@ interface MergeRow {
 }
 
 type Row = ListRow | MergeRow;
+
+/* ---------- TMDB ---------- */
+
+interface TmdbResult {
+  id?: number | string;
+  title?: string;
+  release_date?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  vote_average?: number;
+  vote_count?: number;
+}
+
+/** Enough to draw a tile with, and nothing else. */
+interface TmdbFilm {
+  id: string;
+  title: string;
+  year: number | null;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  vote_average: number;
+}
+
+interface TmdbResponse {
+  results?: TmdbResult[];
+  [key: string]: unknown;
+}
+
+/** One row of the Discovery page, from js/core/config.js. */
+interface DiscoveryCategory {
+  title: string;
+  kind: 'trending' | 'provider' | 'genre' | 'recommended';
+  id?: number;
+}
+
+/* ---------- YouTube ---------- */
+
+interface YoutubeThumb {
+  url?: string;
+}
+
+interface YoutubeSnippet {
+  title?: string;
+  thumbnails?: { medium?: YoutubeThumb; high?: YoutubeThumb; default?: YoutubeThumb };
+}
+
+interface YoutubeContentDetails {
+  duration?: string;
+}
+
+interface YoutubeItem {
+  id?: string | { videoId?: string };
+  snippet?: YoutubeSnippet;
+  contentDetails?: YoutubeContentDetails;
+}
+
+interface YoutubeResponse {
+  items?: YoutubeItem[];
+}
+
+/** One recap, as the show page's rail draws it. */
+interface Recap {
+  id: string;
+  title: string;
+  thumb: string;
+  season: number | null;
+  length: string;
+}

@@ -45,12 +45,12 @@ var Meta = (function () {
     const server = Servers.of(item);
     if (!server) return Promise.resolve(null);
 
-    return Cache.meta
+    return Cached.meta
       .get(key)
       .then((cached) => {
         if (cached) return cached;
         return Plex.metadata(server, item.ratingKey).then((md) => {
-          if (md) Cache.meta.put(key, md);
+          if (md) Cached.meta.put(key, md);
           return md;
         });
       })

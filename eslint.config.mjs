@@ -62,7 +62,7 @@ export default tseslint.config(
 
       '@typescript-eslint/naming-convention': [
         'error',
-        { selector: 'default', format: ['camelCase'] },
+        { selector: 'default', format: ['camelCase'], leadingUnderscore: 'allow' },
         { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
         { selector: 'typeLike', format: ['PascalCase'] },
         { selector: 'typeProperty', format: null },

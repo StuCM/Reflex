@@ -1,5 +1,12 @@
 /* What the tests import while half the app is js/ and half is src/.
    Converted modules directly; the rest read off the global they set. */
+
+/* First, and statically: src/api reads Config at module evaluation, and a
+   static import is hoisted above every `await import` below. */
+import '../js/core/config.js';
+import * as http from '../src/api/http';
+import * as tmdb from '../src/api/tmdb';
+import * as youtube from '../src/api/youtube';
 import * as audio from '../src/rules/audio';
 import * as cues from '../src/rules/cues';
 import * as identity from '../src/rules/identity';
@@ -24,6 +31,9 @@ export const Media = {
 };
 
 export const Subs = cues;
+export const Http = http;
+export const Tmdb = tmdb;
+export const Youtube = youtube;
 export const Rows = rows;
 
 /* Order matters below: js/core/panel.js is what Media.canDecode asks, and
@@ -32,17 +42,16 @@ export const Rows = rows;
 const globals = globalThis as Record<string, unknown>;
 globals.Media = Media;
 globals.Subs = Subs;
+globals.Http = http;
+globals.Tmdb = tmdb;
+globals.Youtube = youtube;
 globals.Rows = Rows;
 
-await import('../js/core/config.js');
 await import('../js/core/panel.js');
-await import('../js/api/http.js');
 await import('../js/data/servers.js');
 await import('../js/data/merge.js');
 await import('../js/data/shows.js');
 await import('../js/api/plex.js');
-await import('../js/api/tmdb.js');
-await import('../js/api/youtube.js');
 await import('../js/data/art.js');
 await import('../js/data/discovery.js');
 
@@ -52,7 +61,5 @@ export const Servers = globals.Servers;
 export const Merge = globals.Merge;
 export const Shows = globals.Shows;
 export const Plex = globals.Plex;
-export const Tmdb = globals.Tmdb;
-export const Youtube = globals.Youtube;
 export const Art = globals.Art;
 export const Discovery = globals.Discovery;

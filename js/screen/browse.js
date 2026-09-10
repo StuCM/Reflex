@@ -339,7 +339,7 @@ var Browse = (function () {
     deckItems = deckItems.filter((m) => {
       return Media.identity(m) !== gone;
     });
-    for (let i = 0; i < sections.length; i++) Cache.rows.drop(sections[i].title);
+    for (let i = 0; i < sections.length; i++) Cached.rows.drop(sections[i].title);
     at = watchingRowIdx();
     if (at < 0) return;
     row = Rows.list(rows[at].title, deckCut());
@@ -595,7 +595,7 @@ var Browse = (function () {
     const jobs = row.state.streams.map((s) => {
       if (s.total) return Promise.resolve();
       const ck = s.part.server.id + ':' + s.part.key + ':' + s.part.tag;
-      return Cache.total
+      return Cached.total
         .get(ck)
         .then((cached) => {
           if (cached && cached.total && cached.updatedAt === s.part.updatedAt) {
@@ -604,7 +604,7 @@ var Browse = (function () {
           }
           return Plex.items(s.part.server, s.part.key, 0, 0, s.part.filter).then((res) => {
             s.total = res.total;
-            Cache.total.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
+            Cached.total.put(ck, { updatedAt: s.part.updatedAt, total: res.total });
           });
         })
         .catch((e) => {
@@ -636,7 +636,7 @@ var Browse = (function () {
     reset('library');
     const isCurrent = generationGuard();
     const sec = sections[i];
-    Cache.rows
+    Cached.rows
       .get(sec.title)
       .then((cached) => {
         if (!isCurrent()) return;
@@ -685,7 +685,7 @@ var Browse = (function () {
             built.push(hub);
           });
 
-          Cache.rows.put(sec.title, { rows: built });
+          Cached.rows.put(sec.title, { rows: built });
           rows = listRows(built);
           rows.push(allRow(sec));
           noteCategories(sec);

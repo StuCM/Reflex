@@ -415,7 +415,7 @@
   function start() {
     UI.show('browse');
     /* Paint from cache before any network work — the whole point of the app. */
-    Cache.sections
+    Cached.sections
       .get()
       .then((cached) => {
         if (cached && cached.length && Servers.count()) {
@@ -449,7 +449,7 @@
           UI.message('No libraries', 'Neither server shares a film or show section.');
           return;
         }
-        Cache.sections.put(
+        Cached.sections.put(
           perServer.map((r) => {
             return { serverId: r.server.id, sections: r.sections };
           }),

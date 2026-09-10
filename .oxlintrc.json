@@ -53,7 +53,11 @@
     // certificate codes (u, g, r, x), language codes, codec names.
     "id-length": [
       "error",
-      { "min": 3, "exceptions": ["i", "j", "id", "at", "to"], "properties": "never" }
+      {
+        "min": 3,
+        "exceptions": ["i", "j", "id", "at", "to", "UI", "T", "K"],
+        "properties": "never"
+      }
     ],
     "unicorn/filename-case": ["error", { "case": "kebabCase" }],
     "import/no-cycle": "error",
@@ -71,7 +75,7 @@
       // The entry is side-effect imports by design: each legacy module still
       // publishes itself on `window` and is imported for that, not for a value.
       // Every line here disappears as its file becomes a real module.
-      "files": ["src/main.ts"],
+      "files": ["src/main.ts", "test/modules.ts"],
       "rules": { "import/no-unassigned-import": "off" }
     },
     {

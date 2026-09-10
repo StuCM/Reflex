@@ -6,6 +6,9 @@ import * as labels from './rules/labels';
 import { langName } from './rules/language';
 import * as quality from './rules/quality';
 import * as ratings from './rules/ratings';
+import * as http from './api/http';
+import * as tmdb from './api/tmdb';
+import * as youtube from './api/youtube';
 import * as cues from './rules/cues';
 import * as rows from './rules/rows';
 import * as subtitles from './rules/subtitles';
@@ -23,14 +26,26 @@ const Media = {
   langName,
 };
 
+/** A module namespace is sealed; what js/ gets is a plain copy of it. */
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
+
 declare global {
   interface Window {
     Media: typeof Media;
-    Subs: typeof cues;
-    Rows: typeof rows;
+    Subs: Mutable<typeof cues>;
+    Rows: Mutable<typeof rows>;
+    Http: Mutable<typeof http>;
+    Tmdb: Mutable<typeof tmdb>;
+    Youtube: Mutable<typeof youtube>;
   }
 }
 
 window.Media = Media;
-window.Subs = cues;
-window.Rows = rows;
+/* Spread, not the namespace object itself: `import * as x` gives a sealed
+   object, and js/ — and the smoke suite — still expect to be able to swap a
+   function out the way they could on the old IIFE. */
+window.Subs = { ...cues };
+window.Rows = { ...rows };
+window.Http = { ...http };
+window.Tmdb = { ...tmdb };
+window.Youtube = { ...youtube };

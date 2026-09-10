@@ -140,7 +140,7 @@ var Art = (function () {
   }
 
   function fetchOne(id) {
-    Cache.art
+    Cached.art
       .get(id)
       .then((hit) => {
         /* An entry cached before the facts or the poster existed is a miss for
@@ -149,7 +149,7 @@ var Art = (function () {
         return Tmdb.details(id).then((payload) => {
           const got = pick(payload);
           got.facts = facts(payload);
-          Cache.art.put(id, got);
+          Cached.art.put(id, got);
           return got;
         });
       })

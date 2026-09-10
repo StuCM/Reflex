@@ -68,7 +68,7 @@ var Plex = (function () {
     return out;
   }
 
-  const qs = Http.qs;
+  const qs = Http.queryString;
 
   function headers() {
     return {
