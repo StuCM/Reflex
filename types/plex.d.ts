@@ -309,3 +309,21 @@ interface PlexResource {
   accessToken?: string;
   connections?: { uri: string; relay?: boolean }[];
 }
+
+/** What Guard.check resolves with. Never rejects. */
+interface Verdict {
+  ok: boolean;
+  state: string;
+  text?: string;
+  transcode?: boolean;
+  video?: string;
+  audioDecision?: string;
+  audio?: PlexStream | null;
+  passes?: boolean;
+  maxBitrate?: number | null;
+  forceStream?: boolean;
+  metadata?: PlexItem;
+  media?: PlexMedia;
+  part?: PlexPart;
+  mediaIndex?: number;
+}

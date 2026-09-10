@@ -8,6 +8,8 @@ import * as quality from './rules/quality';
 import * as ratings from './rules/ratings';
 import * as http from './api/http';
 import * as cached from './data/cached';
+import * as guard from './data/guard';
+import * as meta from './data/meta';
 import * as merge from './data/merge';
 import * as servers from './data/servers';
 import * as store from './data/store';
@@ -64,6 +66,8 @@ declare global {
     Cached: Mutable<typeof cached>;
     Servers: Mutable<typeof servers>;
     Merge: Mutable<typeof merge>;
+    Meta: Mutable<typeof meta>;
+    Guard: Mutable<typeof guard>;
   }
 }
 
@@ -81,3 +85,5 @@ window.Store = { ...store };
 window.Cached = { ...cached };
 window.Servers = { ...servers };
 window.Merge = { ...merge };
+window.Meta = { ...meta };
+window.Guard = { ...guard };
