@@ -396,10 +396,18 @@ live there as *variables*: set `element.style.setProperty('--offset', …)` and
 let the stylesheet do `transform: translateX(var(--offset))`. The number comes
 from JavaScript; the design stays in CSS.
 
-`eslint.config.mjs` enforces both over `src/`. As of 2026-09-10 `js/` still has
-33 `innerHTML` assignments and 26 inline style writes, all in `view/` and
-`screen/` — they go as those layers convert, which is why the rule is scoped to
-`src/` rather than being a retrofit.
+`eslint.config.mjs` enforces both over `src/`. As of 2026-09-10 `js/` is down
+to `player.js` and `app.js`, holding 5 `innerHTML` assignments and 11 inline
+style writes — they go as the player converts, which is why the rule is scoped
+to `src/` rather than being a retrofit.
+
+**`replaceChildren` is Chrome 86 and `append` is Chrome 54.** Both read as
+ordinary DOM and neither is caught by anything: `tsconfig`'s `lib: ES2015`
+governs ES built-ins, and TypeScript's `DOM` lib is one unversioned blob that
+types every modern API as available. `src/view/dom.ts` holds `fill` and `put`
+over `appendChild`, and `no-restricted-properties` keeps the two out of the
+rest of `src/`. Found 2026-09-10, after 34 uses had already landed across five
+converted files.
 
 ## Testing
 

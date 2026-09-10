@@ -236,7 +236,20 @@ strip animation and become custom properties rather than disappearing.
 
 This is the largest single piece of work in steps 5 and 6, and it is why
 `view/` and `screen/` are last: they are not a rename, they are a rewrite of
-how the screen is drawn.
+how the screen is drawn. As of step 6 only `player`'s 5 remain.
+
+**And the rewrite brought its own Chrome 53 problem.** `replaceChildren` is
+Chrome 86, `append` is Chrome 54, and 34 uses of the two landed across five
+converted files before anything noticed — because nothing *could*. `lib:
+ES2015` governs ES built-ins; TypeScript's `DOM` lib is one unversioned blob
+that types every modern API as present, and `tools/check-es5.js` only scans
+`js/`. `src/view/dom.ts` now holds `div`, `span`, `fill`, `put`, `must` and
+`svg` over `appendChild`, and `no-restricted-properties` in
+`eslint.config.mjs` keeps the banned two out of the rest of `src/`.
+
+The general lesson, worth applying to the next such API: **the compat lever
+does not cover the DOM.** A newer DOM method has to be caught by a lint rule
+naming it, or not at all.
 
 ### Naming
 
