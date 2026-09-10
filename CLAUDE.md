@@ -379,6 +379,28 @@ why two list lengths are compared before the panel's track order is trusted,
 and without it that check reads as redundant and gets simplified away into a
 silent wrong-track bug. That is the shape.
 
+### Types
+
+**If changing the type and changing the code that uses it would be one commit,
+they belong in one file.** That splits three ways:
+
+- `types/*.d.ts` — shapes we do not own. The Plex wire format is read by 19
+  files and changes when Plex changes, not when we do. Ambient is right for it,
+  and so is being generous: everything optional that a real server has ever
+  omitted.
+- `export interface` in the module that owns it — `MenuTab`, `PlayOptions`,
+  `RailTileElement`. These *are* the module's API, and separating them lets the
+  two drift.
+- A plain `interface` at the top of the file — `Copy`, `Source`, `Action` in
+  `screen/detail.ts`. Private, and putting them in `types/` would advertise a
+  shared vocabulary that does not exist.
+
+The reason is not tidiness. **An ambient `.d.ts` is invisible to the import
+graph**, so `import/no-cycle`, the layer rules, and "what does this file depend
+on" cannot see it — and turning the script order into a graph the compiler
+enforces is the whole point of the migration. `types/legacy.d.ts` is ambient by
+necessity and dies with the bridge.
+
 ### The DOM
 
 **Build nodes; do not spell them.** `innerHTML` with a value interpolated into

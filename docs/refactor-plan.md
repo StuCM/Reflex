@@ -426,7 +426,7 @@ unconverted files keep finding their globals. It is deleted last.
    bake in `tools/package.sh`, which **fixes the §0b bug** rather than patching
    it: a bundled build currently ships with TMDB and YouTube keys empty.
 5. **`view/`** — five files, DOM-heavy, needs the element typing from the
-   September spike (`types/rail.d.ts` is the pattern).
+   September spike (`RailTileElement` in `src/view/rail.ts` is the pattern).
 6. **`screen/`** — four files, the largest. Splitting them is a separate task,
    not a precondition.
 7. **Delete the bridge**, delete `tools/check-es5.js`, rewrite CLAUDE.md's

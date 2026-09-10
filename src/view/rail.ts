@@ -7,6 +7,34 @@ import { railSub, railTitle } from '../rules/labels';
 import { itemAt } from '../rules/rows';
 import { div, put } from './dom';
 
+/* The pool hangs its bookkeeping on the elements themselves rather than in a
+   parallel array. Underscored so nothing mistakes them for DOM properties. */
+/** One tile in the pool. Recycled: _item says which film is in it now. */
+export interface RailTileElement extends HTMLDivElement {
+  _img: HTMLImageElement;
+  _name: HTMLDivElement;
+  _sub: HTMLDivElement;
+  _prog: HTMLDivElement;
+  /** Index within the row, or -1 while unused. */
+  _idx: number;
+  _filled: boolean;
+  _item: PlexItem | null;
+  /** Art has been asked for and has not landed yet. */
+  _wait: boolean;
+  /** Below the fold when drawn, so its poster was skipped. */
+  _deferred: boolean;
+}
+
+export interface RailRowElement extends HTMLDivElement {
+  _label: HTMLDivElement;
+  _strip: HTMLDivElement;
+  /** Index into the row model, or -1 while unused. */
+  _row: number;
+  _rowRef: Row | null;
+  _tiles: RailTileElement[];
+  _onScreen: boolean;
+}
+
 /** 2:3, so seven fit across at 1920: 96 margin + 7×209 + 6×44 = 1823. */
 const TILE_W = 209;
 const TILE_H = 314;

@@ -28,6 +28,7 @@ import * as masthead from '../view/masthead';
 import * as menu from '../view/menu';
 import * as merge from '../data/merge';
 import * as rail from '../view/rail';
+import type { RailTileElement } from '../view/rail';
 import * as rowModel from '../rules/rows';
 import * as servers from '../data/servers';
 import * as sidebar from '../view/sidebar';
