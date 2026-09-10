@@ -1,6 +1,6 @@
 {
   "name": "reflex",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "description": "Browse-fast Plex client for an LG OLED B8 (webOS 4.0)",
   "scripts": {
