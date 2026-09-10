@@ -4,9 +4,8 @@
    file leaves this list when it moves to src/. */
 
 import '../js/core/config.js';
-import '../js/api/http.js';
 import '../js/data/store.js';
-import '../js/data/cache.js';
+import '../js/data/cached.js';
 import '../js/core/panel.js';
 
 /* rules/ has moved to src/. This publishes it under the name js/ still uses,
@@ -16,8 +15,6 @@ import './legacy';
 import '../js/data/servers.js';
 import '../js/data/merge.js';
 import '../js/api/plex.js';
-import '../js/api/tmdb.js';
-import '../js/api/youtube.js';
 import '../js/data/art.js';
 import '../js/core/ui.js';
 import '../js/view/glyphs.js';

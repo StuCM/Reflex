@@ -251,13 +251,13 @@ var ShowPage = (function () {
     const gen = generation;
     const title = show.title || '';
     const id = Media.identity(show);
-    Cache.recaps
+    Cached.recaps
       .get(id)
       .then((cached) => {
         if (cached) return cached;
         return Youtube.recaps(title).then((items) => {
           const list = Youtube.pickForShow(Youtube.parse(items), title);
-          Cache.recaps.put(id, list);
+          Cached.recaps.put(id, list);
           return list;
         });
       })

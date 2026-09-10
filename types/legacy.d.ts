@@ -11,6 +11,22 @@ interface PanelGlobal {
 
 declare const Panel: PanelGlobal;
 
+/** js/core/config.js — settings that differ between the TV and a laptop. */
+interface ConfigGlobal {
+  plexTvBase: string;
+  tmdbKey: string;
+  tmdbBase: string;
+  tmdbImageBase: string;
+  youtubeKey: string;
+  youtubeBase: string;
+  youtubeEmbedBase: string;
+  beacon: string;
+  categories: DiscoveryCategory[];
+  recapChannel: string;
+}
+
+declare const Config: ConfigGlobal;
+
 /** js/data/merge.js — the walk behind a merge row. */
 interface MergeGlobal {
   stream(parts: MergePart[], fetch: MergeFetch): MergeState;
@@ -18,3 +34,23 @@ interface MergeGlobal {
 }
 
 declare const Merge: MergeGlobal;
+
+/** js/core/ui.js — the debug line, toasts, and which view is showing. */
+interface UiGlobal {
+  debug(message: string): void;
+}
+
+declare const UI: UiGlobal;
+
+/** js/data/cache.js — every key the IndexedDB cache holds. */
+interface CachedFamily<T> {
+  get(id: string): Promise<T | undefined>;
+  put(id: string, value: T): Promise<unknown>;
+  drop?(id: string): Promise<unknown>;
+}
+
+interface CacheGlobal {
+  ytChannel: CachedFamily<string>;
+}
+
+declare const Cached: CacheGlobal;

@@ -65,12 +65,12 @@ var Discovery = (function () {
   function resolve(item) {
     if (item._resolved !== undefined) return Promise.resolve(item._resolved);
     if (item._asking) return item._asking;
-    item._asking = Cache.lookup
+    item._asking = Cached.lookup
       .get(item._tmdb.id)
       .then((hit) => {
         if (hit !== undefined) return hit;
         return ask(item._tmdb.id).then((found) => {
-          Cache.lookup.put(item._tmdb.id, found);
+          Cached.lookup.put(item._tmdb.id, found);
           return found;
         });
       })
@@ -106,12 +106,12 @@ var Discovery = (function () {
   function one(ctx, cat) {
     const seeds = ctx.seeds || [];
     const key = cat.kind + ':' + (cat.id || seeds.join('-'));
-    return Cache.catalogue
+    return Cached.catalogue
       .get(key)
       .then((hit) => {
         if (hit && hit.length) return hit;
         return Tmdb.catalogue(cat, seeds).then((found) => {
-          Cache.catalogue.put(key, found);
+          Cached.catalogue.put(key, found);
           return found;
         });
       })

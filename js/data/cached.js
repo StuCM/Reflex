@@ -11,7 +11,7 @@
    `kept` until something replaces it, `daily` on a clock, and `misses` — a hit
    kept for ever while a miss is retried after a while, which is what a lookup
    against a library that may yet gain the film needs. */
-var Cache = (function () {
+var Cached = (function () {
   'use strict';
 
   const DAY = 24 * 60 * 60 * 1000;
@@ -77,4 +77,4 @@ var Cache = (function () {
 /* Bridge, deleted with this file when it becomes a module. index.html now
    loads one entry, so a top-level `var` here is module-scoped rather than
    global — and every other file still reaches this one by bare name. */
-window.Cache = Cache;
+window.Cached = Cached;
