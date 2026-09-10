@@ -942,7 +942,9 @@ function drive(page, titles, port) {
       }
       var img = document.querySelector('#rows .row.on .tile.on img');
       var lit = document.querySelector('#hero-art .hero-layer.on');
-      var hero = lit ? lit.style.backgroundImage : '';
+      /* The backdrop is set as --art and CSS reads it, so the computed
+         value is the only place the painted picture shows up. */
+      var hero = lit ? getComputedStyle(lit).backgroundImage : '';
       return {
         tile: {
           url: (img && img.src) || '',

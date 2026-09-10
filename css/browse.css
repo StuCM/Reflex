@@ -17,6 +17,9 @@
 
 .hero-layer {
   position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  /* The picture is the one thing JavaScript sets, and it sets it as a custom
+     property — everything about how it is drawn stays here. */
+  background-image: var(--art, none);
   background-position: center top; background-size: cover;
   background-repeat: no-repeat;
   opacity: 0;

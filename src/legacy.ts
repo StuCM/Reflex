@@ -11,6 +11,8 @@ import settings from './core/config';
 import * as panel from './core/panel';
 import * as userInterface from './core/ui';
 import * as art from './data/art';
+import * as glyphs from './view/glyphs';
+import * as masthead from './view/masthead';
 import * as cached from './data/cached';
 import * as discovery from './data/discovery';
 import * as guard from './data/guard';
@@ -81,6 +83,9 @@ declare global {
     /* js/ calls it Panel.features(); the module exports probeFeatures. */
     Panel: Mutable<typeof panel> & { features: typeof panel.probeFeatures };
     UI: Mutable<typeof userInterface>;
+    Glyphs: Mutable<typeof glyphs>;
+    /* js/ calls it Masthead.art(); the module exports showArt. */
+    Masthead: Mutable<typeof masthead> & { art: typeof masthead.showArt };
   }
 }
 
@@ -106,3 +111,5 @@ window.Discovery = { ...discovery };
 window.Config = settings;
 window.Panel = { ...panel, features: panel.probeFeatures };
 window.UI = { ...userInterface };
+window.Glyphs = { ...glyphs };
+window.Masthead = { ...masthead, art: masthead.showArt };
