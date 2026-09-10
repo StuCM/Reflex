@@ -7,6 +7,11 @@
    on the TV, so the mistake this catches is the one you cannot see: code that
    is fine in the browser you tested in and a blank screen on the panel.
 
+   The CSS feature bans moved to .stylelintrc.json, which parses declarations
+   and reads the same browserslist as the build. What is left here is the JS
+   scan and the index.html manifest, both of which retire when the bundler
+   lands — see docs/refactor-plan.md.
+
    This is a text scan, not a parser. It knows the constructs that have actually
    come up, and it will not catch everything — treat a clean run as "nothing
    obviously wrong", not as proof. dev/, test/ and tools/ are not scanned; they
@@ -51,29 +56,6 @@ const JS_RULES = [
      property on the global object for index.html's next script tag and for
      test/load.js. */
   [/^\s+var\s/, 'var inside a module', 'house rule: const/let, Chrome 49'],
-];
-
-const CSS_RULES = [
-  [/display\s*:\s*(inline-)?grid/, 'CSS Grid', 'Chrome 57'],
-  [/\bgrid-(template|area|column|row|gap)/, 'CSS Grid', 'Chrome 57'],
-  [/position\s*:\s*sticky/, 'position: sticky', 'Chrome 56'],
-  [/(^|[;{\s])gap\s*:/, 'flexbox gap', 'Chrome 84'],
-  [/\baspect-ratio\s*:/, 'aspect-ratio', 'Chrome 88'],
-  [/backdrop-filter\s*:/, 'backdrop-filter', 'Chrome 76'],
-  [/:\s*(clamp|min|max)\(/, 'CSS clamp()/min()/max()', 'Chrome 79'],
-  [/:(is|where)\s*\(/, ':is() / :where()', 'Chrome 88'],
-  /* CLAUDE.md: animate transform and opacity only — everything else forces
-     layout or paint on a 2018 SoC. */
-  [
-    /transition[^;]*:[^;]*\b(filter|box-shadow|blur|all)\b/,
-    'transition on filter/shadow/all',
-    'house rule: transform and opacity only',
-  ],
-  [
-    /animation[^;]*:[^;]*\b(filter|box-shadow|blur)\b/,
-    'animation on filter/shadow',
-    'house rule: transform and opacity only',
-  ],
 ];
 
 /* Comment and string noise this scan should not trip over: a rule name quoted
@@ -176,9 +158,6 @@ jsFiles.forEach(function (f) {
   if (extra) scan(f, extra);
 });
 const cssFiles = listFiles(path.join(ROOT, 'css'), '.css');
-cssFiles.forEach(function (f) {
-  scan(f, CSS_RULES);
-});
 
 /* Every module in js/ has to be in index.html, in one of the script tags, and
    every stylesheet in one of the link tags, or it simply is not in the app —
