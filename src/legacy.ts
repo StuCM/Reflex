@@ -7,9 +7,12 @@ import { langName } from './rules/language';
 import * as quality from './rules/quality';
 import * as ratings from './rules/ratings';
 import * as http from './api/http';
+import * as art from './data/art';
 import * as cached from './data/cached';
+import * as discovery from './data/discovery';
 import * as guard from './data/guard';
 import * as meta from './data/meta';
+import * as shows from './data/shows';
 import * as merge from './data/merge';
 import * as servers from './data/servers';
 import * as store from './data/store';
@@ -68,6 +71,9 @@ declare global {
     Merge: Mutable<typeof merge>;
     Meta: Mutable<typeof meta>;
     Guard: Mutable<typeof guard>;
+    Art: Mutable<typeof art>;
+    Shows: Mutable<typeof shows>;
+    Discovery: Mutable<typeof discovery>;
   }
 }
 
@@ -87,3 +93,6 @@ window.Servers = { ...servers };
 window.Merge = { ...merge };
 window.Meta = { ...meta };
 window.Guard = { ...guard };
+window.Art = { ...art };
+window.Shows = { ...shows };
+window.Discovery = { ...discovery };

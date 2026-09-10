@@ -5,7 +5,12 @@
    static import is hoisted above every `await import` below. */
 import '../js/core/config.js';
 import * as http from '../src/api/http';
+import * as art from '../src/data/art';
 import * as cached from '../src/data/cached';
+import * as discovery from '../src/data/discovery';
+import * as guard from '../src/data/guard';
+import * as meta from '../src/data/meta';
+import * as shows from '../src/data/shows';
 import * as merge from '../src/data/merge';
 import * as servers from '../src/data/servers';
 import * as store from '../src/data/store';
@@ -51,6 +56,11 @@ export const Plex = {
   ...plexPlayback,
 };
 
+export const Art = art;
+export const Shows = shows;
+export const Discovery = discovery;
+export const Guard = guard;
+export const Meta = meta;
 export const Store = store;
 export const Cached = cached;
 export const Servers = servers;
@@ -74,17 +84,16 @@ globals.Store = store;
 globals.Cached = cached;
 globals.Servers = servers;
 globals.Merge = merge;
+globals.Art = art;
+globals.Shows = shows;
+globals.Discovery = discovery;
+globals.Meta = meta;
+globals.Guard = guard;
 globals.Tmdb = tmdb;
 globals.Youtube = youtube;
 globals.Rows = Rows;
 
 await import('../js/core/panel.js');
-await import('../js/data/shows.js');
-await import('../js/data/art.js');
-await import('../js/data/discovery.js');
 
 export const Config = globals.Config;
 export const Panel = globals.Panel;
-export const Shows = globals.Shows;
-export const Art = globals.Art;
-export const Discovery = globals.Discovery;
