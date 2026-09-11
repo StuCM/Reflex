@@ -32,10 +32,16 @@ greps *that* to prove it.
 2. **Step 7 — the layer check becomes import lint.** `tools/check-layers.js` is
    still a regex scan: it catches what a file reaches *for*, not what it
    imports. `no-restricted-imports` per layer replaces it.
-3. **Split the four screen files.** `src/screen/player.ts` is 1,548 lines and
-   its `max-lines` ratchet was raised three times in one session, each time
-   paid for by deleting comments. That is the ratchet telling us the file is
-   the problem.
+3. **Split the four screen files — deferred to a rebuild, 2026-09-11.**
+   `src/screen/player.ts` is 1,548 lines and its `max-lines` ratchet was raised
+   three times in one session, each time paid for by deleting comments. That is
+   the ratchet telling us the file is the problem. But it is not an extraction:
+   28 module-level `let`s are shared densely enough that the seams are a design
+   choice, not a mechanical move, and 028 and 029 both still change this area.
+   So this waits until 026, 028, 029 and 030 have landed, and is then taken as a
+   **rebuild** of the file rather than a cut of it. Until then the ratchet stays
+   at 1548 and the next fix in that file pays for itself in deletions — which is
+   the cost of deferring, accepted knowingly.
 
 Ordered. Each step is green before the next starts.
 
