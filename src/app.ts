@@ -109,19 +109,23 @@ let recapVideo: Recap | null = null;
 /** The panel refused it; OK opens the app instead. */
 let recapOffer: Recap | null = null;
 let recapTimer = 0;
+/** A key pressed since the overlay opened; the offer defers to it. */
+let recapTouched = false;
 
-/* Chromium 53 is nine years old and YouTube's embed drops old browsers over
-   time, so an embed that never loads is a real outcome, not a bug: it falls
-   back to the app that can play it rather than sitting on a black screen. */
+/* Chromium 53 is nine years old, and YouTube's embed shell loads on it while
+   the player never starts — measured on the panel 2026-09-10. `onload` fires
+   on that shell, so it is not proof of playback and nothing may cancel the
+   timer on it; a cross-origin frame cannot be asked anything else. The cost is
+   that a recap which really is playing would be interrupted, hence the flag:
+   the offer stands down once the viewer has touched a key. */
 function openRecap(video: Recap) {
   recapVideo = video;
+  recapTouched = false;
   clearTimeout(recapTimer);
   recapTimer = setTimeout(() => {
-    recapFailed('did not load');
-  }, 8000);
-  recapFrame.onload = () => {
-    clearTimeout(recapTimer);
-  };
+    if (recapTouched) return;
+    recapFailed('cannot play YouTube');
+  }, 4000);
   recapFrame.onerror = () => {
     recapFailed('would not load');
   };
@@ -131,7 +135,6 @@ function openRecap(video: Recap) {
 
 function closeRecap() {
   clearTimeout(recapTimer);
-  recapFrame.onload = null;
   recapFrame.onerror = null;
   recapFrame.src = 'about:blank'; // stops it playing on the way out
   recapView.classList.add('hidden');
@@ -333,6 +336,7 @@ function onKey(event: KeyboardEvent) {
   /* The recap overlay sits over the show page, which is still the view: BACK
      closes it and leaves the rail exactly where it was. */
   if (recapVideo) {
+    recapTouched = true;
     if (isBack(code)) {
       closeRecap();
       event.preventDefault();
