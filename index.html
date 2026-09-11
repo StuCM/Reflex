@@ -164,17 +164,46 @@
      about where you are going than "Chapter 7" ever does. -->
 <div id="osd-chapters" class="hidden"><div id="osd-chapters-inner"></div></div>
 
+<!-- The menu row, per 7b: a little icon, the label with its note under it,
+     and a check on the chosen one. Cloned by src/view/menu.ts, which fills the
+     text and the classes — the shape is here so it can be edited here. -->
+<template id="tpl-menu-row">
+  <div class="menu-row">
+    <span class="menu-icon"></span>
+    <span class="menu-text">
+      <span class="menu-label"></span>
+      <span class="menu-row-note"></span>
+    </span>
+    <span class="menu-check"></span>
+  </div>
+</template>
+
 <div id="osd" class="hidden">
-  <div id="osd-title"><span class="osd-back">‹</span><span id="osd-name"></span></div>
+  <!-- 7a puts what you are watching at the top with the way out beside it, and
+       the wall clock and finish time opposite. player.ts fills all four. -->
+  <div id="osd-head">
+    <div id="osd-back" class="osd-btn"></div>
+    <div id="osd-what">
+      <div id="osd-name"></div>
+      <div id="osd-where"></div>
+    </div>
+    <div id="osd-when">
+      <div id="osd-clock"></div>
+      <div id="osd-ends"></div>
+    </div>
+  </div>
+  <div id="osd-foot">
   <div id="osd-track">
-    <div id="osd-time"></div>
     <div id="osd-bar">
       <div id="osd-buffered"></div>
       <div id="osd-fill"></div>
       <div id="osd-ticks"></div>
       <div id="osd-knob"></div>
     </div>
-    <div id="osd-total"></div>
+    <div id="osd-clocks">
+      <div id="osd-time"></div>
+      <div id="osd-total"></div>
+    </div>
   </div>
   <!-- Transport on the left, the four things that can be changed on the right,
        each captioned with what is chosen now. js/player.js fills both. -->
@@ -183,6 +212,7 @@
     <div id="osd-right"></div>
   </div>
   <div id="osd-hint"></div>
+  </div>
 </div>
 
 <!-- A season recap, played where it was chosen. It is not library content: it

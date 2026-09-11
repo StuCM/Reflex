@@ -403,8 +403,13 @@ module.exports = function (h) {
                   'a quality row claims to follow the connection: ' + labels.join(' | '),
                 );
               }
-              /* And each one says what it costs before OK is pressed. */
-              if (!/\[direct play\]/.test(labels[0]) || !/\[transcode · /.test(labels[1])) {
+              /* And each one says what it costs before OK is pressed. The cost
+                 is the note under the label, not part of it — the bitrate in a
+                 27px row title was the complaint that moved it. */
+              if (
+                !/ · {2}direct play\]/.test(labels[0]) ||
+                !/\[server converts\]/.test(labels[1])
+              ) {
                 throw new Error('quality rows do not say what they cost: ' + labels.join(' | '));
               }
             })
@@ -544,7 +549,9 @@ module.exports = function (h) {
               .then(function () {
                 return page.evaluate(function () {
                   const sub = document.getElementById('subtitle').getBoundingClientRect();
-                  const osd = document.getElementById('osd').getBoundingClientRect();
+                  /* #osd covers the screen — the trackbar and the controls are
+                     #osd-foot, and that is what a line of dialogue must clear. */
+                  const osd = document.getElementById('osd-foot').getBoundingClientRect();
                   return [
                     sub.bottom,
                     osd.top,
@@ -824,19 +831,21 @@ module.exports = function (h) {
                     return document.getElementById(id).getBoundingClientRect();
                   }
                   return [
-                    box('osd-time').right,
-                    box('osd-bar').left,
-                    box('osd-bar').right,
-                    box('osd-total').left,
+                    Math.round(box('osd-clocks').top - box('osd-bar').bottom),
+                    Math.round(box('osd-time').left - box('osd-bar').left),
+                    Math.round(box('osd-bar').right - box('osd-total').right),
                     document.getElementById('osd-total').textContent.trim(),
                   ];
                 });
               })
               .then(function (at) {
-                if (!(at[0] <= at[1] && at[2] <= at[3])) {
-                  throw new Error('the times are not either side of the bar: ' + at.join(', '));
+                /* 7a: elapsed and total sit under the bar, flush with its two
+                   ends. Either side of it they cost 500px of the one control
+                   this screen is actually for. */
+                if (at[0] < 0 || at[0] > 40 || Math.abs(at[1]) > 2 || Math.abs(at[2]) > 2) {
+                  throw new Error('the times are not under the bar and flush: ' + at.join(', '));
                 }
-                if (!/^\d+:\d\d/.test(at[4])) throw new Error('no total run time: ' + at[4]);
+                if (!/^\d+:\d\d/.test(at[3])) throw new Error('no total run time: ' + at[3]);
               })
               /* 0 is the safe digit to prove the jump with: the fixture is thirty
            seconds and the film says two hours, so anything else aims past the

@@ -3,11 +3,17 @@
    It knows nothing about playback or copies — a row carries a `value` and the
    caller decides what that means. */
 import { clamp, isBack } from '../core/ui';
-import { span, fill, put } from './dom';
+import { clone, fill, pick, put, span, svg } from './dom';
 
 /** .menu-row, in CSS pixels. */
-const ROW_H = 56;
-const ROWS_SHOWN = 7;
+/** .menu-row and .menu-list in css/base.css, per 7b. */
+const ROW_H = 94;
+const ROWS_SHOWN = 4;
+
+/** phosphor check — the chosen row's mark, per 7b. */
+const CHECK =
+  '<svg viewBox="0 0 256 256" fill="currentColor" width="28" height="28">' +
+  '<path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>';
 
 export interface MenuRow {
   label: string;
@@ -20,6 +26,9 @@ export interface MenuRow {
 export interface MenuTab {
   label: string;
   note?: string;
+  /** Inline SVG, drawn beside every row. The caller supplies it: this file
+      draws a menu and has no opinion about what the menu is of. */
+  icon?: string;
   rows(): MenuRow[];
 }
 
@@ -60,19 +69,22 @@ function paint(): void {
   fill(
     innerElement,
     ...built.map((row, at) => {
-      const line = document.createElement('div');
+      const line = clone('tpl-menu-row');
       line.className =
         `menu-row${at === selected ? ' sel' : ''}` +
         (row.on ? ' on' : '') +
         (row.off ? ' off' : '');
-      put(line, span('menu-mark', row.on ? '●' : ''), span('menu-label', row.label));
-      if (row.note) put(line, span('menu-note-inline', row.note));
+      const icon = tabs[tab]?.icon;
+      if (icon) put(pick(line, 'menu-icon'), svg(icon));
+      pick(line, 'menu-label').textContent = row.label;
+      pick(line, 'menu-row-note').textContent = row.note ?? '';
+      if (row.on) put(pick(line, 'menu-check'), svg(CHECK));
       return line;
     }),
   );
 
   /* Keep the selection in view without a scrollbar the remote cannot use. */
-  const top = clamp(selected - 3, 0, Math.max(0, built.length - ROWS_SHOWN));
+  const top = clamp(selected - 1, 0, Math.max(0, built.length - ROWS_SHOWN));
   innerElement.style.setProperty('--wind', `${-top * ROW_H}px`);
   noteElement.textContent = tabs[tab]?.note ?? '';
 }

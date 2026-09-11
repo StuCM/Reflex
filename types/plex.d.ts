@@ -93,9 +93,11 @@ interface Chapter {
   thumb: string | null;
 }
 
-/** A row of the quality menu. A null bitrate is the file as it stands. */
+/** A row of the quality menu. A null bitrate is the file as it stands.
+    `detail` is what the choice costs — it belongs under the label, not in it. */
 interface Quality {
   label: string;
+  detail?: string;
   bitrate: number | null;
 }
 

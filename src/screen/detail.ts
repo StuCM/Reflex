@@ -15,6 +15,7 @@ import * as merge from '../data/merge';
 import * as meta from '../data/meta';
 import * as servers from '../data/servers';
 import { audioLabel, audioMenuLabel, audioTracks } from '../rules/audio';
+import { hoursAndMinutes } from '../rules/clock';
 import { episodeLabel } from '../rules/labels';
 import { bitrateLabel, isUHD, qualities, versionLabel } from '../rules/quality';
 import { isTextSub, pickSubtitle, subLabel, subtitleTracks } from '../rules/subtitles';
@@ -385,7 +386,7 @@ function qualityRows() {
       note:
         cap.bitrate && isUHD(source && source.media)
           ? 'a 4K transcode is what gets the stream killed — this will be refused'
-          : '',
+          : cap.detail || '',
       on: (cap.bitrate || null) === maxBitrate,
       value: cap.bitrate || null,
     };
@@ -431,12 +432,6 @@ function subRows() {
   return out;
 }
 
-/* "1:12", from seconds — where a part-watched film would pick up. */
-function atLabel(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  return Math.floor(mins / 60) + ':' + (mins % 60 < 10 ? '0' : '') + (mins % 60);
-}
-
 /* Where Play would pick up, in seconds, and 0 when there is nothing worth
    resuming — the first ten seconds of a film are not a position. */
 function resumeAt() {
@@ -449,7 +444,7 @@ function resumeAt() {
 function playCaption() {
   const at = resumeAt();
   return (
-    (at ? `resume at ${atLabel(at)}` : 'from start') +
+    (at ? `resume at ${hoursAndMinutes(at)}` : 'from start') +
     '  ·  ' +
     (verdict ? guard.label(verdict) : 'checking…')
   );
@@ -586,6 +581,7 @@ function openSource() {
   openChooser<number>(
     {
       label: 'Play from',
+      icon: glyphs.source,
       rows: sourceRows,
       note: 'Every copy on every server, each already checked.',
     },
@@ -600,6 +596,7 @@ function openQuality() {
   openChooser<number | null>(
     {
       label: 'Quality',
+      icon: glyphs.quality,
       rows: qualityRows,
       note: 'Anything but Original asks the server to re-encode.',
     },
@@ -611,7 +608,7 @@ function openQuality() {
 }
 
 function openAudio() {
-  openChooser<PlexStream>({ label: 'Audio', rows: audioRows }, (stream) => {
+  openChooser<PlexStream>({ label: 'Audio', icon: glyphs.audio, rows: audioRows }, (stream) => {
     if (chosenAudio && String(chosenAudio.id) === String(stream.id)) return;
     /* A direct play hands the panel the whole file and the panel picks its own
        track, so a choice it cannot make itself means asking the server to mux
@@ -628,6 +625,7 @@ function openSubs() {
   openChooser<PlexStream | null>(
     {
       label: 'Subtitles',
+      icon: glyphs.subs,
       rows: subRows,
       note: 'Drawn over the video as text, so they cost the server nothing.',
     },

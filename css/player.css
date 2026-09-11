@@ -5,27 +5,63 @@
 
 #video { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: #000; }
 
+/* The OSD is the whole screen now: 7a hangs the title off the top and the
+   controls off the bottom, and one box cannot be at both ends. It draws
+   nothing itself, so it never swallows a key. */
 #osd {
-  position: absolute; left: var(--sp-page); bottom: 72px; width: 1792px;
+  position: absolute; left: 0; top: 0; right: 0; bottom: 0;
   -webkit-transition: opacity var(--t-quick) var(--ease); transition: opacity var(--t-quick) var(--ease);
 }
+/* 7a's 96, not the app's --sp-page of 64 — see the margin note in
+   docs/backlog.md, which is a wider question than this screen. */
+#osd-foot { position: absolute; left: 96px; right: 96px; bottom: 72px; }
 /* Faded rather than hidden: the OSD goes away on a timer and comes back on a
    keypress, and only a transition on opacity is free on this panel. */
 #osd.faded { opacity: 0; }
-#osd-title { font-size: 40px; font-weight: 300; line-height: 48px; }
-/* BACK stops playback, and nothing else on this screen says so. */
-.osd-back { display: inline-block; width: 40px; color: var(--dim); }
+/* 7a's header: the way out, then what is playing, then the time of day and
+   when this finishes. Anchored to the top of the screen rather than riding
+   above the trackbar — at the bottom it competed with the controls. */
+#osd-head {
+  position: absolute; left: 96px; right: 96px; top: 64px;
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: flex-start; align-items: flex-start;
+}
+/* margin, not margin-right: .osd-btn carries `margin: 0 auto` for the control
+   row, and an auto left margin in a flex row eats the free space and centres
+   the header. */
+#osd-back {
+  width: 64px; height: 64px; border-radius: 20px; margin: 0 28px 0 0;
+  -webkit-flex: none; flex: none;
+}
+#osd-back svg { width: 30px; height: 30px; }
+#osd-what { min-width: 0; }
+#osd-name {
+  font-size: 46px; font-weight: 500; letter-spacing: -0.02em; line-height: 56px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#osd-where { font-size: 25px; color: var(--dim); margin-top: 8px; }
+#osd-when {
+  margin-left: auto; text-align: right;
+  -webkit-flex: none; flex: none;
+}
+#osd-clock { font-size: 30px; color: var(--fg); }
+#osd-ends { font-size: 22px; color: var(--dim2); margin-top: 6px; }
 
 /* Position at a glance, with the elapsed and the total either side of it.
    Seeking blind is what made the player feel like it had no controls at all. */
-#osd-track { display: -webkit-flex; display: flex;
-             -webkit-align-items: center; align-items: center;
-             height: 40px; margin-top: 18px; }
+/* 7a: the bar is full width and the two clocks sit under it, not either side.
+   Beside it they cost 500px of bar on a screen where the bar is the control. */
+#osd-track { margin-top: 18px; }
+#osd-clocks {
+  display: -webkit-flex; display: flex;
+  -webkit-justify-content: space-between; justify-content: space-between;
+  margin-top: 18px; font-size: 25px; color: var(--dim);
+}
 /* 7a: an 8px bar over the picture, so the track and the buffered run are
    white at low alpha rather than palette greys — a solid grey reads as a
    second UI layer on top of the film. */
 #osd-bar {
-  position: relative; height: 8px; width: 1300px;
+  position: relative; height: 8px; width: 1728px;
   background: rgba(238, 241, 243, 0.16); border-radius: var(--r-pill);
 }
 /* The two widths and the knob's offset are the only numbers on this screen
@@ -35,15 +71,19 @@
   position: absolute; top: 0; left: 0; height: 8px; width: var(--buffered, 0);
   background: rgba(238, 241, 243, 0.28); border-radius: var(--r-pill);
 }
+/* White until the trackbar is the thing being driven, then the accent — 7b
+   unfocused against 7a focused. It is how this screen says which of its two
+   rows a left-press belongs to. */
 #osd-fill {
   position: absolute; top: 0; left: 0; height: 8px; width: var(--fill, 0);
-  background: var(--ac); border-radius: var(--r-pill);
+  background: rgba(238, 241, 243, 0.5); border-radius: var(--r-pill);
 }
+#osd-bar.foc #osd-fill { background: var(--ac); }
 
 /* Chapters as ticks, intro and credits as bands — where you can jump to, and
    what is worth jumping over. Drawn once when the duration is known. */
 #osd-ticks {
-  position: absolute; top: 0; left: 0; height: 8px; width: 1300px;
+  position: absolute; top: 0; left: 0; height: 8px; width: 1728px;
   /* A file whose chapters run past what the element reports as its duration
      would otherwise scatter ticks across the picture. */
   overflow: hidden;
@@ -59,49 +99,66 @@
 
 /* The one thing that moves every frame, so it moves on transform alone. */
 #osd-knob {
-  position: absolute; top: -9px; left: 0; margin-left: -13px;
-  width: 26px; height: 26px;
-  background: var(--ac); border-radius: var(--r-pill);
-  box-shadow: 0 0 0 8px rgba(157, 147, 214, 0.22);
+  position: absolute; top: -7px; left: 0; margin-left: -11px;
+  width: 22px; height: 22px;
+  background: rgba(238, 241, 243, 0.7); border-radius: var(--r-pill);
   -webkit-transform: translateX(var(--at, 0)); transform: translateX(var(--at, 0));
 }
 /* The trackbar has the focus, and 7a's ring round the knob is what says so —
    scrubbing has to look like a mode rather than another nudge. Toggled, never
    transitioned: a shadow that animated would repaint over the video. */
-#osd-bar.foc #osd-knob { box-shadow: 0 0 0 12px rgba(157, 147, 214, 0.34); }
+#osd-bar.foc #osd-knob {
+  top: -9px; margin-left: -13px; width: 26px; height: 26px;
+  background: var(--ac); box-shadow: 0 0 0 8px rgba(157, 147, 214, 0.22);
+}
 
 /* Wide enough for a three-part clock and the SEEKING marker beside it: the
    elapsed wrapping onto a second line pushes the bar off centre. */
-#osd-time { width: 260px; font-size: 28px; color: var(--dim); white-space: nowrap; }
-#osd-total {
-  width: 232px; font-size: 28px; color: var(--dim);
-  text-align: right; white-space: nowrap;
-}
+#osd-time { white-space: nowrap; }
+#osd-total { white-space: nowrap; }
 
 /* Transport left, choices right. Nothing here moves on a timeupdate — the row
    is redrawn when something about it changes, never per frame. */
 #osd-controls {
   display: -webkit-flex; display: flex;
   -webkit-justify-content: space-between; justify-content: space-between;
+  -webkit-align-items: flex-start; align-items: flex-start;
   height: 140px; margin-top: 22px;
 }
-#osd-left, #osd-right { white-space: nowrap; }
+/* 7a: the transport shares one centre line, so Play is taller than the jumps
+   rather than lower than them. The choices stay top-aligned — their captions
+   hang below, and it is the captions that need a common baseline. */
+#osd-left {
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+}
+#osd-right { white-space: nowrap; }
 .osd-ctl {
   display: inline-block; vertical-align: top; width: var(--c-ctl);
   text-align: center; white-space: normal;
 }
 
 /* 7a's sizes. Play is the one you reach for, so it is bigger and filled; the
-   two jumps flank it at 80, and the four choices sit a size down again. */
-#osd-left .osd-btn { width: 80px; height: 80px; }
-#osd-left .osd-btn svg { margin-top: 17px; }
-#osd-left .osd-ctl.primary .osd-btn {
-  width: 104px; height: 104px;
-  background: var(--ac); color: var(--bg);
+   two jumps flank it at 80, and the four choices sit a size down again.
+
+   The button centres its own icon. There are three button sizes on this row
+   and glyphs.ts emits one 46px square for all of them, so a margin worked out
+   by hand is a number per size that goes wrong the moment a size changes. */
+.osd-btn {
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+  -webkit-justify-content: center; justify-content: center;
 }
-#osd-left .osd-ctl.primary .osd-btn svg { margin-top: 29px; }
+.osd-btn svg { margin: 0; width: 34px; height: 34px; }
+
+#osd-left .osd-btn { width: 80px; height: 80px; }
+/* Play is bigger, not a different colour: every button on this row wears the
+   same neutral, and the focus tint plus the ring is what says which one has
+   the keys. Filled with the accent all the time it read as permanently
+   selected, and left the ring nothing to say. */
+#osd-left .osd-ctl.primary .osd-btn { width: 104px; height: 104px; }
+#osd-left .osd-ctl.primary .osd-btn svg { width: 44px; height: 44px; }
 #osd-right .osd-btn { width: 76px; height: 76px; }
-#osd-right .osd-btn svg { margin-top: 15px; }
 
 #osd-hint { font-size: 20px; color: var(--dim2); margin-top: 10px; }
 
@@ -211,7 +268,7 @@
   position: absolute; left: var(--menu-left, var(--sp-page)); bottom: 330px; width: 860px;
   padding: 26px 18px; border-radius: 26px;
   background: var(--surface);
-  box-shadow: 0 0 0 1px rgba(238, 241, 243, 0.1), 0 40px 90px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 1px rgba(238, 241, 243, 0.1), 0 40px 90px rgba(0, 0, 0, 0.7);
 }
-#menu .menu-list { height: auto; max-height: 392px; }
+#menu .menu-list { height: auto; max-height: 376px; }
 

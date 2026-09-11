@@ -486,11 +486,14 @@ function drive(page, titles, port) {
   function menuLabels() {
     return page.evaluate(function (sel) {
       return Array.prototype.map.call(document.querySelectorAll(sel), function (r) {
-        const note = r.querySelector('.menu-note-inline');
+        /* The template always carries the note element, so an empty one means
+           no note — the element existing is not a warning. */
+        const note = r.querySelector('.menu-row-note');
+        const said = note ? note.textContent.trim() : '';
         return (
           (r.classList.contains('on') ? '* ' : '') +
           r.querySelector('.menu-label').textContent.trim() +
-          (note ? '  [' + note.textContent.trim() + ']' : '')
+          (said ? '  [' + said + ']' : '')
         );
       });
     }, MENU_ROWS);
@@ -1069,7 +1072,7 @@ function drive(page, titles, port) {
       return Array.prototype.map.call(
         document.querySelectorAll('#dt-menu:not(.hidden) .menu-row'),
         function (r) {
-          const note = r.querySelector('.menu-note-inline');
+          const note = r.querySelector('.menu-row-note');
           const parts = r.querySelector('.menu-label').textContent.trim().split(' \u00b7 ');
           const preferred = parts[parts.length - 1] === 'preferred';
           if (preferred) parts.pop();

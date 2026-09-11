@@ -23,10 +23,10 @@ export function versionLabel(media: PlexMedia | null | undefined): string {
    worse picture. */
 export function qualities(media: PlexMedia | null | undefined): Quality[] {
   const source = media?.bitrate ?? 0;
-  const out: Quality[] = [{ label: `Original (${versionLabel(media)})`, bitrate: null }];
+  const out: Quality[] = [{ label: 'Original', detail: versionLabel(media), bitrate: null }];
   BITRATES.forEach((cap) => {
     if (!source || cap < source) {
-      out.push({ label: `${bitrateLabel(cap)} — server converts`, bitrate: cap });
+      out.push({ label: bitrateLabel(cap), detail: 'server converts', bitrate: cap });
     }
   });
   return out;

@@ -27,6 +27,10 @@
   --dim:     rgba(238, 240, 242, .44);
   --dim2:    rgba(238, 240, 242, .26);
   --soft:    rgba(238, 240, 242, .07);
+  /* The accent behind a chosen row, and the ring round a focused control. */
+  --ac-soft: rgba(157, 147, 214, .2);
+  --ac-tint: rgba(157, 147, 214, .14);
+  --ac-ring: 0 0 0 2px var(--ac);
 
   --t-quick: 180ms;   /* a tile lifting, a strip sliding */
   --t-move:  340ms;   /* a row change, the hero collapsing */
@@ -58,12 +62,35 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Inter, the design's typeface, served from the bundle. Not from Google: the
+   app runs from file:// on the panel, and a UI that waits on a third party to
+   draw its own text is a UI that sometimes does not. SIL OFL, see
+   css/fonts/LICENSE; refresh from the @fontsource/inter devDependency. */
+@font-face {
+  font-family: Inter;
+  font-weight: 400;
+  font-style: normal;
+  src: url("fonts/inter-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: Inter;
+  font-weight: 500;
+  font-style: normal;
+  src: url("fonts/inter-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: Inter;
+  font-weight: 600;
+  font-style: normal;
+  src: url("fonts/inter-latin-600-normal.woff2") format("woff2");
+}
+
 html, body {
   width: 1920px; height: 1080px;
   overflow: hidden;
   background: var(--bg);
   color: var(--fg);
-  font-family: "LG Smart UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: Inter, "LG Smart UI", "Helvetica Neue", Arial, sans-serif;
   -webkit-user-select: none;
   cursor: none;
 }
@@ -135,6 +162,13 @@ html, body {
   color: var(--fg);
   -webkit-transform: scale(1.06); transform: scale(1.06);
 }
+/* 7b rings the focused control. Scale alone reads as a wobble on a 2018 panel
+   at three metres; the ring is what says "this one". Toggled, never
+   transitioned — an animated shadow repaints over the video. */
+.osd-ctl.foc .osd-btn, .dt-act.on .dt-act-btn {
+  box-shadow: var(--ac-ring);
+  background: var(--ac-soft);
+}
 .dt-act.primary.on .dt-act-btn { border-color: var(--fg); color: var(--bg); }
 
 .dt-act-cap, .osd-cap {
@@ -151,7 +185,8 @@ html, body {
 }
 .menu-tab.on { color: var(--fg); border-bottom-color: var(--ac); }
 
-.menu-list { height: 392px; overflow: hidden; margin-top: 18px; }
+/* Four rows, per 7b. Matches ROW_H x ROWS_SHOWN in src/view/menu.ts. */
+.menu-list { height: 376px; overflow: hidden; margin-top: 18px; }
 .menu-inner {
   /* --wind is how far up the list is scrolled; JavaScript sets the number and
      the transform stays here. */
@@ -161,17 +196,39 @@ html, body {
   transition: transform var(--t-quick) var(--ease);
 }
 
+/* 7b's row: the icon, the label with its note beneath, and a check on the one
+   that is chosen. The shape is the template in index.html; this is only how it
+   is dressed. */
 .menu-row {
-  height: 56px; line-height: 56px; padding: 0 18px;
-  font-size: 26px; color: var(--dim);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  border-radius: var(--r-row);
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+  height: 94px; padding: 0 18px; border-radius: var(--r-row);
+  color: rgba(238, 241, 243, 0.68);
 }
-.menu-row.sel { background: var(--raised); color: var(--fg); }
+/* The chosen value, not the cursor: a faint accent wash and the check. */
+.menu-row.on { background: var(--ac-tint); color: var(--fg); }
+/* The cursor. Stronger than the wash, because it is what the d-pad moves. */
+.menu-row.sel { background: var(--ac-soft); color: var(--fg); }
 .menu-row.off { color: var(--dim2); }
-.menu-mark { display: inline-block; width: 34px; color: var(--ac); }
-.menu-label { display: inline-block; }
-.menu-note-inline { margin-left: 18px; font-size: 21px; color: var(--dim2); }
+.menu-icon {
+  width: 28px; height: 28px; margin-right: 18px;
+  -webkit-flex: none; flex: none;
+}
+.menu-icon svg, .menu-check svg { display: block; width: 28px; height: 28px; }
+.menu-text { min-width: 0; }
+.menu-label {
+  display: block; font-size: 27px; line-height: 32px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Not .menu-note: that is the panel's own footnote, and two elements sharing
+   one class made `querySelector('.menu-note')` return whichever came first. */
+.menu-row-note {
+  display: block; font-size: 21px; line-height: 26px; margin-top: 4px;
+  color: rgba(238, 241, 243, 0.42);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.menu-row-note:empty { display: none; }
+.menu-check { margin-left: auto; color: var(--ac); -webkit-flex: none; flex: none; }
 
 .menu-note { margin-top: 12px; font-size: 20px; color: var(--dim2); height: 24px; }
 
@@ -184,6 +241,6 @@ html, body {
   padding: 22px 26px 18px; border-radius: var(--r-panel);
   background: rgba(22, 24, 38, 0.94);
 }
-#confirm .menu-list { height: auto; max-height: 392px; }
+#confirm .menu-list { height: auto; max-height: 376px; }
 #confirm .menu-note { height: auto; }
 
