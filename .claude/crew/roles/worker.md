@@ -41,19 +41,23 @@ that section looks empty or wrong, say so in the task file.
 
 - **Chromium 53, permanently.** No `async`/`await`, no CSS Grid, no object
   spread, no `Object.entries`, no `position: sticky`. Animate only `transform`
-  and `opacity`. `npm run check` catches these, but it is a text scan, not a
-  parser — a clean run means nothing obviously wrong, not proof.
-- `index.html`'s script list **is** the dependency graph. A new file in `js/`
-  must be added to it or `npm run check` fails.
+  and `opacity`. Nothing here is one tool's job: the bundler lowers syntax,
+  `lib: ES2015` catches the built-ins, stylelint reads browserslist for the CSS,
+  and `no-restricted-properties` covers the DOM methods none of those can see —
+  `replaceChildren` (Chrome 86) and `append` (Chrome 54) read as ordinary DOM
+  and are invisible to the type checker. Build nodes with `src/view/dom.ts`.
+- **The import graph is the manifest.** `index.html` loads `src/main.ts` and
+  nothing else, so a file nothing imports is simply not in the bundle. There is
+  no script list to add to.
 - **Never judge playback on the laptop.** A desktop browser decodes far less
   than the panel. A silent film or a decode error there is the browser, not
   the app, and it looks exactly like the bugs that matter. If your task is
   about decode, containers, HLS, smoothness or audio over ARC, the honest end
   state is `pending-tv`.
-- `js/media.js` and `js/subs.js` are pure and unit tested. Change them and the
-  tests change with them.
-- `js/guard.js` has no unit test and is the most important logic in the app.
-  If you touch it, adding one is in scope by default.
+- `src/rules/` is pure — no DOM, no request, no cache — and unit tested.
+  Change anything there and the tests change with it.
+- `src/data/guard.ts` has no unit test and is the most important logic in the
+  app. If you touch it, adding one is in scope by default.
 - The server is someone else's. 4K must direct play or not play; below 4K a
   transcode is allowed. Never widen the direct play profile to make something
   work.
