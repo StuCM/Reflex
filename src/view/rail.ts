@@ -249,13 +249,17 @@ function drawRow(
   const start = clamp(firstVisible - 2, 0, Math.max(0, row.total - TILE_POOL));
   place(rowElement._strip, -firstVisible * STRIDE, !reused);
 
-  rowElement._tiles.forEach((tile, offset) => {
-    const index = start + offset;
+  /* A slot per index, not per position in the window: the pool is exactly the
+     window, so one step recycles the one tile that wrapped round and leaves the
+     other eleven — and the short circuit below — alone. */
+  for (let index = start; index < start + TILE_POOL; index++) {
+    const tile = rowElement._tiles[index % TILE_POOL];
+    if (!tile) continue;
     if (index >= row.total) {
       tile.classList.add('hidden');
       tile._idx = -1;
       tile._item = null;
-      return;
+      continue;
     }
     tile.classList.remove('hidden');
     translate(tile, index * STRIDE, 0);
@@ -268,7 +272,7 @@ function drawRow(
       /* Nothing else changed, but the focus can arrive on a tile still waiting
          for its picture, and that one never waits. */
       if (focused && tile._wait) paint(tile);
-      return;
+      continue;
     }
     tile._idx = index;
     const item = itemAt(row, index);
@@ -280,7 +284,7 @@ function drawRow(
       tile._sub.textContent = '';
       tile._prog.style.setProperty('--progress', '0');
       tile._img.removeAttribute('src');
-      return;
+      continue;
     }
 
     tile._name.textContent = railTitle(item);
@@ -300,17 +304,17 @@ function drawRow(
       tile._deferred = true;
       tile._wait = false;
       tile._img.removeAttribute('src');
-      return;
+      continue;
     }
     tile._deferred = false;
     /* The focused tile is the one being looked at and the one the hero is about
        to draw, so it pays the lookup immediately whatever the rail is doing. */
     if (focused) {
       paint(tile);
-      return;
+      continue;
     }
     tile._wait = !drawHeld(tile);
-  });
+  }
 }
 
 export function render(rows: Row[], rowIndex: number): void {
