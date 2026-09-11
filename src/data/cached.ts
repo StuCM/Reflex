@@ -61,7 +61,6 @@ export const total = kept<{ updatedAt?: number; total: number }>('total:');
 export const art = kept<unknown>('art:');
 export const meta = kept<PlexItem>('meta:');
 export const recaps = kept<Recap[]>('recaps:');
-export const ytChannel = kept<string>('youtube:channel:');
 
 /* A film can be added to a library but is rarely taken out, so a hit stands
    and only a miss is ever asked again. */
