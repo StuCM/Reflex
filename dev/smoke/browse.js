@@ -326,6 +326,69 @@ module.exports = function (h) {
     })
 
     .then(function () {
+      return step('a row walked twice keeps its pictures while it moves', function () {
+        /* Cover the ground first — a settle paints every tile in the pool, not
+           only the seven on screen — then walk back over it. Going back hands
+           every element a different index, which is the recycling the settle
+           used to blank; by then the browser holds all of those pictures and
+           there is nothing left to wait for.
+
+           Two rows down, as above: Continue watching is short enough that the
+           strip never winds, and a strip that does not wind never recycles. */
+        return backToLibrary()
+          .then(function () {
+            return press('ArrowUp', 8);
+          })
+          .then(function () {
+            return press('ArrowDown', 2);
+          })
+          .then(function () {
+            return page.waitForTimeout(1500);
+          })
+          .then(function () {
+            return press('ArrowRight', 5);
+          })
+          .then(function () {
+            return page.waitForTimeout(1500);
+          })
+          .then(function () {
+            return sweepReadings(function () {
+              return press('ArrowLeft', 5);
+            });
+          })
+          .then(function (readings) {
+            if (readings.length !== 5) {
+              throw new Error('read ' + readings.length + ' of 5 presses');
+            }
+            readings.forEach(function (st, n) {
+              const seen = st.fresh + st.stale.length + st.blank.length;
+              /* Not "most of them": the settle painted every tile in the pool on
+                 the way out, so on the way back there is nothing left to fetch
+                 and a single blank is the bug this step exists for. A threshold
+                 here would pass with half the row grey. */
+              if (st.blank.length) {
+                throw new Error(
+                  'press ' +
+                    (n + 1) +
+                    ': ' +
+                    st.blank.length +
+                    ' of ' +
+                    seen +
+                    ' tiles went blank on a second pass: ' +
+                    st.blank.join(', '),
+                );
+              }
+              if (st.stale.length) {
+                throw new Error(
+                  'press ' + (n + 1) + ": another film's poster on: " + st.stale.join(', '),
+                );
+              }
+            });
+          });
+      });
+    })
+
+    .then(function () {
       return step('the tile is a poster and the hero behind it is a backdrop', function () {
         /* The whole point of the feature: the tile asks for a different kind of
            picture from the hero, so the two can never be the same image. Same
