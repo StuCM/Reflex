@@ -12,10 +12,30 @@ refactor is open, nothing else is taken.
 
 ### 0. The refactor — and nothing else until it lands
 
-**Feature freeze, decided 2026-09-10.** No new features are taken until this
-section is empty. The layering merged at 0.0.2; what follows is the rest of the
-same job. A feature added on top of a tree that is about to become modules is a
-feature that has to be written twice.
+**Feature freeze, decided 2026-09-10. Still in force, but nearly clear.** No new
+features are taken until this section is empty. A feature added on top of a tree
+that is about to become modules is a feature that has to be written twice.
+
+**Landed 2026-09-11 (0.3.1):** stage 1 (the bundle) and stage 2 (`.ts` and ES
+modules) are both done — `js/` no longer exists and `src/` is 46 TypeScript
+modules behind one Rolldown bundle. Both 0b bugs below are fixed: `main` is
+pushed, and `tools/package.sh` now bakes the keys into the artefact it ships and
+greps *that* to prove it.
+
+**What is genuinely left, and all that the freeze now waits on:**
+
+1. **Step 7 — delete the bridge.** `src/legacy.ts` still publishes four globals
+   (`Panel`, `Config`, `UI`, `Cached`) because `src/api/youtube.ts` reaches for
+   the `Cached` global rather than importing `data/cached`. That is an
+   `api/` → `data/` import and a real layering decision, not an oversight to fix
+   blindly.
+2. **Step 7 — the layer check becomes import lint.** `tools/check-layers.js` is
+   still a regex scan: it catches what a file reaches *for*, not what it
+   imports. `no-restricted-imports` per layer replaces it.
+3. **Split the four screen files.** `src/screen/player.ts` is 1,548 lines and
+   its `max-lines` ratchet was raised three times in one session, each time
+   paid for by deleting comments. That is the ratchet telling us the file is
+   the problem.
 
 Ordered. Each step is green before the next starts.
 
@@ -48,13 +68,13 @@ starting any of the steps below; they are the summary, it is the spec.
 
 ### 0b. Bugs found deploying 0.0.2 to the panel
 
-- **Push `main`.** Before 2026-09-10 it had 217 commits that had never left
+- ~~**Push `main`.**~~ Done 2026-09-11. Before 2026-09-10 it had 217 commits that had never left
   this laptop, so `origin/main` sat at `035773d` — which is exactly where the
   cloud session's PR #1 branched, and why it could never merge. Any session
   that is not this one branches from GitHub. If `main` is stale there, their
   work is born conflicted.
 
-- **`tools/package.sh` bakes keys into the file that no longer ships.** It
+- ~~**`tools/package.sh` bakes keys into the file that no longer ships.**~~ Fixed 2026-09-10; `check_baked` now greps the shipped bundle. It
   `sed`s `TMDB_KEY`/`YOUTUBE_KEY` into the *staged* `js/core/config.js`, then
   verifies the patch against that same file — so its guard passes while a
   bundled build compiled from the unbaked source ships with both keys empty.
@@ -67,6 +87,71 @@ starting any of the steps below; they are the summary, it is the spec.
   stream per server × section × tag, as a server count. Two servers with
   several libraries each reads as "across 12 servers" on the panel. Cosmetic,
   one line, but it is the only number on that screen and it is wrong.
+
+### 0c. Asked for 2026-09-11 — held by the freeze, except the bug
+
+Raised in one go. Only the Discover fault is a bug and therefore takeable now;
+everything else waits on section 0. Listed here rather than filed into the
+sections below so the set stays visible as a set.
+
+- **The Discover page is not working correctly.** A bug, so it can be taken
+  under the freeze — but "not working correctly" is not a spec. Needed first:
+  what it does that it should not. Task 023 rebuilt it TMDB-first (rows drawn
+  from TMDB, the servers asked only for what they hold), and it is
+  `src/data/discovery.ts` plus the `discovery` smoke area. Reproduce on the
+  panel and write down the symptom before speccing.
+
+- **Work out the correct lists and categories to show.** Not a code task yet: a
+  decision about what the home screen is *for*. Today's rows are whatever the
+  servers' sections are, plus TMDB's curated lists. Blocks Custom Lists below,
+  and probably subsumes part of the Discover fault.
+
+- **Rebuild the menu correctly.** The 7b row landed 2026-09-11 (icon, label over
+  its note, accent check, `<template>` in `index.html`). What "correctly" means
+  beyond that needs saying — most likely the tab strip and the panel's
+  placement, which 7b does not show.
+
+- **Custom Lists.** A user-made row: pick titles, name it, keep it. Needs the
+  categories decision above first, and a store — `src/data/store.ts` holds
+  IndexedDB, and nothing there is currently user-authored content. **This is the
+  first feature that puts user data in the cache**, which changes what a cache
+  wipe costs: today losing it re-fetches, afterwards it loses something the user
+  made. Decide where it lives before building it.
+
+- **Magic Remote pointer.** Already specced in section 2 below — see the entry
+  there, which settles that every action must stay d-pad reachable and that the
+  translation belongs in one module rather than per screen.
+
+- **Long press on an item opens a menu.** Needs the pointer work above, or a
+  d-pad equivalent (hold OK). Note the app has three listeners in total and no
+  click handlers at all, because focus is an integer the screen owns — a long
+  press is a new input concept, not a new handler.
+
+- **A splash screen for the first load, with a supplied animation.** The app
+  paints from IndexedDB before any network call, so the honest window is short.
+  Worth measuring what it actually covers before building it: boot to first
+  rail was ~1.2s on the panel from cache, ~15s cold. Animate `transform` and
+  `opacity` only.
+
+- **Rename to Manta.** `appinfo.json` says `Mantis` today and `index.html`'s
+  `<title>` still says `Reflex` — so this is three names in two files. The id
+  stays `com.stu.plexlite` so the install replaces rather than sits beside.
+  Chore, not a feature, but it touches the packaged artefact so it should ride
+  with a deploy rather than alone.
+
+- **New design updates.** The canvas in `design/` was refreshed 2026-09-11 from
+  the newer export. Which screens changed, and what follows from them, is not
+  yet read — 7a and 7b were byte-identical, 7c and 6c were not.
+
+### 0d. The direction, not yet a task
+
+**Everything customisable — the user decides what the home screen shows.** The
+stated ambition. Worth recording now because it changes how the items above
+should be built: Custom Lists, the categories decision and the Discover rows
+are all the same feature seen from three sides, and building them as three
+separate things is how they end up impossible to unify later. Nothing here is
+scheduled; it is here so the next person designing a row model knows where it
+is meant to go.
 
 ### 1. Playback itself
 
