@@ -362,15 +362,19 @@ module.exports = function (h) {
             }
             readings.forEach(function (st, n) {
               const seen = st.fresh + st.stale.length + st.blank.length;
-              if (st.fresh < 5) {
+              /* Not "most of them": the settle painted every tile in the pool on
+                 the way out, so on the way back there is nothing left to fetch
+                 and a single blank is the bug this step exists for. A threshold
+                 here would pass with half the row grey. */
+              if (st.blank.length) {
                 throw new Error(
                   'press ' +
                     (n + 1) +
-                    ': only ' +
-                    st.fresh +
+                    ': ' +
+                    st.blank.length +
                     ' of ' +
                     seen +
-                    ' tiles kept their picture, blank: ' +
+                    ' tiles went blank on a second pass: ' +
                     st.blank.join(', '),
                 );
               }
