@@ -6,6 +6,7 @@ import { photoUrl, posterUrl } from '../api/plex/images';
 import { streamUrl, subtitles as fetchSubtitles, timeline } from '../api/plex/playback';
 import settings from '../core/config';
 import { clamp, debug, isBack, toast } from '../core/ui';
+import { endsAt, timecode, wallClock } from '../rules/clock';
 import { audioLabel, audioMenuLabel, audioTracks } from '../rules/audio';
 import * as cues from '../rules/cues';
 import { bitrateLabel, isUHD, qualities, versionLabel } from '../rules/quality';
@@ -79,6 +80,10 @@ interface Control {
 const videoElement = must('video') as PanelVideoElement;
 const osd = must('osd');
 const osdTitle = must('osd-name');
+const osdWhere = must('osd-where');
+const osdBack = must('osd-back');
+const osdClock = must('osd-clock');
+const osdEnds = must('osd-ends');
 const osdTime = must('osd-time');
 const osdTotal = must('osd-total');
 const osdFill = must('osd-fill');
@@ -101,7 +106,8 @@ const subtitleElement = must('subtitle');
 const menuElement = must('menu');
 
 /** #osd-bar, in CSS pixels. */
-const BAR_W = 1300;
+/** Matches #osd-bar in css/player.css: 1920 less 7a's two 96 margins. */
+const BAR_W = 1728;
 /** .osd-chap plus its margin. */
 const CARD_W = 260;
 const CARDS_SHOWN = 6;
@@ -170,18 +176,6 @@ let controlIndex = -1;
 let openPanel: string | null = null;
 let chapterIndex = 0;
 
-function pad(value: number): string {
-  return (value < 10 ? '0' : '') + value;
-}
-
-function timecode(seconds: number): string {
-  const whole = Math.max(0, Math.floor(seconds || 0));
-  const hours = Math.floor(whole / 3600);
-  const minutes = Math.floor(whole / 60) % 60;
-  const rest = whole % 60;
-  return hours ? `${hours}:${pad(minutes)}:${pad(rest)}` : `${minutes}:${pad(rest)}`;
-}
-
 /* A live or badly-muxed stream reports Infinity, and every sum here divides
    by this — so fall back to what the server said the film runs to. */
 function duration(): number {
@@ -223,6 +217,7 @@ function paintOsd(): void {
 
   osdTime.textContent = timecode(at) + (pending === null ? paused : '   SEEKING');
   osdTotal.textContent = timecode(total) + (total ? `   ·   ${timecode(left)} left` : '');
+  paintHead(left);
 
   const across = total ? Math.round((BAR_W * Math.min(at, total)) / total) : 0;
   osdFill.style.setProperty('--fill', `${across}px`);
@@ -235,6 +230,15 @@ function paintOsd(): void {
     '--buffered',
     total ? `${Math.round((BAR_W * Math.min(ahead, total)) / total)}px` : '0',
   );
+}
+
+function paintHead(left: number): void {
+  const here = chapterAt(chapters(item), target());
+  osdWhere.textContent = here ? here.title : '';
+  const now = new Date();
+  osdClock.textContent = wallClock(now);
+  const finish = endsAt(now, left);
+  osdEnds.textContent = finish && `ends ${finish}`;
 }
 
 /* Chapters as ticks, markers as bands. Drawn once, when the duration is
@@ -452,6 +456,7 @@ function controls(): Control[] {
 }
 
 function paintControls(): void {
+  osd.classList.toggle('panelled', !!openPanel);
   const left: HTMLElement[] = [];
   const right: HTMLElement[] = [];
   controls().forEach((control, at) => {
@@ -481,7 +486,6 @@ function togglePlay(): void {
 
 /* ---------- seeking ---------- */
 
-/* Nudge the target. Repeats accumulate rather than each one seeking. */
 function seekBy(seconds: number): void {
   seekTo(target() + seconds);
 }
@@ -924,11 +928,14 @@ function versionRow(media: PlexMedia, at: number): MenuRow {
    Original is the file as it stands and every cap is a fixed ceiling the
    server re-encodes to. */
 function qualityNote(cap: Quality): string {
-  if (!cap.bitrate) return forceStream ? 'the server muxes this one' : 'direct play';
+  if (!cap.bitrate) {
+    const cost = forceStream ? 'the server muxes this one' : 'direct play';
+    return cap.detail ? `${cap.detail}  ·  ${cost}` : cost;
+  }
   if (isUHD(currentMedia)) {
     return 'a 4K transcode is what gets the stream killed — this will be refused';
   }
-  return `transcode · ${bitrateLabel(cap.bitrate)}`;
+  return cap.detail ?? '';
 }
 
 function qualityRow(cap: Quality): MenuRow {
@@ -960,21 +967,23 @@ function chapterAt(list: Chapter[], at: number): Chapter | null {
    builders are handed over rather than called, so the list is made when the
    panel opens and reflects where playback has got to. */
 const PANELS: Record<string, MenuTab> = {
-  audio: { label: 'Audio', rows: audioRows },
+  audio: { label: 'Audio', icon: glyphs.audio, rows: audioRows },
   subs: {
     label: 'Subtitles',
+    icon: glyphs.subs,
     rows: subRows,
     note: 'Subtitles are fetched as text and drawn here, so they cost the server nothing.',
   },
   quality: {
     label: 'Quality',
+    icon: glyphs.quality,
     rows: qualityRows,
     note: 'Anything but Original asks the server to re-encode.',
   },
 };
 
-/* Open the panel belonging to one of the four right-hand buttons, anchored
-   over it and clamped so the last button does not push it off the screen. */
+/* Anchored over the button that opened it, clamped so the last one does not
+   push it off screen. */
 function openPanelFor(id: string): void {
   if (id === 'chapters') {
     openChapters();
@@ -1219,6 +1228,7 @@ export function play(options: PlayOptions): void {
     return;
   }
   osdTitle.textContent = options.item.title || '';
+  put(osdBack, svg(glyphs.back));
   pending = null;
   if (seekTimer) clearTimeout(seekTimer);
   currentPart = options.part || null;

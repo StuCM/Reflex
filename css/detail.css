@@ -149,12 +149,12 @@
   position: absolute; bottom: 48px; left: var(--menu-left, 96px); width: 860px;
   padding: 26px 18px; border-radius: 26px;
   background: var(--surface);
-  box-shadow: 0 0 0 1px rgba(238, 241, 243, 0.1), 0 40px 90px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 1px rgba(238, 241, 243, 0.1), 0 40px 90px rgba(0, 0, 0, 0.7);
 }
 /* The player's menu holds its height so its tabs never move; this one can be
    three rows long, so it shrinks to what it holds and grows upward from the
    bottom edge. */
-#dt-menu .menu-list { height: auto; max-height: 392px; }
+#dt-menu .menu-list { height: auto; max-height: 376px; }
 
 /* ---- extras ----
    Cards in the rail's language: the same --r-card corner and the same violet

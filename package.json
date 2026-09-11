@@ -28,6 +28,8 @@
     "smoke:built": "npm run build && node dev/smoke.js --built"
   },
   "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@phosphor-icons/core": "^2.1.1",
     "eslint": "^10.10.0",
     "eslint-plugin-jsdoc": "^64.3.8",
     "eslint-plugin-unicorn": "^74.0.0",

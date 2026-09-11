@@ -1,62 +1,77 @@
 /* The action icons, as inline SVG.
-   Inline rather than a font: nothing is fetched, and stroke follows the text
-   colour, so a focused button needs no second asset. */
 
-/** One 46px icon from its inner shapes. */
+   Phosphor (MIT), the design's own set — the paths are lifted from
+   @phosphor-icons/core at build time rather than the web font being loaded at
+   runtime: a font is a fetch this app cannot rely on from file://, and an icon
+   font that fails to arrive renders nothing at all. Inline, stroke follows the
+   text colour and a focused button needs no second asset.
+
+   Regenerate with tools/icons.js when the set changes. */
+
+/** One icon, sized by CSS. Phosphor's own viewBox, and filled rather than
+    stroked — the weight is in the path. */
 export function glyph(inner: string): string {
   return (
-    '<svg width="46" height="46" viewBox="0 0 256 256" fill="none" ' +
-    'stroke="currentColor" stroke-width="16" stroke-linecap="round" ' +
-    'stroke-linejoin="round">' +
-    inner +
-    '</svg>'
+    '<svg viewBox="0 0 256 256" fill="currentColor" width="46" height="46">' + inner + '</svg>'
   );
 }
 
-/* Shared by the film page and the player. */
+/** phosphor speaker-high */
 export const audio = glyph(
-  '<polygon points="36,100 92,100 148,48 148,208 92,156 36,156"/>' +
-    '<path d="M188 92a52 52 0 0 1 0 72"/>',
+  '<path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM32,96H72v64H32ZM144,207.64,88,164.09V91.91l56-43.55Zm54-106.08a40,40,0,0,1,0,52.88,8,8,0,0,1-12-10.58,24,24,0,0,0,0-31.72,8,8,0,0,1,12-10.58ZM248,128a79.9,79.9,0,0,1-20.37,53.34,8,8,0,0,1-11.92-10.67,64,64,0,0,0,0-85.33,8,8,0,1,1,11.92-10.67A79.83,79.83,0,0,1,248,128Z"/>',
 );
+
+/** phosphor subtitles */
 export const subs = glyph(
-  '<rect x="28" y="52" width="200" height="152" rx="18"/>' +
-    '<line x1="64" y1="124" x2="140" y2="124"/>' +
-    '<line x1="64" y1="164" x2="192" y2="164"/>',
+  '<path d="M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,144H32V64H224V192ZM48,136a8,8,0,0,1,8-8H72a8,8,0,0,1,0,16H56A8,8,0,0,1,48,136Zm160,0a8,8,0,0,1-8,8H104a8,8,0,0,1,0-16h96A8,8,0,0,1,208,136Zm-48,32a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16h96A8,8,0,0,1,160,168Zm48,0a8,8,0,0,1-8,8H184a8,8,0,0,1,0-16h16A8,8,0,0,1,208,168Z"/>',
 );
+
+/** phosphor monitor-play */
 export const quality = glyph(
-  '<line x1="56" y1="196" x2="56" y2="140"/>' +
-    '<line x1="128" y1="196" x2="128" y2="96"/>' +
-    '<line x1="200" y1="196" x2="200" y2="52"/>',
+  '<path d="M208,40H48A24,24,0,0,0,24,64V176a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V64A24,24,0,0,0,208,40Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V64a8,8,0,0,1,8-8H208a8,8,0,0,1,8,8Zm-48,48a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,224Zm-3.56-110.66-48-32A8,8,0,0,0,104,88v64a8,8,0,0,0,12.44,6.66l48-32a8,8,0,0,0,0-13.32ZM120,137.05V103l25.58,17Z"/>',
 );
 
-/* The film page's own. */
+/** phosphor film-reel */
 export const trailer = glyph(
-  '<circle cx="128" cy="128" r="100"/><polygon points="106,84 178,128 106,172"/>',
-);
-export const source = glyph(
-  '<rect x="36" y="44" width="184" height="72" rx="14"/>' +
-    '<rect x="36" y="140" width="184" height="72" rx="14"/>',
-);
-export const remove = glyph(
-  '<circle cx="128" cy="128" r="100"/>' + '<line x1="84" y1="128" x2="172" y2="128"/>',
+  '<path d="M232,216H183.36A103.95,103.95,0,1,0,128,232H232a8,8,0,0,0,0-16ZM40,128a88,88,0,1,1,88,88A88.1,88.1,0,0,1,40,128Zm88-24a24,24,0,1,0-24-24A24,24,0,0,0,128,104Zm0-32a8,8,0,1,1-8,8A8,8,0,0,1,128,72Zm24,104a24,24,0,1,0-24,24A24,24,0,0,0,152,176Zm-32,0a8,8,0,1,1,8,8A8,8,0,0,1,120,176Zm56-24a24,24,0,1,0-24-24A24,24,0,0,0,176,152Zm0-32a8,8,0,1,1-8,8A8,8,0,0,1,176,120ZM80,104a24,24,0,1,0,24,24A24,24,0,0,0,80,104Zm0,32a8,8,0,1,1,8-8A8,8,0,0,1,80,136Z"/>',
 );
 
-/* The player's own. */
+/** phosphor hard-drives */
+export const source = glyph(
+  '<path d="M208,136H48a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V152A16,16,0,0,0,208,136Zm0,64H48V152H208v48Zm0-160H48A16,16,0,0,0,32,56v48a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40Zm0,64H48V56H208v48ZM192,80a12,12,0,1,1-12-12A12,12,0,0,1,192,80Zm0,96a12,12,0,1,1-12-12A12,12,0,0,1,192,176Z"/>',
+);
+
+/** phosphor minus-circle */
+export const remove = glyph(
+  '<path d="M176,128a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,128Zm56,0A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/>',
+);
+
+/** phosphor rewind */
 export const rewind = glyph(
-  '<polygon points="124,64 124,192 40,128"/>' + '<polygon points="216,64 216,192 132,128"/>',
+  '<path d="M223.77,58a16,16,0,0,0-16.25.53L128,109.14V71.84A15.91,15.91,0,0,0,103.52,58.5L15.33,114.66a15.8,15.8,0,0,0,0,26.68l88.19,56.16A15.91,15.91,0,0,0,128,184.16v-37.3l79.52,50.64A15.91,15.91,0,0,0,232,184.16V71.84A15.83,15.83,0,0,0,223.77,58ZM112,183.93,24.18,128,112,72.06Zm104,0L128.18,128,216,72.06Z"/>',
 );
+
+/** phosphor fast-forward */
 export const forward = glyph(
-  '<polygon points="132,64 132,192 216,128"/>' + '<polygon points="40,64 40,192 124,128"/>',
+  '<path d="M248.67,114.66,160.48,58.5A15.91,15.91,0,0,0,136,71.84v37.3L56.48,58.5A15.91,15.91,0,0,0,32,71.84V184.16A15.92,15.92,0,0,0,56.48,197.5L136,146.86v37.3a15.92,15.92,0,0,0,24.48,13.34l88.19-56.16a15.8,15.8,0,0,0,0-26.68ZM48,183.94V72.07L135.82,128Zm104,0V72.07L239.82,128Z"/>',
 );
-/* Filling their box the way the two jumps either side of them do: the
-     buttons were always one size, and a triangle inset in its own box is
-     what read as a smaller play than forward. */
-export const play = glyph('<polygon points="72,48 72,208 208,128"/>');
+
+/** phosphor play-fill */
+export const play = glyph(
+  '<path d="M240,128a15.74,15.74,0,0,1-7.6,13.51L88.32,229.65a16,16,0,0,1-16.2.3A15.86,15.86,0,0,1,64,216.13V39.87a15.86,15.86,0,0,1,8.12-13.82,16,16,0,0,1,16.2.3L232.4,114.49A15.74,15.74,0,0,1,240,128Z"/>',
+);
+
+/** phosphor pause-fill */
 export const pause = glyph(
-  '<line x1="88" y1="52" x2="88" y2="204"/>' + '<line x1="168" y1="52" x2="168" y2="204"/>',
+  '<path d="M216,48V208a16,16,0,0,1-16,16H160a16,16,0,0,1-16-16V48a16,16,0,0,1,16-16h40A16,16,0,0,1,216,48ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Z"/>',
 );
+
+/** phosphor list-numbers */
 export const chapters = glyph(
-  '<rect x="28" y="60" width="200" height="136" rx="18"/>' +
-    '<line x1="96" y1="60" x2="96" y2="196"/>' +
-    '<line x1="160" y1="60" x2="160" y2="196"/>',
+  '<path d="M224,128a8,8,0,0,1-8,8H104a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM104,72H216a8,8,0,0,0,0-16H104a8,8,0,0,0,0,16ZM216,184H104a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM43.58,55.16,48,52.94V104a8,8,0,0,0,16,0V40a8,8,0,0,0-11.58-7.16l-16,8a8,8,0,0,0,7.16,14.32ZM79.77,156.72a23.73,23.73,0,0,0-9.6-15.95,24.86,24.86,0,0,0-34.11,4.7,23.63,23.63,0,0,0-3.57,6.46,8,8,0,1,0,15,5.47,7.84,7.84,0,0,1,1.18-2.13,8.76,8.76,0,0,1,12-1.59A7.91,7.91,0,0,1,63.93,159a7.64,7.64,0,0,1-1.57,5.78,1,1,0,0,0-.08.11L33.59,203.21A8,8,0,0,0,40,216H72a8,8,0,0,0,0-16H56l19.08-25.53A23.47,23.47,0,0,0,79.77,156.72Z"/>',
+);
+
+/** phosphor arrow-left */
+export const back = glyph(
+  '<path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/>',
 );

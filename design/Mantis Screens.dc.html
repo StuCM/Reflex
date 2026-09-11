@@ -256,83 +256,87 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
 </div>
 
 <div class="dv-opt" id="6c">
-<div class="dv-olabel"><a class="dv-oid" href="#6c">6c</a>Movie page after OK — description and ratings, the actions as icons with their current setting underneath, cast then extras stacked below.</div>
-<div class="dv-card">
+<div class="dv-olabel"><a class="dv-oid" href="#6c">6c</a>Movie page after OK — the page holds one screen of film, and cast and extras sit below it. Hover and press ▼ (or click the strip) to move down into them.</div>
+<div class="dv-card" onMouseEnter="{{ actD }}">
 <div class="frame" style="background:var(--bg);color:var(--fg)">
-  <div style="position:absolute;right:0;top:0;width:1240px;height:760px;z-index:0"><image-slot id="mantis-detail-hero" shape="rect" placeholder="Drop backdrop art"></image-slot></div>
+  <div style="position:absolute;right:0;top:0;width:1240px;height:760px;z-index:0;opacity:{{ det.artOpacity }};transition:opacity .3s"><image-slot id="mantis-detail-hero" shape="rect" placeholder="Drop backdrop art"></image-slot></div>
   <div style="position:absolute;right:0;top:0;width:1240px;height:760px;z-index:1;background:linear-gradient(90deg,var(--bg) 0%,var(--bg86) 34%,var(--bg18) 100%);pointer-events:none"></div>
   <div style="position:absolute;right:0;top:380px;width:1240px;height:380px;z-index:1;background:linear-gradient(180deg,var(--bg0),var(--bg) 78%);pointer-events:none"></div>
 
-  <div style="position:relative;z-index:3;height:88px;flex:none;display:flex;align-items:center;padding:0 96px">
+  <div style="position:relative;z-index:5;height:88px;flex:none;display:flex;align-items:center;padding:0 96px">
     <div style="width:56px;height:56px;border-radius:18px;background:var(--soft);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph ph-arrow-left" style="font-size:28px;color:var(--fg)"></i></div>
     <div style="font:500 26px Inter;letter-spacing:.3em;color:var(--dim)">MANTIS</div>
   </div>
 
-  <div style="position:relative;z-index:3;padding:14px 96px 0;width:1240px">
-    <div style="font:400 23px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">Movie · Science fiction · Denis Villeneuve</div>
-    <div style="font:500 72px/1.04 Inter;letter-spacing:-.03em;margin-top:12px">Dune: Part Two</div>
-    <div style="display:flex;align-items:center;margin-top:18px;font:400 25px Inter;color:var(--dim)">
-      <span style="border:2px solid rgba(238,241,243,.24);border-radius:8px;padding:2px 10px;font-size:21px;margin-right:24px">PG-13</span>
-      <span style="margin-right:24px">2024</span><span style="margin-right:24px">2h 46m</span>
-      <span style="border:2px solid var(--ac40);border-radius:8px;padding:2px 10px;font-size:21px;color:var(--ac)">4K HDR</span>
-    </div>
-    <div style="display:flex;align-items:center;margin-top:16px;font:400 25px Inter">
-      <div style="display:flex;align-items:center;margin-right:40px"><i class="ph-fill ph-star" style="font-size:26px;color:var(--ac);margin-right:10px"></i><span style="margin-right:10px">8.5</span><span style="color:var(--dim)">IMDb</span></div>
-      <div style="display:flex;align-items:center;margin-right:40px"><i class="ph ph-seal-check" style="font-size:26px;color:var(--ac2);margin-right:10px"></i><span style="margin-right:10px">92%</span><span style="color:var(--dim)">Critics</span></div>
-      <div style="display:flex;align-items:center"><i class="ph ph-users-three" style="font-size:26px;color:var(--dim);margin-right:10px"></i><span style="margin-right:10px">95%</span><span style="color:var(--dim)">Audience</span></div>
-    </div>
-    <div style="margin-top:16px;font:400 25px/1.45 Inter;color:rgba(238,241,243,.68);max-width:1120px">Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family, caught between the love of his life and the fate of the known universe.</div>
+  <div style="position:relative;z-index:3;flex:1;overflow:hidden">
+    <div style="transform:{{ det.ty }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
 
-    <div style="display:flex;align-items:flex-start;margin-top:24px">
-      <div style="display:flex;flex-direction:column;align-items:center;margin-right:20px">
-        <button class="btn" style="display:flex;align-items:center;font:500 27px Inter;padding:17px 44px;margin-bottom:10px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:28px;margin-right:14px"></i>Play</button>
-        <div style="font:400 20px Inter;color:var(--dim)">from start</div>
-      </div>
-      <sc-for list="{{ actions }}" as="ac" hint-placeholder-count="6">
-        <div style="display:flex;flex-direction:column;align-items:center;width:112px;margin-right:20px">
-          <div style="width:70px;height:70px;border-radius:999px;margin-bottom:10px;background:{{ ac.bg }};box-shadow:{{ ac.ring }};display:flex;align-items:center;justify-content:center"><i class="ph {{ ac.icon }}" style="font-size:32px;color:{{ ac.fg }}"></i></div>
-          <div style="font:400 20px Inter;color:{{ ac.labelColor }};text-align:center;line-height:1.25">{{ ac.label }}</div>
+      <div style="padding:40px 96px 78px;width:1240px;box-sizing:border-box">
+        <div style="font:400 23px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">Movie · Science fiction · Denis Villeneuve</div>
+        <div style="font:500 84px/1.04 Inter;letter-spacing:-.03em;margin-top:24px">Dune: Part Two</div>
+        <div style="display:flex;align-items:center;margin-top:30px;font:400 26px Inter;color:var(--dim)">
+          <span style="border:2px solid rgba(238,241,243,.24);border-radius:8px;padding:2px 10px;font-size:22px;margin-right:26px">PG-13</span>
+          <span style="margin-right:26px">2024</span><span style="margin-right:26px">2h 46m</span>
+          <span style="border:2px solid var(--ac40);border-radius:8px;padding:2px 10px;font-size:22px;color:var(--ac)">4K HDR</span>
         </div>
-      </sc-for>
+        <div style="display:flex;align-items:center;margin-top:28px;font:400 26px Inter">
+          <div style="display:flex;align-items:center;margin-right:44px"><i class="ph-fill ph-star" style="font-size:27px;color:var(--ac);margin-right:10px"></i><span style="margin-right:10px">8.5</span><span style="color:var(--dim)">IMDb</span></div>
+          <div style="display:flex;align-items:center;margin-right:44px"><i class="ph ph-seal-check" style="font-size:27px;color:var(--ac2);margin-right:10px"></i><span style="margin-right:10px">92%</span><span style="color:var(--dim)">Critics</span></div>
+          <div style="display:flex;align-items:center"><i class="ph ph-users-three" style="font-size:27px;color:var(--dim);margin-right:10px"></i><span style="margin-right:10px">95%</span><span style="color:var(--dim)">Audience</span></div>
+        </div>
+        <div style="margin-top:30px;font:400 27px/1.5 Inter;color:rgba(238,241,243,.68);max-width:1060px">Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family, caught between the love of his life and the fate of the known universe.</div>
+
+        <div style="display:flex;align-items:flex-start;margin-top:52px">
+          <div style="display:flex;flex-direction:column;align-items:center;margin-right:22px">
+            <button class="btn" style="display:flex;align-items:center;font:500 28px Inter;height:76px;padding:0 48px;margin-bottom:12px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:29px;margin-right:14px"></i>Play</button>
+            <div style="font:400 21px Inter;color:var(--dim)">from start</div>
+          </div>
+          <sc-for list="{{ actions }}" as="ac" hint-placeholder-count="6">
+            <div style="display:flex;flex-direction:column;align-items:center;width:118px;margin-right:22px">
+              <div style="width:76px;height:76px;border-radius:999px;margin-bottom:12px;background:{{ ac.bg }};box-shadow:{{ ac.ring }};display:flex;align-items:center;justify-content:center"><i class="ph {{ ac.icon }}" style="font-size:34px;color:{{ ac.fg }}"></i></div>
+              <div style="font:400 21px Inter;color:{{ ac.labelColor }};text-align:center;line-height:1.25">{{ ac.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div onClick="{{ det.down }}" style="padding:0 96px 60px;cursor:pointer">
+        <div style="display:flex;align-items:center;margin-bottom:22px">
+          <div style="font:400 24px Inter;letter-spacing:.22em;text-transform:uppercase;color:{{ det.castColor }};margin-right:16px">Cast</div>
+          <i class="ph ph-caret-down" style="font-size:24px;color:{{ det.caretColor }}"></i>
+        </div>
+        <div style="display:flex;margin-bottom:64px">
+          <sc-for list="{{ cast }}" as="c" hint-placeholder-count="5">
+            <div style="width:212px;display:flex;flex-direction:column;align-items:center;margin-right:32px">
+              <div class="phq3" style="width:132px;height:132px;border-radius:999px;background:var(--tile);margin-bottom:16px;box-shadow:{{ c.ring }}">
+                <div style="font:500 42px Inter;color:rgba(238,241,243,.22)">{{ c.ini }}</div>
+              </div>
+              <div style="text-align:center;width:212px">
+                <div style="font:400 23px/1.3 Inter;color:{{ c.nameColor }};white-space:nowrap">{{ c.name }}</div>
+                <div class="ell" style="font:400 21px/1.3 Inter;color:var(--dim);margin-top:6px">{{ c.role }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font:400 24px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:22px">Extras</div>
+        <div style="display:flex">
+          <sc-for list="{{ extras }}" as="x" hint-placeholder-count="4">
+            <div style="width:352px;flex:none;margin-right:32px">
+              <div class="phq3" style="width:100%;height:198px;border-radius:20px;background:var(--tile);box-shadow:0 0 0 1px rgba(238,241,243,.06)">
+                <i class="ph-fill ph-play" style="font-size:36px;color:rgba(238,241,243,.28)"></i>
+                <div style="position:absolute;right:12px;bottom:12px;font:400 20px Inter;padding:4px 11px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ x.dur }}</div>
+              </div>
+              <div class="ell" style="margin-top:14px;font:400 25px Inter">{{ x.t }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
     </div>
   </div>
-
-  <div style="position:relative;z-index:3;margin-top:auto;padding:0 96px 48px">
-    <div style="margin-bottom:26px">
-      <div style="font:400 22px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)">Cast</div>
-      <div style="display:flex;margin-top:16px">
-        <sc-for list="{{ cast }}" as="c" hint-placeholder-count="5">
-          <div style="width:176px;display:flex;flex-direction:column;align-items:center;margin-right:24px">
-            <div class="phq3" style="width:88px;height:88px;border-radius:999px;background:var(--tile);margin-bottom:10px">
-              <div style="font:500 30px Inter;color:rgba(238,241,243,.22)">{{ c.ini }}</div>
-            </div>
-            <div style="text-align:center;width:176px">
-              <div style="font:400 19px/1.3 Inter;white-space:nowrap">{{ c.name }}</div>
-              <div class="ell" style="font:400 18px/1.3 Inter;color:var(--dim);margin-top:3px">{{ c.role }}</div>
-            </div>
-          </div>
-        </sc-for>
-      </div>
-    </div>
-    <div>
-      <div style="font:400 22px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)">Extras</div>
-      <div style="display:flex;margin-top:16px">
-        <sc-for list="{{ extras }}" as="x" hint-placeholder-count="4">
-          <div style="width:236px;flex:none;margin-right:24px">
-            <div class="phq3" style="width:100%;height:133px;border-radius:16px;background:var(--tile);box-shadow:0 0 0 1px rgba(238,241,243,.06)">
-              <i class="ph-fill ph-play" style="font-size:30px;color:rgba(238,241,243,.28)"></i>
-              <div style="position:absolute;right:10px;bottom:10px;font:400 18px Inter;padding:3px 9px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ x.dur }}</div>
-            </div>
-            <div class="ell" style="margin-top:10px;font:400 22px Inter">{{ x.t }}</div>
-          </div>
-        </sc-for>
-      </div>
-    </div>
-  </div>
 </div>
 </div>
 </div>
-
 </div>
 </section>
 
@@ -636,7 +640,7 @@ const EXTRAS = [['Official trailer', '2:31'], ['Behind the sands', '8:14'], ['Cr
 
 
 class Component extends DCLogic {
-  state = { pal: 2, active: 'j', j: { r: 0, cols: [0, 0, 0, 0, 0, 0] }, l: { r: 2, cols: [0, 0, 1, 0, 0, 0] } };
+  state = { pal: 2, det: 0, active: 'j', j: { r: 0, cols: [0, 0, 0, 0, 0, 0] }, l: { r: 2, cols: [0, 0, 1, 0, 0, 0] } };
 
   view3(k) {
     const f = this.state[k];
@@ -697,6 +701,11 @@ class Component extends DCLogic {
       if (!d) return;
       e.preventDefault();
       const k = this.state.active;
+      if (k === 'd') {
+        if (d[0]) this.setState({ det: d[0] > 0 ? 1 : 0 });
+        else if (this.state.det) this.setState({ castI: Math.max(0, Math.min(CAST.length - 1, (this.state.castI || 0) + d[1])) });
+        return;
+      }
       const f = this.state[k];
       const cols = f.cols.slice();
       let r = f.r;
@@ -720,6 +729,14 @@ class Component extends DCLogic {
         chipBg: i === this.state.pal ? 'rgba(255,255,255,.06)' : 'transparent',
         pick: () => this.setPal(i)
       })),
+      det: {
+        ty: 'translateY(' + (this.state.det ? -724 : 0) + 'px)',
+        artOpacity: this.state.det ? .35 : 1,
+        castColor: this.state.det ? 'var(--fg)' : 'var(--dim)',
+        caretColor: this.state.det ? 'transparent' : 'var(--ac)',
+        down: () => this.setState({ active: 'd', det: this.state.det ? 0 : 1 })
+      },
+      actD: () => this.setState({ active: 'd' }),
       viewJ: this.view3('j'),
       viewL: this.view3('l'),
       actJ: () => this.setState({ active: 'j' }),
@@ -731,7 +748,14 @@ class Component extends DCLogic {
         fg: i === 0 ? 'var(--ac)' : 'var(--fg)',
         labelColor: i === 0 ? 'var(--fg)' : 'var(--dim)'
       })),
-      cast: CAST.map(([name, role]) => ({ name, role, ini: name.split(' ').map(w => w[0]).join('') })),
+      cast: CAST.map(([name, role], i) => {
+        const on = this.state.det && i === (this.state.castI || 0);
+        return {
+          name, role, ini: name.split(' ').map(w => w[0]).join(''),
+          ring: on ? '0 0 0 3px var(--ac)' : 'none',
+          nameColor: on ? 'var(--fg)' : 'rgba(238,241,243,.78)'
+        };
+      }),
       extras: EXTRAS.map(([t, dur]) => ({ t, dur })),
       playerBtns: PLAYER_BTNS.map(([icon, label]) => ({ icon, label })),
       playerBtns2: PLAYER_BTNS.map(([icon, label], i) => ({

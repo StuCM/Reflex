@@ -56,3 +56,20 @@ export function svg(markup: string): Element {
   if (root.namespaceURI !== SVG_NS) throw new Error(`not SVG: ${markup.slice(0, 40)}`);
   return document.importNode(root, true);
 }
+
+/** A `<template>`'s first element, cloned. The markup lives in index.html so
+    the shape of a repeated thing can be edited there rather than in a builder;
+    only the text and the classes come from here. */
+export function clone(id: string): HTMLElement {
+  const template = must(id) as HTMLTemplateElement;
+  const first = template.content.firstElementChild;
+  if (!first) throw new Error(`#${id} has no element to clone`);
+  return document.importNode(first, true) as HTMLElement;
+}
+
+/** The one element inside `host` with this class. */
+export function pick(host: HTMLElement, className: string): HTMLElement {
+  const found = host.getElementsByClassName(className)[0];
+  if (!found) throw new Error(`no .${className} in the template`);
+  return found as HTMLElement;
+}

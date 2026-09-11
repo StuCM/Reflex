@@ -230,7 +230,11 @@ test('subtitles, markers and quality', () => {
   };
   var qualities = Media.qualities(hd);
   assert.strictEqual(qualities[0].bitrate, null, 'Original is always first');
-  assert.ok(/1080p H264/.test(qualities[0].label));
+  /* The heading is the choice, the detail is what it costs — one string
+     holding both put the bitrate in a 27px row title. */
+  assert.strictEqual(qualities[0].label, 'Original');
+  assert.ok(/1080p H264/.test(qualities[0].detail));
+  assert.strictEqual(qualities[1].detail, 'server converts');
   assert.ok(qualities.length > 1);
   qualities.slice(1).forEach(function (q) {
     assert.ok(q.bitrate < hd.bitrate, 'never offer a cap above what the file already is');
