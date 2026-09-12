@@ -10,16 +10,16 @@ reasons. This skill produces the one artifact everything else runs on.
 
 The spec is where the token budget is won or lost. A worker given file names
 and call sites starts writing immediately; a worker given a paragraph spends
-30k tokens rediscovering what you already knew. **Specificity here is the
-optimisation, not the ceremony.**
+tens of thousands of tokens rediscovering what you already knew.
+**Specificity here is the optimisation, not the ceremony.**
 
 ## 1. Prime from the graph — you, once, not every agent
 
 ```sh
-.claude/crew/bin/graph.sh prime
-.claude/crew/bin/graph.sh prefs
-.claude/crew/bin/graph.sh traps
-.claude/crew/bin/graph.sh find <the subsystem this touches>
+npx crew graph prime
+npx crew graph prefs
+npx crew graph traps
+npx crew graph find <the subsystem this touches>
 ```
 
 Read what comes back and keep only what bears on *this* task. Then **inline it
@@ -28,7 +28,8 @@ into the spec's Graph context section**, in your own words, compressed.
 This is deliberate: one query per task instead of one per agent, filtered by
 someone with judgement, and workers stay hermetic — they need no MCP, no
 network, and no memory of previous sessions. If the CLI is absent it says so
-and you fall back to `docs/decisions.md`; the loop does not stall.
+and you fall back to the project's own decision record; the loop does not
+stall.
 
 Pay attention to anything that reads as a trap or a phantom problem. Carrying
 one line — *"a 403 from the proxy is environmental, not the app"* — into the
@@ -40,40 +41,48 @@ Talk it through with the user. Push on:
 
 - **What is different afterwards, from the outside?** If you cannot say it in
   a sentence, the task is too big — split it.
-- **Which files?** Go and look. `Grep` for the call sites. The `files:` list is
-  a contract, and a wrong one causes a false scope failure later.
-- **Where can it be proven?** Set `env:`. If the answer is the TV, say so now
-  and set expectations: code-complete is the best the loop can reach.
+- **Which files?** Go and look. Grep for the call sites. The `files:` list is a
+  contract — the scope hook refuses a write outside it — so a wrong one blocks
+  the worker on something you could have checked in a minute.
+- **Where can it be proven?** Set `env:`. `npx crew doctor` lists the
+  environments and their statuses. If the answer is an environment no agent can
+  reach, say so now and set expectations: code-complete is the best the loop
+  can reach.
 - **What is explicitly out of scope?** Ask directly. An empty Out of scope
   section means the reviewer invents its own.
-- **Which model?** `sonnet` for well-specified work. `opus` only for the parts
-  CLAUDE.md says must not be wrong — the guard, the media rules, anything that
-  decides what plays.
+- **Which model?** The project's `models.default` for well-specified work;
+  `models.critical` only for the code the project brief says must not be wrong.
 
 Once `files:` is settled, ask whether the work already exists:
 
 ```sh
-node .claude/crew/bin/preflight.js collisions .claude/tasks/<NNN>-<slug>.md
+npx crew collisions .claude/tasks/<NNN>-<slug>.md
 ```
 
 The board only knows about *tasks*. A commit sitting on a branch nobody turned
 into a task is invisible to it, and specifying over the top of one wastes a
 whole session on work that is already written. This asks git instead.
 
-Whatever it prints, put in the task file under a `## Existing work` heading,
-above **Graph context** — verbatim, plus one line on what you make of each hit
-after reading it (`git log -p HEAD..<branch> -- <file>`). The person approving
-the spec has to see it; finding it at dispatch is a round too late. If it
-prints nothing, say `None.` so the reader knows the question was asked.
+Whatever it prints, put in the task file under **Existing work** — verbatim,
+plus one line on what you make of each hit after reading it
+(`git log -p HEAD..<branch> -- <file>`). The person approving the spec has to
+see it; finding it at dispatch is a round too late. If it prints nothing, say
+`None.` so the reader knows the question was asked.
 
 ## 3. Write it
 
-Copy `.claude/crew/templates/task.md` to
-`.claude/tasks/<NNN>-<slug>.md` — next free number, three digits.
+```sh
+npx crew spec-template > .claude/tasks/<NNN>-<slug>.md
+```
 
-Fill every section. The Definition of done is the one that matters most: the
-reviewer executes it literally, so nothing in it may be a matter of taste.
-Each item must be checkable by someone who was not in this conversation.
+Next free number, three digits. Fill every section. The Definition of done is
+the one that matters most: the reviewer executes it literally, so nothing in it
+may be a matter of taste. Each item must be checkable by someone who was not in
+this conversation.
+
+Keep **Constraints that bite here** to the rules that actually touch these
+files. The worker already reads `.claude/crew/project.md`; repeating it here
+costs tokens in every downstream agent and says nothing new.
 
 ## 4. Get approval — this is a hard gate
 
@@ -83,4 +92,5 @@ Show the user the spec. Ask plainly whether to proceed.
 reason: a wrong spec is the most expensive thing in the system, and it is
 cheapest to fix right now.
 
-On approval set `status: approved` and tell them `/crew-run <id>` is next.
+On approval set `status: approved`, run `npx crew log <task> spec`, and tell
+them `/crew-run <id>` is next.
