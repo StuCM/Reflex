@@ -1,0 +1,8 @@
+#!/bin/sh
+# The commit convention. Enable with:
+#   git config core.hooksPath .claude/crew/githooks
+ROOT=$(git rev-parse --show-toplevel) || exit 0
+if [ -x "$ROOT/node_modules/.bin/crew" ]; then
+  exec "$ROOT/node_modules/.bin/crew" commit-msg "$1"
+fi
+exec npx --no-install crew commit-msg "$1"

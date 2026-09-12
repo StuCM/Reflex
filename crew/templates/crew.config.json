@@ -1,0 +1,33 @@
+{
+  "$schema": "./crew/crew.config.schema.json",
+  "project": "CHANGE-ME",
+  "graphProject": "CHANGE-ME",
+
+  "baseBranch": "main",
+  "verify": "CHANGE-ME",
+  "quickVerify": null,
+  "prepare": [],
+
+  "scopes": {
+    "fromDir": ["src"],
+    "extra": ["docs", "ci", "deps", "crew"]
+  },
+
+  "commit": {
+    "types": ["feat", "fix", "docs", "refactor", "perf", "test", "build", "chore", "revert"],
+    "subjectMax": 72,
+    "bodyMaxLines": 4,
+    "requireScope": false,
+    "banned": ["Co-Authored-By:", "Generated with [Claude Code]", "Claude-Session:"]
+  },
+
+  "comments": { "warnAddedRatio": 0.25 },
+
+  "preCommit": [],
+
+  "environments": {
+    "laptop": { "proves": ["everything the test suite covers"], "command": "CHANGE-ME" }
+  },
+
+  "deploy": null
+}
