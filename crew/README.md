@@ -40,7 +40,10 @@ npx crew doctor
 ```
 
 `init` writes the config, the project brief, the task directory and the git
-hooks, and points `core.hooksPath` at them. It never overwrites a file you may
+hooks, and points `core.hooksPath` at them. Check that your `.gitignore` does
+not hide `.claude/settings.json` — a repo that ignores `.claude/*` with an
+allowlist will keep the scope hook local, so it never reaches the worktree
+where it matters, and `crew doctor` cannot tell the difference. It never overwrites a file you may
 have edited, so it is also the upgrade path. `--hook` adds the PreToolUse scope
 hook to `.claude/settings.json`.
 
@@ -169,6 +172,17 @@ app"* recorded once stops every future agent chasing it.
 declared files, commits. The whole system is an argument that a specified task
 costs less than an unspecified one, and until now nothing measured it, so
 nothing could have contradicted it.
+
+## What this deliberately does not use
+
+A hook framework. The scope hook is ~40 lines over the task parser the CLI
+already has, and the frameworks worth considering solve a different problem:
+[`claude-hook-kit`](https://github.com/StuCM/claude-memory-graph/tree/main/hook-kit)
+is Python, has no `PreToolUse` in its event map, and always exits 0 with stdout
+treated as injected context — so a `permissionDecision` returned through it
+would reach the model as prose rather than deny the write. Its session state
+and `Stop`/`PostToolUse` events are the right home for *recording* what a task
+cost; they are not a way to refuse one.
 
 ## Contributing
 
