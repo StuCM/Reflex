@@ -1,195 +1,176 @@
 ---
 id: 029
 slug: delete-the-bridge
-status: blocked
+status: approved
 branch: crew/029-delete-the-bridge
 model: sonnet
 env: laptop
+rounds: 0
 files:
   - src/api/youtube.ts
   - src/data/cached.ts
   - src/legacy.ts
+  - src/seam.ts
   - src/main.ts
   - types/legacy.d.ts
+  - types/seam.d.ts
+  - eslint.config.mjs
+  - dev/smoke/browse.js
+  - dev/smoke/show.js
+  - dev/smoke/sections.js
+  - dev/smoke/recaps.js
 ---
 
-# The last four globals go, and the bridge with them
+# The migration bridge becomes a named test seam
 
 ## Goal
-`src/legacy.ts` and `types/legacy.d.ts` no longer exist. Nothing in `src/`
-reaches for a global; every dependency is an import the compiler can see.
+`src/legacy.ts` stops being a migration bridge publishing twenty-nine globals
+and becomes `src/seam.ts`, publishing exactly the five the smoke suite reads —
+named, typed, and documented as a test seam. Nothing in `src/` reaches for a
+global any more; step 7 of the refactor is finished.
 
 ## Why now
-Step 7, and one of the three things the feature freeze now waits on. The
-migration finished at 0.3.1 — this is the last of it.
+Section 0 item 1 of `docs/backlog.md`, and the last thing between the project
+and the end of the feature freeze.
+
+## Existing work
+`npx crew collisions` printed nothing.
+
+But **this task has already been attempted** and is the reason for this respec.
+Branch `crew/029-delete-the-bridge` holds one commit, `b9eeca1
+refactor(api): memoise the youtube channel id in memory`, branched from `main`
+at `7f99a76`. That commit is **good and should be kept** — start from it rather
+than from `main`, and do not redo it. It contains:
+
+- `src/api/youtube.ts` — `channelId()` memoises a module-level `Promise<string>`
+  instead of round-tripping `Cached.ytChannel`, cleared on rejection.
+- `src/data/cached.ts` — `ytChannel` deleted.
+- `src/legacy.ts`, `types/legacy.d.ts` — deleted.
+- `src/main.ts` — reduced to one `import './app';`.
+
+It scored 82/94 on smoke, which is what this respec exists to fix. Rebase it
+onto current `main` first (`main` has since gained 026, 028 and the crew
+package; `npm run smoke` on `main` is **96/96**, which is your baseline).
 
 ## Graph context
-`types/legacy.d.ts` declares four globals: `Panel`, `Config`, `UI` and `Cached`.
-Three are already dead — nothing in `src/` uses them. **`Cached` has exactly one
-consumer**, `src/api/youtube.ts:40` and `:46`, inside `channelId()`:
+`npx crew graph` reports the memory-graph CLI is not on PATH, so this section is
+written from `docs/decisions.md`, `CLAUDE.md` and the previous attempt.
 
-```ts
-export function channelId(): Promise<string> {
-  return Cached.ytChannel.get(HANDLE).then((cached) => {
-    if (cached) return cached;
-    return get('/channels', …).then((body) => { … Cached.ytChannel.put(HANDLE, id); return id; });
-  });
-}
-```
+**The trap that blocked the last attempt, stated plainly so nobody pays for it
+twice.** `src/legacy.ts` reads as dead the moment you grep `src/` for its
+globals and get nothing back. It is not dead. The smoke suite reads five of them
+**page-side**, from inside `page.evaluate` strings and a page-side `keydown`
+listener, where no import reaches, no type checker looks and no grep over `src/`
+can see them. The previous attempt deleted the file on that evidence and took
+twelve smoke steps down with it. **The consumers of a global are not only the
+modules that import it.**
 
-`ytChannel` is declared at `src/data/cached.ts:64` and has no other consumer
-anywhere in `src/`, `dev/` or `test/`.
+**Why a seam and not a rewrite of the assertions.** Rewriting the five call
+sites to assert on rendered DOM was considered and rejected by the user.
+`dev/smoke/browse.js` classifies a tile as blank / **fresh** / **stale** by
+recomputing the expected URL with `Art.tile(t._item, …)` and comparing it to the
+`src` actually on the element. Without that call the step can only tell blank
+from non-blank — losing exactly the stale-picture distinction task 021 exists to
+catch and 027's review round strengthened. The seam keeps every assertion at
+full strength, and the five names on `window` are a price already being paid
+today.
 
-**The decision this task carries, already taken — do not re-open it.** The
-obvious fix is to import `data/cached` into `api/youtube.ts`. That inverts the
-layering: `api/` makes requests, `data/` decides what is held, and an
-`api/` → `data/` import makes the lower layer depend on the higher one. Task 030
-turns the layer rules into import lint, which would then have to carve out an
-exception for it on day one.
-
-So the persistent cache goes instead. `channelId()` keeps a module-level
-in-memory promise, which resolves the handle **once per session** and only when
-recaps are actually opened. The cost is one extra search call per app launch, in
-the one flow that already makes several; the gain is that `api/` stops reaching
-across the layering and `Cached` loses its last consumer.
+**Chromium 53 and the build.** A `import.meta.env.DEV` guard was considered and
+rejected: `npm run smoke:built` runs the production bundle, where that flag is
+false, so the five steps would fail there. The seam is unconditional.
 
 ## Constraints that bite here
-- Chromium 53 via the bundler. Keep the file's Promise idiom.
-- `src/api/youtube.ts` must stay inert without a key — `enabled()` reads
-  `settings.youtubeKey` at call time and the smoke suite depends on that.
-- `channelId()` throws `no channel for <handle>` when the lookup finds nothing.
-  That contract is relied on; a memo must not cache a rejection forever.
+- The seam is loaded for its side effect, so `.oxlintrc.json:82`'s
+  `import/no-unassigned-import` override still applies. Its comment mentions
+  legacy modules and is now stale — **leave the comment alone**, it is outside
+  `files:`.
+- `types/seam.d.ts` is ambient by necessity, exactly as `types/legacy.d.ts` was.
+  `CLAUDE.md` says ambient `.d.ts` is invisible to the import graph; that is
+  accepted here because the consumer is a `page.evaluate` string, not a module.
+- `dev/smoke/*.js` runs in Chromium and uses `var` and `function` deliberately.
+  Match the file.
 
 ## Approach
-1. In `src/api/youtube.ts`, replace the `Cached.ytChannel` round trip with a
-   module-level `let channel: Promise<string> | null = null`. `channelId()`
-   returns it when set, otherwise assigns the request promise and returns it.
-   **Clear it on rejection** (`channel = null` in a `.then(null, …)`), or a
-   single failed lookup poisons the session.
-2. Delete `ytChannel` from `src/data/cached.ts`.
-3. Delete `types/legacy.d.ts` and `src/legacy.ts`.
-4. In `src/main.ts`, drop `import './legacy';`. The file becomes the single
-   `import './app';` — say so in its header comment, which currently explains
-   why the bridge is still there.
-5. In `CLAUDE.md`, the Layout section says step 7 is outstanding and the freeze
-   note lists "delete the bridge". Update both to what is true afterwards.
+1. **Rebase `b9eeca1` onto current `main`.** Keep it. Everything below is on top.
+
+2. **Add `src/seam.ts`.** It imports the five modules the suite reads and
+   assigns them to `window`, and its one comment says what it is for — that
+   deleting a name here breaks a smoke step that no type checker will warn
+   about. Publish exactly these five, no more:
+
+   | name | what the suite does with it | call site |
+   |---|---|---|
+   | `Art` | `Art.tile(item, 209, 314)` | `dev/smoke/browse.js:62` |
+   | `Merge` | `Merge.sources(item)` | `dev/smoke/browse.js:878` |
+   | `ShowPage` | `ShowPage.current()` | `dev/smoke/show.js:66` |
+   | `Sidebar` | `Sidebar.open(sections, cb, 'library')` | `dev/smoke/sections.js:431` |
+   | `Config` | reads **and writes** `Config.youtubeKey` | `dev/smoke/recaps.js:36,37,51` |
+
+   `Config` must stay writable — the recaps step sets `youtubeKey` to `''` and
+   restores it, which is how it proves `enabled()` reads the key at call time.
+
+3. **Add `types/seam.d.ts`** declaring those five on `Window`, replacing
+   `types/legacy.d.ts`.
+
+4. **`src/main.ts` imports `./seam`** alongside `./app`.
+
+5. **Drop `Youtube._key` from `dev/smoke/recaps.js`.** It is not an app global
+   at all — the suite is using it as scratch storage to stash the key across two
+   `page.evaluate` calls, and it only ever worked because the bridge published
+   `Youtube`. Return the key to node instead and pass it back in:
+   `page.evaluate(() => Config.youtubeKey)` then
+   `page.evaluate((k) => { Config.youtubeKey = k; }, key)`. The seam publishes no
+   `Youtube` and must not gain one.
+
+6. **Leave the other four call sites as they are.** `Art`, `Merge`, `ShowPage`
+   and `Sidebar` are on the seam under the same names, so `browse.js`,
+   `show.js` and `sections.js` need no edit. They are declared in `files:` only
+   so that step 5's sibling edits and any fallout are in scope — **if you do not
+   need to touch a file, do not touch it.**
+
+7. **Delete the dead `files: ['src/legacy.ts']` override** at
+   `eslint.config.mjs:114-120`. It turned off `naming-convention` for the
+   bridge. Judge whether `src/seam.ts` needs the same exemption — it assigns
+   capitalised names to `window` — and if it does, repoint the override rather
+   than adding a second one.
 
 ## Out of scope
-- `tools/check-layers.js` and import lint — that is task 030, and the two are
-  **file-disjoint but not order-free**: 030's rules would flag the very import
-  this task removes, so 029 lands first.
-- Splitting the screen files — task 031.
-- Any other use of `src/data/cached.ts`; only `ytChannel` goes.
-- The recaps feature itself, and task 026's embed fallback.
+- Rewriting any assertion to read the DOM instead of the seam. That was
+  considered and rejected; see Graph context.
+- `.oxlintrc.json` — including its stale comment.
+- Adding anything to the seam beyond the five names above. If a sixth turns out
+  to be needed, that is a finding for the task file, not a quiet addition.
+- Touching `CLAUDE.md` or `docs/` — the orchestrator applies those at close.
+- Any change to what the five app modules themselves do.
+
+## Docs the orchestrator applies at close
+- `CLAUDE.md` "Layout": `src/legacy.ts` and the bridge are gone; `src/seam.ts`
+  publishes five names for the smoke suite and is the only global surface left.
+- `docs/backlog.md` section 0 item 1: done.
 
 ## Definition of done
-- [ ] `grep -rn "legacy" src/ types/` returns nothing
-- [ ] `src/main.ts` imports one module
-- [ ] Opening recaps twice in one session makes **one** `/channels` request, and
-      a step asserts that count with a non-zero control on the same collector
-- [ ] A failed channel lookup does not prevent a later one succeeding
-- [ ] `npm run verify` passes
+- [ ] `ls src/legacy.ts types/legacy.d.ts` reports both missing
+- [ ] `grep -rn "Cached\." src/` returns nothing
+- [ ] `src/seam.ts` publishes exactly five names; `grep -c "window\." src/seam.ts`
+      is 5
+- [ ] `grep -rn "Youtube\._key" dev/` returns nothing
+- [ ] `npm run smoke` scores **96/96** — the same as `main`, with no step
+      removed, skipped or weakened to get there
+- [ ] the five steps the last attempt broke pass by name: `a moving rail fetches
+      only what has the focus, and fills in when it stops`, `a film in two of one
+      server's libraries keeps both copies`, `a series with a theme plays it,
+      quietly and looping`, `the last sidebar entry can be reached and is on
+      screen`, `no recaps strip at all without a YouTube key`
+- [ ] the gate passes (`npx crew gate .claude/tasks/029-delete-the-bridge.md`)
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
-## Docs the orchestrator applies at close
-<!-- Not in files: — two tasks editing CLAUDE.md collide at merge and defeat
-     running them apart. State what it must say; the orchestrator writes it. -->
-
-- The Layout section's note that `src/legacy.ts` survives, and the freeze note's
-  "delete the bridge", both come out: nothing in `src/` reaches for a global.
-- The Types section says `types/legacy.d.ts` "is ambient by necessity and dies
-  with the bridge". It has died; drop the sentence.
-
 ## Review rounds
 
-None. Blocked before review.
-
-## What changed
-
-- `src/api/youtube.ts` — `channelId()` memoises a module-level
-  `Promise<string>` instead of round-tripping `Cached.ytChannel`, and clears it
-  on rejection so one failed lookup does not poison the session.
-- `src/data/cached.ts` — `ytChannel` deleted; it had no other consumer.
-- `src/legacy.ts` — deleted.
-- `types/legacy.d.ts` — deleted.
-- `src/main.ts` — one `import './app';`, header rewritten.
-
-Committed as `b9eeca1 refactor(api): memoise the youtube channel id in memory`,
-branched from `main` at `7f99a76`. Scope check passes: 5 files declared,
-5 changed.
-
-## Why this is blocked
-
-**The spec's Graph context is wrong about who consumes the bridge.** It says
-three of the four globals are dead because nothing in `src/` uses them. True of
-`src/` — but `src/legacy.ts` publishes twenty-nine globals on `window`, and the
-**smoke suite reads five of them page-side**, inside `page.evaluate` and inside
-a page-side `keydown` listener. Deleting the bridge deletes those globals and
-the suite cannot see the app at all.
-
-Measured on this branch: `npm run verify` gets through check, lint, format,
-typecheck and the unit tests, then `npm run smoke` scores **82/94**, down from
-94/94 on `main`. Twelve steps fail, all with `ReferenceError`:
-
-| smoke file | global | steps that fail |
-|---|---|---|
-| `dev/smoke/browse.js:62` | `Art.tile` | `a moving rail fetches only what has the focus…`, `a tile carries no picture but its own while the row sweeps`, `a row walked twice keeps its pictures while it moves`, and `no console errors and nothing left this machine` |
-| `dev/smoke/browse.js:784` | `Merge.sources` | `a film in two of one server's libraries keeps both copies` |
-| `dev/smoke/show.js:66` | `ShowPage.current` | the five theme-music steps: `a series with a theme plays it, quietly and looping`, `BACK off the show page stops the theme`, `a series without a theme is silent`, `starting an episode stops the theme dead`, `theme music can be turned off, and off survives a reload` |
-| `dev/smoke/recaps.js:36,37,51` | `Config.youtubeKey`, `Youtube._key` | `no recaps strip at all without a YouTube key` — which is also the step proving `enabled()` reads the key at call time, a constraint this task's own spec names |
-| `dev/smoke/sections.js:431` | `Sidebar.open` | `the last sidebar entry can be reached and is on screen`, and `stepping down keeps the film on screen, over one row and a peek` cascades behind it |
-
-None of these five files is in `files:`, and the handover was explicit that
-nothing outside it may be touched because 026 and 028 are live in parallel
-worktrees — 026 owns `dev/smoke/recaps.js` and 028 the browse/rail area. So the
-fix is out of scope by construction, and the decision it needs is not mine to
-invent.
-
-**What the spec has to settle before this can land:**
-
-1. How the smoke suite reaches app internals once no module is on `window`.
-   Either the suite stops reaching for them (rewrite five assertions against
-   rendered DOM instead of app functions), or a deliberate, dev-only export
-   survives the bridge — a `window.__reflex` set behind `import.meta.env.DEV`,
-   say, which is a different thing from the migration bridge but is still a
-   global and still needs `types/`, so it wants stating out loud, not guessing.
-2. Ordering. If the answer is "rewrite the smoke steps", this task must run
-   **after** 026 and 028 land, with `dev/smoke/browse.js`, `show.js`,
-   `sections.js` and `recaps.js` added to `files:`.
-
-## Other things the spec got wrong
-
-- **DoD 1 cannot pass as written.** `grep -rn "legacy" src/ types/` still
-  matches seven lines about Plex's *legacy agent guid form* in
-  `src/api/plex/library.ts`, `src/rules/identity.ts` and `types/plex.d.ts` —
-  nothing to do with the bridge. The check wants to be
-  `ls src/legacy.ts types/legacy.d.ts` or a grep for `legacy.ts`.
-- **DoD 3 is unbuildable inside `files:`.** "a step asserts that count with a
-  non-zero control on the same collector" is a change to `dev/smoke/recaps.js`,
-  which is not declared. The collectors already exist (`ytCalls`, `ytSearches`
-  in `dev/smoke.js`), so it is a small step — but it belongs to whichever task
-  owns that file.
-- **`eslint.config.mjs:114-120`** carries a `files: ['src/legacy.ts']` override
-  turning off `naming-convention` for the bridge. Harmless once the file is
-  gone (eslint ignores a glob that matches nothing) but now dead. Not in
-  `files:`; flagging it for whoever closes this out.
-- `.oxlintrc.json:82` mentions legacy modules in a comment on the
-  `import/no-unassigned-import` override. That override is still needed —
-  `src/main.ts` is still a side-effect import — so only the comment is stale.
-
 ## Graph writes proposed
-
-- **Pattern:** *the smoke suite is a consumer of the migration bridge, not just
-  `js/`.* `src/legacy.ts` reads as dead the moment `grep` over `src/` comes back
-  empty, and it is not: five `dev/smoke/*.js` files reach for `Art`, `Merge`,
-  `ShowPage`, `Sidebar`, `Config` and `Youtube` from inside `page.evaluate`,
-  where no import can reach and no type checker can see them. Before deleting
-  anything that publishes on `window`, grep `dev/` and `test/` as well as
-  `src/`. Cost here: one full task round.
-- **Decision (implemented, and still good):** the youtube channel id is
-  memoised in memory rather than cached in IndexedDB, because a persistent
-  cache required `api/` to import `data/` and invert the layering that task 030
-  is about to enforce. Cost is one lookup per session, in a flow that already
-  spends 100 quota units on the search beside it. The memo clears itself on
-  rejection so a failed lookup does not poison the session.
+- **Pattern:** *a global's consumers are not only the modules that import it.*
+  `src/legacy.ts` greps clean across `src/` and is still load-bearing: five
+  `dev/smoke/*.js` files reach for its names from inside `page.evaluate`, where
+  no import reaches and no type checker looks. Before deleting any global,
+  grep `dev/` and any string-evaluated code as well as the module tree. Cost the
+  029 attempt a full session and twelve smoke steps.

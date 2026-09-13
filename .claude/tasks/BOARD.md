@@ -10,7 +10,7 @@ Task files are the source of truth; this is the glance view.
 | 021 | A tile keeps its picture only while it is the same film | `pending-tv` | laptop | crew/021-tile-keeps-its-own-picture *(gone)* |
 | 022 | The series theme, on the show page | `pending-tv` | laptop | crew/022-series-theme-music *(gone)* |
 | 027 | A poster we already have is drawn straight away, moving or not | `pending-tv` | laptop | crew/027-a-cached-poster-paints-while-the-rail-moves *(gone)* |
-| 029 | The last four globals go, and the bridge with them | `blocked` | laptop | crew/029-delete-the-bridge |
+| 029 | The migration bridge becomes a named test seam | `approved` | laptop | crew/029-delete-the-bridge |
 | 030 | The layer rules resolve imports instead of matching text | `approved` | laptop | crew/030-the-layers-become-import-lint *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
@@ -43,8 +43,8 @@ Task files are the source of truth; this is the glance view.
 - **021 A tile keeps its picture only while it is the same film** — Only a human at the panel can clear a pending-tv task.
 - **022 The series theme, on the show page** — Only a human at the panel can clear a pending-tv task.
 - **027 A poster we already have is drawn straight away, moving or not** — Only a human at the panel can clear a pending-tv task.
-- **029 The last four globals go, and the bridge with them** — 2 review rounds disagreed — needs your call
 
 ## In flight
 
+- **029 The migration bridge becomes a named test seam** — `approved` on `crew/029-delete-the-bridge`
 - **030 The layer rules resolve imports instead of matching text** — `approved` on `crew/030-the-layers-become-import-lint`
