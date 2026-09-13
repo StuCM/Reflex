@@ -35,18 +35,23 @@ function get(path: string, parameters: Record<string, string | number>): Promise
   return queue as Promise<YoutubeResponse>;
 }
 
-/** The channel id behind the handle, resolved once and kept for good. */
+let channel: Promise<string> | null = null;
+
+/** The channel id behind the handle, looked up once a session. */
 export function channelId(): Promise<string> {
-  return Cached.ytChannel.get(HANDLE).then((cached: string | undefined) => {
-    if (cached) return cached;
-    return get('/channels', { part: 'id', forHandle: HANDLE }).then((body) => {
-      const found = body.items?.[0]?.id;
-      const id = typeof found === 'string' ? found : undefined;
-      if (!id) throw new Error(`no channel for ${HANDLE}`);
-      Cached.ytChannel.put(HANDLE, id);
-      return id;
-    });
+  if (channel) return channel;
+  channel = get('/channels', { part: 'id', forHandle: HANDLE }).then((body) => {
+    const found = body.items?.[0]?.id;
+    const id = typeof found === 'string' ? found : undefined;
+    if (!id) throw new Error(`no channel for ${HANDLE}`);
+    return id;
   });
+  /* Without this a single failed lookup would answer every later call from the
+     rejected promise, and recaps would stay broken for the session. */
+  channel.then(null, () => {
+    channel = null;
+  });
+  return channel;
 }
 
 /* search carries no duration and videos.list does — one more unit against the
