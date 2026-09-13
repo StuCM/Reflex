@@ -103,6 +103,56 @@ module.exports = function (h) {
       });
   }
 
+  /* How many of the focused row's twelve tiles were handed a different film by
+     each press. Taken page-side for the same reason as the readings above, and
+     the items are compared by reference in the page rather than serialised out:
+     what matters is which slot changed identity, not what is in it. */
+  function installChurn() {
+    return page.evaluate(function () {
+      if (window.__churn) return;
+      window.__churn = { last: null, counts: [] };
+      window.__churnSnap = function () {
+        var row = document.querySelector('#rows .row.on');
+        if (!row) return null;
+        var tiles = row.querySelectorAll('.tile');
+        var now = [];
+        for (var i = 0; i < tiles.length; i++) now.push(tiles[i]._item || null);
+        return now;
+      };
+      document.addEventListener(
+        'keydown',
+        function () {
+          var now = window.__churnSnap();
+          var last = window.__churn.last;
+          if (now && last && last.length === now.length) {
+            var changed = 0;
+            for (var n = 0; n < now.length; n++) if (now[n] !== last[n]) changed++;
+            window.__churn.counts.push(changed);
+          }
+          window.__churn.last = now;
+        },
+        false,
+      );
+    });
+  }
+
+  /* One count per press fn makes, starting from where the rail is now. */
+  function churnReadings(fn) {
+    return installChurn()
+      .then(function () {
+        return page.evaluate(function () {
+          window.__churn.counts = [];
+          window.__churn.last = window.__churnSnap();
+        });
+      })
+      .then(fn)
+      .then(function () {
+        return page.evaluate(function () {
+          return window.__churn.counts;
+        });
+      });
+  }
+
   return h
     .ready()
 
@@ -381,6 +431,50 @@ module.exports = function (h) {
               if (st.stale.length) {
                 throw new Error(
                   'press ' + (n + 1) + ": another film's poster on: " + st.stale.join(', '),
+                );
+              }
+            });
+          });
+      });
+    })
+
+    .then(function () {
+      return step('one press along a row hands exactly one tile a different film', function () {
+        /* The pool is exactly the window, so a step retires one index and adds
+           one: the tile the retired index owned is the one the new index owns
+           too, and the other eleven keep the film they had. Assigning the pool
+           in window order instead gives every tile a new film on every press,
+           which is what this reports as twelve.
+
+           Two rows down and four in, for the reason the sweeps above give:
+           Continue watching is short enough that the strip never winds, and a
+           strip that does not wind never recycles anything. */
+        return backToLibrary()
+          .then(function () {
+            return press('ArrowUp', 8);
+          })
+          .then(function () {
+            return press('ArrowDown', 2);
+          })
+          .then(function () {
+            return press('ArrowRight', 4);
+          })
+          .then(function () {
+            return page.waitForTimeout(1500);
+          })
+          .then(function () {
+            return churnReadings(function () {
+              return press('ArrowRight', 5);
+            });
+          })
+          .then(function (counts) {
+            if (counts.length !== 5) {
+              throw new Error('read ' + counts.length + ' of 5 presses');
+            }
+            counts.forEach(function (changed, n) {
+              if (changed !== 1) {
+                throw new Error(
+                  'press ' + (n + 1) + ' handed ' + changed + ' of 12 tiles a different film',
                 );
               }
             });
