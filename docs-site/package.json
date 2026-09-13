@@ -1,0 +1,14 @@
+{
+  "name": "reflex-docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The documentation site. Separate from the app on purpose: blume pulls ~80 packages and Astro 7, none of which should sit in the tree that ships to a 2018 TV.",
+  "scripts": {
+    "dev": "blume dev",
+    "build": "blume build",
+    "preview": "blume preview"
+  },
+  "dependencies": {
+    "blume": "^1.6.5"
+  }
+}
