@@ -1,11 +1,11 @@
 ---
 id: 030
 slug: the-layers-become-import-lint
-status: approved
+status: done
 branch: crew/030-the-layers-become-import-lint
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 supersedes-round: blocked-2026-09-13
 files:
   - eslint.config.mjs
@@ -14,6 +14,9 @@ files:
   - .github/workflows/verify.yml
   - .claude/crew.config.json
   - docs/layering-debt.md
+gate: pass
+gateSha: c2f6d2422823a32b3c3bebe2defa7c759318e068
+gateAt: 2026-09-13T18:59:05.250Z
 ---
 
 # The layer rules resolve imports instead of matching text
@@ -146,25 +149,25 @@ refactor.
   number of unrelated edits is how this task stops being reviewable.
 
 ## Definition of done
-- [ ] A **new** import across the layering — one not on the exception list —
+- [x] A **new** import across the layering — one not on the exception list —
       fails `npm run lint:names`, named
-- [ ] Proven by adding one deliberately in a scratch commit, watching it fail,
+- [x] Proven by adding one deliberately in a scratch commit, watching it fail,
       and reverting — say so in the report
-- [ ] Every existing crossing is an individual commented exception; no blanket
+- [x] Every existing crossing is an individual commented exception; no blanket
       disable over a directory. `docs/layering-debt.md` lists the same set
-- [ ] The exception count in `docs/layering-debt.md` matches the number of
+- [x] The exception count in `docs/layering-debt.md` matches the number of
       entries in `eslint.config.mjs` — say what the number turned out to be
-- [ ] `document` in `src/rules/` still fails
-- [ ] `tools/check-layers.js` is gone, and `grep -rn "npm run check" .
+- [x] `document` in `src/rules/` still fails
+- [x] `tools/check-layers.js` is gone, and `grep -rn "npm run check" .
       --exclude-dir=node_modules --exclude-dir=.git` returns only documentation
       lines — no `package.json`, no workflow, no `crew.config.json`
-- [ ] `npx crew gate .claude/tasks/030-the-layers-become-import-lint.md` passes,
+- [x] `npx crew gate .claude/tasks/030-the-layers-become-import-lint.md` passes,
       which exercises the `quickVerify` you just changed
-- [ ] `npm run lint:names` still passes on `src/seam.ts` — the deliberate
+- [x] `npm run lint:names` still passes on `src/seam.ts` — the deliberate
       cross-layer file
-- [ ] `npm run verify` passes
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] `npm run verify` passes
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Docs the orchestrator applies at close
 <!-- Not in files: — see 029. -->
@@ -185,6 +188,13 @@ refactor.
   bundler.
 
 ## Review rounds
+
+### Round 1 — PASS
+
+The reviewer re-ran the three ratchet probes rather than taking the report on
+trust, and added a fourth of its own (`view/sidebar.ts`, already forgiven for
+`data/` and `screen/`, importing `api/http` — still red, so an exception really
+is per file *and* target). No findings.
 
 ### Blocked before round 1 — the spec's premise does not match the tree
 
@@ -247,3 +257,76 @@ Nothing was implemented and nothing outside this file was touched.
 - Decision: layer boundaries are enforced by resolved imports, not a regex over
   file text. Supersedes the text scan that `tools/check-es5.js` carried since
   the js/ era.
+
+## What changed
+
+- `eslint.config.mjs` — a `LAYERS` table, a 15-line `DEBT` table of today's
+  crossings, and a `banBlock` helper that turns both into per-layer
+  `no-restricted-imports` blocks plus one per-file override each. Also
+  `no-restricted-globals` for XHR and IndexedDB across `src/`, `document` on top
+  of that in `rules/` and `api/`, and the two owner files exempted from the one
+  their own layer owns.
+- `docs/layering-debt.md` — new. The same fifteen as prose, grouped by pair,
+  `rules/rows.ts` → `data/merge` called out to go first.
+- `tools/check-layers.js` — deleted.
+- `package.json` — `check` script gone; `verify` starts at `lint`; `deploy` runs
+  `lint:names` in its place.
+- `.github/workflows/verify.yml` — the "chromium 53 scan" step gone (it ran a
+  layer check under a name two refactors stale); "naming rules" is now "layers
+  and naming rules".
+- `.claude/crew.config.json` — `quickVerify` is `npm run lint:names && npm test`.
+
+## What the rules found
+
+**Fifteen crossings across eleven files**, which is the orchestrator's count
+rather than the blocked round's fourteen. The difference is arithmetic, not
+disagreement: `view/sidebar.ts` → `screen/` is *two* imports (`player` and
+`showpage`), and this list is one entry per import so the config, the doc and
+the error count are all the same number.
+
+`data/` → `rules/` does not appear, and should not: `data/` is above `rules/` in
+the layering, so that import goes downward.
+
+Proof the ratchet bites, all three done as scratch edits and reverted (the tree
+was clean before the commit):
+
+1. `import * as art from '../data/art'` added to `src/rules/quality.ts` →
+   `rules/ must not import data/ — the layering only goes downward`.
+2. `document.body` in the same file → `Unexpected use of 'document'. no DOM here
+   — draw it in view/`.
+3. `import { fill } from '../view/dom'` added to `src/rules/rows.ts`, which *is*
+   on the exception list → still red. The exception is per file **and** target,
+   so being forgiven `data/` buys nothing anywhere else.
+
+`eslint --print-config src/seam.ts` carries no `no-restricted-imports` at all —
+root-level files match no layer block — while keeping the global bans. Nothing
+was added for root files, as the spec required.
+
+## What the spec got wrong
+
+Nothing that changed the work. Two notes for the record:
+
+- Out of scope says "any layering violation other than the `view/` → `screen/`
+  one named above", which is a sentence left over from the pre-ratchet draft —
+  under the ratchet nothing is fixed, so it reads as its own opposite. Taken as
+  "fix none of them, report them all", which is what Approach says.
+- `docs/refactor-plan.md` names `tools/check-layers.js` at lines 7, 245, 316 and
+  437 and calls the import-lint replacement "the last job of step 7". It is now
+  done and the file is stale, but `docs/` outside `layering-debt.md` was
+  explicitly off limits, so it is left for the orchestrator alongside the
+  README and CLAUDE.md edits already listed.
+
+## Graph writes proposed
+
+- **Decision:** layer boundaries are enforced by resolved imports, not a regex
+  over file text. Supersedes the text scan `tools/check-es5.js` carried since
+  the `js/` era. The scan could not see `rules/rows.ts` importing `data/merge`
+  at all — it looked for `indexedDB`, and the import is the violation.
+- **Decision:** the layer rules ship as a ratchet. The fifteen crossings that
+  predate them are named exceptions in `eslint.config.mjs`, registered in
+  `docs/layering-debt.md`, and removed as separate work. Chosen over an
+  eleven-file refactor because it blocks the sixteenth today.
+- **Pattern:** an exception list is only worth what a probe says it is. Three
+  scratch edits proved this one names a new crossing, catches a banned global,
+  and does not leak from one forgiven target to another — the failure mode being
+  guarded against is a list that quietly swallows new violations too.
