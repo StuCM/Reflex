@@ -1,44 +1,69 @@
 {
+  "$schema": "./crew/crew.config.schema.json",
   "project": "Reflex",
   "graphProject": "Reflex",
+
+  "baseBranch": "main",
+  "branchPrefix": "crew/",
+  "worktreeDir": "..",
+  "decisionsFile": "docs/decisions.md",
+  "backlogFile": "docs/backlog.md",
+
   "verify": "npm run verify",
   "quickVerify": "npm run check && npm test",
+  "prepare": ["npm run fixture"],
+
+  "reviewRounds": 2,
+  "models": { "default": "sonnet", "critical": "opus" },
+
   "scopes": {
-    "fromDir": ["js", "src"],
+    "fromDir": ["src"],
     "extra": ["dev", "tools", "test", "docs", "crew", "deps", "ci", "css", "release"]
   },
+
   "commit": {
     "types": ["feat", "fix", "docs", "refactor", "perf", "test", "build", "chore", "revert"],
     "subjectMax": 72,
     "bodyMaxLines": 4,
     "requireScope": false,
-    "banned": [
-      "Co-Authored-By:",
-      "Co-authored-by:",
-      "Generated with [Claude Code]",
-      "Claude-Session:",
-      "\ud83e\udd16 Generated"
-    ]
+    "banned": ["Co-Authored-By:", "Generated with [Claude Code]", "Claude-Session:", "🤖 Generated"]
   },
-  "comments": {
-    "warnAddedRatio": 0.25
-  },
+
+  "comments": { "warnAddedRatio": 0.25 },
+
+  "preCommit": [
+    {
+      "tool": "oxfmt",
+      "args": ["--check"],
+      "extensions": [".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".json", ".jsonc"],
+      "fix": "npm run format"
+    },
+    {
+      "tool": "oxlint",
+      "extensions": [".js", ".mjs", ".cjs", ".ts", ".mts", ".cts"]
+    }
+  ],
+
   "environments": {
     "laptop": {
-      "proves": ["browsing", "guard", "audio selection", "merge", "row arithmetic"],
+      "proves": ["browsing", "the guard", "audio selection", "the merge", "row arithmetic"],
       "command": "npm run verify"
     },
     "tv": {
       "proves": ["decode", "container support", "HLS", "smoothness", "audio over ARC"],
       "command": "npm run deploy",
+      "requires": ["ares-install", "ares-launch"],
       "reachableFromAgents": false,
       "note": "Only a human at the panel can clear a pending-tv task."
     }
   },
+
   "deploy": {
     "command": "npm run deploy",
     "orchestratorOnly": true,
     "requires": ["ares-install", "ares-launch"],
     "note": "Workers never deploy. Sideloading needs a paired TV that no agent can reach."
-  }
+  },
+
+  "log": ".claude/crew/log.jsonl"
 }

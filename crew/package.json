@@ -1,0 +1,42 @@
+{
+  "name": "@stucm/crew",
+  "version": "0.1.0",
+  "description": "A task loop for coding agents: spec, worker, deterministic gate, independent review.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "bin": {
+    "crew": "src/cli.js"
+  },
+  "exports": {
+    ".": "./src/lib/index.js",
+    "./schema": "./schema/crew.config.schema.json"
+  },
+  "files": [
+    "src",
+    "schema",
+    "templates",
+    "githooks",
+    ".claude-plugin",
+    "skills",
+    "agents",
+    "hooks",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "verify": "npm run lint && npm run format:check && npm test"
+  },
+  "keywords": [
+    "claude-code",
+    "agents",
+    "git-hooks",
+    "commit-convention",
+    "code-review"
+  ]
+}

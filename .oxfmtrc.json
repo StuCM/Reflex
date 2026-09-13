@@ -6,6 +6,8 @@
     "**/*.css",
     "**/*.html",
     "design/**",
+    "crew/**",
+    ".claude/crew/**",
     "dev/fixtures/**",
     "build/**",
     "dist/**"

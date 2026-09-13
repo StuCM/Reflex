@@ -1,0 +1,9 @@
+{
+  "name": "crew",
+  "displayName": "crew",
+  "version": "0.1.0",
+  "description": "A task loop for coding agents: an approved spec, a worker in its own worktree, a deterministic gate, and an independent review that cannot edit.",
+  "license": "MIT",
+  "keywords": ["workflow", "code-review", "agents", "git"],
+  "hooks": "./hooks/hooks.json"
+}

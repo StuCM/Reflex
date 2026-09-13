@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/StuCM/crew/schema/crew.config.schema.json",
+  "title": "crew.config.json",
+  "description": "Everything crew needs to know about one project. Prose belongs in projectBrief, not here.",
+  "type": "object",
+  "required": ["project", "verify"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "project": { "type": "string", "description": "Human name, used on the board and in the graph." },
+    "graphProject": { "type": ["string", "null"], "description": "Project node name in the memory graph. Defaults to project." },
+    "baseBranch": { "type": "string", "default": "main" },
+    "branchPrefix": { "type": "string", "default": "crew/", "description": "Task branches are <branchPrefix><id>-<slug>." },
+    "worktreeDir": { "type": "string", "default": "..", "description": "Where /crew-run puts each task's worktree." },
+    "tasksDir": { "type": "string", "default": ".claude/tasks" },
+    "projectBrief": { "type": "string", "default": ".claude/crew/project.md", "description": "Markdown the worker and reviewer roles include. All project-specific prose lives here." },
+    "decisionsFile": { "type": ["string", "null"], "description": "Where /crew-close records a decision in prose, alongside the graph." },
+    "backlogFile": { "type": ["string", "null"], "description": "Read by /crew-status to say what to pick up next." },
+    "verify": { "type": ["string", "null"], "description": "The command that proves a task. The gate runs it and will not stamp without it." },
+    "quickVerify": { "type": ["string", "null"], "description": "A faster subset, for iterating." },
+    "prepare": {
+      "description": "Commands the gate runs before verify, per worktree — a fixture, a seed, an install.",
+      "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }]
+    },
+    "reviewRounds": { "type": "integer", "minimum": 1, "default": 2, "description": "Rounds before a human decides. A round past this is two agents disagreeing." },
+    "models": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "default for well-specified work; critical for the code that must not be wrong."
+    },
+    "scopes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fromDir": {
+          "description": "Source roots. Every directory and module name under them, at any depth, is a valid commit scope.",
+          "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }]
+        },
+        "extra": { "type": "array", "items": { "type": "string" }, "description": "Scopes with no directory of their own: docs, ci, deps." }
+      }
+    },
+    "commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "types": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "subjectMax": { "type": "integer", "minimum": 1, "default": 72 },
+        "bodyMaxLines": { "type": "integer", "minimum": 0, "default": 4 },
+        "requireScope": { "type": "boolean", "default": false },
+        "banned": { "type": "array", "items": { "type": "string" }, "description": "Substrings rejected anywhere in the message, matched case-insensitively." }
+      }
+    },
+    "comments": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "warnAddedRatio": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 },
+        "extensions": { "type": "array", "items": { "type": "string" }, "description": "File extensions whose comment lines are counted. Markdown is deliberately absent." }
+      }
+    },
+    "preCommit": {
+      "type": "array",
+      "description": "Fast staged-file checks for the pre-commit hook. Milliseconds only.",
+      "items": {
+        "type": "object",
+        "required": ["tool", "extensions"],
+        "additionalProperties": false,
+        "properties": {
+          "tool": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "extensions": { "type": "array", "items": { "type": "string" } },
+          "fix": { "type": "string", "description": "Command to suggest when it fails." }
+        }
+      }
+    },
+    "environments": {
+      "type": "object",
+      "description": "Where a task can be proved. Any environment with reachableFromAgents: false gets its own pending-<name> status, which is how code-complete work is stopped from calling itself done.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "proves": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "command": { "type": ["string", "null"] },
+          "requires": { "type": "array", "items": { "type": "string" } },
+          "reachableFromAgents": { "type": "boolean", "default": true },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "deploy": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "type": "string" },
+        "orchestratorOnly": { "type": "boolean", "default": true },
+        "requires": { "type": "array", "items": { "type": "string" } },
+        "note": { "type": "string" }
+      }
+    },
+    "log": { "type": ["string", "null"], "default": ".claude/crew/log.jsonl", "description": "JSONL of task events, so the cost of the loop can be checked." }
+  }
+}

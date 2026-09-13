@@ -1,0 +1,10 @@
+{
+  "plugins": ["unicorn", "import", "oxc"],
+  "categories": { "correctness": "error", "suspicious": "error", "perf": "error" },
+  "env": { "node": true, "es2022": true },
+  "ignorePatterns": ["node_modules"],
+  "rules": {
+    "no-console": "off",
+    "unicorn/no-array-sort": "off"
+  }
+}

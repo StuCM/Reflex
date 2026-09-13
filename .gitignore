@@ -11,6 +11,9 @@ dev/screenshots/
 !.claude/crew/
 !.claude/crew.config.json
 !.claude/tasks/
+# Shared project settings, including the crew scope hook — without this the
+# hook is local only and never reaches a worktree, which is where it matters.
+!.claude/settings.json
 .claude/settings.local.json
 build/
 dist/
