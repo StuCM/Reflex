@@ -27,15 +27,21 @@ module.exports = function (h) {
         /* Youtube.enabled() is the whole gate, and the key is read once at load,
            so switching the gate off is how a keyless build is seen from here.
            The harness always sets a key; a shipped app usually will not. */
+        var key;
         return openShowPage(titles.recapShow)
           .then(function () {
             /* The real condition, not a stubbed function: Youtube.enabled()
                reads the key at call time, so clearing it is what a shipped
                build without one actually looks like. */
             return page.evaluate(function () {
-              Youtube._key = Config.youtubeKey;
+              var had = Config.youtubeKey;
               Config.youtubeKey = '';
+              return had;
             });
+          })
+          .then(function (had) {
+            key = had;
+            if (!key) throw new Error('the harness set no YouTube key to clear');
           })
           .then(function () {
             return reopenShowPage(titles.recapShow);
@@ -47,9 +53,9 @@ module.exports = function (h) {
             if (ytCalls.length) throw new Error('asked YouTube anyway: ' + ytCalls.join(', '));
           })
           .then(function () {
-            return page.evaluate(function () {
-              Config.youtubeKey = Youtube._key;
-            });
+            return page.evaluate(function (k) {
+              Config.youtubeKey = k;
+            }, key);
           });
       });
     })
