@@ -203,6 +203,69 @@ module.exports = function (h) {
     })
 
     .then(function () {
+      return step('an embed that loads and never plays offers the app too', function () {
+        /* The card the mock does answer: its page loads, and nothing ever
+           plays — which is what the panel does with the real embed, and what
+           iframe.onload cannot tell you. Nothing is pressed after OK, because
+           a keypress is the signal that stands the offer down. */
+        const began = Date.now();
+        return page.keyboard
+          .press('Enter')
+          .then(function () {
+            return waitFor(
+              '!document.getElementById("recap").classList.contains("hidden")',
+              'the recap overlay',
+              10000,
+            );
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return document.getElementById('recap-frame').getAttribute('src');
+            });
+          })
+          .then(function (src) {
+            if (/-stall\?/.test(src)) throw new Error('that card never loads: ' + src);
+          })
+          .then(function () {
+            return waitFor(
+              '!document.getElementById("message").classList.contains("hidden")',
+              'the offer of the YouTube app',
+              10000,
+            );
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              return {
+                title: document.getElementById('message-title').textContent,
+                body: document.getElementById('message-body').textContent,
+                overlay: !document.getElementById('recap').classList.contains('hidden'),
+              };
+            });
+          })
+          .then(function (st) {
+            const took = Date.now() - began;
+            if (took > 8000) throw new Error('the offer took ' + took + 'ms');
+            if (st.overlay) throw new Error('the overlay is still up over the offer');
+            if (!/cannot play YouTube/.test(st.title)) {
+              throw new Error('a different failure: ' + st.title);
+            }
+            if (!/YouTube app/.test(st.body)) {
+              throw new Error('the offer does not mention the app: ' + st.body);
+            }
+          })
+          .then(function () {
+            return press('Backspace');
+          })
+          .then(function () {
+            return waitFor(
+              '!document.getElementById("show").classList.contains("hidden")',
+              'the show page behind the offer',
+            );
+          });
+      });
+    })
+
+    .then(function () {
       return step(
         'an embed that never loads offers the YouTube app instead of hanging',
         function () {

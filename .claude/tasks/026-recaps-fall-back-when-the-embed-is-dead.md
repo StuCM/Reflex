@@ -1,7 +1,7 @@
 ---
 id: 026
 slug: recaps-fall-back-when-the-embed-is-dead
-status: approved
+status: done
 branch: crew/026-recaps-fall-back-when-the-embed-is-dead
 model: sonnet
 env: laptop
@@ -80,6 +80,43 @@ wrong.
 
 ## Review rounds
 
+1. **PASS** (crew-reviewer). Verified 94/94 on HEAD, traced the flag for a race
+   at open time (there is none: the OK that opens the overlay is handled by
+   `showpage.key` while `recapVideo` is still null), and confirmed the new step
+   drives the loading card rather than the stalling one. Recorded the one
+   deviation below as correct but literal.
+
+## What changed
+
+- `src/app.ts` — `recapFrame.onload` no longer cancels the fallback timer (the
+  handler is gone); the timer is 4000ms and calls
+  `recapFailed('cannot play YouTube')`; a new `recapTouched`, cleared in
+  `openRecap` and set by the key router's recap branch, stands the offer down
+  if the viewer has pressed anything.
+- `dev/smoke/recaps.js` — a step between the two existing recap steps drives OK
+  on the card the mock *does* answer, presses nothing, and asserts the offer
+  arrives (title `cannot play YouTube`, body naming the app, overlay down) in
+  under 8s. Run against `main` it fails, which is the point.
+
+## What the spec got wrong
+
+- Nothing material. One deviation: "Leave `closeRecap` as it is" — its
+  `recapFrame.onload = null` became dead once step 1 deleted the only
+  assignment, so it went with it. No behaviour change; the reviewer agreed.
+- The spec's step 3 reasoning ("the offer must not steal the screen from a
+  working video") does not quite hold up — a viewer watching a recap that
+  really plays presses nothing either, so the flag protects only the case where
+  they *have* touched a key. It is still the best available signal from outside
+  a cross-origin frame, and it costs nothing, so it was implemented as written.
+- `dev/mock-youtube.js:21` still says "the app's 8-second fallback". Stale by
+  one number, and outside `files:`, so it was left alone.
+
 ## Graph writes proposed
 - Pattern: `iframe.onload` is not proof a third-party embed plays — it fires on
   the shell. Detect with a timer that success cancels, not a load event.
+- Pattern: when a failure is invisible from inside (cross-origin), the honest
+  detector is a deadline plus a signal that the viewer is fine — here a
+  keypress. Nothing can be read back; only the absence of a complaint.
+- Decision: the recap fallback deadline is 4s, and `onload` cancels nothing.
+  YouTube's embed shell loads happily on Chromium 53 and its player never
+  starts, so the only load event available is a lie.
