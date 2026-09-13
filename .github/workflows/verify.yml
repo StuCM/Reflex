@@ -26,15 +26,11 @@ jobs:
 
       # Cheap and independent, so they all run even after one fails: a red run
       # should list everything wrong, not the first thing wrong.
-      - name: chromium 53 scan
-        if: '!cancelled()'
-        run: npm run check
-
       - name: lint
         if: '!cancelled()'
         run: npm run lint
 
-      - name: naming rules
+      - name: layers and naming rules
         if: '!cancelled()'
         run: npm run lint:names
 

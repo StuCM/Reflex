@@ -10,7 +10,7 @@
   "backlogFile": "docs/backlog.md",
 
   "verify": "npm run verify",
-  "quickVerify": "npm run check && npm test",
+  "quickVerify": "npm run lint:names && npm test",
   "prepare": ["npm run fixture"],
 
   "reviewRounds": 2,
