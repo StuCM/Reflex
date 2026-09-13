@@ -10,11 +10,23 @@ wrong, nothing further out matters. Take one group at a time. Anything marked
 Section 0 is the exception to that ordering and outranks all of it: while the
 refactor is open, nothing else is taken.
 
-### 0. The refactor — and nothing else until it lands
+### 0. The refactor — DONE, and the freeze is lifted
 
-**Feature freeze, decided 2026-09-10. Still in force, but nearly clear.** No new
-features are taken until this section is empty. A feature added on top of a tree
-that is about to become modules is a feature that has to be written twice.
+**Feature freeze, decided 2026-09-10 — LIFTED 2026-09-13.** Section 0 is empty:
+the bundle, the TypeScript modules, the bridge and the layer rules all landed.
+Features are open again.
+
+Two things the refactor left behind, deliberately and written down rather than
+forgotten:
+
+- **`docs/layering-debt.md`** — eleven imports that cross the layering the wrong
+  way, frozen by a ratchet so nothing new joins them. Cheapest first: moving
+  `tmdbId` from `api/plex/library.ts` to `rules/` clears two of the eleven,
+  because it is a pure guid parse that opens nothing. Most important first:
+  `rules/rows.ts` importing `data/merge`, which is the one making CLAUDE.md's
+  "`rules/` is pure" false.
+- **Splitting `src/screen/player.ts`** — see below. Deferred to a rebuild on
+  purpose, not forgotten.
 
 **Landed 2026-09-11 (0.3.1):** stage 1 (the bundle) and stage 2 (`.ts` and ES
 modules) are both done — `js/` no longer exists and `src/` is 46 TypeScript
@@ -32,9 +44,12 @@ greps *that* to prove it.
    twenty-nine on the strength of a grep over `src/` and took twelve smoke steps
    down with it, because the real consumers are `page.evaluate` strings in
    `dev/smoke/` that no grep over the module tree can see.
-2. **Step 7 — the layer check becomes import lint.** `tools/check-layers.js` is
-   still a regex scan: it catches what a file reaches *for*, not what it
-   imports. `no-restricted-imports` per layer replaces it.
+2. ~~**Step 7 — the layer check becomes import lint.**~~ **Done 2026-09-13,
+   task 030.** `tools/check-layers.js` is deleted; `eslint.config.mjs` carries a
+   `LAYERS` table and fails a wrong-way import by name. It found eleven
+   crossings the text scan had no way to see, so it **shipped as a ratchet** —
+   those eleven are named exceptions and `docs/layering-debt.md` is the
+   register. Working them off is section 1 below, not a blocker.
 3. **Split the four screen files — deferred to a rebuild, 2026-09-11.**
    `src/screen/player.ts` is 1,548 lines and its `max-lines` ratchet was raised
    three times in one session, each time paid for by deleting comments. That is

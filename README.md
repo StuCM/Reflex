@@ -111,9 +111,11 @@ TV=lounge npm run deploy               # against a differently-named device
 ares-inspect --device tv --app com.stu.plexlite   # DevTools, use Chromium ~53
 ```
 
-`deploy` runs `npm run check` first, so code Chromium 53 cannot run never
-reaches the panel — the one failure that costs a whole sideload trip to
-diagnose.
+`deploy` runs `npm run lint:names` first, so a layering breach never reaches
+the panel. What Chromium 53 cannot run is caught earlier and by other things:
+the bundler lowers the syntax, `lib: ES2015` catches the built-ins, stylelint
+reads browserslist for the CSS, and `no-restricted-properties` covers the DOM
+methods none of those can see.
 
 Use `npm run package`, not `ares-package .` — its `--exclude` was silently
 ignored here, and a bare `ares-package .` ships the git history, the dev
@@ -180,7 +182,7 @@ Without one they say so and everything else works unchanged.
 ```sh
 npm test          # pure rules: audio selection, the UHD guard, certificates,
                   # and the virtual row's arithmetic
-npm run check     # anything in js/ or css/ that Chromium 53 cannot run
+npm run lint:names # the layering, on resolved imports
 npm run smoke     # the whole app in headless Chromium, against the mock
 ```
 

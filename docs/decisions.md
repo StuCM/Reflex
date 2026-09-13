@@ -19,6 +19,12 @@ Newest first. One entry per decision, appended by the orchestrator at
 `screen` — and the boundaries are checked rather than trusted: `npm run check`
 now fails on a request opened outside `api/`, on `Store` addressed outside
 `data/`, and on the DOM, a request or the cache reached for from `rules/`.
+
+> **Superseded 2026-09-13 (task 030).** `npm run check` is gone. The boundaries
+> are checked on resolved imports by `no-restricted-imports` in
+> `eslint.config.mjs`, which catches what a text scan never could — it found
+> eleven crossings the scan had no way to see. It runs as a ratchet:
+> `docs/layering-debt.md` lists what was already there.
 Every rule was confirmed by planting a violation and watching it go red, and
 the first run found a real one — the debug beacon in `core/ui.js` had its own
 `XMLHttpRequest`.

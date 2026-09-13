@@ -84,6 +84,15 @@
   },
   "overrides": [
     {
+      // `var` has no use left in the app: the module bindings that needed it
+      // went with the bridge, and src/ has been var-free since. CLAUDE.md said
+      // the check rejected it long after nothing did. dev/ keeps var on
+      // purpose — those function bodies are stringified into page.evaluate and
+      // run in Chromium 53.
+      "files": ["src/**"],
+      "rules": { "no-var": "error" }
+    },
+    {
       // The entry is side-effect imports by design: each legacy module still
       // publishes itself on `window` and is imported for that, not for a value.
       // Every line here disappears as its file becomes a real module.

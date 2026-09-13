@@ -36,10 +36,11 @@ Not available, do not use:
 
 Available, and preferred — Chromium 53 is ES2015 apart from the above:
 
-- `const` and `let` (Chrome 49). Not `var`: `npm run check` rejects it
-  anywhere but column 0, where a module's own binding lives. That one has to
-  be `var`, because only `var` puts a property on the global object for
-  `index.html`'s next script tag and for `test/load.js`.
+- `const` and `let` (Chrome 49). Not `var`: oxlint's `no-var` rejects it
+  outright. The column-0 exception this used to carry died with the bridge —
+  there are no global bindings left to declare, and `src/` has been `var`-free
+  since. (Found 2026-09-13: the rule had quietly not existed for some time, and
+  this line claimed it did.)
 - Arrow functions (Chrome 45), and concise bodies. Nothing in `src/` uses
   `this` or `arguments`, so there is no binding to preserve.
 - Template literals (Chrome 41). Prefer them to `+` chains once there is more
@@ -176,12 +177,20 @@ the bundle, which is a better manifest check than the list this used to be.
 Vite rewrites the module tag to a classic deferred script, because Chromium 53
 has no module scripts (Chrome 61).
 
-`src/` is layered, and the layering is enforced rather than suggested:
-`npm run check` fails on a request opened outside `src/api/`, on IndexedDB
-addressed outside `src/data/`, and on the DOM, a request or the cache reached
-for from `src/rules/`. It is still a regex scan — it catches what a file
-reaches *for*, not what it imports — and becomes `no-restricted-imports` in
-step 7.
+`src/` is layered, and since 030 the layering is checked on **resolved
+imports** rather than a regex over file text: `eslint.config.mjs` holds a
+`LAYERS` table and `npm run lint:names` fails an import that goes the wrong way
+up, by name. `no-restricted-globals` carries the other half — `XMLHttpRequest`
+and `indexedDB` outside the layers that own them, `document` in `rules/` and
+`api/`.
+
+**It shipped as a ratchet, and that distinction matters.** Fifteen crossings
+already existed when the rule arrived; they are named exceptions in the `DEBT`
+table beside `LAYERS`, one entry per file and target, and
+`docs/layering-debt.md` is the same list as prose. So a sixteenth fails the
+build, and removing one of the fifteen is a diff on a list — but **the layering
+is not true today**, and anything reasoning about `src/` should read that file
+before assuming it is.
 
 `src/seam.ts` — the five app modules the smoke suite reaches for, published
 under the names it uses: `Art`, `Merge`, `ShowPage`, `Sidebar`, `Config`. Not a
@@ -234,7 +243,11 @@ twenty-nine globals and read as dead to every grep over `src/`.
   server. Everything that reaches Player goes through it first.
 
 `src/rules/` — pure. No DOM, no request, no cache, which is what makes it the
-half worth unit testing.
+half worth unit testing — **with one exception that is real and being worked
+off**: `src/rules/rows.ts` imports `data/merge` and calls `merge.stream` and
+`merge.items`, so the row model reaches the cache. It is first on the list in
+`docs/layering-debt.md` for exactly that reason. Everything else in here is
+pure, and new files must be.
 
 - `src/rules/media.ts` — the rules, as pure functions: audio and subtitle track
   selection, the UHD guard, certificate ages, markers, chapters, quality caps,
@@ -346,16 +359,18 @@ Through the crew loop — see `.claude/crew/README.md`. Spec approved by the
 user, then worker, then a deterministic gate, then review. Two rounds and a
 human decides.
 
-**Feature freeze, 2026-09-10.** No new features until section 0 of
-`docs/backlog.md` is empty. The migration finished at 0.3.1: `js/` is gone and
-`src/` is TypeScript modules throughout. What is left of step 7 is deleting the
-bridge and turning the layer check into import lint. Bugs and the
-refactor itself are the only work taken. If asked for a feature, say this and
-point at section 0.
+**The feature freeze of 2026-09-10 is over, lifted 2026-09-13.** Section 0 of
+`docs/backlog.md` is empty: the bundle, the TypeScript modules, the bridge
+(now `src/seam.ts`) and the layer rules all landed. Features are open again.
+
+Two things it left behind on purpose, both written down rather than forgotten:
+`docs/layering-debt.md` holds eleven imports that cross the layering the wrong
+way, frozen by a ratchet so nothing new joins them; and `src/screen/player.ts`
+is still one file, deferred to a rebuild rather than a cut.
 
 ### Commits
 
-Conventional commits, enforced by `.claude/crew/bin/commit-msg.js`:
+Conventional commits, enforced by the crew package's commit-msg hook:
 
     type(scope): summary
 
@@ -462,13 +477,14 @@ The one thing it cannot generate is a video, so playback needs `npm run fixture`
 first (or any playable file at `dev/fixtures/sample.mp4`). Until then, OK on a
 film reaches the player's error path rather than playing.
 
-The three checks, and what each is for:
+The checks, and what each is for:
 
-- `npm run check` — the layer rules over `src/`: no request outside `api/`, no
-  IndexedDB outside `data/`, nothing impure in `rules/`. The Chromium 53 syntax
-  scan retired with the bundler; `build.target` lowers syntax, `lib: ES2015`
-  catches the built-ins, stylelint reads browserslist for CSS, and eslint's
-  `no-restricted-properties` covers the DOM methods none of those can see.
+- `npm run lint:names` — the layer rules over `src/`, on resolved imports, plus
+  the naming rules. See `docs/layering-debt.md`: it is a ratchet with eleven
+  known exceptions, so a clean run means nothing *new* crossed a layer. The
+  Chromium 53 syntax scan retired with the bundler; `build.target` lowers
+  syntax, `lib: ES2015` catches the built-ins, stylelint reads browserslist for
+  CSS, and `no-restricted-properties` covers the DOM methods none can see.
 - `npm test` — the pure rules in `src/rules/` and the row arithmetic.
 - `npm run smoke` — drives the whole app in headless Chromium: link, browse,
   paging, kids, discovery, search, devices, the detail page, all three playback

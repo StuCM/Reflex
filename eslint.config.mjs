@@ -14,12 +14,17 @@ import tseslint from 'typescript-eslint';
 import unicorn from 'eslint-plugin-unicorn';
 import jsdocPlugin from 'eslint-plugin-jsdoc';
 
+/* Settled 2026-09-13. `view/` may read what is already held but may not open a
+   request: a cache read is free and the drawing code is what knows which tile is
+   on screen, whereas a fetch from here is how you get calls nobody asked for.
+   `core/` may reach `api/` for the debug beacon. `import/no-cycle` still guards
+   the core/api pair, which this makes mutually permitted at layer granularity. */
 const LAYERS = {
-  core: [],
+  core: ['api'],
   rules: ['core'],
   api: ['core', 'rules'],
   data: ['core', 'api', 'rules'],
-  view: ['core', 'rules'],
+  view: ['core', 'rules', 'data'],
   screen: ['core', 'api', 'data', 'rules', 'view'],
 };
 const ALL = Object.keys(LAYERS);
@@ -33,14 +38,13 @@ const DEBT = [
   { file: 'src/api/plex/discovery.ts', target: 'data', pulls: 'servers.all/set/forget' },
   { file: 'src/api/plex/images.ts', target: 'data', pulls: 'servers.of' },
   { file: 'src/api/plex/library.ts', target: 'data', pulls: 'servers.stamp' },
-  { file: 'src/core/ui.ts', target: 'api', pulls: 'http.request, for the debug beacon' },
   { file: 'src/data/devices.ts', target: 'view', pulls: 'dom.fill, dom.put' },
   { file: 'src/rules/rows.ts', target: 'data', pulls: 'merge.items, merge.stream' },
+  /* Both of these are `library.tmdbId`, which parses a guid string and opens
+     nothing. It is in api/ by misplacement; moving it to rules/ removes both
+     entries rather than forgiving them. */
   { file: 'src/view/masthead.ts', target: 'api', pulls: 'library.tmdbId' },
-  { file: 'src/view/masthead.ts', target: 'data', pulls: 'art' },
   { file: 'src/view/rail.ts', target: 'api', pulls: 'library.tmdbId' },
-  { file: 'src/view/rail.ts', target: 'data', pulls: 'art' },
-  { file: 'src/view/sidebar.ts', target: 'data', pulls: 'servers' },
   { file: 'src/view/sidebar.ts', target: 'screen', pulls: 'player.autoplayLabel' },
   { file: 'src/view/sidebar.ts', target: 'screen', pulls: 'showpage.themeLabel' },
 ];

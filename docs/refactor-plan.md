@@ -1,7 +1,13 @@
 # The refactor: Vite, TypeScript, and rules that enforce themselves
 
 Decided 2026-09-10, in conversation. This is the spec for section 0 of
-`docs/backlog.md`. Features are frozen until it is done.
+`docs/backlog.md`.
+
+**Finished 2026-09-13.** All seven steps landed; the freeze it imposed is
+lifted. Kept as the record of what was decided and why — read it in the past
+tense, and `CLAUDE.md` for what is true now. The one thing it promised and did
+not fully deliver is the layering: step 7's import lint shipped as a ratchet
+with eleven known exceptions, listed in `docs/layering-debt.md`.
 
 The layering landed at 0.0.2 — `js/` became six directories with the
 boundaries checked by `tools/check-layers.js`. That check is a regex scan its own
@@ -435,7 +441,11 @@ unconverted files keep finding their globals. It is deleted last.
 6. **`screen/`** — four files, the largest. Splitting them is a separate task,
    not a precondition.
 7. **Delete the bridge**, turn `tools/check-layers.js` into import lint, rewrite CLAUDE.md's
-   rules sections against the new names.
+   rules sections against the new names. *(Done — tasks 029 and 030. The bridge
+   became `src/seam.ts`, five names the smoke suite reads page-side rather than
+   twenty-nine; `tools/check-layers.js` is deleted and the layer rules are
+   `no-restricted-imports` in `eslint.config.mjs`, as a ratchet — see
+   `docs/layering-debt.md`.)*
 
 Green smoke at every step. Nothing sits unreviewable — the lesson of PR #1,
 which was thirteen commits against a remote six weeks stale.
