@@ -170,8 +170,8 @@ question you cannot act on until OK.
 
 ## Layout
 
-One entry, one bundle. `index.html` loads `src/main.ts` and nothing else, and
-the import graph *is* the dependency order — a file nothing imports is not in
+One entry, one bundle. `index.html` loads `src/main.ts` and nothing else, which
+imports `./app` and `./seam`, and the import graph *is* the dependency order — a file nothing imports is not in
 the bundle, which is a better manifest check than the list this used to be.
 Vite rewrites the module tag to a classic deferred script, because Chromium 53
 has no module scripts (Chrome 61).
@@ -182,6 +182,14 @@ addressed outside `src/data/`, and on the DOM, a request or the cache reached
 for from `src/rules/`. It is still a regex scan — it catches what a file
 reaches *for*, not what it imports — and becomes `no-restricted-imports` in
 step 7.
+
+`src/seam.ts` — the five app modules the smoke suite reaches for, published
+under the names it uses: `Art`, `Merge`, `ShowPage`, `Sidebar`, `Config`. Not a
+migration bridge and not an app dependency — nothing in `src/` may import it.
+Its consumers are `page.evaluate` strings in `dev/smoke/`, where no import
+reaches and no type checker looks, so **deleting a name here breaks a smoke step
+that nothing will warn you about.** It replaced `src/legacy.ts`, which published
+twenty-nine globals and read as dead to every grep over `src/`.
 
 `src/core/` — what this build is, and what this device is.
 
@@ -402,8 +410,9 @@ they belong in one file.** That splits three ways:
 The reason is not tidiness. **An ambient `.d.ts` is invisible to the import
 graph**, so `import/no-cycle`, the layer rules, and "what does this file depend
 on" cannot see it — and turning the script order into a graph the compiler
-enforces is the whole point of the migration. `types/legacy.d.ts` is ambient by
-necessity and dies with the bridge.
+enforces is the whole point of the migration. `types/seam.d.ts` is the one
+ambient file left, and is ambient by necessity: what reads those names is a
+`page.evaluate` string in `dev/smoke/`, which is not a module and cannot import.
 
 ### The DOM
 

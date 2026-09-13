@@ -24,11 +24,14 @@ greps *that* to prove it.
 
 **What is genuinely left, and all that the freeze now waits on:**
 
-1. **Step 7 — delete the bridge.** `src/legacy.ts` still publishes four globals
-   (`Panel`, `Config`, `UI`, `Cached`) because `src/api/youtube.ts` reaches for
-   the `Cached` global rather than importing `data/cached`. That is an
-   `api/` → `data/` import and a real layering decision, not an oversight to fix
-   blindly.
+1. ~~**Step 7 — delete the bridge.**~~ **Done 2026-09-13, task 029.**
+   `src/legacy.ts` is gone. `src/api/youtube.ts` memoises the channel id in
+   memory rather than reaching for the `Cached` global, so the `api/` → `data/`
+   reach is removed rather than legitimised. What survives is `src/seam.ts`,
+   publishing five names for the smoke suite — the first attempt deleted all
+   twenty-nine on the strength of a grep over `src/` and took twelve smoke steps
+   down with it, because the real consumers are `page.evaluate` strings in
+   `dev/smoke/` that no grep over the module tree can see.
 2. **Step 7 — the layer check becomes import lint.** `tools/check-layers.js` is
    still a regex scan: it catches what a file reaches *for*, not what it
    imports. `no-restricted-imports` per layer replaces it.
