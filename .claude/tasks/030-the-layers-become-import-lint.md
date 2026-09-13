@@ -3,14 +3,15 @@ id: 030
 slug: the-layers-become-import-lint
 status: approved
 branch: crew/030-the-layers-become-import-lint
-base: crew/029-delete-the-bridge
 model: sonnet
 env: laptop
+rounds: 0
 files:
   - eslint.config.mjs
   - tools/check-layers.js
   - package.json
   - .github/workflows/verify.yml
+  - .claude/crew.config.json
 ---
 
 # The layer rules resolve imports instead of matching text
@@ -22,10 +23,11 @@ it also mentions the thing in its text.
 ## Why now
 Step 7's second half, and one of the three things the freeze waits on.
 
-## Base
-**Branch from `crew/029-delete-the-bridge`.** 029 removes the one genuine
-`api/` → `data/` reach; running this first would mean shipping an exception for
-it on day one.
+## Existing work
+`npx crew collisions` printed nothing.
+
+**029 has landed**, which is what unblocked this. It removed the one genuine
+`api/` → `data/` reach, so no exception has to ship for it. Branch from `main`.
 
 ## Graph context
 `tools/check-layers.js` is 142 lines and a regex scan — its own header says so.
@@ -58,6 +60,17 @@ belongs.
   `no-restricted-globals`, and they must survive.
 - CI runs `npm run check` as a named step. If the script goes, the workflow step
   and its name go with it.
+- **`npm run check` has four callers, not one.** `package.json`'s `verify` AND
+  its `deploy` script, `.github/workflows/verify.yml:31`, and
+  `.claude/crew.config.json:13`'s `quickVerify` (`npm run check && npm test`).
+  Miss the last and you break the crew gate itself, on every future task. All
+  four are in `files:`; go and look rather than trusting this list.
+- **`src/seam.ts` crosses layers on purpose and must keep working.** It imports
+  `core/config`, `data/art`, `data/merge`, `screen/showpage` and `view/sidebar`
+  to publish them for the smoke suite (029). It sits at the root of `src/`,
+  alongside `app.ts` and `main.ts`, so per-directory blocks should not match it
+  — **verify that they do not, and do not add a rule for root-level files.**
+  If a rule does catch it, the seam is right and the rule is wrong.
 
 ## Approach
 1. Add per-directory `no-restricted-imports` blocks to `eslint.config.mjs`, one
@@ -67,12 +80,14 @@ belongs.
 3. Resolve the `view/` → `screen/` import named above. Prefer moving
    `themeLabel`; if it cannot move, say why in the commit body and add the
    exception with a comment.
-4. Delete `tools/check-layers.js`, the `check` script in `package.json`, and the
-   "chromium 53 scan" step in `.github/workflows/verify.yml`. Check `verify`
-   itself no longer references it.
-5. Update CLAUDE.md's Testing section, which describes `npm run check` as the
-   layer check, and its Layout section, which says the check "becomes
-   `no-restricted-imports` in step 7".
+4. Delete `tools/check-layers.js` and the `check` script, then fix **every**
+   caller listed in Constraints: `verify` and `deploy` in `package.json`, the
+   step in `.github/workflows/verify.yml`, and `quickVerify` in
+   `.claude/crew.config.json`. `grep -rn "npm run check" . --exclude-dir=node_modules
+   --exclude-dir=.git` must come back with nothing but documentation.
+5. Do **not** touch `CLAUDE.md`, `README.md` or `docs/` — the orchestrator
+   applies those at close, so this task and any other can run without colliding
+   on a shared document.
 
 ## Out of scope
 - `import/no-cycle`, already enabled.
@@ -86,7 +101,13 @@ belongs.
 - [ ] Proven by adding one deliberately in a scratch commit, watching it fail,
       and reverting — say so in the report
 - [ ] `document` in `src/rules/` still fails
-- [ ] `tools/check-layers.js` is gone, and nothing references `npm run check`
+- [ ] `tools/check-layers.js` is gone, and `grep -rn "npm run check" .
+      --exclude-dir=node_modules --exclude-dir=.git` returns only documentation
+      lines — no `package.json`, no workflow, no `crew.config.json`
+- [ ] `npx crew gate .claude/tasks/030-the-layers-become-import-lint.md` passes,
+      which exercises the `quickVerify` you just changed
+- [ ] `npm run lint:names` still passes on `src/seam.ts` — the deliberate
+      cross-layer file
 - [ ] `npm run verify` passes
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
@@ -99,6 +120,10 @@ belongs.
 - Layout says the check "is still a regex scan … and becomes
   `no-restricted-imports` in step 7". It has; say what it now is.
 - If `themeLabel` moved, the `src/view/` and `src/rules/` bullets follow it.
+- `README.md:114` says `deploy` runs `npm run check` first "so code Chromium 53
+  cannot run never ships", and `README.md:183` describes it as scanning `js/`.
+  Both are stale twice over — `js/` is gone and the syntax scan retired with the
+  bundler.
 
 ## Review rounds
 
