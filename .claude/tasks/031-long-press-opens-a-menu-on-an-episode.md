@@ -12,7 +12,14 @@ files:
   - src/app.ts
   - css/show.css
   - dev/smoke/show.js
+  - tools/icons.js
+  - src/view/glyphs.ts
 ---
+
+<!-- files: amended by the worker. The spec's own constraints require the four
+     new icons to come from the mapping in tools/icons.js, regenerated into
+     src/view/glyphs.ts — neither path was declared. Nothing else was added. -->
+
 
 # Holding OK on an episode opens a menu against the card
 

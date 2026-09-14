@@ -21,6 +21,15 @@ export interface MenuRow {
   on?: boolean;
   off?: boolean;
   value?: unknown;
+  /** Inline SVG for this row alone, where the tab's one icon will not do. */
+  icon?: string;
+}
+
+/** A kicker over a title, in place of the tab strip: what the menu is *of*,
+    when a menu of one tab has no name worth showing. */
+export interface MenuHead {
+  kicker: string;
+  title: string;
 }
 
 export interface MenuTab {
@@ -39,6 +48,8 @@ let selected = 0;
 let built: MenuRow[] = [];
 let onChoose: ((value: unknown, row: MenuRow) => void) | null = null;
 let onClose: (() => void) | null = null;
+let head: MenuHead | null = null;
+let headElement: HTMLElement | null = null;
 let tabsElement: HTMLElement | null = null;
 let innerElement: HTMLElement | null = null;
 let noteElement: HTMLElement | null = null;
@@ -59,7 +70,11 @@ function land(): void {
 }
 
 function paint(): void {
-  if (!tabsElement || !innerElement || !noteElement) return;
+  if (!headElement || !tabsElement || !innerElement || !noteElement) return;
+
+  if (head)
+    fill(headElement, span('menu-kicker', head.kicker), span('menu-head-title', head.title));
+  else fill(headElement);
 
   fill(
     tabsElement,
@@ -74,7 +89,7 @@ function paint(): void {
         `menu-row${at === selected ? ' sel' : ''}` +
         (row.on ? ' on' : '') +
         (row.off ? ' off' : '');
-      const icon = tabs[tab]?.icon;
+      const icon = row.icon ?? tabs[tab]?.icon;
       if (icon) put(pick(line, 'menu-icon'), svg(icon));
       pick(line, 'menu-label').textContent = row.label;
       pick(line, 'menu-row-note').textContent = row.note ?? '';
@@ -90,6 +105,8 @@ function paint(): void {
 }
 
 function shell(): HTMLElement[] {
+  const headRow = document.createElement('div');
+  headRow.className = 'menu-head';
   const tabsRow = document.createElement('div');
   tabsRow.className = 'menu-tabs';
   const list = document.createElement('div');
@@ -99,7 +116,7 @@ function shell(): HTMLElement[] {
   put(list, inner);
   const note = document.createElement('div');
   note.className = 'menu-note';
-  return [tabsRow, list, note];
+  return [headRow, tabsRow, list, note];
 }
 
 /* Draw tabs into `host` and take the d-pad until a row is chosen or BACK closes
@@ -109,12 +126,14 @@ export function open(options: {
   host: HTMLElement;
   tabs?: MenuTab[];
   tab?: number;
+  head?: MenuHead;
   onChoose?: (value: unknown, row: MenuRow) => void;
   onClose?: () => void;
 }): void {
   host = options.host;
   tabs = options.tabs ?? [];
   tab = options.tab ?? 0;
+  head = options.head ?? null;
   onChoose = options.onChoose ?? null;
   onClose = options.onClose ?? null;
 
@@ -122,6 +141,7 @@ export function open(options: {
      .menu-inner, and an element replaced on every paint never runs one. */
   if (!host.firstChild) fill(host, ...shell());
 
+  headElement = host.querySelector('.menu-head');
   tabsElement = host.querySelector('.menu-tabs');
   innerElement = host.querySelector('.menu-inner');
   noteElement = host.querySelector('.menu-note');
@@ -137,6 +157,7 @@ export function close(): void {
   host.classList.add('hidden');
   host = null;
   tabs = [];
+  head = null;
   onChoose = null;
   onClose = null;
   done?.();
@@ -166,7 +187,14 @@ export function key(code: number): boolean {
     paint();
     return true;
   }
-  if ((code === 37 || code === 39) && tabs.length > 1) {
+  if (code === 37 || code === 39) {
+    /* With more than one tab the sideways axis switches them. With one it has
+       nothing to do, so it closes — 6e asks for a menu any direction key
+       dismisses, and ▲▼ are spoken for by the rows. */
+    if (tabs.length < 2) {
+      close();
+      return true;
+    }
     tab = (tab + (code === 39 ? 1 : tabs.length - 1)) % tabs.length;
     build();
     land();

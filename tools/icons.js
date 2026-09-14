@@ -26,6 +26,10 @@ const MAP = [
   ['pause', 'fill/pause-fill'],
   ['chapters', 'regular/list-numbers'],
   ['back', 'regular/arrow-left'],
+  ['watched', 'regular/check-circle'],
+  ['watchedAll', 'regular/checks'],
+  ['restart', 'regular/play-circle'],
+  ['info', 'regular/info'],
 ];
 
 function inner(rel) {

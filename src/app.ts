@@ -78,8 +78,11 @@ function openShow(entry: PlexItem, at?: { season?: number; episode?: number }) {
   showpage.open(entry, {
     at,
     onExit: toBrowse,
-    onPlay: (episode, verdict) => {
-      playChecked(episode, verdict, false, undefined, toShow);
+    /* `startAt` is 0 only when the hold menu's Play from start was chosen, and
+       undefined otherwise — the difference between starting again and picking
+       up, so it must not be collapsed to `startAt || 0`. */
+    onPlay: (episode, verdict, startAt) => {
+      playChecked(episode, verdict, false, startAt, toShow);
     },
     /* Leaving the page by any route stops its theme. One call per route rather
        than a listener, because the failure mode is two sources on one ARC
@@ -369,6 +372,14 @@ function onKey(event: KeyboardEvent) {
   if (handled) event.preventDefault();
 }
 
+/* Release, routed the same way. Only the show page wants it: OK on an episode
+   acts on keyup so a hold can open its menu instead of playing. A screen with
+   no keyUp() never hears about it. */
+function onKeyUp(event: KeyboardEvent) {
+  if (player.playing() || recapVideo) return;
+  if (view() === 'show') showpage.keyUp(event.keyCode);
+}
+
 /* Back from a message goes where you came from — the detail page if one is
    open, which is where a refusal is most likely to have come from. */
 function messageKey(code: number): boolean {
@@ -520,6 +531,7 @@ window.onerror = (text, url, line) => {
 rail.build();
 browse.init({ onOpen: openItem, onExit: exitApp });
 document.addEventListener('keydown', onKey, false);
+document.addEventListener('keyup', onKeyUp, false);
 plexInit();
 devices.init();
 storageSelfTest();

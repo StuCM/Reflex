@@ -2,8 +2,10 @@
    Each episode row carries the same verdict the film page would give it,
    checked for the focused one as you move. OK plays when the preferred copy
    will direct play and opens the copy chooser when it will not — the only time
-   you need to care which server an episode came from. */
+   you need to care which server an episode came from. Held, OK opens a menu
+   against the card instead, which is why OK here acts on release. */
 import { artUrl, posterUrl, themeUrl } from '../api/plex/images';
+import { scrobble as plexScrobble } from '../api/plex/library';
 import * as youtube from '../api/youtube';
 import { KEY, clamp, debug, isBack, show as showView, toast } from '../core/ui';
 import * as cached from '../data/cached';
@@ -13,6 +15,8 @@ import * as servers from '../data/servers';
 import * as shows from '../data/shows';
 import { identity } from '../rules/identity';
 import { div, span, fill, put, must } from '../view/dom';
+import * as glyphs from '../view/glyphs';
+import * as menu from '../view/menu';
 
 const titleElement = must('sh-title');
 const metaElement = must('sh-meta');
@@ -24,6 +28,10 @@ const hintElement = must('sh-hint');
 const recapsElement = must('sh-recaps');
 const headElement = must('sh-head');
 const themeElement = must('theme') as HTMLAudioElement;
+const viewElement = must('show');
+const menuElement = div('hidden');
+menuElement.id = 'sh-menu';
+put(viewElement, menuElement);
 
 /** Episode rows on screen at once, at 111px each. */
 const EPISODE_POOL = 6;
@@ -35,7 +43,7 @@ const RECAP_LEAD = 2;
 interface ShowOptions {
   at?: { season?: number; episode?: number };
   onExit?: () => void;
-  onPlay?: (episode: PlexItem, verdict: Verdict) => void;
+  onPlay?: (episode: PlexItem, verdict: Verdict, at?: number) => void;
   onChoose?: (episode: PlexItem) => void;
   onRecap?: (video: Recap) => void;
 }
@@ -55,6 +63,8 @@ let options: ShowOptions = {};
 let generation = 0;
 let verdicts: Record<string, Verdict> = {};
 let checkTimer: ReturnType<typeof setTimeout> | null = null;
+/** The hold menu is up against the focused card. */
+let holding = false;
 
 function verdictKey(episode: PlexItem): string {
   return `${episode._server}:${episode.ratingKey}`;
@@ -95,7 +105,12 @@ function verdictBadge(episode: PlexItem): HTMLSpanElement | null {
   return span(`badge ${state} sh-verdict`, guard.label(verdict));
 }
 
+function minutes(episode: PlexItem): string {
+  return episode.duration ? `${Math.round(episode.duration / 60000)} min` : '';
+}
+
 function hint(): string {
+  if (holding) return '↑ ↓ choose · OK confirms · ← → or BACK closes';
   if (zone === 'seasons') return '← → choose a series · ↓ to the episodes · BACK to the rail';
   if (zone === 'recaps') {
     return recaps?.length
@@ -137,7 +152,7 @@ function renderEpisodes(): void {
       still,
       span('sh-ep-num', episode.index === undefined ? '·' : String(episode.index)),
       span('sh-ep-title', episode.title ?? ''),
-      span('sh-ep-mins', episode.duration ? `${Math.round(episode.duration / 60000)} min` : ''),
+      span('sh-ep-mins', minutes(episode)),
       span('sh-ep-seen', watched),
     );
     const badge = verdictBadge(episode);
@@ -146,6 +161,9 @@ function renderEpisodes(): void {
   }
 
   fill(episodesElement, ...drawn);
+  /* The scrim, the dim on every other card and the ring on the held one are all
+     this class: the menu is over the page, so nothing else redraws. */
+  viewElement.classList.toggle('holding', holding);
   hintElement.textContent = hint();
 }
 
@@ -398,6 +416,8 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   recaps = null;
   recapIndex = 0;
   searching = false;
+  clearHold();
+  holding = false;
 
   showView('show');
   paintHeader();
@@ -430,12 +450,14 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
 
 function close(): void {
   if (checkTimer) clearTimeout(checkTimer);
+  clearHold();
   silence();
   show = null;
   options.onExit?.();
 }
 
-function playFocused(): void {
+/** `at` of 0 starts the episode again; undefined picks it up where it was. */
+function playFocused(at?: number): void {
   const episode = episodes[episodeIndex];
   if (!episode) return;
   const verdict = verdicts[verdictKey(episode)];
@@ -445,12 +467,164 @@ function playFocused(): void {
     openCopies();
     return;
   }
-  options.onPlay?.(episode, verdict);
+  options.onPlay?.(episode, verdict, at);
 }
 
 function openCopies(): void {
+  clearHold(); // ▶ while OK is held would otherwise open the menu behind the film page
   const episode = episodes[episodeIndex];
   if (episode) options.onChoose?.(episode);
+}
+
+/* ---------- holding OK on an episode ----------
+
+   OK here acts on *release*. It has to: a hold must be able to open this menu
+   instead of playing, and playFocused() reaches the decision endpoint on a
+   server we do not own — a side effect that cannot be fired and then taken
+   back. Nothing else in the app listens for keyup. */
+
+/** How long OK is held before the menu opens, in milliseconds. */
+const HOLD_MS = 500;
+/** The box in css/show.css, and the gap it keeps from the screen edges. */
+const MENU_W = 512;
+const MENU_EDGE = 32;
+
+let holdTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearHold(): void {
+  if (holdTimer) clearTimeout(holdTimer);
+  holdTimer = null;
+}
+
+function okDown(): void {
+  /* A second keydown while the timer runs is the remote repeating, which is the
+     same hold the timer is waiting out — the player trusts that signal too. */
+  if (holdTimer) {
+    openHoldMenu();
+    return;
+  }
+  holdTimer = setTimeout(openHoldMenu, HOLD_MS);
+}
+
+function okUp(): void {
+  if (!holdTimer) return; // the menu opened, or this press began elsewhere
+  clearHold();
+  playFocused();
+}
+
+function seasonNumber(episode: PlexItem): number {
+  return episode.parentIndex ?? seasons[seasonIndex]?.index ?? 0;
+}
+
+/** 'S2 E3', from the episode's own numbers rather than its place in the list. */
+function tag(episode: PlexItem): string {
+  return `S${seasonNumber(episode)} E${episode.index ?? 0}`;
+}
+
+/** The stretch "mark all up to here" would cover: the series' first episode to
+    this one, or just this one when it is the first. */
+function spanUpTo(episode: PlexItem): string {
+  const first = episodes[0];
+  if (!first || first.index === episode.index) return tag(episode);
+  return `S${seasonNumber(episode)} E${first.index ?? 0}–E${episode.index ?? 0}`;
+}
+
+function holdRows(episode: PlexItem): menu.MenuRow[] {
+  return [
+    { icon: glyphs.watched, label: 'Mark as watched', value: 'watched' },
+    {
+      icon: glyphs.watchedAll,
+      label: 'Mark all up to here',
+      note: spanUpTo(episode),
+      value: 'upto',
+    },
+    { icon: glyphs.restart, label: 'Play from start', note: minutes(episode), value: 'restart' },
+    { icon: glyphs.info, label: 'Episode details', value: 'details' },
+  ];
+}
+
+/* Against the card, and never off the screen: the first episode's menu would
+   hang off the top and the last one's off the bottom. Same move as the player's
+   openPanelFor — the number comes from here, the position stays in CSS. */
+function anchorMenu(card: HTMLElement): void {
+  const left = episodesElement.offsetLeft + card.offsetLeft;
+  const top = episodesElement.offsetTop + card.offsetTop;
+  const lowest = 1080 - menuElement.offsetHeight - MENU_EDGE;
+  menuElement.style.setProperty(
+    '--menu-left',
+    `${clamp(left, MENU_EDGE, 1920 - MENU_W - MENU_EDGE)}px`,
+  );
+  menuElement.style.setProperty(
+    '--menu-top',
+    `${clamp(top, MENU_EDGE, Math.max(MENU_EDGE, lowest))}px`,
+  );
+}
+
+function openHoldMenu(): void {
+  clearHold();
+  const episode = episodes[episodeIndex];
+  if (!episode || holding) return;
+
+  holding = true;
+  renderEpisodes();
+  const card = episodesElement.querySelector('.sh-episode.on') as HTMLElement | null;
+  if (!card) {
+    holding = false;
+    return;
+  }
+
+  menu.open({
+    host: menuElement,
+    head: { kicker: tag(episode), title: episode.title ?? '' },
+    tabs: [{ label: '', rows: () => holdRows(episode) }],
+    onChoose: (value) => {
+      chose(String(value), episode);
+    },
+    onClose: () => {
+      holding = false;
+      renderEpisodes();
+    },
+  });
+  anchorMenu(card);
+}
+
+function chose(value: string, episode: PlexItem): void {
+  if (value === 'watched') markWatched([episode]);
+  else if (value === 'upto') markWatched(episodes.slice(0, episodeIndex + 1));
+  else if (value === 'restart') playFocused(0);
+  else openCopies();
+}
+
+/* Every copy, because each server keeps its own watch state — the same reason
+   the deck scrobbles each copy it clears rather than only the shown one. */
+function markWatched(list: PlexItem[]): void {
+  const writes: Promise<unknown>[] = [];
+  list.forEach((episode) => {
+    merge.sources(episode).forEach((copy) => {
+      const server = servers.of(copy);
+      if (server) writes.push(plexScrobble(server, copy.ratingKey));
+    });
+  });
+  if (!writes.length) {
+    toast('No server to mark it on');
+    return;
+  }
+
+  void Promise.all(writes).then(
+    () => {
+      list.forEach((episode) => {
+        const seen = episode as { viewCount?: number; viewOffset?: number };
+        seen.viewCount = 1;
+        seen.viewOffset = 0;
+      });
+      renderEpisodes();
+      toast(list.length === 1 ? 'Marked watched' : `Marked ${list.length} episodes watched`);
+    },
+    (error: Error) => {
+      debug(`scrobble: ${error.message}`);
+      toast('Could not mark it watched');
+    },
+  );
 }
 
 /** OK in the recaps zone is either the search or one of its results. */
@@ -464,6 +638,8 @@ function chooseRecap(): void {
 }
 
 export function key(code: number): boolean {
+  if (menu.isOpen()) return menu.key(code);
+
   if (zone === 'seasons') {
     if (code === KEY.LEFT && seasonIndex > 0) {
       seasonIndex--;
@@ -530,9 +706,14 @@ export function key(code: number): boolean {
     return true;
   }
   if (code === KEY.RIGHT) openCopies();
-  else if (code === KEY.OK) playFocused();
+  else if (code === KEY.OK) okDown();
   else if (isBack(code)) close();
   return true; // this page swallows everything else
+}
+
+/** OK on an episode plays on release; a hold has already opened the menu. */
+export function keyUp(code: number): void {
+  if (code === KEY.OK) okUp();
 }
 
 export function current(): PlexItem | null {
