@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#161826">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#161826"/>
+    <path d="M470 300 L730 400 L545 555" stroke="#9d93d6" stroke-width="46" stroke-linecap="square" fill="none"/>
+    <path d="M615 480 L730 555" stroke="#e5a06d" stroke-width="46" stroke-linecap="square" fill="none"/>
+  </svg>
+</template>
 </head>
 <body>
 <x-dc>
@@ -24,7 +31,7 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
 .dv-olabel{font:400 11px/1.3 system-ui,sans-serif;color:rgba(233,233,237,.55);margin:0 0 9px}
 .dv-card{background:#000;border:1px solid rgba(255,255,255,.1);border-radius:8px;overflow:hidden;width:960px;height:540px}
 .dv-opt:target .dv-oid{background:var(--ac);color:var(--bg)}
-:root{--bg:#131719;--fg:#e8eaec;--dim:rgba(232,234,236,.46);--soft:rgba(232,234,236,.07);--tile:#1c2124;--ac:#a3bfa8;--ac2:#b9a98c;--ac40:rgba(163,191,168,.4);--ac28:rgba(163,191,168,.28);--ac22:rgba(163,191,168,.22);--ac20:rgba(163,191,168,.2);--ac14:rgba(163,191,168,.14);--ac2-22:rgba(185,169,140,.22);--bg72:rgba(19,23,25,.72);--bg86:rgba(19,23,25,.86);--bg18:rgba(19,23,25,.18);--bg0:rgba(19,23,25,0);--sc95:rgba(9,11,12,.95);--sc94:rgba(9,11,12,.94);--sc90:rgba(9,11,12,.9);--sc72:rgba(9,11,12,.72);--sc55:rgba(9,11,12,.55);--sc50:rgba(9,11,12,.5);--sc45:rgba(9,11,12,.45);--sc0:rgba(9,11,12,0)}
+:root{--bg:#131719;--fg:#e8eaec;--dim:rgba(232,234,236,.46);--soft:rgba(232,234,236,.07);--tile:#1c2124;--ac:#a3bfa8;--ac2:#b9a98c;--ac40:rgba(163,191,168,.4);--ac28:rgba(163,191,168,.28);--ac22:rgba(163,191,168,.22);--ac20:rgba(163,191,168,.2);--ac14:rgba(163,191,168,.14);--bg72:rgba(19,23,25,.72);--bg86:rgba(19,23,25,.86);--bg18:rgba(19,23,25,.18);--bg0:rgba(19,23,25,0);--sc95:rgba(9,11,12,.95);--sc94:rgba(9,11,12,.94);--sc90:rgba(9,11,12,.9);--sc72:rgba(9,11,12,.72);--sc55:rgba(9,11,12,.55);--sc50:rgba(9,11,12,.5);--sc45:rgba(9,11,12,.45);--sc0:rgba(9,11,12,0)}
 .pal-bar{display:flex;flex-wrap:wrap;align-items:flex-start}
 .pal{display:block;text-align:left;margin:0 12px 0 0;padding:11px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;cursor:pointer;font:inherit}
 .pal-sw{display:flex;margin-bottom:8px}
@@ -214,20 +221,12 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
   </sc-if>
 
   <sc-if value="{{ viewL.dense }}" hint-placeholder-val="{{ true }}">
-    <div style="position:relative;z-index:3;height:318px;flex:none;padding:0 96px;display:flex;align-items:center;border-bottom:1px solid rgba(238,241,243,.08)">
-      <div style="position:absolute;right:0;top:0;width:1100px;height:318px;z-index:0"><image-slot id="mantis-rows-band" shape="rect" placeholder="Drop backdrop art"></image-slot></div>
-      <div style="position:absolute;right:0;top:0;width:1100px;height:318px;z-index:1;background:linear-gradient(90deg,var(--bg) 0%,var(--bg86) 30%,var(--bg18) 82%,var(--bg0) 100%);pointer-events:none"></div>
-      <div style="position:absolute;right:0;bottom:0;width:1100px;height:150px;z-index:1;background:linear-gradient(180deg,var(--bg0),var(--bg) 92%);pointer-events:none"></div>
-      <div style="position:relative;z-index:2;flex:1;min-width:0;padding-right:56px;max-width:1120px">
-        <div style="font:400 21px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">{{ viewL.hero.rowTitle }}</div>
-        <div class="ell" style="font:500 52px Inter;letter-spacing:-.024em;margin-top:12px">{{ viewL.hero.t }}</div>
-        <div style="display:flex;align-items:center;margin-top:14px;font:400 23px Inter;color:var(--dim)">
-          <sc-if value="{{ viewL.hero.rated }}"><span style="border:2px solid rgba(238,241,243,.24);border-radius:8px;padding:1px 9px;font-size:20px;margin-right:20px">{{ viewL.hero.rated }}</span></sc-if>
-          <span style="margin-right:20px">{{ viewL.hero.sub }}</span>
-          <sc-if value="{{ viewL.hero.r }}"><i class="ph-fill ph-star" style="font-size:22px;color:var(--ac);margin-right:8px"></i><span style="margin-right:20px">{{ viewL.hero.r }}</span></sc-if>
-          <sc-if value="{{ viewL.hero.left }}"><span style="color:var(--ac2)">{{ viewL.hero.left }}</span></sc-if>
-        </div>
-        <div style="margin-top:14px;font:400 23px/1.42 Inter;color:rgba(238,241,243,.66);height:66px;overflow:hidden">{{ viewL.hero.d }}</div>
+    <div style="position:relative;z-index:3;height:132px;flex:none;padding:0 96px;display:flex;align-items:center;border-bottom:1px solid rgba(238,241,243,.08)">
+      <div class="ell" style="font:500 46px Inter;letter-spacing:-.02em;min-width:0;margin-right:32px">{{ viewL.hero.t }}</div>
+      <div style="font:400 25px Inter;color:var(--dim);white-space:nowrap">{{ viewL.hero.sub }}</div>
+      <div style="margin-left:auto;display:flex">
+        <button class="btn" style="display:flex;align-items:center;font:500 25px Inter;padding:14px 34px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:26px;margin-right:12px"></i>{{ viewL.hero.cta }}</button>
+        <button class="btn" style="width:58px;height:58px;border-radius:999px;margin-left:14px;background:var(--soft);border:none;color:var(--dim);display:flex;align-items:center;justify-content:center"><i class="ph ph-info" style="font-size:26px"></i></button>
       </div>
     </div>
     <div style="position:relative;z-index:3;flex:1;overflow:hidden;margin-bottom:64px">
@@ -279,22 +278,22 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
   <div style="position:relative;z-index:3;flex:1;overflow:hidden">
     <div style="transform:{{ det.ty }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
 
-      <div style="padding:52px 96px 78px;width:1240px;box-sizing:border-box">
+      <div style="padding:40px 96px 78px;width:1240px;box-sizing:border-box">
         <div style="font:400 23px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">Movie · Science fiction · Denis Villeneuve</div>
-        <div style="font:500 84px/1.04 Inter;letter-spacing:-.03em;margin-top:32px">Dune: Part Two</div>
-        <div style="display:flex;align-items:center;margin-top:36px;font:400 26px Inter;color:var(--dim)">
+        <div style="font:500 84px/1.04 Inter;letter-spacing:-.03em;margin-top:24px">Dune: Part Two</div>
+        <div style="display:flex;align-items:center;margin-top:30px;font:400 26px Inter;color:var(--dim)">
           <span style="border:2px solid rgba(238,241,243,.24);border-radius:8px;padding:2px 10px;font-size:22px;margin-right:26px">PG-13</span>
           <span style="margin-right:26px">2024</span><span style="margin-right:26px">2h 46m</span>
           <span style="border:2px solid var(--ac40);border-radius:8px;padding:2px 10px;font-size:22px;color:var(--ac)">4K HDR</span>
         </div>
-        <div style="display:flex;align-items:center;margin-top:34px;font:400 26px Inter">
+        <div style="display:flex;align-items:center;margin-top:28px;font:400 26px Inter">
           <div style="display:flex;align-items:center;margin-right:44px"><i class="ph-fill ph-star" style="font-size:27px;color:var(--ac);margin-right:10px"></i><span style="margin-right:10px">8.5</span><span style="color:var(--dim)">IMDb</span></div>
           <div style="display:flex;align-items:center;margin-right:44px"><i class="ph ph-seal-check" style="font-size:27px;color:var(--ac2);margin-right:10px"></i><span style="margin-right:10px">92%</span><span style="color:var(--dim)">Critics</span></div>
           <div style="display:flex;align-items:center"><i class="ph ph-users-three" style="font-size:27px;color:var(--dim);margin-right:10px"></i><span style="margin-right:10px">95%</span><span style="color:var(--dim)">Audience</span></div>
         </div>
-        <div style="margin-top:36px;font:400 27px/1.5 Inter;color:rgba(238,241,243,.68);max-width:1060px">Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family, caught between the love of his life and the fate of the known universe.</div>
+        <div style="margin-top:30px;font:400 27px/1.5 Inter;color:rgba(238,241,243,.68);max-width:1060px">Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family, caught between the love of his life and the fate of the known universe.</div>
 
-        <div style="display:flex;align-items:flex-start;margin-top:62px">
+        <div style="display:flex;align-items:flex-start;margin-top:52px">
           <div style="display:flex;flex-direction:column;align-items:center;margin-right:22px">
             <button class="btn" style="display:flex;align-items:center;font:500 28px Inter;height:76px;padding:0 48px;margin-bottom:12px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:29px;margin-right:14px"></i>Play</button>
             <div style="font:400 21px Inter;color:var(--dim)">from start</div>
@@ -345,232 +344,6 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
 </div>
 </div>
 </div>
-<div class="dv-opt" id="6d">
-<div class="dv-olabel"><a class="dv-oid" href="#6d">6d</a>TV series — the episodes carry the page: the film's tall info block compresses to a header strip so a full row of landscape stills is on screen without moving. Recap replaces the trailer. ▼ focuses the rail, ◀ ▶ runs along it, ▼ again drops to the cast.</div>
-<div class="dv-card" onMouseEnter="{{ actE }}">
-<div class="frame" style="background:var(--bg);color:var(--fg)">
-  <div style="position:absolute;right:0;top:0;width:1180px;height:620px;z-index:0;opacity:{{ ser.artOpacity }};transition:opacity .3s"><image-slot id="mantis-series-hero" shape="rect" placeholder="Drop series art"></image-slot></div>
-  <div style="position:absolute;right:0;top:0;width:1180px;height:620px;z-index:1;background:linear-gradient(90deg,var(--bg) 0%,var(--bg86) 36%,var(--bg18) 100%);pointer-events:none"></div>
-  <div style="position:absolute;right:0;top:300px;width:1180px;height:320px;z-index:1;background:linear-gradient(180deg,var(--bg0),var(--bg) 76%);pointer-events:none"></div>
-
-  <div style="position:relative;z-index:5;height:88px;flex:none;display:flex;align-items:center;padding:0 96px">
-    <div style="width:56px;height:56px;border-radius:18px;background:var(--soft);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph ph-arrow-left" style="font-size:28px;color:var(--fg)"></i></div>
-    <div style="font:500 26px Inter;letter-spacing:.3em;color:var(--dim)">MANTIS</div>
-  </div>
-
-  <div style="position:relative;z-index:3;flex:1;overflow:hidden">
-    <div style="transform:{{ ser.ty }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
-
-      <div style="padding:28px 96px 40px;width:1180px;box-sizing:border-box;opacity:{{ ser.headOpacity }};transition:opacity .3s">
-        <div style="font:400 22px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">Series · Drama</div>
-        <div style="display:flex;align-items:flex-end;margin-top:14px">
-          <div style="font:500 64px/1.04 Inter;letter-spacing:-.03em;margin-right:28px">Silo</div>
-          <div style="display:flex;align-items:center;font:400 23px Inter;color:var(--dim);padding-bottom:8px">
-            <span style="border:2px solid rgba(238,241,243,.24);border-radius:8px;padding:1px 9px;font-size:20px;margin-right:20px">15</span>
-            <span style="margin-right:20px">2023–2025</span><span style="margin-right:20px">2 seasons</span>
-            <i class="ph-fill ph-star" style="font-size:23px;color:var(--ac);margin-right:8px"></i><span style="margin-right:20px">8.1</span>
-            <span style="border:2px solid var(--ac40);border-radius:8px;padding:1px 9px;font-size:20px;color:var(--ac)">4K HDR</span>
-          </div>
-        </div>
-        <div style="margin-top:16px;font:400 24px/1.45 Inter;color:rgba(238,241,243,.66);max-width:1000px">Ten thousand people live in a giant silo deep underground. After its sheriff breaks a cardinal rule, engineer Juliette starts to uncover what the silo is hiding.</div>
-
-        <div style="display:flex;align-items:flex-start;margin-top:28px">
-          <div style="display:flex;flex-direction:column;align-items:center;margin-right:20px">
-            <button class="btn" style="display:flex;align-items:center;font:500 26px Inter;height:70px;padding:0 40px;margin-bottom:10px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:27px;margin-right:13px"></i>Resume</button>
-            <div style="font:400 20px Inter;color:var(--dim)">S2 E4 · 18m left</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;width:112px;margin-right:20px">
-            <div style="width:70px;height:70px;border-radius:999px;margin-bottom:10px;background:var(--ac20);box-shadow:0 0 0 2px var(--ac);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-youtube-logo" style="font-size:34px;color:var(--ac)"></i></div>
-            <div style="font:400 20px Inter;color:var(--fg);text-align:center;line-height:1.25">Recaps</div>
-          </div>
-          <sc-for list="{{ seriesActions }}" as="ac" hint-placeholder-count="4">
-            <div style="display:flex;flex-direction:column;align-items:center;width:112px;margin-right:20px">
-              <div style="width:70px;height:70px;border-radius:999px;margin-bottom:10px;background:var(--soft);display:flex;align-items:center;justify-content:center"><i class="ph {{ ac.icon }}" style="font-size:32px;color:var(--fg)"></i></div>
-              <div style="font:400 20px Inter;color:var(--dim);text-align:center;line-height:1.25">{{ ac.label }}</div>
-            </div>
-          </sc-for>
-        </div>
-      </div>
-
-      <div onClick="{{ ser.down }}" style="padding:0 0 56px;cursor:pointer">
-        <div style="padding:0 96px;display:flex;align-items:center;margin-bottom:22px">
-          <div style="font:400 24px Inter;letter-spacing:.22em;text-transform:uppercase;color:{{ ser.epColor }};margin-right:28px">Episodes</div>
-          <sc-for list="{{ seasons }}" as="s" hint-placeholder-count="2">
-            <div style="font:400 22px Inter;padding:8px 22px;border-radius:999px;margin-right:12px;color:{{ s.fg }};background:{{ s.bg }};box-shadow:{{ s.ring }}">{{ s.label }}</div>
-          </sc-for>
-          <div style="margin-left:auto;display:flex;align-items:center;font:400 21px Inter;color:var(--dim)">
-            <span style="margin-right:20px">5 episodes · 2 watched</span>
-            <i class="ph ph-dots-three-outline-vertical" style="font-size:22px;color:{{ ser.holdHint }}"></i>
-          </div>
-        </div>
-        <div style="overflow:hidden;padding:0 96px 4px">
-          <div style="display:flex;transform:{{ ser.railTx }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
-            <sc-for list="{{ episodes }}" as="ep" hint-placeholder-count="4">
-              <div onMouseDown="{{ ep.holdStart }}" onMouseUp="{{ ep.holdEnd }}" onMouseLeave="{{ ep.holdEnd }}" style="width:472px;flex:none;margin-right:36px">
-                <div class="phq3" style="width:100%;height:266px;border-radius:22px;background:var(--tile);box-shadow:{{ ep.ring }}">
-                  <i class="ph-fill ph-play" style="font-size:40px;color:{{ ep.playColor }}"></i>
-                  <div style="position:absolute;left:16px;top:16px;font:400 21px Inter;padding:5px 13px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ ep.no }}</div>
-                  <div style="position:absolute;right:16px;bottom:16px;font:400 21px Inter;padding:5px 13px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ ep.dur }}</div>
-                  <sc-if value="{{ ep.recap }}"><div style="position:absolute;right:16px;top:16px;width:38px;height:38px;border-radius:999px;background:var(--ac20);box-shadow:0 0 0 1px var(--ac40);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-youtube-logo" style="font-size:22px;color:var(--ac)"></i></div></sc-if>
-                  <sc-if value="{{ ep.watched }}"><div style="position:absolute;left:16px;bottom:16px;width:38px;height:38px;border-radius:999px;background:var(--bg72);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-check-circle" style="font-size:26px;color:var(--ac)"></i></div></sc-if>
-                  <sc-if value="{{ ep.pct }}"><div style="position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(238,241,243,.18);z-index:2"><div style="height:100%;width:{{ ep.pctW }};background:var(--ac2)"></div></div></sc-if>
-                </div>
-                <div class="ell" style="margin-top:16px;font:400 26px Inter;color:{{ ep.titleColor }}">{{ ep.t }}</div>
-                <div style="margin-top:8px;font:400 21px/1.4 Inter;color:var(--dim);height:59px;overflow:hidden">{{ ep.blurb }}</div>
-              </div>
-            </sc-for>
-          </div>
-        </div>
-        <div style="position:relative;height:0">
-          <sc-if value="{{ ser.menuOpen }}">
-            <div style="position:absolute;left:{{ ser.menuX }};top:-232px;width:440px;z-index:9;border-radius:22px;padding:20px 14px;background:var(--tile);box-shadow:0 0 0 1px rgba(238,241,243,.1),0 40px 90px rgba(0,0,0,.7)">
-              <div style="font:400 20px Inter;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);padding:0 16px 14px">{{ ser.menuEp }}</div>
-              <sc-for list="{{ epMenu }}" as="m" hint-placeholder-count="4">
-                <div style="display:flex;align-items:center;padding:14px 16px;border-radius:16px;background:{{ m.bg }}">
-                  <i class="ph {{ m.icon }}" style="font-size:26px;color:{{ m.fg }};margin-right:16px"></i>
-                  <div style="font:400 25px Inter;color:{{ m.fg }}">{{ m.label }}</div>
-                </div>
-              </sc-for>
-            </div>
-          </sc-if>
-        </div>
-        <div style="padding:16px 96px 0;font:400 20px Inter;color:{{ ser.holdHint }}">Hold OK on an episode for mark as watched, recap and more</div>
-        <div style="padding:44px 96px 0">
-          <div style="font:400 24px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:22px">Cast</div>
-          <div style="display:flex">
-            <sc-for list="{{ seriesCast }}" as="c" hint-placeholder-count="5">
-              <div style="width:212px;display:flex;flex-direction:column;align-items:center;margin-right:32px">
-                <div class="phq3" style="width:118px;height:118px;border-radius:999px;background:var(--tile);margin-bottom:14px;box-shadow:{{ c.ring }}">
-                  <div style="font:500 38px Inter;color:rgba(238,241,243,.22)">{{ c.ini }}</div>
-                </div>
-                <div style="text-align:center;width:212px">
-                  <div style="font:400 22px/1.3 Inter;color:{{ c.nameColor }};white-space:nowrap">{{ c.name }}</div>
-                  <div class="ell" style="font:400 20px/1.3 Inter;color:var(--dim);margin-top:5px">{{ c.role }}</div>
-                </div>
-              </div>
-            </sc-for>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-</div>
-</div>
-<div class="dv-opt" id="6e">
-<div class="dv-olabel"><a class="dv-oid" href="#6e">6e</a>Long press on an episode — OK held for half a second opens a menu against the card. <a class="dv-oid" href="#6d">6d</a> stays exactly as it was behind it: the held card keeps full brightness, everything else dims. Any direction key or Back closes it.</div>
-<div class="dv-card">
-<div class="frame" style="background:var(--bg);color:var(--fg)">
-  <div style="position:absolute;right:0;top:0;width:1180px;height:620px;z-index:0;opacity:.3"><image-slot id="mantis-series-hold" shape="rect" placeholder="Drop series art"></image-slot></div>
-  <div style="position:absolute;right:0;top:0;width:1180px;height:620px;z-index:1;background:linear-gradient(90deg,var(--bg) 0%,var(--bg86) 36%,var(--bg18) 100%);pointer-events:none"></div>
-  <div style="position:absolute;right:0;top:300px;width:1180px;height:320px;z-index:1;background:linear-gradient(180deg,var(--bg0),var(--bg) 76%);pointer-events:none"></div>
-
-  <div style="position:relative;z-index:3;height:88px;flex:none;display:flex;align-items:center;padding:0 96px">
-    <div style="width:56px;height:56px;border-radius:18px;background:var(--soft);display:flex;align-items:center;justify-content:center;margin-right:22px"><i class="ph ph-arrow-left" style="font-size:28px;color:var(--fg)"></i></div>
-    <div style="font:500 26px Inter;letter-spacing:.3em;color:var(--dim)">MANTIS</div>
-  </div>
-
-  <div style="position:relative;z-index:3;flex:1;overflow:hidden">
-    <div>
-      <div style="padding:28px 96px 40px;width:1180px;box-sizing:border-box;opacity:.5">
-        <div style="font:400 22px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--ac2)">Series · Drama</div>
-        <div style="display:flex;align-items:flex-end;margin-top:14px">
-          <div style="font:500 64px/1.04 Inter;letter-spacing:-.03em;margin-right:28px">Silo</div>
-          <div style="display:flex;align-items:center;font:400 23px Inter;color:var(--dim);padding-bottom:8px">
-            <span style="border:2px solid rgba(238,241,243,.24);border-radius:8px;padding:1px 9px;font-size:20px;margin-right:20px">15</span>
-            <span style="margin-right:20px">2023–2025</span><span style="margin-right:20px">2 seasons</span>
-            <i class="ph-fill ph-star" style="font-size:23px;color:var(--ac);margin-right:8px"></i><span style="margin-right:20px">8.1</span>
-            <span style="border:2px solid var(--ac40);border-radius:8px;padding:1px 9px;font-size:20px;color:var(--ac)">4K HDR</span>
-          </div>
-        </div>
-        <div style="margin-top:16px;font:400 24px/1.45 Inter;color:rgba(238,241,243,.66);max-width:1000px">Ten thousand people live in a giant silo deep underground. After its sheriff breaks a cardinal rule, engineer Juliette starts to uncover what the silo is hiding.</div>
-
-        <div style="display:flex;align-items:flex-start;margin-top:28px">
-          <div style="display:flex;flex-direction:column;align-items:center;margin-right:20px">
-            <button class="btn" style="display:flex;align-items:center;font:500 26px Inter;height:70px;padding:0 40px;margin-bottom:10px;border-radius:999px;background:var(--ac);color:var(--bg);border:none;white-space:nowrap"><i class="ph-fill ph-play" style="font-size:27px;margin-right:13px"></i>Resume</button>
-            <div style="font:400 20px Inter;color:var(--dim)">S2 E4 · 18m left</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;width:112px;margin-right:20px">
-            <div style="width:70px;height:70px;border-radius:999px;margin-bottom:10px;background:var(--ac20);box-shadow:0 0 0 2px var(--ac);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-youtube-logo" style="font-size:34px;color:var(--ac)"></i></div>
-            <div style="font:400 20px Inter;color:var(--fg);text-align:center;line-height:1.25">Recaps</div>
-          </div>
-          <sc-for list="{{ seriesActions }}" as="ac" hint-placeholder-count="4">
-            <div style="display:flex;flex-direction:column;align-items:center;width:112px;margin-right:20px">
-              <div style="width:70px;height:70px;border-radius:999px;margin-bottom:10px;background:var(--soft);display:flex;align-items:center;justify-content:center"><i class="ph {{ ac.icon }}" style="font-size:32px;color:var(--fg)"></i></div>
-              <div style="font:400 20px Inter;color:var(--dim);text-align:center;line-height:1.25">{{ ac.label }}</div>
-            </div>
-          </sc-for>
-        </div>
-      </div>
-
-      <div style="padding:0 0 56px">
-        <div style="padding:0 96px;display:flex;align-items:center;margin-bottom:22px;opacity:.5">
-          <div style="font:400 24px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--fg);margin-right:28px">Episodes</div>
-          <div style="font:400 22px Inter;padding:8px 22px;border-radius:999px;margin-right:12px;color:var(--dim);box-shadow:0 0 0 1px rgba(238,241,243,.16)">Season 1</div>
-          <div style="font:400 22px Inter;padding:8px 22px;border-radius:999px;color:var(--bg);background:var(--ac)">Season 2</div>
-          <div style="margin-left:auto;font:400 21px Inter;color:var(--dim)">5 episodes · 2 watched</div>
-        </div>
-        <div style="overflow:hidden;padding:0 96px 4px">
-          <div style="display:flex;transform:translateX(-508px)">
-            <sc-for list="{{ holdEpisodes }}" as="ep" hint-placeholder-count="4">
-              <div style="width:472px;flex:none;margin-right:36px;opacity:{{ ep.dim }}">
-                <div class="phq3" style="width:100%;height:266px;border-radius:22px;background:var(--tile);box-shadow:{{ ep.ring }}">
-                  <i class="ph-fill ph-play" style="font-size:40px;color:{{ ep.playColor }}"></i>
-                  <div style="position:absolute;left:16px;top:16px;font:400 21px Inter;padding:5px 13px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ ep.no }}</div>
-                  <div style="position:absolute;right:16px;bottom:16px;font:400 21px Inter;padding:5px 13px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ ep.dur }}</div>
-                  <sc-if value="{{ ep.recap }}"><div style="position:absolute;right:16px;top:16px;width:38px;height:38px;border-radius:999px;background:var(--ac20);box-shadow:0 0 0 1px var(--ac40);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-youtube-logo" style="font-size:22px;color:var(--ac)"></i></div></sc-if>
-                  <sc-if value="{{ ep.watched }}"><div style="position:absolute;left:16px;bottom:16px;width:38px;height:38px;border-radius:999px;background:var(--bg72);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-check-circle" style="font-size:26px;color:var(--ac)"></i></div></sc-if>
-                  <sc-if value="{{ ep.pct }}"><div style="position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(238,241,243,.18);z-index:2"><div style="height:100%;width:{{ ep.pctW }};background:var(--ac2)"></div></div></sc-if>
-                </div>
-                <div class="ell" style="margin-top:16px;font:400 26px Inter;color:{{ ep.titleColor }}">{{ ep.t }}</div>
-                <div style="margin-top:8px;font:400 21px/1.4 Inter;color:var(--dim);height:59px;overflow:hidden">{{ ep.blurb }}</div>
-              </div>
-            </sc-for>
-          </div>
-        </div>
-        <div style="padding:44px 96px 0;opacity:.5">
-          <div style="font:400 24px Inter;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:22px">Cast</div>
-          <div style="display:flex">
-            <sc-for list="{{ seriesCast }}" as="c" hint-placeholder-count="5">
-              <div style="width:212px;display:flex;flex-direction:column;align-items:center;margin-right:32px">
-                <div class="phq3" style="width:118px;height:118px;border-radius:999px;background:var(--tile);margin-bottom:14px">
-                  <div style="font:500 38px Inter;color:rgba(238,241,243,.22)">{{ c.ini }}</div>
-                </div>
-                <div style="text-align:center;width:212px">
-                  <div style="font:400 22px/1.3 Inter;white-space:nowrap">{{ c.name }}</div>
-                  <div class="ell" style="font:400 20px/1.3 Inter;color:var(--dim);margin-top:5px">{{ c.role }}</div>
-                </div>
-              </div>
-            </sc-for>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:4;background:var(--sc55);pointer-events:none"></div>
-
-  <div style="position:absolute;left:96px;top:606px;width:512px;z-index:6;border-radius:24px;padding:24px 16px;background:var(--tile);box-shadow:0 0 0 1px rgba(238,241,243,.12),0 44px 100px rgba(0,0,0,.72)">
-    <div style="padding:0 18px 18px">
-      <div style="font:400 20px Inter;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)">S2 E3</div>
-      <div class="ell" style="font:400 28px Inter;color:var(--fg);margin-top:8px">Machines</div>
-    </div>
-    <sc-for list="{{ holdMenu }}" as="m" hint-placeholder-count="5">
-      <div style="display:flex;align-items:center;padding:15px 18px;border-radius:16px;background:{{ m.bg }}">
-        <i class="ph {{ m.icon }}" style="font-size:27px;color:{{ m.fg }};margin-right:18px;flex:none"></i>
-        <div style="font:400 25px Inter;color:{{ m.fg }};min-width:0">{{ m.label }}</div>
-        <sc-if value="{{ m.note }}"><div style="margin-left:auto;font:400 21px Inter;color:var(--dim);white-space:nowrap">{{ m.note }}</div></sc-if>
-      </div>
-    </sc-for>
-  </div>
-
-  <div style="position:absolute;right:96px;bottom:44px;z-index:6;display:flex;align-items:center;font:400 22px Inter;color:var(--dim)">
-    <i class="ph ph-arrow-u-up-left" style="font-size:24px;margin-right:14px"></i><span>Back closes · OK confirms</span>
-  </div>
-</div>
-</div>
-</div>
 </div>
 </section>
 
@@ -602,8 +375,8 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
   <div style="position:absolute;left:96px;right:96px;bottom:72px;z-index:3">
     <div style="position:relative;height:8px;border-radius:4px;background:rgba(238,241,243,.16)">
       <div style="position:absolute;left:0;top:0;bottom:0;width:58%;border-radius:4px;background:rgba(238,241,243,.28)"></div>
-      <div style="position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:4px;background:var(--ac2)"></div>
-      <div style="position:absolute;left:42%;top:-9px;width:26px;height:26px;margin-left:-13px;border-radius:13px;background:var(--ac2);box-shadow:0 0 0 8px var(--ac2-22)"></div>
+      <div style="position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:4px;background:var(--ac)"></div>
+      <div style="position:absolute;left:42%;top:-9px;width:26px;height:26px;margin-left:-13px;border-radius:13px;background:var(--ac);box-shadow:0 0 0 8px var(--ac22)"></div>
     </div>
     <div style="display:flex;align-items:baseline;margin-top:18px;font:400 25px Inter;color:rgba(238,241,243,.65)">
       <span>1:09:12</span>
@@ -728,12 +501,12 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
       <div style="overflow:hidden;margin-top:16px">
         <div style="display:flex;transform:{{ chapterTx }};transition:transform .34s cubic-bezier(.2,.7,.2,1)">
           <sc-for list="{{ chapters }}" as="ch" hint-placeholder-count="5">
-            <div style="width:384px;flex:none;margin-right:28px">
-              <div class="phq3" style="width:100%;height:216px;border-radius:22px;background:var(--tile);box-shadow:{{ ch.ring }}">
-                <i class="ph-fill ph-play" style="font-size:36px;color:{{ ch.playColor }}"></i>
-                <div style="position:absolute;left:14px;bottom:14px;font:400 21px Inter;padding:4px 12px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ ch.at }}</div>
+            <div style="width:300px;flex:none;margin-right:24px">
+              <div class="phq3" style="width:100%;height:169px;border-radius:18px;background:var(--tile);box-shadow:{{ ch.ring }}">
+                <i class="ph-fill ph-play" style="font-size:30px;color:{{ ch.playColor }}"></i>
+                <div style="position:absolute;left:12px;bottom:12px;font:400 19px Inter;padding:3px 10px;border-radius:8px;background:var(--bg72);color:var(--fg)">{{ ch.at }}</div>
               </div>
-              <div class="ell" style="margin-top:14px;font:400 25px Inter;color:{{ ch.titleColor }}">{{ ch.t }}</div>
+              <div class="ell" style="margin-top:12px;font:400 23px Inter;color:{{ ch.titleColor }}">{{ ch.t }}</div>
             </div>
           </sc-for>
         </div>
@@ -749,7 +522,7 @@ body{margin:0;background:#0e0f18;font-family:Inter,system-ui,sans-serif}
 
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;palette&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Slate &amp; sage&quot;,&quot;Nocturne blurple&quot;,&quot;Blurple + apricot&quot;,&quot;Blurple, vivid&quot;,&quot;Blurple + aqua&quot;,&quot;Blurple + rose&quot;,&quot;Dusk &amp; clay&quot;,&quot;Harbour &amp; sand&quot;],&quot;default&quot;:&quot;Blurple, vivid&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Colour&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;palette&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Slate &amp; sage&quot;,&quot;Nocturne blurple&quot;,&quot;Blurple + apricot&quot;,&quot;Blurple + aqua&quot;,&quot;Blurple + rose&quot;,&quot;Dusk &amp; clay&quot;,&quot;Harbour &amp; sand&quot;],&quot;default&quot;:&quot;Blurple + apricot&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Colour&quot;}}">
 const S = (t, y, r, rated, dur, extra) => Object.assign({ t, y, r, rated, dur, initial: t[0] }, extra || {});
 
 const ROWS = [
@@ -852,47 +625,19 @@ const QUALITY = [
   ['1080p', 'transcode · 12 Mbps'], ['720p', 'transcode · 4 Mbps']
 ];
 const PALETTES = [
-  { id: 'sage', name: 'Slate & sage', note: 'cool grey-green, chroma lifted', bg: '#121b1d', tile: '#1b282a', ac: '#8fc79b', ac2: '#d6b47e', sc: '7,13,14' },
-  { id: 'blurple', name: 'Nocturne blurple', note: 'the design system accent, richer ground', bg: '#171a2e', tile: '#232848', ac: '#9689e2', ac2: '#8fa4cc', sc: '9,11,24' },
-  { id: 'blurple-apricot', name: 'Blurple + apricot', note: 'warm complement — most lift', bg: '#181a2b', tile: '#242945', ac: '#9689e2', ac2: '#f0a06a', sc: '10,11,23' },
-  { id: 'blurple-vivid', name: 'Blurple, vivid', note: 'same family, chroma lifted across ground and both accents', bg: '#171a2c', tile: '#222745', ac: '#9689e2', ac2: '#ef9a65', sc: '10,11,24' },
-  { id: 'blurple-aqua', name: 'Blurple + aqua', note: 'cool split-complement', bg: '#161a2c', tile: '#212945', ac: '#9689e2', ac2: '#55c9c1', sc: '9,11,23' },
-  { id: 'blurple-rose', name: 'Blurple + rose', note: 'neighbouring warm, gentlest contrast', bg: '#191a2c', tile: '#262945', ac: '#9689e2', ac2: '#ee7f9c', sc: '11,11,23' },
-  { id: 'clay', name: 'Dusk & clay', note: 'warm violet ground, terracotta second', bg: '#1d1729', tile: '#2a2039', ac: '#b99ce0', ac2: '#d99677', sc: '13,9,19' },
-  { id: 'harbour', name: 'Harbour & sand', note: 'deep teal with a sand highlight', bg: '#0d1c21', tile: '#16282e', ac: '#7dc0c8', ac2: '#dcbf8c', sc: '5,13,16' }
+  { id: 'sage', name: 'Slate & sage', note: 'cool grey-green, quietest of the four', bg: '#131719', tile: '#1c2124', ac: '#a3bfa8', ac2: '#b9a98c', sc: '9,11,12' },
+  { id: 'blurple', name: 'Nocturne blurple', note: 'the design system accent, unflooded', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#93a0b8', sc: '9,10,17' },
+  { id: 'blurple-apricot', name: 'Blurple + apricot', note: 'warm complement — most lift, still soft', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#e5a06d', sc: '9,10,17' },
+  { id: 'blurple-aqua', name: 'Blurple + aqua', note: 'cool split-complement, keeps the calm', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#6fc3bd', sc: '9,10,17' },
+  { id: 'blurple-rose', name: 'Blurple + rose', note: 'neighbouring warm, gentlest contrast', bg: '#161826', tile: '#1f2233', ac: '#9d93d6', ac2: '#e2879e', sc: '9,10,17' },
+  { id: 'clay', name: 'Dusk & clay', note: 'warm violet ground, terracotta second', bg: '#191621', tile: '#221e2c', ac: '#b6a6cc', ac2: '#c49a88', sc: '11,9,15' },
+  { id: 'harbour', name: 'Harbour & sand', note: 'deep teal with a sand highlight', bg: '#0f181b', tile: '#182226', ac: '#93b6bb', ac2: '#c8b795', sc: '6,11,13' }
 ];
 const rgbOf = (hex) => [1, 3, 5].map(i => parseInt(hex.substr(i, 2), 16)).join(',');
 
 const CHAPTERS = [
   ['0:00', 'Opening'], ['11:26', 'Sietch Tabr'], ['38:14', 'The gom jabbar'],
   ['1:02:50', 'Arrakeen'], ['1:36:18', 'Riding the worm'], ['2:11:04', 'The reckoning']
-];
-const EPISODES = [
-  ['E1', 'Freedom Day', '58m', 'A sheriff who kept the peace for decades makes a request no one expects.', 100, 0],
-  ['E2', 'Holston\u2019s Pick', '52m', 'Juliette is handed a badge she never asked for.', 100, 0],
-  ['E3', 'Machines', '47m', 'A generator failure forces the silo to sit in the dark.', 62, 1],
-  ['E4', 'Truth', '55m', 'A relic points to a floor that appears on no map.', 0, 1],
-  ['E5', 'The Janitor\u2019s Boy', '51m', 'Judicial tightens its grip as an old uprising resurfaces.', 0, 0]
-];
-const SEASONS = ['Season 1', 'Season 2'];
-const HOLD_MENU = [
-  ['ph-check-circle', 'Mark as watched', ''],
-  ['ph-checks', 'Mark all up to here', 'S2 E1–E3'],
-  ['ph-youtube-logo', 'Watch recap', 'YouTube'],
-  ['ph-play-circle', 'Play from start', '47m'],
-  ['ph-info', 'Episode details', '']
-];
-const EP_MENU = [
-  ['ph-check-circle', 'Mark as watched'], ['ph-checks', 'Mark season watched'],
-  ['ph-youtube-logo', 'Watch recap on YouTube'], ['ph-info', 'Episode details']
-];
-const SERIES_CAST = [
-  ['Rebecca Ferguson', 'Juliette Nichols'], ['Tim Robbins', 'Bernard Holland'], ['Common', 'Robert Sims'],
-  ['Harriet Walter', 'Martha Walker'], ['Chinaza Uche', 'Paul Billings'], ['Steve Zahn', 'Solo']
-];
-const SERIES_ACTIONS = [
-  ['ph-monitor-play', '4K HDR'], ['ph-speaker-high', 'Atmos 5.1'],
-  ['ph-subtitles', 'Subtitles off'], ['ph-plus-circle', 'My list']
 ];
 const CAST = [
   ['Timothée Chalamet', 'Paul Atreides'], ['Zendaya', 'Chani'], ['Rebecca Ferguson', 'Lady Jessica'],
@@ -902,7 +647,7 @@ const EXTRAS = [['Official trailer', '2:31'], ['Behind the sands', '8:14'], ['Cr
 
 
 class Component extends DCLogic {
-  state = { pal: 3, det: 0, ser: 0, epI: 0, active: 'j', j: { r: 0, cols: [0, 0, 0, 0, 0, 0] }, l: { r: 2, cols: [0, 0, 1, 0, 0, 0] } };
+  state = { pal: 2, det: 0, active: 'j', j: { r: 0, cols: [0, 0, 0, 0, 0, 0] }, l: { r: 2, cols: [0, 0, 1, 0, 0, 0] } };
 
   view3(k) {
     const f = this.state[k];
@@ -932,7 +677,6 @@ class Component extends DCLogic {
       tyD: 'translateY(' + (-Math.max(0, f.r - 1) * DENSE_H) + 'px)',
       hero: {
         t: item.t, rowTitle: ROWS3[f.r].title,
-        rated: item.rated || '', r: item.r || '', d: item.d || '',
         sub: item.sub || (item.y ? item.y + ' \u00b7 ' + item.dur : ''),
         left: item.pct ? (100 - item.pct) + '% remaining' : '',
         cta: item.pct ? 'Resume' : 'Play'
@@ -947,7 +691,6 @@ class Component extends DCLogic {
       '--bg': p.bg, '--tile': p.tile, '--ac': p.ac, '--ac2': p.ac2,
       '--ac40': 'rgba(' + ac + ',.4)', '--ac28': 'rgba(' + ac + ',.28)', '--ac22': 'rgba(' + ac + ',.22)',
       '--ac20': 'rgba(' + ac + ',.2)', '--ac14': 'rgba(' + ac + ',.14)',
-      '--ac2-22': 'rgba(' + rgbOf(p.ac2) + ',.22)',
       '--bg72': 'rgba(' + bg + ',.72)', '--bg86': 'rgba(' + bg + ',.86)', '--bg18': 'rgba(' + bg + ',.18)', '--bg0': 'rgba(' + bg + ',0)',
       '--sc95': 'rgba(' + p.sc + ',.95)', '--sc94': 'rgba(' + p.sc + ',.94)', '--sc90': 'rgba(' + p.sc + ',.9)',
       '--sc72': 'rgba(' + p.sc + ',.72)', '--sc55': 'rgba(' + p.sc + ',.55)', '--sc50': 'rgba(' + p.sc + ',.5)',
@@ -965,13 +708,6 @@ class Component extends DCLogic {
       if (!d) return;
       e.preventDefault();
       const k = this.state.active;
-      if (k === 'e') {
-        if (this.state.hold) { this.setState({ hold: 0 }); return; }
-        if (d[0]) this.setState({ ser: Math.max(0, Math.min(2, this.state.ser + d[0])) });
-        else if (this.state.ser === 1) this.setState({ epI: Math.max(0, Math.min(EPISODES.length - 1, (this.state.epI || 0) + d[1])) });
-        else if (this.state.ser === 2) this.setState({ sCastI: Math.max(0, Math.min(SERIES_CAST.length - 1, (this.state.sCastI || 0) + d[1])) });
-        return;
-      }
       if (k === 'd') {
         if (d[0]) this.setState({ det: d[0] > 0 ? 1 : 0 });
         else if (this.state.det) this.setState({ castI: Math.max(0, Math.min(CAST.length - 1, (this.state.castI || 0) + d[1])) });
@@ -1001,75 +737,13 @@ class Component extends DCLogic {
         pick: () => this.setPal(i)
       })),
       det: {
-        ty: 'translateY(' + (this.state.det ? -720 : 0) + 'px)',
+        ty: 'translateY(' + (this.state.det ? -724 : 0) + 'px)',
         artOpacity: this.state.det ? .35 : 1,
         castColor: this.state.det ? 'var(--fg)' : 'var(--dim)',
         caretColor: this.state.det ? 'transparent' : 'var(--ac)',
         down: () => this.setState({ active: 'd', det: this.state.det ? 0 : 1 })
       },
       actD: () => this.setState({ active: 'd' }),
-      actE: () => this.setState({ active: 'e' }),
-      ser: {
-        ty: 'translateY(' + (this.state.ser === 2 ? -219 : 0) + 'px)',
-        artOpacity: this.state.ser ? .3 : 1,
-        headOpacity: this.state.ser ? .5 : 1,
-        epColor: this.state.ser === 1 ? 'var(--fg)' : 'var(--dim)',
-        railTx: 'translateX(' + (-Math.max(0, (this.state.epI || 0) - 1) * 508) + 'px)',
-        menuOpen: this.state.hold ? 1 : 0,
-        menuX: (96 + Math.min(this.state.epI || 0, 1) * 508) + 'px',
-        menuEp: (EPISODES[this.state.epI || 0] || EPISODES[0])[0] + ' · ' + (EPISODES[this.state.epI || 0] || EPISODES[0])[1],
-        holdHint: this.state.ser === 1 ? 'var(--dim)' : 'transparent',
-        down: () => this.setState({ active: 'e', ser: this.state.ser >= 1 ? 0 : 1, hold: 0 })
-      },
-      holdEpisodes: EPISODES.map(([no, t, dur, blurb, pct, recap], i) => ({
-        no, t, dur, blurb, pct, recap, pctW: pct + '%',
-        watched: pct === 100 ? 1 : 0,
-        dim: i === 2 ? 1 : .4,
-        ring: i === 2 ? '0 0 0 3px var(--ac), 0 24px 54px rgba(0,0,0,.6)' : '0 0 0 1px rgba(238,241,243,.06)',
-        playColor: i === 2 ? 'var(--ac)' : 'rgba(238,241,243,.26)',
-        titleColor: i === 2 ? 'var(--fg)' : 'rgba(238,241,243,.72)'
-      })),
-      holdMenu: HOLD_MENU.map(([icon, label, note], i) => ({
-        icon, label, note,
-        bg: i === 0 ? 'var(--ac14)' : 'transparent',
-        fg: i === 0 ? 'var(--fg)' : 'rgba(238,241,243,.72)'
-      })),
-      epMenu: EP_MENU.map(([icon, label], i) => ({
-        icon, label,
-        bg: i === 0 ? 'var(--ac14)' : 'transparent',
-        fg: i === 0 ? 'var(--fg)' : 'rgba(238,241,243,.7)'
-      })),
-      seriesCast: SERIES_CAST.map(([name, role], i) => {
-        const on = this.state.ser === 2 && i === (this.state.sCastI || 0);
-        return {
-          name, role, ini: name.split(' ').map(w => w[0]).join(''),
-          ring: on ? '0 0 0 3px var(--ac)' : 'none',
-          nameColor: on ? 'var(--fg)' : 'rgba(238,241,243,.78)'
-        };
-      }),
-      seasons: SEASONS.map((label, i) => ({
-        label,
-        fg: i === 1 ? 'var(--bg)' : 'var(--dim)',
-        bg: i === 1 ? 'var(--ac)' : 'transparent',
-        ring: i === 1 ? 'none' : '0 0 0 1px rgba(238,241,243,.16)'
-      })),
-      seriesActions: SERIES_ACTIONS.map(([icon, label]) => ({ icon, label })),
-      episodes: EPISODES.map(([no, t, dur, blurb, pct, recap], i) => {
-        const on = this.state.ser === 1 && i === (this.state.epI || 0);
-        return {
-          no, t, dur, blurb, pct, recap, pctW: pct + '%',
-          watched: pct === 100 ? 1 : 0,
-          holdStart: () => {
-            this.setState({ active: 'e', ser: 1, epI: i, hold: 0 });
-            clearTimeout(this._hold);
-            this._hold = setTimeout(() => this.setState({ hold: 1 }), 450);
-          },
-          holdEnd: () => clearTimeout(this._hold),
-          ring: on ? '0 0 0 3px var(--ac), 0 24px 54px rgba(0,0,0,.6)' : '0 0 0 1px rgba(238,241,243,.06)',
-          playColor: on ? 'var(--ac)' : 'rgba(238,241,243,.26)',
-          titleColor: on ? 'var(--fg)' : 'rgba(238,241,243,.72)'
-        };
-      }),
       viewJ: this.view3('j'),
       viewL: this.view3('l'),
       actJ: () => this.setState({ active: 'j' }),
@@ -1105,7 +779,7 @@ class Component extends DCLogic {
         fg: i === 3 ? 'var(--ac)' : 'var(--fg)',
         labelColor: i === 3 ? 'var(--fg)' : 'rgba(238,241,243,.6)'
       })),
-      chapterTx: 'translateX(-412px)',
+      chapterTx: 'translateX(-324px)',
       chapters: CHAPTERS.map(([at, t], i) => ({
         at, t,
         ring: i === 3 ? '0 0 0 2px var(--ac), 0 20px 44px rgba(0,0,0,.6)' : '0 0 0 1px rgba(238,241,243,.08)',
