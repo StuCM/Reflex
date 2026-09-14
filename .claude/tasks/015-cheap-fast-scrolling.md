@@ -1,7 +1,7 @@
 ---
 id: 015
 slug: cheap-fast-scrolling
-status: pending-tv
+status: done
 branch: crew/015-cheap-fast-scrolling
 model: sonnet
 env: laptop

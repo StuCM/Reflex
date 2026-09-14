@@ -5,10 +5,6 @@ Task files are the source of truth; this is the glance view.
 
 | id | task | status | env | branch |
 |---|---|---|---|---|
-| 012 | Season recaps on a show, but only when asked for | `pending-tv` | laptop | crew/012-recaps-rail *(gone)* |
-| 015 | Scrolling fast costs nothing until you stop | `pending-tv` | laptop | crew/015-cheap-fast-scrolling *(gone)* |
-| 021 | A tile keeps its picture only while it is the same film | `pending-tv` | laptop | crew/021-tile-keeps-its-own-picture *(gone)* |
-| 022 | The series theme, on the show page | `pending-tv` | laptop | crew/022-series-theme-music *(gone)* |
 | 027 | A poster we already have is drawn straight away, moving or not | `pending-tv` | laptop | crew/027-a-cached-poster-paints-while-the-rail-moves *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
@@ -21,27 +17,27 @@ Task files are the source of truth; this is the glance view.
 | 009 | The rail goes portrait, and the still moves to the series page | `done` | laptop | crew/009-portrait-rail *(gone)* |
 | 010 | OK on an episode opens the series, at that episode | `done` | laptop | crew/010-series-not-episode *(gone)* |
 | 011 | Up next, when an episode ends | `done` | laptop | crew/011-play-next *(gone)* |
+| 012 | Season recaps on a show, but only when asked for | `done` | laptop | crew/012-recaps-rail *(gone)* |
 | 013 | The Mantis palette, and motion that does not jar | `done` | laptop | crew/013-palette-and-motion *(gone)* |
 | 014 | The detail page's face | `done` | laptop | crew/014-detail-page-face *(gone)* |
+| 015 | Scrolling fast costs nothing until you stop | `done` | laptop | crew/015-cheap-fast-scrolling *(gone)* |
 | 016 | Choose the copy, the audio and the subtitles before pressing Play | `done` | laptop | crew/016-detail-choosers *(gone)* |
 | 017 | The player's controls, to the design | `done` | laptop | crew/017-player-osd *(gone)* |
 | 018 | Getting things out of Continue watching | `done` | laptop | crew/018-clear-continue-watching *(gone)* |
 | 019 | One suite, many files, and a free port | `done` | laptop | crew/019-split-the-smoke-suite *(gone)* |
 | 020 | One stylesheet per screen, and the tokens they share | `done` | laptop | crew/020-split-the-stylesheet *(gone)* |
+| 021 | A tile keeps its picture only while it is the same film | `done` | laptop | crew/021-tile-keeps-its-own-picture *(gone)* |
+| 022 | The series theme, on the show page | `done` | laptop | crew/022-series-theme-music *(gone)* |
 | 023 | Discovery, drawn from TMDB, asking the servers only when it must | `done` | laptop | crew/023-tmdb-first-discovery *(gone)* |
 | 024 | The film page fills the screen, and Play stops being the biggest thing on it | `done` | laptop | crew/024-the-film-page-fits-the-screen *(gone)* |
 | 025 | The player, to the design — and up goes to the trackbar | `done` | laptop | crew/025-the-player-matches-the-design *(gone)* |
 | 026 | A recap that cannot play says so, instead of showing black | `done` | laptop | crew/026-recaps-fall-back-when-the-embed-is-dead *(gone)* |
 | 028 | One press moves the strip and changes one tile, not twelve | `done` | laptop | crew/028-the-rail-recycles-one-tile-a-move *(gone)* |
 | 029 | The migration bridge becomes a named test seam | `done` | laptop | crew/029-delete-the-bridge *(gone)* |
-| 030 | The layer rules resolve imports instead of matching text | `done` | laptop | crew/030-the-layers-become-import-lint |
+| 030 | The layer rules resolve imports instead of matching text | `done` | laptop | crew/030-the-layers-become-import-lint *(gone)* |
 
 ## Waiting on you
 
-- **012 Season recaps on a show, but only when asked for** — Only a human at the panel can clear a pending-tv task.
-- **015 Scrolling fast costs nothing until you stop** — Only a human at the panel can clear a pending-tv task.
-- **021 A tile keeps its picture only while it is the same film** — Only a human at the panel can clear a pending-tv task.
-- **022 The series theme, on the show page** — Only a human at the panel can clear a pending-tv task.
 - **027 A poster we already have is drawn straight away, moving or not** — Only a human at the panel can clear a pending-tv task.
 
 ## In flight

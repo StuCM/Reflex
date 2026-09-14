@@ -1,7 +1,7 @@
 ---
 id: 021
 slug: tile-keeps-its-own-picture
-status: pending-tv
+status: done
 branch: crew/021-tile-keeps-its-own-picture
 model: sonnet
 env: laptop

@@ -1,7 +1,7 @@
 ---
 id: 012
 slug: recaps-rail
-status: pending-tv
+status: done
 branch: crew/012-recaps-rail
 model: sonnet
 env: laptop
@@ -310,3 +310,29 @@ without it, and accepted both deviations below. No findings.
   smoke suite.** The key is read once at load and the harness always sets one, so
   the only honest way to see a keyless show page without a second page load is to
   switch the gate off and reopen the page.
+
+## Closed 2026-09-14 — done, but the recaps do not play
+
+Stuart, after the 0.3.2 deploy: *"Task 12 the recap needs rethinking the videos
+don't play but lets mark it as done."*
+
+**What works:** the rail appears on a show, only when asked for, and searches
+YouTube on a keypress rather than on the page opening. The quota discipline this
+task was really about holds.
+
+**What does not:** pressing OK on a recap gives a black frame. Two separate
+causes, both already established:
+
+1. The YouTube IFrame embed loads its shell on Chromium 53 but never fetches
+   media — confirmed over CDP on the panel.
+2. Task 026 fixed the *symptom* (the offer now says "cannot play YouTube"
+   instead of showing black) but not the cause, and was never meant to.
+
+So this is closed as **the quota-safe rail**, not as working playback. Playing a
+recap at all needs a different route — deep-linking to the TV's own YouTube app
+is the one known-dependable option and it leaves Reflex — and that is a new
+task, not a fix to this one.
+
+**This matters right now:** the 2026-09-14 design puts *"Watch recap · YouTube"*
+in the long-press menu (`HOLD_MENU` in `design/Mantis Screens.dc.html`, screen
+6e). Whatever builds that menu inherits this problem.

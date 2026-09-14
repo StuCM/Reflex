@@ -1,7 +1,7 @@
 ---
 id: 022
 slug: series-theme-music
-status: pending-tv
+status: done
 branch: crew/022-series-theme-music
 model: sonnet
 env: laptop
