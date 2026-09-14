@@ -6,6 +6,7 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 027 | A poster we already have is drawn straight away, moving or not | `pending-tv` | laptop | crew/027-a-cached-poster-paints-while-the-rail-moves *(gone)* |
+| 031 | Holding OK on an episode opens a menu against the card | `draft` | laptop | crew/031-long-press-opens-a-menu-on-an-episode *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -39,6 +40,7 @@ Task files are the source of truth; this is the glance view.
 ## Waiting on you
 
 - **027 A poster we already have is drawn straight away, moving or not** — Only a human at the panel can clear a pending-tv task.
+- **031 Holding OK on an episode opens a menu against the card** — spec needs your approval before anyone starts
 
 ## In flight
 
