@@ -1,11 +1,11 @@
 ---
 id: 031
 slug: long-press-opens-a-menu-on-an-episode
-status: review
+status: done
 branch: crew/031-long-press-opens-a-menu-on-an-episode
 model: sonnet
 env: laptop
-rounds: 1
+rounds: 2
 files:
   - src/screen/showpage.ts
   - src/view/menu.ts
@@ -15,8 +15,8 @@ files:
   - tools/icons.js
   - src/view/glyphs.ts
 gate: pass
-gateSha: e5b9845e2544ca1bd3560601ec096d1ee4e33f08
-gateAt: 2026-09-14T16:19:15.385Z
+gateSha: 36c28ee07d980576b7b37b138633cc906630e287
+gateAt: 2026-09-14T16:38:04.394Z
 ---
 
 <!-- files: amended by the worker. The spec's own constraints require the four
@@ -169,20 +169,24 @@ report so the panel check knows what to look at first.
 - `css/base.css` and the shared tokens.
 
 ## Definition of done
-- [ ] Holding OK on an episode for ~500ms opens a menu anchored to that card,
+- [x] Holding OK on an episode for ~500ms opens a menu anchored to that card,
       with exactly four rows in the order above
-- [ ] A normal OK press still plays the episode, and the smoke suite proves it
-- [ ] The held card stays at full brightness while the others dim
-- [ ] ▲▼ walk the rows, OK confirms, ◀▶ and BACK close
-- [ ] Each of the four actions does what it says, and marking watched survives a
-      reload
-- [ ] The menu is clamped on screen for the first and last episode in the list,
+- [x] A normal OK press still plays the episode, and the smoke suite proves it
+- [x] The held card stays at full brightness while the others dim
+- [x] ▲▼ walk the rows, OK confirms, ◀▶ and BACK close
+- [x] Each of the four actions does what it says, and marking watched survives a
+      reload — *the four actions yes; the reload half is asserted as "the
+      scrobble was issued against every copy", because the mock does not model
+      `viewCount` and `dev/mock-plex.js` is not in `files:`. See the judgements
+      section.*
+- [x] The menu is clamped on screen for the first and last episode in the list,
       not only a middle one
-- [ ] `npm run smoke -- show` passes, and `npm run verify` is green at **96/96
+- [x] `npm run smoke -- show` passes, and `npm run verify` is green at **96/96
       plus the steps this adds** — no existing step removed or weakened
-- [ ] the gate passes (`npx crew gate <this file>`)
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+      (104/104, eight added)
+- [x] the gate passes (`npx crew gate <this file>`)
+- [x] no file outside `files:` is touched (`files:` amended by two, see above)
+- [x] commits follow the convention (the hook enforces it)
 
 ## Docs the orchestrator applies at close
 - `CLAUDE.md`'s show page bullet gains the long press and the keyup rule — that
@@ -237,6 +241,8 @@ report so the panel check knows what to look at first.
   E1–E3 reading *watched* and E4 not — it fails on `episodeIndex + 2`, checked.
   (2) Record the ◀▶ decision rather than leave it implicit: done above. Smoke
   104/104.
+- **Round 2 — PASS.** Both fixes verified independently, `npm run verify` rerun
+  at 104/104, and no file outside the amended `files:` touched.
 
 ## Graph writes proposed
 - **Decision:** OK on an episode acts on `keyup`, not `keydown`. Rationale: a
