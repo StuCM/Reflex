@@ -1,7 +1,7 @@
 ---
 id: 031
 slug: long-press-opens-a-menu-on-an-episode
-status: draft
+status: building
 branch: crew/031-long-press-opens-a-menu-on-an-episode
 model: sonnet
 env: laptop

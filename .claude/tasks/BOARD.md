@@ -5,8 +5,7 @@ Task files are the source of truth; this is the glance view.
 
 | id | task | status | env | branch |
 |---|---|---|---|---|
-| 027 | A poster we already have is drawn straight away, moving or not | `pending-tv` | laptop | crew/027-a-cached-poster-paints-while-the-rail-moves *(gone)* |
-| 031 | Holding OK on an episode opens a menu against the card | `draft` | laptop | crew/031-long-press-opens-a-menu-on-an-episode *(gone)* |
+| 031 | Holding OK on an episode opens a menu against the card | `building` | laptop | crew/031-long-press-opens-a-menu-on-an-episode *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -33,15 +32,15 @@ Task files are the source of truth; this is the glance view.
 | 024 | The film page fills the screen, and Play stops being the biggest thing on it | `done` | laptop | crew/024-the-film-page-fits-the-screen *(gone)* |
 | 025 | The player, to the design — and up goes to the trackbar | `done` | laptop | crew/025-the-player-matches-the-design *(gone)* |
 | 026 | A recap that cannot play says so, instead of showing black | `done` | laptop | crew/026-recaps-fall-back-when-the-embed-is-dead *(gone)* |
+| 027 | A poster we already have is drawn straight away, moving or not | `done` | laptop | crew/027-a-cached-poster-paints-while-the-rail-moves *(gone)* |
 | 028 | One press moves the strip and changes one tile, not twelve | `done` | laptop | crew/028-the-rail-recycles-one-tile-a-move *(gone)* |
 | 029 | The migration bridge becomes a named test seam | `done` | laptop | crew/029-delete-the-bridge *(gone)* |
 | 030 | The layer rules resolve imports instead of matching text | `done` | laptop | crew/030-the-layers-become-import-lint *(gone)* |
 
 ## Waiting on you
 
-- **027 A poster we already have is drawn straight away, moving or not** — Only a human at the panel can clear a pending-tv task.
-- **031 Holding OK on an episode opens a menu against the card** — spec needs your approval before anyone starts
+Nothing.
 
 ## In flight
 
-Nothing running.
+- **031 Holding OK on an episode opens a menu against the card** — `building` on `crew/031-long-press-opens-a-menu-on-an-episode`

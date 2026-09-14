@@ -1,7 +1,7 @@
 ---
 id: 027
 slug: a-cached-poster-paints-while-the-rail-moves
-status: pending-tv
+status: done
 branch: crew/027-a-cached-poster-paints-while-the-rail-moves
 model: sonnet
 env: laptop
