@@ -161,6 +161,18 @@ module.exports = function (h) {
     });
   }
 
+  function episodeRows() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(document.querySelectorAll('.sh-episode'), function (r) {
+        function text(selector) {
+          const found = r.querySelector(selector);
+          return found ? found.textContent.trim() : '';
+        }
+        return { num: text('.sh-ep-num'), seen: text('.sh-ep-seen') };
+      });
+    });
+  }
+
   /* Down to the end of the series, stopping when the focus stops moving or
      steps off the list onto the recaps strip below it. */
   function toLastEpisode(left) {
@@ -824,6 +836,81 @@ module.exports = function (h) {
               if (title !== held.title) {
                 throw new Error('the film page opened on "' + title + '", not ' + held.title);
               }
+            })
+            .then(backToLibrary);
+        });
+      })
+
+      .then(function () {
+        return step('Mark all up to here marks that stretch and no more', function () {
+          let before = 0;
+          return openShowPage(themed)
+            .then(function () {
+              return page.waitForTimeout(400);
+            })
+            .then(function () {
+              return press('ArrowUp', 12); // to the series chips
+            })
+            .then(function () {
+              return press('ArrowDown'); // and back onto the first episode
+            })
+            .then(function () {
+              return press('ArrowDown', 2); // down to the third
+            })
+            .then(focusedEpisodeRow)
+            .then(function (ep) {
+              if (ep.num !== '3') throw new Error('landed on episode ' + ep.num + ', wanted 3');
+              before = h.deckWrites.length;
+            })
+            .then(holdOk)
+            .then(holdMenu)
+            .then(function (st) {
+              if (!/^S\d+ E1–E3$/.test(st.rows[1].note)) {
+                throw new Error('the row spans "' + st.rows[1].note + '", not E1 to E3');
+              }
+            })
+            .then(function () {
+              return press('ArrowDown');
+            })
+            .then(holdMenu)
+            .then(function (st) {
+              if (selected(st) !== 'Mark all up to here') {
+                throw new Error('one down landed on "' + selected(st) + '"');
+              }
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return page.waitForTimeout(900);
+            })
+            .then(function () {
+              /* One copy of this show, so one scrobble an episode: three
+                 episodes, three writes, and a fourth would mean the slice runs
+                 past the card that was held. */
+              const wrote = h.deckWrites.slice(before).filter(function (u) {
+                return u.indexOf('/:/scrobble') >= 0;
+              });
+              if (wrote.length !== 3) {
+                throw new Error(
+                  'E1 to E3 scrobbled ' + wrote.length + ' times: ' + (wrote.join(', ') || 'never'),
+                );
+              }
+            })
+            .then(episodeRows)
+            .then(function (rows) {
+              const seen = {};
+              rows.forEach(function (r) {
+                seen[r.num] = r.seen;
+              });
+              ['1', '2', '3'].forEach(function (n) {
+                if (seen[n] !== 'watched') {
+                  throw new Error('episode ' + n + ' reads "' + seen[n] + '", not watched');
+                }
+              });
+              /* The control: the stretch stops at the card that was held. */
+              if (seen['4'] === undefined) throw new Error('no fourth episode to check against');
+              if (seen['4'] === 'watched') throw new Error('episode 4 was marked as well');
             })
             .then(backToLibrary);
         });
