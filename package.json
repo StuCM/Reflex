@@ -23,6 +23,9 @@
     "lint:names": "eslint",
     "build": "vite build",
     "smoke:built": "npm run build && node dev/smoke.js --built",
+    "docs:dev": "blume dev",
+    "docs:build": "blume build",
+    "docs:validate": "blume validate",
     "crew:doctor": "crew doctor",
     "crew:gate": "crew gate",
     "crew:check": "npm --prefix crew run verify"
@@ -31,6 +34,7 @@
     "@fontsource/inter": "^5.3.0",
     "@phosphor-icons/core": "^2.1.1",
     "@stucm/crew": "file:./crew",
+    "blume": "^1.6.5",
     "eslint": "^10.10.0",
     "eslint-plugin-jsdoc": "^64.3.8",
     "eslint-plugin-unicorn": "^74.0.0",

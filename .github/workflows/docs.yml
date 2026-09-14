@@ -1,14 +1,13 @@
 name: docs
 
-# Only when the docs themselves change. The site is built from the repository's
-# own docs/ — docs-site/ holds the generator and its config, nothing else — so
-# a change to src/ cannot alter the published pages and need not rebuild them.
+# Only when the docs themselves change: a commit touching src/ cannot alter the
+# published pages, so it should not spend a Pages deploy.
 on:
   push:
     branches: [main]
     paths:
       - 'docs/**'
-      - 'docs-site/**'
+      - 'blume.config.ts'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -26,9 +25,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs-site
     steps:
       - uses: actions/checkout@v4
 
@@ -36,19 +32,18 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: docs-site/package-lock.json
 
       - run: npm ci
 
-      - run: npm run build
+      - run: npm run docs:build
 
       # Fails the build on a broken internal link rather than publishing one.
       - name: validate links
-        run: npx blume validate
+        run: npm run docs:validate
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs-site/dist
+          path: dist
 
   deploy:
     needs: build

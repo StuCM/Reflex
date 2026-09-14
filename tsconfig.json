@@ -21,5 +21,10 @@
     "noEmit": true,
     "types": []
   },
-  "include": ["src/**/*.ts", "types/**/*.d.ts", "*.config.ts"]
+  // This describes the app, and nothing else. The configs here are `.mts`
+  // (vite, vitest), so the `*.config.ts` this used to carry matched no file
+  // at all until blume.config.ts arrived — at which point it pulled blume's
+  // whole type graph in and `setTimeout` started returning NodeJS.Timeout
+  // instead of a number.
+  "include": ["src/**/*.ts", "types/**/*.d.ts"]
 }

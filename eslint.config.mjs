@@ -83,7 +83,20 @@ const debtBlocks = [...new Set(DEBT.map((d) => d.file))].map((file) => ({
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', 'build/**', 'dist/**', 'design/**', 'js/**', 'dev/**', 'tools/**'],
+    /* `.blume/` is the runtime blume generates from docs/ on every build, and
+       `dist/` is its output — neither is ours to lint. crew/ is a separate
+       package carrying its own lint and formatter config. */
+    ignores: [
+      'node_modules/**',
+      'build/**',
+      'dist/**',
+      'design/**',
+      'js/**',
+      'dev/**',
+      'tools/**',
+      '.blume/**',
+      'crew/**',
+    ],
   },
   {
     files: ['src/**/*.ts'],

@@ -17,3 +17,6 @@ dev/screenshots/
 .claude/settings.local.json
 build/
 dist/
+
+# blume generates this from docs/ on every build.
+.blume/
