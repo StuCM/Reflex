@@ -5,12 +5,17 @@ look right and be wrong.
 
 ## Hard constraints
 
-- **Chromium 53, permanently.** No `async`/`await`, no object spread or rest,
+- **Chromium 53, permanently.** No object spread or rest,
   no `Object.entries`, no optional chaining or `??`, no CSS Grid, no
   `position: sticky`, no flexbox `gap`. `const`, `let`, arrow functions,
   template literals, destructuring, `Map` and `Set` are all available and
   preferred — this is ES2015 apart from the list above, and writing ES5 here is
   a misreading, not caution.
+- **`async`/`await` is available and preferred over `.then()` chains.**
+  `build.target: 'chrome53'` rewrites it to a generator, which the panel has had
+  since Chrome 39 — verified 2026-09-15 by building one and reading the bundle.
+  This file said the opposite until 2026-09-15, and `CLAUDE.md` did too, which
+  is why 0 of 46 files in `src/` used it.
 - **Animate only `transform` and `opacity`.** A shadow, filter or blur
   transition forces layout and paint on a 2018 SoC.
 - **`Array.prototype.sort` is not stable.** Above ten elements, equal items
