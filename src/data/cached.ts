@@ -33,10 +33,10 @@ function one<T>(key: string) {
 /** Cached for maxAge, hit or miss. */
 function daily<T>(prefix: string, maxAge: number) {
   return {
-    get: (id: string) =>
-      get<Stamped<T>>(prefix + id).then((hit) =>
-        hit && Date.now() - hit.at < maxAge ? hit.value : undefined,
-      ),
+    get: async (id: string) => {
+      const hit = await get<Stamped<T>>(prefix + id);
+      return hit && Date.now() - hit.at < maxAge ? hit.value : undefined;
+    },
     put: (id: string, value: T) => put(prefix + id, { at: Date.now(), value }),
   };
 }
@@ -45,12 +45,12 @@ function daily<T>(prefix: string, maxAge: number) {
    "never asked", null for "asked, and there is none". */
 function misses<T>(prefix: string, maxAge: number) {
   return {
-    get: (id: string) =>
-      get<Stamped<T | null>>(prefix + id).then((hit) => {
-        if (!hit) return undefined;
-        if (hit.value) return hit.value;
-        return Date.now() - hit.at < maxAge ? null : undefined;
-      }),
+    get: async (id: string) => {
+      const hit = await get<Stamped<T | null>>(prefix + id);
+      if (!hit) return undefined;
+      if (hit.value) return hit.value;
+      return Date.now() - hit.at < maxAge ? null : undefined;
+    },
     put: (id: string, value: T | null) => put(prefix + id, { at: Date.now(), value }),
   };
 }
