@@ -21,8 +21,8 @@ files:
   - dev/smoke/sections.js
   - dev/smoke/recaps.js
 gate: pass
-gateSha: 54734fcb0e0e149a06f950d7935ec79a808a6fdd
-gateAt: 2026-09-15T08:09:25.494Z
+gateSha: 63c76ceea379015457363f1e36e4ada6db39eda7
+gateAt: 2026-09-15T08:25:08.314Z
 ---
 
 # The series page carries its episodes across, not down
