@@ -496,17 +496,30 @@ function clearHold(): void {
   holdTimer = null;
 }
 
+let okHeld = false;
+
 function okDown(): void {
   /* A second keydown while the timer runs is the remote repeating, which is the
      same hold the timer is waiting out — the player trusts that signal too. */
   if (holdTimer) {
-    openHoldMenu();
+    hold();
     return;
   }
-  holdTimer = setTimeout(openHoldMenu, HOLD_MS);
+  holdTimer = setTimeout(hold, HOLD_MS);
+}
+
+/* The remote goes on repeating keydown for as long as OK is held, and those
+   repeats arrive after the menu is up — where key() hands them to the menu as
+   confirmations, firing the focused row again and again. `okHeld` is what makes
+   a hold one gesture rather than a stream of presses; it is cleared only by the
+   release. */
+function hold(): void {
+  okHeld = true;
+  openHoldMenu();
 }
 
 function okUp(): void {
+  okHeld = false;
   if (!holdTimer) return; // the menu opened, or this press began elsewhere
   clearHold();
   playFocused();
@@ -638,6 +651,7 @@ function chooseRecap(): void {
 }
 
 export function key(code: number): boolean {
+  if (code === KEY.OK && okHeld) return true;
   if (menu.isOpen()) return menu.key(code);
 
   if (zone === 'seasons') {

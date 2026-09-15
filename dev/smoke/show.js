@@ -737,6 +737,58 @@ module.exports = function (h) {
       })
 
       .then(function () {
+        /* The remote repeats keydown for as long as OK is held. Playwright's
+           keyboard.down() sends exactly one, so holdOk() above cannot produce
+           the stream the panel produces — and the bug this catches shipped to
+           the TV precisely because no step could see it. Dispatch the repeats
+           page-side instead. */
+        return step('a held OK is one gesture, not a stream of confirmations', function () {
+          const before = h.deckWrites.length;
+          return page
+            .evaluate(function () {
+              function ok(repeat) {
+                const e = document.createEvent('Event');
+                e.initEvent('keydown', true, true);
+                Object.defineProperty(e, 'keyCode', { get: () => 13 });
+                Object.defineProperty(e, 'repeat', { get: () => repeat });
+                document.dispatchEvent(e);
+              }
+              ok(false);
+              for (let i = 0; i < 8; i++) ok(true);
+            })
+            .then(function () {
+              return page.waitForTimeout(400);
+            })
+            .then(holdMenu)
+            .then(function (st) {
+              if (!st.open) {
+                throw new Error('eight repeats of a held OK left no menu open');
+              }
+              const wrote = h.deckWrites.slice(before).filter(function (u) {
+                return u.indexOf('/:/scrobble') >= 0;
+              });
+              if (wrote.length) {
+                throw new Error(
+                  'holding OK confirmed the focused row ' +
+                    wrote.length +
+                    ' time(s) without a release: ' +
+                    wrote.join(', '),
+                );
+              }
+            })
+            .then(function () {
+              return page.keyboard.up('Enter');
+            })
+            .then(function () {
+              return page.keyboard.press('Backspace');
+            })
+            .then(function () {
+              return page.waitForTimeout(250);
+            });
+        });
+      })
+
+      .then(function () {
         return step('Mark as watched scrobbles the episode and the row says so', function () {
           const before = h.deckWrites.length;
           return holdOk()
