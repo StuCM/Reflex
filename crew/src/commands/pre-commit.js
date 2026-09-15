@@ -10,6 +10,8 @@ import { join } from 'node:path';
 import { extname } from 'node:path';
 import { gitLines } from '../lib/git.js';
 
+const NOTHING_TO_DO = /at least one target file|excluded by ignore/i;
+
 export const run = (cfg) => {
   if (!cfg.preCommit.length) return 0;
 
@@ -25,7 +27,10 @@ export const run = (cfg) => {
     const local = join(cfg.root, 'node_modules', '.bin', step.tool);
     for (const bin of [local, step.tool]) {
       try {
-        execFileSync(bin, [...(step.args || []), ...files], { cwd: cfg.root, stdio: 'inherit' });
+        execFileSync(bin, [...(step.args || []), ...files], {
+          cwd: cfg.root,
+          stdio: ['inherit', 'inherit', 'pipe'],
+        });
         break;
       } catch (error) {
         if (error.code === 'ENOENT') {
@@ -34,6 +39,12 @@ export const run = (cfg) => {
           }
           continue;
         }
+        const said = String(error.stderr || '');
+        process.stderr.write(said);
+        // A commit of only files the tool itself ignores — a lockfile, a
+        // generated export — leaves it with nothing to do, and oxfmt calls that
+        // an error. Blocking there would block a commit that is already clean.
+        if (NOTHING_TO_DO.test(said)) break;
         if (step.fix) console.error(`\n  Run \`${step.fix}\` and stage the result.\n`);
         return 1;
       }
