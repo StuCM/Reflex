@@ -1,17 +1,20 @@
 ---
 id: 034
 slug: async-await-in-the-holding-half-of-data
-status: building
+status: review
 branch: crew/034-async-await-in-the-holding-half-of-data
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 files:
   - src/data/art.ts
   - src/data/merge.ts
   - src/data/devices.ts
   - src/data/cached.ts
   - src/data/store.ts
+gate: pass
+gateSha: 9f67d02314429dd7a2a965da3f5289d99e6639b6
+gateAt: 2026-09-15T07:43:30.595Z
 ---
 
 # The holding half of data/ reads as async/await
@@ -65,17 +68,17 @@ Chromium 53 has had generators since Chrome 39. `build.target: 'chrome53'` in
   cache keys. This is a readability refactor and nothing else.
 
 ## Definition of done
-- [ ] Every `.then(` in the declared files is gone, except any deliberately
+- [x] Every `.then(` in the declared files is gone, except any deliberately
       kept — and each of those is named in the task file with its reason
-- [ ] No `.catch(` left where `try`/`catch` says it better
-- [ ] Any two-argument `.then(onOk, onErr)` converted without widening what is
+- [x] No `.catch(` left where `try`/`catch` says it better
+- [x] Any two-argument `.then(onOk, onErr)` converted without widening what is
       caught, or named in the task file if the shape changed
-- [ ] `npm run build` then `grep -c "await \|async function" build/assets/*.js`
+- [x] `npm run build` then `grep -c "await \|async function" build/assets/*.js`
       is **0** — the downlevel still happens and nothing raw reaches the panel
-- [ ] `npm run verify` green, at no fewer smoke steps than `main` scores
-- [ ] the gate passes (`npx crew gate <this file>`)
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] `npm run verify` green, at no fewer smoke steps than `main` scores
+- [x] the gate passes (`npx crew gate <this file>`)
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Approach
 1. `src/data/cached.ts` and `src/data/store.ts` first — they are the floor the
@@ -99,8 +102,54 @@ Chromium 53 has had generators since Chrome 39. `build.target: 'chrome53'` in
 - The `new Promise` wrappers in `store.ts`.
 
 ## Review rounds
+- **Round 1 — PASS.** No findings. Checked the narrow catches, the `fold`/`fill`
+  split's request pattern, the kept `new Promise` wrappers, the bundle grep and
+  the touched-file list independently.
+
+## What changed
+- `src/data/store.ts` — `transact` is `async`, awaiting `open()` and returning
+  the transaction's `new Promise`; `get` and `put` fall back to `memory` in a
+  `catch`. Both `new Promise` wrappers kept, as the spec asks.
+- `src/data/cached.ts` — `daily.get` and `misses.get` are `async` arrows; the
+  staleness arithmetic is unchanged.
+- `src/data/art.ts` — the chain splits into `lookUp` (cache hit, else TMDB) and
+  an `async fetchOne` that calls `landed()` **outside** the try, so a throw in
+  `landed` cannot decrement the in-flight count twice. `pump` is untouched, so
+  `MAX_IN_FLIGHT` requests still run at once.
+- `src/data/merge.ts` — `fetchInto` guards only the `state.fetch` call; the fold
+  below it is deliberately unguarded. `fill` splits into a sync `fold` (the
+  per-film walk, returning the streams that ran dry) and an `async fill` that
+  awaits one `Promise.all` per round and recurses — the same shape the old
+  `.then(() => fill(...))` had, so one page per dry stream per round as before.
+  `advance` keeps its shared-promise identity; `walk` clears `state.busy` in a
+  `finally`.
+- `src/data/devices.ts` — `ensureHistory` is a whole-body `try`/`catch`, which
+  is what its trailing `.catch` already was. The `open()` tail moved into an
+  `async load()`, because `open` is called synchronously from the key handler
+  and cannot become a promise without touching files outside `files:`.
+
+## What the spec got wrong
+- Nothing in the spec. But **`.claude/crew/project.md` still says "No
+  `async`/`await`"** under Hard constraints — it was not updated alongside
+  `CLAUDE.md` in `655de11`, and it is outside `files:` so this task could not
+  fix it. The next worker reads it and will write `.then()` chains again.
+- `await` in a `while` loop trips oxlint's `no-await-in-loop`, which is on via
+  the `perf` category. The repo has zero inline lint disables and
+  `.oxlintrc.json` is outside `files:`, so `merge.ts` keeps the round-recursion
+  instead of a loop-with-await.
 
 ## Graph writes proposed
 - **Decision:** a `new Promise` around a callback API is not a chain to be
   converted — it is the adapter that makes awaiting possible. `store.ts` keeps
   its two.
+- **Pattern:** converting `.then(onOk, onErr)`, put the success-side side
+  effects *after* the `try`/`catch`, not inside the `try`. `art.ts`'s `landed()`
+  decrements the in-flight count; inside the try a throw there would run it
+  twice and the queue would over-issue for the rest of the session.
+- **Pattern:** oxlint's `no-await-in-loop` is on in this repo (`perf` category)
+  and there are no inline disables anywhere, so a paged walk converts to
+  `await` + recursion per round, not a `while` loop with an `await` in it.
+- **Decision:** `.claude/crew/project.md` is a second copy of `CLAUDE.md`'s
+  hard constraints and drifted from it within days — its async/await ban
+  outlived the one in `CLAUDE.md`. Two copies of the same rule, and the one
+  nobody edits is the one workers read.
