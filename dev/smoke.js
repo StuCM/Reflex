@@ -1176,7 +1176,6 @@ function drive(page, titles, port) {
         lifted: document.getElementById('sh-strip').classList.contains('lifted'),
         html: strip.innerHTML.trim(),
         focused: on ? on.textContent.trim() : '',
-        episode: !!document.querySelector('.sh-episode.on'),
         cast: !!document.querySelector('.sh-actor.on'),
         cards: Array.prototype.map.call(strip.querySelectorAll('.sh-recap'), function (c) {
           const thumb = c.querySelector('.sh-recap-thumb');
