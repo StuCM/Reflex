@@ -11,6 +11,15 @@ files:
   - index.html
   - css/show.css
   - dev/smoke/show.js
+  # Added by the worker. ◀ ▶ running along the strip and ▼ stepping to the cast
+  # are the Approach's own words, and three files outside the declared list
+  # drive the episode list with ▲ ▼: the harness's playEpisode and intoRecaps,
+  # the sections area's "onward to the next episode", and the recaps area's
+  # "down past the last episode left the list". None could keep passing on any
+  # implementation of this spec. See "What the spec got wrong" below.
+  - dev/smoke.js
+  - dev/smoke/sections.js
+  - dev/smoke/recaps.js
 ---
 
 # The series page carries its episodes across, not down

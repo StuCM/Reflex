@@ -1173,10 +1173,11 @@ function drive(page, titles, port) {
       const on = strip.querySelector('.sh-recap.on');
       return {
         open: strip.classList.contains('open'),
-        lifted: document.getElementById('sh-episodes').classList.contains('lifted'),
+        lifted: document.getElementById('sh-strip').classList.contains('lifted'),
         html: strip.innerHTML.trim(),
         focused: on ? on.textContent.trim() : '',
         episode: !!document.querySelector('.sh-episode.on'),
+        cast: !!document.querySelector('.sh-actor.on'),
         cards: Array.prototype.map.call(strip.querySelectorAll('.sh-recap'), function (c) {
           const thumb = c.querySelector('.sh-recap-thumb');
           const len = c.querySelector('.sh-recap-len');
@@ -1191,8 +1192,35 @@ function drive(page, titles, port) {
     });
   }
 
-  /* Down out of the episode list, however far into it the page landed — no
-     series here runs to twenty episodes. */
+  /* OK held past the show page's 500ms timer, then released. Playwright's
+     `down` does not auto-repeat, so this exercises the timer and nothing else. */
+  function holdOk() {
+    return page.keyboard
+      .down('Enter')
+      .then(function () {
+        return page.waitForTimeout(900);
+      })
+      .then(function () {
+        return page.keyboard.up('Enter');
+      })
+      .then(function () {
+        return page.waitForTimeout(150);
+      });
+  }
+
+  /* An episode's copies, which since 6d are reached through the hold menu —
+     ◀ ▶ run along the strip. */
+  function episodeDetails() {
+    return holdOk()
+      .then(function () {
+        return press('ArrowDown', 3);
+      })
+      .then(function () {
+        return page.keyboard.press('Enter');
+      });
+  }
+
+  /* Down off the episode strip, through the cast, to the recaps below it. */
   function intoRecaps() {
     return press('ArrowDown', 20).then(recapStrip);
   }
@@ -1245,7 +1273,7 @@ function drive(page, titles, port) {
       .then(function (at) {
         if (at === null) throw new Error('no focused episode row');
         if (at === episodeN) return;
-        return press(episodeN > at ? 'ArrowDown' : 'ArrowUp', Math.abs(episodeN - at))
+        return press(episodeN > at ? 'ArrowRight' : 'ArrowLeft', Math.abs(episodeN - at))
           .then(focusedEpisode)
           .then(function (now) {
             if (now !== episodeN)
@@ -1371,6 +1399,8 @@ function drive(page, titles, port) {
     openShowPage,
     reopenShowPage,
     recapStrip,
+    episodeDetails,
+    holdOk,
     intoRecaps,
     playEpisode,
     playToEnd,

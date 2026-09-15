@@ -1,12 +1,14 @@
 /* The series page: the artwork and its shade, the season chips' row, the
-   episode list, the recaps strip below it and the recap itself. */
+   episode strip, the cast below it, the recaps strip and the recap itself. */
 
 /* ---- show ----
-   Series across the top, episodes down the left. Same flat-gradient treatment
-   as the detail page: no blur, nothing animated but the focus. */
+   6d: the episodes carry the page. The info block is a header strip so a whole
+   row of landscape stills sits on screen without the page moving, and the cast
+   follows underneath. Same flat-gradient treatment as the detail page: no blur,
+   nothing animated but the focus and the strip's offset. */
 
 #sh-art {
-  position: absolute; top: 0; right: 0; width: 1100px; height: 560px;
+  position: absolute; top: 0; right: 0; width: 1180px; height: 620px;
   /* The picture is the one thing JavaScript sets. */
   background-image: var(--art, none);
   background-position: center; background-size: cover;
@@ -14,74 +16,141 @@
 }
 
 #sh-shade {
-  position: absolute; top: 0; left: 0; width: 1920px; height: 560px;
+  position: absolute; top: 0; left: 0; width: 1920px; height: 620px;
   background-image: -webkit-linear-gradient(left, var(--bg) 0%, var(--bg) 44%, rgba(9, 10, 17, 0) 100%);
   background-image: linear-gradient(to right, var(--bg) 0%, var(--bg) 44%, rgba(9, 10, 17, 0) 100%);
 }
 
-#sh-head { position: absolute; top: 56px; left: var(--sp-page); width: 1000px; }
+#sh-head { position: absolute; top: 44px; left: var(--sp-page); width: 1400px; }
 
 /* The page scrolls up as one to make room for the recaps strip below — see the
    recaps block further down. Transform only; nothing here changes height. */
-#sh-head, #sh-seasons, #sh-episodes {
+#sh-head, #sh-seasons, #sh-strip, #sh-cast-label, #sh-cast {
   -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
   transition: transform var(--t-quick) var(--ease);
 }
-#sh-head.lifted, #sh-seasons.lifted, #sh-episodes.lifted {
-  -webkit-transform: translateY(-240px); transform: translateY(-240px);
+#sh-head.lifted, #sh-seasons.lifted, #sh-strip.lifted,
+#sh-cast-label.lifted, #sh-cast.lifted {
+  -webkit-transform: translateY(-200px); transform: translateY(-200px);
 }
 
+/* The title and its facts share a baseline, which is what turns the old block
+   into a strip. */
 #sh-title {
+  display: inline-block; max-width: 940px; vertical-align: baseline;
   font-size: 54px; font-weight: 300; line-height: 1.1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#sh-meta { margin-top: 10px; font-size: 24px; color: var(--dim); }
-#sh-summary {
-  margin-top: 12px; font-size: 21px; line-height: 1.4; color: var(--dim);
-  max-height: 60px; overflow: hidden;
-}
-
-#sh-seasons { position: absolute; top: 280px; left: var(--sp-page); height: 42px; }
-
-#sh-episodes { position: absolute; top: 340px; left: var(--sp-page); width: 1180px; }
-
-/* Reserved border, so moving the selection shifts nothing sideways. */
-.sh-episode {
-  position: relative; height: 106px; padding: 8px 18px;
-  border-left: 6px solid transparent;
-  background: var(--surface);
-  margin-bottom: 5px;
+#sh-meta {
+  display: inline-block; margin-left: 28px; vertical-align: baseline;
   font-size: 24px; color: var(--dim);
-  white-space: nowrap; overflow: hidden;
 }
-.sh-episode.on { background: var(--raised); border-left-color: var(--ac); color: var(--fg); }
+#sh-summary {
+  margin-top: 10px; font-size: 21px; line-height: 1.4; color: var(--dim);
+  max-height: 60px; overflow: hidden; width: 1180px;
+}
+
+/* What the copy that would play actually is: its quality, the audio track that
+   will really be heard, and the subtitles. */
+#sh-chips { margin-top: 12px; height: 34px; }
+.sh-chip {
+  display: inline-block; margin-right: 12px; padding: 2px 14px;
+  border: 2px solid var(--ac-soft); border-radius: var(--r-pill);
+  font-size: 21px; color: var(--ac);
+}
+
+#sh-seasons { position: absolute; top: 232px; left: var(--sp-page); height: 42px; }
+
+/* The strip clips and the row inside it slides, so nothing here lays out twice
+   on a keypress. */
+#sh-strip {
+  position: absolute; top: 292px; left: var(--sp-page); width: 1792px; height: 400px;
+  overflow: hidden;
+}
+#sh-episodes {
+  white-space: nowrap; height: 400px;
+  -webkit-transform: translateX(var(--strip-x, 0)); transform: translateX(var(--strip-x, 0));
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease);
+}
+
+/* 6d's card: 472 across with 36 between it and the next. Unfocused cards keep
+   their brightness here and lose the ring — the opacity drop is 6e's, and the
+   holding block below is the only thing that applies it. */
+.sh-episode {
+  position: relative; display: inline-block; vertical-align: top;
+  width: 472px; margin-right: 36px; white-space: normal;
+}
 
 /* The episode's own still, which is the one place it is worth a picture each.
-   An episode with none keeps the box, so the row is never a different height
-   and never a broken image. */
+   An episode with none keeps the box, so no card is a different height and
+   none is a broken image. */
 .sh-ep-still {
-  display: inline-block; width: 160px; height: 90px; margin-right: 18px;
-  vertical-align: middle;
-  background: var(--still, none) var(--raised) no-repeat center;
-  border-radius: var(--r-card);
+  position: relative; display: block; width: 472px; height: 266px;
+  background: var(--still, none) var(--surface) no-repeat center;
+  border-radius: 22px;
+  box-shadow: 0 0 0 1px rgba(238, 241, 243, 0.06);
   -webkit-background-size: cover; background-size: cover;
 }
+.sh-episode.on .sh-ep-still { box-shadow: 0 0 0 3px var(--ac), 0 24px 54px rgba(0, 0, 0, 0.6); }
 
-.sh-ep-num {
-  display: inline-block; width: 54px; color: var(--dim2); font-size: 22px;
-  vertical-align: middle;
+/* Three small plates over the still, in the corners 6d puts them. */
+.sh-ep-num, .sh-ep-mins, .sh-ep-seen {
+  position: absolute; padding: 5px 13px; border-radius: 8px;
+  background: rgba(9, 10, 17, 0.72); font-size: 21px; color: var(--fg);
 }
-.sh-episode.on .sh-ep-num { color: var(--ac); }
-.sh-ep-title { display: inline-block; width: 560px; overflow: hidden; vertical-align: middle; }
-.sh-ep-mins {
-  display: inline-block; width: 110px; font-size: 21px; color: var(--dim2);
-  vertical-align: middle;
+.sh-ep-num { left: 16px; top: 16px; }
+.sh-ep-mins { right: 16px; bottom: 16px; }
+.sh-ep-seen { left: 16px; bottom: 16px; }
+/* Nothing to say about an unwatched episode, and an empty plate says it badly. */
+.sh-ep-seen:empty { display: none; }
+
+.sh-ep-title {
+  display: block; margin-top: 16px; font-size: 26px; color: rgba(238, 241, 243, 0.72);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.sh-ep-seen {
-  display: inline-block; width: 120px; font-size: 21px; color: var(--dim2);
-  vertical-align: middle;
+.sh-episode.on .sh-ep-title { color: var(--fg); }
+.sh-ep-blurb {
+  display: block; margin-top: 8px; height: 59px; overflow: hidden;
+  font-size: 21px; line-height: 1.4; color: var(--dim);
 }
-.sh-verdict { position: absolute; right: 16px; top: 35px; }
+/* Over the still rather than under the blurb: below it, the badge lands on the
+   focused card only and every other card is a different height. */
+.sh-verdict { position: absolute; right: 16px; top: 16px; }
+
+/* ---- cast ----
+   Under the strip, and the third thing ▼ reaches. */
+
+#sh-cast-label {
+  position: absolute; top: 716px; left: var(--sp-page);
+  font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim);
+}
+#sh-cast {
+  position: absolute; top: 762px; left: var(--sp-page); width: 1792px; height: 210px;
+  white-space: nowrap; overflow: hidden;
+}
+/* No cast to draw is the ordinary case on a thin library, and a label over
+   nothing reads as a fault. */
+#show.no-cast #sh-cast-label { display: none; }
+
+.sh-actor {
+  display: inline-block; vertical-align: top; width: 212px; margin-right: 32px;
+  text-align: center; white-space: normal;
+}
+.sh-actor-face {
+  display: block; width: 118px; height: 118px; margin: 0 auto 14px;
+  background: var(--face, none) var(--surface) no-repeat center;
+  border-radius: var(--r-pill);
+  font-size: 38px; line-height: 118px; color: var(--dim2);
+  -webkit-background-size: cover; background-size: cover;
+}
+.sh-actor.on .sh-actor-face { box-shadow: 0 0 0 3px var(--ac); }
+.sh-actor-name, .sh-actor-role {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sh-actor-name { font-size: 22px; line-height: 1.3; color: rgba(238, 241, 243, 0.78); }
+.sh-actor.on .sh-actor-name { color: var(--fg); }
+.sh-actor-role { margin-top: 5px; font-size: 20px; line-height: 1.3; color: var(--dim); }
 
 #sh-hint { position: absolute; left: var(--sp-page); bottom: 30px; margin-top: 0; }
 

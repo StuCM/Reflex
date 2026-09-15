@@ -16,6 +16,8 @@ module.exports = function (h) {
     sidebarRows,
     playEpisode,
     detailFace,
+    episodeDetails,
+    holdOk,
     kickerParts,
     page,
   } = h;
@@ -25,9 +27,12 @@ module.exports = function (h) {
      dev/smoke.js picks its own titles. The themed one must also direct play, or
      OK on its first episode opens the copy chooser instead of playing. */
   const themed = pickShow(true),
-    silent = pickShow(false);
+    silent = pickShow(false),
+    /* A 4K remux whose own track is TrueHD, with an AC3 beside it. TrueHD can
+       never cross plain ARC, so the AC3 is what would actually be heard. */
+    remuxed = pickShow(false, 'hevc-mixed');
 
-  function pickShow(want) {
+  function pickShow(want, profile) {
     const lib = buildLibrary({ films: h.FILMS });
     const holders = {};
     lib.servers.forEach(function (srv) {
@@ -48,13 +53,23 @@ module.exports = function (h) {
       return inShows.length === 1 && inFilms.length === 0;
     }
 
+    /* One copy only, or the two servers each bring their own encode and which
+       one the page shows is not this step's to decide. */
+    const wanted = profile || (want ? 'h264-eac3' : '');
     const hit = lib.shows.find(function (sh) {
       const copies = holders[sh.i] || [];
       if (hasTheme(sh.i) !== want || !copies.length) return false;
-      if (want && (copies.length !== 1 || copies[0]._profile !== 'h264-eac3')) return false;
+      if (wanted && (copies.length !== 1 || copies[0]._profile !== wanted)) return false;
       return unambiguous(sh.title);
     });
-    if (!hit) throw new Error('no unambiguous show ' + (want ? 'with' : 'without') + ' a theme');
+    if (!hit) {
+      throw new Error(
+        'no unambiguous show ' +
+          (want ? 'with' : 'without') +
+          ' a theme' +
+          (profile ? ' on ' + profile : ''),
+      );
+    }
     return hit.title;
   }
 
@@ -79,22 +94,6 @@ module.exports = function (h) {
   /** The card the menu was opened against, so the header can be checked against
       what the list actually says. */
   let held = null;
-
-  /* Held long enough for the 500ms timer, then released. Playwright's `down`
-     does not auto-repeat, so this exercises the timer and nothing else. */
-  function holdOk() {
-    return page.keyboard
-      .down('Enter')
-      .then(function () {
-        return page.waitForTimeout(900);
-      })
-      .then(function () {
-        return page.keyboard.up('Enter');
-      })
-      .then(function () {
-        return page.waitForTimeout(150);
-      });
-  }
 
   function holdMenu() {
     return page.evaluate(function () {
@@ -161,6 +160,73 @@ module.exports = function (h) {
     });
   }
 
+  /* The strip slides for --t-move; a rect read before that is over reports the
+     position it is leaving. */
+  function settle() {
+    return page.waitForTimeout(500);
+  }
+
+  /* What is actually on screen, read from committed positions: a card is on
+     screen when it sits wholly inside the strip that clips it. */
+  function stripShape() {
+    return page.evaluate(function () {
+      const strip = document.getElementById('sh-strip');
+      const box = strip.getBoundingClientRect();
+      const cards = Array.prototype.map.call(
+        document.querySelectorAll('.sh-episode'),
+        function (c) {
+          const r = c.getBoundingClientRect();
+          const still = c.querySelector('.sh-ep-still');
+          return {
+            left: Math.round(r.left),
+            width: Math.round(r.width),
+            whole: r.left >= box.left - 1 && r.right <= box.right + 1,
+            on: c.classList.contains('on'),
+            still: still
+              ? Math.round(still.offsetWidth) + 'x' + Math.round(still.offsetHeight)
+              : null,
+            title: (c.querySelector('.sh-ep-title') || {}).textContent || '',
+            blurb: (c.querySelector('.sh-ep-blurb') || {}).textContent || '',
+          };
+        },
+      );
+      return {
+        pageHeight: document.documentElement.scrollHeight,
+        stripBottom: Math.round(box.bottom),
+        /* The committed offset, not a rect: a rect read mid-slide is where the
+           strip is leaving, not where it is going. */
+        offset: document.getElementById('sh-episodes').style.getPropertyValue('--strip-x'),
+        cards: cards,
+      };
+    });
+  }
+
+  function castRow() {
+    return page.evaluate(function () {
+      return {
+        label: !document.getElementById('show').classList.contains('no-cast'),
+        chips: Array.prototype.map.call(
+          document.querySelectorAll('#sh-chips .sh-chip'),
+          function (c) {
+            return c.textContent.trim();
+          },
+        ),
+        faces: Array.prototype.map.call(document.querySelectorAll('.sh-actor'), function (a) {
+          function text(sel) {
+            const found = a.querySelector(sel);
+            return found ? found.textContent.trim() : '';
+          }
+          return {
+            name: text('.sh-actor-name'),
+            role: text('.sh-actor-role'),
+            on: a.classList.contains('on'),
+          };
+        }),
+        episodeStillOn: !!document.querySelector('.sh-episode.on'),
+      };
+    });
+  }
+
   function episodeRows() {
     return page.evaluate(function () {
       return Array.prototype.map.call(document.querySelectorAll('.sh-episode'), function (r) {
@@ -173,16 +239,16 @@ module.exports = function (h) {
     });
   }
 
-  /* Down to the end of the series, stopping when the focus stops moving or
-     steps off the list onto the recaps strip below it. */
+  /* Along to the end of the series, stopping when the focus stops moving or
+     steps off the strip. */
   function toLastEpisode(left) {
     const tries = left === undefined ? 40 : left;
     if (!tries) throw new Error('never reached the end of the episode list');
     return focusedEpisodeRow().then(function (before) {
-      return press('ArrowDown')
+      return press('ArrowRight')
         .then(focusedEpisodeRow)
         .then(function (after) {
-          if (!after) return press('ArrowUp');
+          if (!after) return press('ArrowLeft');
           if (before && after.num === before.num) return undefined;
           return toLastEpisode(tries - 1);
         });
@@ -332,7 +398,7 @@ module.exports = function (h) {
           .then(function (st) {
             if (st.before.length < 2) throw new Error('too few episode rows to judge');
             st.before.forEach(function (r, i) {
-              if (r.box !== '160x90') {
+              if (r.box !== '472x266') {
                 throw new Error('episode ' + i + ' has a ' + r.box + ' still box');
               }
               if (r.art === 'none') throw new Error('episode ' + i + ' drew no still');
@@ -363,7 +429,7 @@ module.exports = function (h) {
           })
           .then(function (n) {
             if (n < 2) return; // this show has one series; nothing to switch
-            return press('ArrowUp', 12) // up out of the episode list, to the series chips
+            return press('ArrowUp') // up off the strip, to the series chips
               .then(function () {
                 return waitFor(
                   'document.querySelector("#sh-seasons .chip.on") !== null',
@@ -386,49 +452,51 @@ module.exports = function (h) {
 
     .then(function () {
       return step("an episode's copy chooser is reached through the series page", function () {
-        return page
-          .evaluate(function () {
-            /* Make sure we are back on the episode list before pressing right. */
-            return !!document.querySelector('.sh-episode');
-          })
-          .then(function () {
-            return press('ArrowDown');
-          })
-          .then(function () {
-            return page.keyboard.press('ArrowRight');
-          })
-          .then(function () {
-            return waitFor(
-              '!document.getElementById("detail").classList.contains("hidden") &&' +
-                ' document.querySelectorAll("#dt-actions .dt-act").length > 0',
-              'the action row for an episode',
-              20000,
-            );
-          })
-          .then(detailFace)
-          .then(function (st) {
-            /* An episode has to say which show and which number it is: the show
+        return (
+          page
+            .evaluate(function () {
+              /* Make sure we are back on the strip before holding OK. */
+              return !!document.querySelector('.sh-episode');
+            })
+            .then(function () {
+              return press('ArrowDown');
+            })
+            /* ◀ ▶ run along the strip now, so Episode details in the hold menu is
+             the way to an episode's copies. */
+            .then(episodeDetails)
+            .then(function () {
+              return waitFor(
+                '!document.getElementById("detail").classList.contains("hidden") &&' +
+                  ' document.querySelectorAll("#dt-actions .dt-act").length > 0',
+                'the action row for an episode',
+                20000,
+              );
+            })
+            .then(detailFace)
+            .then(function (st) {
+              /* An episode has to say which show and which number it is: the show
              is the kicker, the number is a chip. */
-            const parts = kickerParts(st.kicker);
-            if (!parts.length) throw new Error('an episode with no kicker at all');
-            if (
-              !st.chips.some(function (c) {
-                return /^S\d+E\d+$/.test(c);
-              })
-            ) {
-              throw new Error('no season/episode among the chips: ' + st.chips.join(' | '));
-            }
-            /* The mock's episodes carry no scores and TMDB is never asked about
+              const parts = kickerParts(st.kicker);
+              if (!parts.length) throw new Error('an episode with no kicker at all');
+              if (
+                !st.chips.some(function (c) {
+                  return /^S\d+E\d+$/.test(c);
+                })
+              ) {
+                throw new Error('no season/episode among the chips: ' + st.chips.join(' | '));
+              }
+              /* The mock's episodes carry no scores and TMDB is never asked about
              one, so this is the "nothing to show" case: an empty row, not an
              unlabelled glyph or a stray separator. */
-            if (st.ratings.length || st.glyphs) {
-              throw new Error('an episode with scores from nowhere: ' + st.ratings.join(' | '));
-            }
-          })
-          .then(function () {
-            return shot('episode-copies');
-          })
-          .then(backToLibrary);
+              if (st.ratings.length || st.glyphs) {
+                throw new Error('an episode with scores from nowhere: ' + st.ratings.join(' | '));
+              }
+            })
+            .then(function () {
+              return shot('episode-copies');
+            })
+            .then(backToLibrary)
+        );
       });
     })
 
@@ -703,10 +771,13 @@ module.exports = function (h) {
               return page.waitForTimeout(400);
             })
             .then(function () {
-              return press('ArrowUp', 12); // to the series chips, above the list
+              return press('ArrowUp'); // to the series chips, above the strip
             })
             .then(function () {
-              return press('ArrowDown'); // and back onto the first episode
+              return press('ArrowDown'); // and back onto the strip
+            })
+            .then(function () {
+              return press('ArrowLeft', 30); // and along to the first episode
             })
             .then(holdOk)
             .then(holdMenu)
@@ -725,9 +796,10 @@ module.exports = function (h) {
               if (!st.open) throw new Error('no menu on the last episode');
               onScreen(st, 'on the last episode');
               /* Without this the clamp could be a constant position and both
-             readings would pass. */
-              if (st.box.top === first.top) {
-                throw new Error('the menu did not follow the card: both at top ' + first.top);
+             readings would pass. Every card in a strip shares a top, so it is
+             the left that has to have moved. */
+              if (st.box.left === first.left) {
+                throw new Error('the menu did not follow the card: both at left ' + first.left);
               }
             })
             .then(function () {
@@ -849,13 +921,16 @@ module.exports = function (h) {
               return page.waitForTimeout(400);
             })
             .then(function () {
-              return press('ArrowUp', 12); // to the series chips
+              return press('ArrowUp'); // to the series chips
             })
             .then(function () {
-              return press('ArrowDown'); // and back onto the first episode
+              return press('ArrowDown'); // and back onto the strip
             })
             .then(function () {
-              return press('ArrowDown', 2); // down to the third
+              return press('ArrowLeft', 30); // along to the first episode
+            })
+            .then(function () {
+              return press('ArrowRight', 2); // and on to the third
             })
             .then(focusedEpisodeRow)
             .then(function (ep) {
@@ -913,6 +988,180 @@ module.exports = function (h) {
               if (seen['4'] === 'watched') throw new Error('episode 4 was marked as well');
             })
             .then(backToLibrary);
+        });
+      })
+
+      /* ---- 6d ---- */
+
+      .then(function () {
+        return step('a whole row of landscape stills sits on screen unscrolled', function () {
+          return openShowPage(themed)
+            .then(function () {
+              return page.waitForTimeout(500);
+            })
+            .then(stripShape)
+            .then(function (st) {
+              if (st.cards.length < 4) {
+                throw new Error('only ' + st.cards.length + ' episode cards drawn');
+              }
+              const whole = st.cards.filter(function (c) {
+                return c.whole;
+              });
+              if (whole.length < 3) {
+                throw new Error(whole.length + ' cards fit the strip whole, wanted at least 3');
+              }
+              st.cards.forEach(function (c, i) {
+                if (c.width !== 472) throw new Error('card ' + i + ' is ' + c.width + 'px wide');
+                if (c.still !== '472x266') {
+                  throw new Error('card ' + i + ' has a ' + c.still + ' still');
+                }
+                if (!c.title) throw new Error('card ' + i + ' has no title');
+                if (!c.blurb) throw new Error('card ' + i + ' has no blurb');
+              });
+              /* 6d's 36px between them, read off the cards rather than assumed. */
+              const stride = st.cards[1].left - st.cards[0].left;
+              if (stride !== 508) throw new Error('the cards step by ' + stride + 'px, not 508');
+              /* The point of the compressed header: no scrolling to see them. */
+              if (st.stripBottom > 1080) {
+                throw new Error('the strip runs to ' + st.stripBottom + 'px, past the screen');
+              }
+              if (st.pageHeight > 1080) {
+                throw new Error('the page scrolls: ' + st.pageHeight + 'px tall');
+              }
+            })
+            .then(function () {
+              return shot('show-6d');
+            });
+        });
+      })
+
+      .then(function () {
+        return step('◀ ▶ run along the strip and it winds to follow', function () {
+          return stripShape()
+            .then(function (st) {
+              const at = st.cards.findIndex(function (c) {
+                return c.on;
+              });
+              if (at < 0) throw new Error('no focused card to start from');
+              return press('ArrowLeft', 30); // back to the first
+            })
+            .then(settle)
+            .then(stripShape)
+            .then(function (st) {
+              if (!st.cards[0].on) throw new Error('◀ did not reach the first card');
+              if (st.offset !== '0px') {
+                throw new Error('the strip sits at ' + st.offset + ' on the first card');
+              }
+              if (!st.cards[0].whole) throw new Error('the first card is not wholly on screen');
+              return press('ArrowRight', 3);
+            })
+            .then(settle)
+            .then(stripShape)
+            .then(function (st) {
+              if (!st.cards[3].on) {
+                const at = st.cards.findIndex(function (c) {
+                  return c.on;
+                });
+                throw new Error('three ▶ landed on card ' + at + ', not 3');
+              }
+              /* 6d keeps the focused card in the second slot, so by the fourth
+                 the strip has wound two cards' worth. */
+              if (st.offset !== '-1016px') {
+                throw new Error('the strip wound to ' + st.offset + ', not -1016px');
+              }
+              if (!st.cards[3].whole) throw new Error('the focused card is not wholly on screen');
+            });
+        });
+      })
+
+      .then(function () {
+        return step('▼ off the strip reaches the cast, and ◀ ▶ run along it', function () {
+          return castRow()
+            .then(function (st) {
+              if (!st.faces.length) throw new Error('the show drew no cast at all');
+              if (!st.label) throw new Error('the cast row is labelled as absent');
+              const named = st.faces.filter(function (f) {
+                return f.name && f.role;
+              });
+              if (named.length !== st.faces.length) {
+                throw new Error(
+                  named.length + ' of ' + st.faces.length + ' faces carry a name and a part',
+                );
+              }
+              if (
+                st.faces.some(function (f) {
+                  return f.on;
+                })
+              ) {
+                throw new Error('the cast is focused before ▼ was pressed');
+              }
+              return press('ArrowDown');
+            })
+            .then(castRow)
+            .then(function (st) {
+              if (!st.faces[0].on) throw new Error('▼ did not land on the first cast member');
+              if (st.episodeStillOn) throw new Error('the episode kept its ring as well');
+              return press('ArrowRight', 2);
+            })
+            .then(castRow)
+            .then(function (st) {
+              if (!st.faces[2].on) {
+                const at = st.faces.findIndex(function (f) {
+                  return f.on;
+                });
+                throw new Error('two ▶ landed on face ' + at + ', not 2');
+              }
+              return press('ArrowUp');
+            })
+            .then(castRow)
+            .then(function (st) {
+              if (!st.episodeStillOn) throw new Error('▲ did not go back to the episodes');
+              if (
+                st.faces.some(function (f) {
+                  return f.on;
+                })
+              ) {
+                throw new Error('the cast kept its ring');
+              }
+            })
+            .then(function () {
+              return shot('show-cast');
+            });
+        });
+      })
+
+      .then(function () {
+        return step('the header chips name the track that will actually play', function () {
+          return (
+            castRow()
+              .then(function (st) {
+                /* The themed show is h264-eac3: 1080p, and an E-AC3 5.1 track the
+                 panel gets as-is. */
+                if (st.chips.join(' | ') !== '1080p | EAC3 5.1 ENG | Subtitles off') {
+                  throw new Error('the header reads "' + st.chips.join(' | ') + '"');
+                }
+              })
+              /* The control, and the reason the chip exists: a 4K remux whose own
+               track is TrueHD. TrueHD cannot cross plain ARC, so naming it would
+               be a lie — the AC3 beside it is what would be heard. */
+              .then(function () {
+                return openShowPage(remuxed);
+              })
+              .then(function () {
+                return waitFor(
+                  'document.querySelectorAll("#sh-chips .sh-chip").length > 0',
+                  'the header chips for the remux',
+                  20000,
+                );
+              })
+              .then(castRow)
+              .then(function (st) {
+                if (st.chips.join(' | ') !== '4K | AC3 5.1 ENG | Subtitles off') {
+                  throw new Error('the remux header reads "' + st.chips.join(' | ') + '"');
+                }
+              })
+              .then(backToLibrary)
+          );
         });
       })
   );
