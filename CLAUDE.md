@@ -18,7 +18,6 @@ and the code came out written in ES5 as a result, which nothing here asks for.
 
 Not available, do not use:
 
-- No `async`/`await` (Chrome 55). Use Promises with `.then()`.
 - No object spread or rest (Chrome 60), no `Object.entries` (Chrome 54).
 - No optional chaining or `??` (Chrome 80), no `padStart` (57), no `flat` (69),
   no `Promise.prototype.finally` (63).
@@ -35,6 +34,17 @@ Not available, do not use:
 - Build target `es2015` if a bundler is introduced. Prefer no bundler.
 
 Available, and preferred — Chromium 53 is ES2015 apart from the above:
+
+- **`async`/`await` — yes, and preferred over `.then()` chains.** This was
+  banned when there was no compiler, and the ban outlived its reason:
+  `build.target: 'chrome53'` rewrites an `async` function into a generator,
+  which the panel has had since Chrome 39. Verified 2026-09-15 by building a
+  reachable `async` function and reading the bundle — no `await` survives, a
+  `function*` and a `yield` appear in its place. `docs/refactor-plan.md` chose
+  this ("Variant B") before the migration started; this file went on saying the
+  opposite, which is why **0 of 46 files in `src/` use it** and every worker
+  wrote `.then()` chains instead. They were following this file. Fix it here
+  first next time.
 
 - `const` and `let` (Chrome 49). Not `var`: oxlint's `no-var` rejects it
   outright. The column-0 exception this used to carry died with the bridge —
