@@ -1,15 +1,18 @@
 ---
 id: 033
 slug: async-await-in-the-fetching-half-of-data
-status: building
+status: done
 branch: crew/033-async-await-in-the-fetching-half-of-data
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 files:
   - src/data/discovery.ts
   - src/data/shows.ts
   - src/data/meta.ts
+gate: pass
+gateSha: 7866678b5769dd49b7992edddeaa0f5ee46f3a40
+gateAt: 2026-09-15T07:47:15.810Z
 ---
 
 # The fetching half of data/ reads as async/await
@@ -65,17 +68,17 @@ Chromium 53 has had generators since Chrome 39. `build.target: 'chrome53'` in
   cache keys. This is a readability refactor and nothing else.
 
 ## Definition of done
-- [ ] Every `.then(` in the declared files is gone, except any deliberately
+- [x] Every `.then(` in the declared files is gone, except any deliberately
       kept — and each of those is named in the task file with its reason
-- [ ] No `.catch(` left where `try`/`catch` says it better
-- [ ] Any two-argument `.then(onOk, onErr)` converted without widening what is
+- [x] No `.catch(` left where `try`/`catch` says it better
+- [x] Any two-argument `.then(onOk, onErr)` converted without widening what is
       caught, or named in the task file if the shape changed
-- [ ] `npm run build` then `grep -c "await \|async function" build/assets/*.js`
+- [x] `npm run build` then `grep -c "await \|async function" build/assets/*.js`
       is **0** — the downlevel still happens and nothing raw reaches the panel
-- [ ] `npm run verify` green, at no fewer smoke steps than `main` scores
-- [ ] the gate passes (`npx crew gate <this file>`)
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+- [x] `npm run verify` green, at no fewer smoke steps than `main` scores
+- [x] the gate passes (`npx crew gate <this file>`)
+- [x] no file outside `files:` is touched
+- [x] commits follow the convention (the hook enforces it)
 
 ## Approach
 1. `src/data/meta.ts` first — 87 lines, 4 chains, and the debounce-and-cache
@@ -95,8 +98,53 @@ Chromium 53 has had generators since Chrome 39. `build.target: 'chrome53'` in
 - Any change to what these functions return, cache, or ask for.
 
 ## Review rounds
+- **Round 1 — PASS.** Verified independently rather than from the notes: build
+  grep 0, verify 104/104, both narrow catches reproduced, `_asking` still
+  assigned synchronously, `Promise.all` still parallel and `load` still
+  sequential. No findings.
+
+## What changed
+- `src/data/meta.ts` — `load` is `async` with one `try`/`catch` around the whole
+  fetch; `hit ?? (await metadata(...))` keeps the cache short-circuit and the
+  write-back still fires only on a miss. `schedule` passes an `async` callback to
+  `setTimeout` instead of `void load(...).then(...)`.
+- `src/data/shows.ts` — `childrenOf`, `resolve` and `nextAfter` are `async`;
+  both `Promise.all` joins stay as they were, and `nextAfter`'s four-deep nest
+  flattens to straight-line guards.
+- `src/data/discovery.ts` — `askServers` and `one` are `async`; `resolve` splits
+  into the synchronous re-entrancy guard plus `ask`, so `item._asking` is still
+  assigned before the first `await` returns.
+
+## Notes for the spec
+- **The suggested grep misses both two-argument sites.** `grep -n "then(.*,.*=>"`
+  is single-line and oxfmt has wrapped every such call across lines. Both live in
+  `discovery.ts` (`resolve`, `one`); `grep -n "^\s*(error" ` or reading the
+  `.then(` bodies is what finds them. Neither widened: the `try` covers only the
+  fetch stage and the `catch` returns, so `settle` and `context.add` still run
+  unprotected exactly as they did under `.then(onOk, onErr)`.
+- **`for...of` with `await` does not survive lint.** oxlint's `no-await-in-loop`
+  is on through the `perf` category, and `.oxlintrc.json` is outside `files:`, so
+  `discovery.load` keeps the original recursive `step` — sequential, which is the
+  property that matters, and no suppression comment (the repo has none anywhere).
+- **One `.catch(` is deliberately kept**: the per-server
+  `findByGuid(...).catch(() => null)` inside `Promise.all` in `askServers`. It is
+  a per-promise fallback, not an error path — `try`/`catch` there would mean a
+  wrapper `async` function per server to say the same thing.
+- `.claude/crew/project.md` still lists "No `async`/`await`" as a hard
+  constraint. `CLAUDE.md` was corrected in `655de11`; project.md was not, and it
+  is the file the worker role is told to read second. Worth a one-line fix
+  outside this task's scope.
 
 ## Graph writes proposed
 - **Pattern:** the two-argument `.then(onOk, onErr)` does not become
   `try`/`catch` without widening the catch. Named here because this conversion
-  is about to be repeated across the tree.
+  is about to be repeated across the tree. The landing that works: `try` around
+  the fetch only, `catch` returns early, and the publish step sits *after* the
+  `catch` block rather than inside the `try`.
+- **Gotcha:** oxlint's `no-await-in-loop` (perf category) rejects the obvious
+  `for...of` + `await` conversion of a deliberately sequential chain. Where the
+  serialisation is the point — requests to a server we do not own — the
+  recursive `step` shape passes without a suppression.
+- **Decision:** `resolve` in `discovery.ts` stays a synchronous function
+  assigning `item._asking = ask(item)`. An `async resolve` cannot assign its own
+  promise to the entry, and that assignment *is* the re-entrancy guard.
