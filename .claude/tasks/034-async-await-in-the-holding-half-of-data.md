@@ -1,7 +1,7 @@
 ---
 id: 034
 slug: async-await-in-the-holding-half-of-data
-status: review
+status: done
 branch: crew/034-async-await-in-the-holding-half-of-data
 model: sonnet
 env: laptop
