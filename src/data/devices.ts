@@ -71,40 +71,39 @@ function countDevices(map: Record<string, string>): number {
 
 /* One history fetch per server per session gives "which device last played
    this". onDeck carries no device information of its own. */
-export function ensureHistory(): Promise<Record<string, string>> {
-  if (played) return Promise.resolve(played);
+export async function ensureHistory(): Promise<Record<string, string>> {
+  if (played) return played;
   const reachable = servers.all();
-  return Promise.all(
-    reachable.map((server) => history(server, HISTORY).then((entries) => ({ server, entries }))),
-  )
-    .then((perServer) => {
-      const map: Record<string, string> = {};
-      let count = 0;
-      perServer.forEach((result) => {
-        /* Sorted newest first, so the first entry per item is the latest. */
-        result.entries.forEach((entry) => {
-          const deviceId = (entry as { deviceID?: number }).deviceID;
-          if (!entry.ratingKey || deviceId === undefined) return;
-          const seenAt = itemKey(result.server, entry.ratingKey);
-          if (map[seenAt] === undefined) {
-            map[seenAt] = `${result.server.id}:${deviceId}`;
-            count++;
-          }
-        });
+  try {
+    const perServer = await Promise.all(
+      reachable.map(async (server) => ({ server, entries: await history(server, HISTORY) })),
+    );
+    const map: Record<string, string> = {};
+    let count = 0;
+    perServer.forEach((result) => {
+      /* Sorted newest first, so the first entry per item is the latest. */
+      result.entries.forEach((entry) => {
+        const deviceId = (entry as { deviceID?: number }).deviceID;
+        if (!entry.ratingKey || deviceId === undefined) return;
+        const seenAt = itemKey(result.server, entry.ratingKey);
+        if (map[seenAt] === undefined) {
+          map[seenAt] = `${result.server.id}:${deviceId}`;
+          count++;
+        }
       });
-      played = map;
-      debug(
-        `history: ${count} items across ${reachable.length} server` +
-          (reachable.length === 1 ? '' : 's') +
-          `, ${countDevices(map)} devices`,
-      );
-      return map;
-    })
-    .catch((error: Error) => {
-      debug(`history unavailable: ${error.message}`);
-      played = {}; // do not retry all session; filtering just stays off
-      return played;
     });
+    played = map;
+    debug(
+      `history: ${count} items across ${reachable.length} server` +
+        (reachable.length === 1 ? '' : 's') +
+        `, ${countDevices(map)} devices`,
+    );
+    return map;
+  } catch (error) {
+    debug(`history unavailable: ${(error as Error).message}`);
+    played = {}; // do not retry all session; filtering just stays off
+    return played;
+  }
 }
 
 /** A merged entry survives if any copy of it does. */
@@ -156,41 +155,41 @@ export function open(onSaved: (changed: boolean) => void): void {
   show('devices');
   selected = 0;
   fill(listElement, row('device-row', 'Reading history…'));
+  void load();
+}
 
+async function load(): Promise<void> {
   const reachable = servers.all();
-  void Promise.all([
+  const [map, named] = await Promise.all([
     ensureHistory(),
-    Promise.all(
-      reachable.map((server) => serverDevices(server).then((found) => ({ server, found }))),
-    ),
-  ]).then(([map, named]) => {
-    const names: Record<string, string> = {};
-    named.forEach((entry) => {
-      entry.found.forEach((device) => {
-        names[`${entry.server.id}:${device.id}`] = device.name;
-      });
+    Promise.all(reachable.map(async (server) => ({ server, found: await serverDevices(server) }))),
+  ]);
+  const names: Record<string, string> = {};
+  named.forEach((entry) => {
+    entry.found.forEach((device) => {
+      names[`${entry.server.id}:${device.id}`] = device.name;
     });
-
-    const counts: Record<string, number> = {};
-    Object.keys(map).forEach((entry) => {
-      const device = map[entry];
-      if (device) counts[device] = (counts[device] ?? 0) + 1;
-    });
-
-    list = Object.keys(counts)
-      .map((deviceKey) => {
-        const server = servers.get(deviceKey.split(':')[0]);
-        return {
-          key: deviceKey,
-          name: names[deviceKey] ?? `device ${deviceKey.split(':')[1]}`,
-          server: servers.label(server),
-          count: counts[deviceKey] ?? 0,
-          mine: claimed ? !!claimed[deviceKey] : true,
-        };
-      })
-      .sort((one, two) => two.count - one.count);
-    render();
   });
+
+  const counts: Record<string, number> = {};
+  Object.keys(map).forEach((entry) => {
+    const device = map[entry];
+    if (device) counts[device] = (counts[device] ?? 0) + 1;
+  });
+
+  list = Object.keys(counts)
+    .map((deviceKey) => {
+      const server = servers.get(deviceKey.split(':')[0]);
+      return {
+        key: deviceKey,
+        name: names[deviceKey] ?? `device ${deviceKey.split(':')[1]}`,
+        server: servers.label(server),
+        count: counts[deviceKey] ?? 0,
+        mine: claimed ? !!claimed[deviceKey] : true,
+      };
+    })
+    .sort((one, two) => two.count - one.count);
+  render();
 }
 
 function save(): void {

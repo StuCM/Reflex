@@ -30,32 +30,36 @@ function open(): Promise<IDBDatabase> {
   return opening;
 }
 
-function transact<T>(
+async function transact<T>(
   mode: IDBTransactionMode,
   run: (store: IDBObjectStore) => IDBRequest<T>,
 ): Promise<T> {
-  return open().then(
-    (database) =>
-      new Promise<T>((resolve, reject) => {
-        const transaction = database.transaction(STORE, mode);
-        const request = run(transaction.objectStore(STORE));
-        transaction.oncomplete = () => {
-          resolve(request.result);
-        };
-        transaction.onerror = () => {
-          reject(transaction.error ?? new Error('indexedDB transaction failed'));
-        };
-      }),
-  );
+  const database = await open();
+  return new Promise<T>((resolve, reject) => {
+    const transaction = database.transaction(STORE, mode);
+    const request = run(transaction.objectStore(STORE));
+    transaction.oncomplete = () => {
+      resolve(request.result);
+    };
+    transaction.onerror = () => {
+      reject(transaction.error ?? new Error('indexedDB transaction failed'));
+    };
+  });
 }
 
-export function get<T>(key: string): Promise<T | undefined> {
-  return transact<T>('readonly', (store) => store.get(key) as IDBRequest<T>).catch(
-    () => memory[key] as T | undefined,
-  );
+export async function get<T>(key: string): Promise<T | undefined> {
+  try {
+    return await transact<T>('readonly', (store) => store.get(key) as IDBRequest<T>);
+  } catch {
+    return memory[key] as T | undefined;
+  }
 }
 
-export function put<T>(key: string, value: T): Promise<unknown> {
+export async function put<T>(key: string, value: T): Promise<unknown> {
   memory[key] = value;
-  return transact('readwrite', (store) => store.put(value, key)).catch(() => null);
+  try {
+    return await transact('readwrite', (store) => store.put(value, key));
+  } catch {
+    return null;
+  }
 }

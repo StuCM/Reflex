@@ -126,33 +126,32 @@ function pump(): void {
     const id = queue.shift();
     if (!id) return;
     active++;
-    fetchOne(id);
+    void fetchOne(id);
   }
 }
 
-function fetchOne(id: string): void {
-  void cached.art
-    .get(id)
-    .then((hit) => {
-      /* An entry cached before the facts or the poster existed is a miss for
-         them, or an old cache would leave a title short of one for ever. */
-      const entry = hit as ArtEntry | undefined;
-      if (entry?.facts && entry.poster !== undefined) return entry;
-      return details(id).then((payload) => {
-        const got = pick(payload as TmdbDetails);
-        got.facts = facts(payload as TmdbDetails);
-        void cached.art.put(id, got);
-        return got;
-      });
-    })
-    .then(
-      (got) => {
-        landed(id, got);
-      },
-      () => {
-        landed(id, { hero: null, poster: null });
-      },
-    );
+async function fetchOne(id: string): Promise<void> {
+  let got: ArtEntry;
+  try {
+    got = await lookUp(id);
+  } catch {
+    got = { hero: null, poster: null };
+  }
+  /* landed() is outside the try: it decrements the in-flight count, and a throw
+     inside it must not be mistaken for a failed lookup and count it twice. */
+  landed(id, got);
+}
+
+async function lookUp(id: string): Promise<ArtEntry> {
+  /* An entry cached before the facts or the poster existed is a miss for them,
+     or an old cache would leave a title short of one for ever. */
+  const entry = (await cached.art.get(id)) as ArtEntry | undefined;
+  if (entry?.facts && entry.poster !== undefined) return entry;
+  const payload = (await details(id)) as TmdbDetails;
+  const got = pick(payload);
+  got.facts = facts(payload);
+  void cached.art.put(id, got);
+  return got;
 }
 
 /* A title with no usable backdrops is cached too, or an obscure one costs a

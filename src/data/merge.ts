@@ -181,38 +181,39 @@ export function items(state: MergeState): PlexItem[] {
   return state.idx.out;
 }
 
-function fetchInto(state: MergeState, one: MergeStream): Promise<MergeStream> {
-  return state.fetch(one.part, one.offset).then(
-    (result) => {
-      const got = result.items;
-      if (result.total) one.total = result.total;
-      one.offset += got.length;
-      got.forEach((item) => {
-        /* Which library it came from: one section spans several, and two of
-           them can hold the same film in different shapes. */
-        item._part = one.part.key;
-        one.buffer.push(item);
-      });
-      if (!got.length || (one.total && one.offset >= one.total)) one.done = true;
-      return one;
-    },
-    () => {
-      /* A server that stops answering drops out of the merge rather than
-         stalling the row. */
-      one.done = true;
-      return one;
-    },
-  );
+async function fetchInto(state: MergeState, one: MergeStream): Promise<MergeStream> {
+  let result;
+  /* Only the fetch is guarded: a server that stops answering drops out of the
+     merge rather than stalling the row, but a fault in the folding below is a
+     bug and must not be read as a dead server. */
+  try {
+    result = await state.fetch(one.part, one.offset);
+  } catch {
+    one.done = true;
+    return one;
+  }
+  const got = result.items;
+  if (result.total) one.total = result.total;
+  one.offset += got.length;
+  got.forEach((item) => {
+    /* Which library it came from: one section spans several, and two of them
+       can hold the same film in different shapes. */
+    item._part = one.part.key;
+    one.buffer.push(item);
+  });
+  if (!got.length || (one.total && one.offset >= one.total)) one.done = true;
+  return one;
 }
 
-function fill(state: MergeState, upTo: number): Promise<PlexItem[]> {
-  /* A loop, not recursion: walking deep into a big library would otherwise
-     build a stack frame per film. */
+/* Fold what the streams already hold, and return the ones that ran dry — empty
+   when the list reached upTo or the servers are exhausted.
+
+   A loop, not recursion: walking deep into a big library would otherwise build
+   a stack frame per film. */
+function fold(state: MergeState, upTo: number): MergeStream[] {
   while (state.idx.out.length <= upTo) {
     const needs = state.streams.filter((one) => !one.done && !one.buffer.length);
-    if (needs.length) {
-      return Promise.all(needs.map((one) => fetchInto(state, one))).then(() => fill(state, upTo));
-    }
+    if (needs.length) return needs;
 
     const live = state.streams.filter((one) => one.buffer.length);
     if (!live.length) {
@@ -230,7 +231,24 @@ function fill(state: MergeState, upTo: number): Promise<PlexItem[]> {
     const raw = pick.buffer.shift();
     if (raw) push(state.idx, slim(raw), identities(raw));
   }
-  return Promise.resolve(state.idx.out);
+  return [];
+}
+
+/* One page per dry stream per round, in parallel — the servers are someone
+   else's and the request count must not change. */
+async function fill(state: MergeState, upTo: number): Promise<PlexItem[]> {
+  const needs = fold(state, upTo);
+  if (!needs.length) return state.idx.out;
+  await Promise.all(needs.map((one) => fetchInto(state, one)));
+  return fill(state, upTo);
+}
+
+async function walk(state: MergeState, upTo: number): Promise<PlexItem[]> {
+  try {
+    return await fill(state, upTo);
+  } finally {
+    state.busy = null;
+  }
 }
 
 /* Materialise the merged list until index `upTo` exists, or the servers run
@@ -238,15 +256,6 @@ function fill(state: MergeState, upTo: number): Promise<PlexItem[]> {
 export function advance(state: MergeState, upTo: number): Promise<PlexItem[]> {
   if (state.idx.out.length > upTo || state.exhausted) return Promise.resolve(state.idx.out);
   if (state.busy) return state.busy;
-  state.busy = fill(state, upTo).then(
-    (out) => {
-      state.busy = null;
-      return out;
-    },
-    (error: unknown) => {
-      state.busy = null;
-      throw error;
-    },
-  );
+  state.busy = walk(state, upTo);
   return state.busy;
 }
