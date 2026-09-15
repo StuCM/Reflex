@@ -51,7 +51,14 @@ Chromium 53 has had generators since Chrome 39. `build.target: 'chrome53'` in
   `try { r = a(await p) } catch (e) { b(e) }`, it does. Converting that form
   naively widens the catch and changes behaviour. Every such site must either
   keep the narrow shape deliberately or the change must be called out in the
-  task file. **Search for it before starting**: `grep -n "then(.*,.*=>" <file>`.
+  task file.
+
+    **Do not trust a grep for this.** Task 033's spec offered
+    `grep -n "then(.*,.*=>" <file>` and it matched **none of the two real sites**
+    in `src/data/discovery.ts` — oxfmt wraps the arguments across lines, so a
+    single-line pattern cannot see them. Read the file, or scan for a comma at
+    paren depth 1 between `.then(` and its closing bracket. A grep returning
+    nothing here is not evidence of absence.
 - **`Promise.prototype.finally` is banned (Chrome 63) but `try`/`finally` is
   not** — it is syntax, not a method, and predates everything. Where a chain
   works around the missing `.finally()`, `try`/`finally` is the tidier landing

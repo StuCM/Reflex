@@ -3,3 +3,6 @@
 {"at":"2026-09-13T18:49:35.009Z","event":"dispatch","id":"030","slug":"the-layers-become-import-lint","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":6,"commits":null}
 {"at":"2026-09-14T15:58:02.418Z","event":"spec","id":"031","slug":"long-press-opens-a-menu-on-an-episode","status":"approved","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":5,"commits":null}
 {"at":"2026-09-14T15:58:06.593Z","event":"dispatch","id":"031","slug":"long-press-opens-a-menu-on-an-episode","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":5,"commits":null}
+{"at":"2026-09-15T07:36:51.420Z","event":"dispatch","id":"032","slug":"the-series-page-to-6d","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":4,"commits":null}
+{"at":"2026-09-15T07:36:52.408Z","event":"dispatch","id":"033","slug":"async-await-in-the-fetching-half-of-data","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":3,"commits":null}
+{"at":"2026-09-15T07:36:53.353Z","event":"dispatch","id":"034","slug":"async-await-in-the-holding-half-of-data","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":5,"commits":null}
