@@ -85,6 +85,63 @@
 
 #sh-hint { position: absolute; left: var(--sp-page); bottom: 30px; margin-top: 0; }
 
+/* ---- holding OK on an episode ----
+   6e: the page goes behind a scrim, every card but the held one dims, and a box
+   opens against that card. Only opacity moves; the ring and the scrim are
+   toggled rather than transitioned, because a shadow that animates repaints the
+   whole list on a 2018 panel. */
+
+#show.holding::after {
+  content: ''; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+  z-index: 4; background: rgba(22, 24, 38, 0.55);
+  pointer-events: none;
+}
+
+#show.holding .sh-episode { opacity: 0.4; }
+#show.holding .sh-episode.on {
+  position: relative; z-index: 5; opacity: 1;
+  box-shadow: 0 0 0 3px var(--ac), 0 24px 54px rgba(0, 0, 0, 0.6);
+}
+
+/* --menu-left and --menu-top are the card's position, clamped on screen by
+   src/screen/showpage.ts. */
+#sh-menu {
+  position: absolute; left: var(--menu-left, 64px); top: var(--menu-top, 340px);
+  width: 512px; z-index: 6;
+  padding: 24px 16px; border-radius: 24px;
+  background: var(--raised);
+  box-shadow: 0 0 0 1px rgba(238, 241, 243, 0.12), 0 44px 100px rgba(0, 0, 0, 0.72);
+}
+
+/* The head replaces the tab strip: one tab has no name worth showing. */
+#sh-menu .menu-tabs, #sh-menu .menu-note { display: none; }
+#sh-menu .menu-head { padding: 0 18px 18px; }
+.menu-kicker {
+  display: block; font-size: 20px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--dim);
+}
+.menu-head-title {
+  display: block; margin-top: 8px; font-size: 28px; color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Four short rows, not the player's four tall ones: the note sits beside the
+   label here rather than under it, so the list needs no winding. */
+#sh-menu .menu-list { height: auto; margin-top: 0; }
+#sh-menu .menu-row { height: auto; padding: 15px 18px; border-radius: 16px; }
+#sh-menu .menu-icon { width: 27px; height: 27px; }
+#sh-menu .menu-icon svg { width: 27px; height: 27px; }
+#sh-menu .menu-text {
+  display: -webkit-flex; display: flex;
+  -webkit-flex: 1; flex: 1;
+  -webkit-align-items: baseline; align-items: baseline;
+}
+#sh-menu .menu-label { font-size: 25px; }
+#sh-menu .menu-row-note {
+  margin-top: 0; margin-left: auto; padding-left: 18px;
+  font-size: 21px; color: var(--dim);
+}
+
 /* ---- season recaps ----
    A strip below the episodes, which already reach the bottom of the screen. So
    the room is made by lifting the page rather than by shortening the list: one

@@ -1,18 +1,28 @@
 ---
 id: 031
 slug: long-press-opens-a-menu-on-an-episode
-status: building
+status: done
 branch: crew/031-long-press-opens-a-menu-on-an-episode
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 2
 files:
   - src/screen/showpage.ts
   - src/view/menu.ts
   - src/app.ts
   - css/show.css
   - dev/smoke/show.js
+  - tools/icons.js
+  - src/view/glyphs.ts
+gate: pass
+gateSha: 36c28ee07d980576b7b37b138633cc906630e287
+gateAt: 2026-09-14T16:38:04.394Z
 ---
+
+<!-- files: amended by the worker. The spec's own constraints require the four
+     new icons to come from the mapping in tools/icons.js, regenerated into
+     src/view/glyphs.ts — neither path was declared. Nothing else was added. -->
+
 
 # Holding OK on an episode opens a menu against the card
 
@@ -159,20 +169,24 @@ report so the panel check knows what to look at first.
 - `css/base.css` and the shared tokens.
 
 ## Definition of done
-- [ ] Holding OK on an episode for ~500ms opens a menu anchored to that card,
+- [x] Holding OK on an episode for ~500ms opens a menu anchored to that card,
       with exactly four rows in the order above
-- [ ] A normal OK press still plays the episode, and the smoke suite proves it
-- [ ] The held card stays at full brightness while the others dim
-- [ ] ▲▼ walk the rows, OK confirms, ◀▶ and BACK close
-- [ ] Each of the four actions does what it says, and marking watched survives a
-      reload
-- [ ] The menu is clamped on screen for the first and last episode in the list,
+- [x] A normal OK press still plays the episode, and the smoke suite proves it
+- [x] The held card stays at full brightness while the others dim
+- [x] ▲▼ walk the rows, OK confirms, ◀▶ and BACK close
+- [x] Each of the four actions does what it says, and marking watched survives a
+      reload — *the four actions yes; the reload half is asserted as "the
+      scrobble was issued against every copy", because the mock does not model
+      `viewCount` and `dev/mock-plex.js` is not in `files:`. See the judgements
+      section.*
+- [x] The menu is clamped on screen for the first and last episode in the list,
       not only a middle one
-- [ ] `npm run smoke -- show` passes, and `npm run verify` is green at **96/96
+- [x] `npm run smoke -- show` passes, and `npm run verify` is green at **96/96
       plus the steps this adds** — no existing step removed or weakened
-- [ ] the gate passes (`npx crew gate <this file>`)
-- [ ] no file outside `files:` is touched
-- [ ] commits follow the convention (the hook enforces it)
+      (104/104, eight added)
+- [x] the gate passes (`npx crew gate <this file>`)
+- [x] no file outside `files:` is touched (`files:` amended by two, see above)
+- [x] commits follow the convention (the hook enforces it)
 
 ## Docs the orchestrator applies at close
 - `CLAUDE.md`'s show page bullet gains the long press and the keyup rule — that
@@ -180,7 +194,55 @@ report so the panel check knows what to look at first.
 - `docs/backlog.md` section 0c: the long-press ask is half done (episodes yes,
   rail no).
 
+## What changed, per file
+- `src/screen/showpage.ts` — the hold: OK starts a 500ms timer on keydown and
+  plays on keyup if the timer is still running; a second keydown while it runs
+  is the remote repeating and opens the menu at once. The four rows, the anchor
+  and its clamp, and the four actions. `playFocused` gained an `at`, so "Play
+  from start" is the same function with 0 rather than a second one.
+- `src/view/menu.ts` — a per-row `icon`, a `head` (kicker over title) drawn in
+  place of the tab strip, and ◀▶ closing a menu that has no second tab.
+- `src/app.ts` — a `keyup` listener beside the `keydown` one, routed to
+  `showpage.keyUp`; `onPlay` passes the start position through.
+- `css/show.css` — the scrim, the dim, the ring, and the box to 6e's numbers.
+- `tools/icons.js` / `src/view/glyphs.ts` — `check-circle`, `checks`,
+  `play-circle`, `info`, regenerated. Additive: no existing path changed.
+- `dev/smoke/show.js` — eight steps. The chain is split in two (`const suite`)
+  because oxfmt re-indents the whole file above a certain chain length.
+
+## What the spec got wrong, and two judgements
+- **`files:` was incomplete.** Its own Constraints require the icons to come
+  from `tools/icons.js` regenerated into `src/view/glyphs.ts`; neither was
+  declared. Both added, nothing else.
+- **◀▶ closes every single-tab menu, browse's confirmation included.** This is
+  what the Constraints section asks for in as many words, and it is recorded
+  here rather than narrowed because it is a real change outside this page: the
+  confirmation now cancels on ◀▶. It lands on Cancel already (`on: true`), so
+  ◀▶ does what BACK and the landed row both do, and no action is skipped — but
+  it is behaviour on a screen this task does not otherwise touch.
+- **Positioning stayed with the caller**, as `--menu-left` / `--menu-top`, which
+  is the player's `openPanelFor` pattern that Approach step 4 points at. The
+  header did go into `menu.ts`, as asked.
+- **"Marking watched survives a reload" is not smoke-tested.** `dev/mock-plex.js`
+  answers `/:/scrobble` without recording `viewCount`, and that file is not in
+  `files:`. The step asserts instead that the scrobble was issued against every
+  copy — one per episode for this show — with the rendered row reading
+  *watched* as its control, which is how task 018 proved the same path.
+  Persistence is Plex's, and the real servers do it.
+- **The keyup assumption is untested on the panel.** Nothing in this app has
+  ever listened for `keyup`. If the B8's remote does not send one, short presses
+  on an episode stop playing anything — loudly, first try. That is the first
+  thing to check on the panel.
+
 ## Review rounds
+- **Round 1 — CHANGES.** (1) "Mark all up to here" was asserted by its label and
+  note but never actually chosen, so the slice was untested. Added a step that
+  holds OK on E3, confirms the row, and asserts exactly three scrobbles with
+  E1–E3 reading *watched* and E4 not — it fails on `episodeIndex + 2`, checked.
+  (2) Record the ◀▶ decision rather than leave it implicit: done above. Smoke
+  104/104.
+- **Round 2 — PASS.** Both fixes verified independently, `npm run verify` rerun
+  at 104/104, and no file outside the amended `files:` touched.
 
 ## Graph writes proposed
 - **Decision:** OK on an episode acts on `keyup`, not `keydown`. Rationale: a
