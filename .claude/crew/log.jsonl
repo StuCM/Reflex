@@ -1,3 +1,5 @@
 {"at":"2026-09-13T16:13:14.809Z","event":"dispatch","id":"029","slug":"delete-the-bridge","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":12,"commits":null}
 {"at":"2026-09-13T16:40:31.150Z","event":"dispatch","id":"030","slug":"the-layers-become-import-lint","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":5,"commits":null}
 {"at":"2026-09-13T18:49:35.009Z","event":"dispatch","id":"030","slug":"the-layers-become-import-lint","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":6,"commits":null}
+{"at":"2026-09-14T15:58:02.418Z","event":"spec","id":"031","slug":"long-press-opens-a-menu-on-an-episode","status":"approved","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":5,"commits":null}
+{"at":"2026-09-14T15:58:06.593Z","event":"dispatch","id":"031","slug":"long-press-opens-a-menu-on-an-episode","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":5,"commits":null}
