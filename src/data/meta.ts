@@ -33,37 +33,29 @@ function remember(key: string, item: PlexItem): void {
   count++;
 }
 
-export function load(item: PlexItem | null | undefined): Promise<PlexItem | null> {
-  if (!item?.ratingKey) return Promise.resolve(null);
+export async function load(item: PlexItem | null | undefined): Promise<PlexItem | null> {
+  if (!item?.ratingKey) return null;
   const key = keyOf(item);
   const already = held[key];
-  if (already) return Promise.resolve(already);
+  if (already) return already;
 
   const server = servers.of(item);
-  if (!server) return Promise.resolve(null);
+  if (!server) return null;
 
-  return cached.meta
-    .get(key)
-    .then(
-      (hit) =>
-        /* Only a fresh fetch is written back — putting a cache hit straight
-           back would be an IndexedDB write per focused tile. */
-        hit ??
-        metadata(server, item.ratingKey).then((found) => {
-          if (found) void cached.meta.put(key, found);
-          return found;
-        }),
-    )
-    .then((found) => {
-      if (!found) return null;
-      found._server = item._server; // survives the round trip through Store
-      remember(key, found);
-      return found;
-    })
-    .catch((error: Error) => {
-      debug(`meta: ${error.message}`);
-      return null;
-    });
+  try {
+    const hit = await cached.meta.get(key);
+    const found = hit ?? (await metadata(server, item.ratingKey));
+    /* Only a fresh fetch is written back — putting a cache hit straight back
+       would be an IndexedDB write per focused tile. */
+    if (!hit && found) void cached.meta.put(key, found);
+    if (!found) return null;
+    found._server = item._server; // survives the round trip through Store
+    remember(key, found);
+    return found;
+  } catch (error) {
+    debug(`meta: ${(error as Error).message}`);
+    return null;
+  }
 }
 
 /* Fetch for whatever is focused now, once the user stops moving. onLoaded is
@@ -79,9 +71,8 @@ export function schedule(
      nothing to fetch and nothing to repaint. */
   if (held[keyOf(item)]) return;
   const ratingKey = item.ratingKey;
-  timer = setTimeout(() => {
-    void load(item).then((found) => {
-      if (found) onLoaded(ratingKey, found);
-    });
+  timer = setTimeout(async () => {
+    const found = await load(item);
+    if (found) onLoaded(ratingKey, found);
   }, HOLD);
 }
