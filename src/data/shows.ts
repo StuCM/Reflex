@@ -9,18 +9,17 @@ import * as servers from './servers';
 /** '<server>:<showKey>' -> the resolved series entry. */
 const entries: Record<string, Promise<PlexItem | null>> = {};
 
-function childrenOf(entry: PlexItem, type: string): Promise<PlexItem[]> {
+async function childrenOf(entry: PlexItem, type: string): Promise<PlexItem[]> {
   const copies = merge.sources(entry);
-  return Promise.all(
+  const perServer = await Promise.all(
     copies.map((copy) => {
       const server = servers.of(copy);
       return server ? children(server, copy.ratingKey) : Promise.resolve([]);
     }),
-  ).then((perServer) => {
-    const merged = merge.lists(perServer.map((list) => list.filter((one) => one.type === type)));
-    merged.sort((one, two) => (one.index ?? 0) - (two.index ?? 0));
-    return merged;
-  });
+  );
+  const merged = merge.lists(perServer.map((list) => list.filter((one) => one.type === type)));
+  merged.sort((one, two) => (one.index ?? 0) - (two.index ?? 0));
+  return merged;
 }
 
 /* Each returned season carries its own per-server copies, which is what the
@@ -33,22 +32,22 @@ export function episodes(season: PlexItem): Promise<PlexItem[]> {
   return childrenOf(season, 'episode');
 }
 
-function resolve(episode: PlexItem): Promise<PlexItem | null> {
-  return load({
-    ratingKey: episode.grandparentRatingKey as string,
-    _server: episode._server,
-  })
-    .then((show) => {
-      if (!show) return null;
-      /* Up to the show and out from there: episodes rarely carry ids of their
-         own, but the show does, so its ids are what the other servers are asked
-         for. Its own server's copy leads the fold, so a show only one server
-         has is a one-source entry and the page is happy with that. */
-      return Promise.all(servers.all().map((server) => allVersions(server, show))).then(
-        (perServer) => merge.lists([[show], ...perServer])[0] ?? null,
-      );
-    })
-    .catch(() => null);
+async function resolve(episode: PlexItem): Promise<PlexItem | null> {
+  try {
+    const show = await load({
+      ratingKey: episode.grandparentRatingKey as string,
+      _server: episode._server,
+    });
+    if (!show) return null;
+    /* Up to the show and out from there: episodes rarely carry ids of their
+       own, but the show does, so its ids are what the other servers are asked
+       for. Its own server's copy leads the fold, so a show only one server
+       has is a one-source entry and the page is happy with that. */
+    const perServer = await Promise.all(servers.all().map((server) => allVersions(server, show)));
+    return merge.lists([[show], ...perServer])[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /* The series an episode belongs to, merged across every server that has it.
@@ -80,31 +79,29 @@ export function nextInList(
   return list[at + 1] ?? null;
 }
 
-export function nextAfter(
+export async function nextAfter(
   episode: PlexItem | null | undefined,
 ): Promise<{ episode: PlexItem; newSeason: boolean } | null> {
-  if (!episode) return Promise.resolve(null);
-  return entryFor(episode)
-    .then((entry) => {
-      if (!entry) return null;
-      return seasons(entry).then((list) => {
-        const at = list.findIndex((season) => season.index === episode.parentIndex);
-        if (at < 0) return null;
-        const season = list[at];
-        if (!season) return null;
-        return episodes(season).then((found) => {
-          const next = nextInList(found, episode);
-          if (next) return { episode: next, newSeason: false };
-          /* seasons() is sorted by index, so the one after is simply the next. */
-          const following = list[at + 1];
-          if (!following) return null;
-          return episodes(following).then((more) =>
-            more[0] ? { episode: more[0], newSeason: true } : null,
-          );
-        });
-      });
-    })
-    .catch(() => null);
+  if (!episode) return null;
+  try {
+    const entry = await entryFor(episode);
+    if (!entry) return null;
+    const list = await seasons(entry);
+    const at = list.findIndex((season) => season.index === episode.parentIndex);
+    if (at < 0) return null;
+    const season = list[at];
+    if (!season) return null;
+    const found = await episodes(season);
+    const next = nextInList(found, episode);
+    if (next) return { episode: next, newSeason: false };
+    /* seasons() is sorted by index, so the one after is simply the next. */
+    const following = list[at + 1];
+    if (!following) return null;
+    const more = await episodes(following);
+    return more[0] ? { episode: more[0], newSeason: true } : null;
+  } catch {
+    return null;
+  }
 }
 
 /** "4 series · 38 episodes", or as much of it as the server told us. */

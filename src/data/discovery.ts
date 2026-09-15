@@ -46,13 +46,12 @@ function settle(item: DiscoveryEntry, found: PlexItem | null): void {
       : 'In your library';
 }
 
-function askServers(id: string): Promise<PlexItem | null> {
-  return Promise.all(
+async function askServers(id: string): Promise<PlexItem | null> {
+  const perServer = await Promise.all(
     servers.all().map((server) => findByGuid(server, `tmdb://${id}`).catch(() => null)),
-  ).then((perServer) => {
-    const hits = perServer.filter((hit): hit is PlexItem => !!hit);
-    return hits.length ? (merge.lists([hits])[0] ?? null) : null;
-  });
+  );
+  const hits = perServer.filter((hit): hit is PlexItem => !!hit);
+  return hits.length ? (merge.lists([hits])[0] ?? null) : null;
 }
 
 /* The copy we hold of a TMDB title, or null for one we do not. Call it for the
@@ -61,27 +60,29 @@ export function resolve(item: DiscoveryEntry): Promise<PlexItem | null> {
   if (item._resolved !== undefined) return Promise.resolve(item._resolved);
   if (item._asking) return item._asking;
 
-  item._asking = cached.lookup
-    .get(item._tmdb.id)
-    .then((hit) => {
-      if (hit !== undefined) return hit;
-      return askServers(item._tmdb.id).then((found) => {
-        void cached.lookup.put(item._tmdb.id, found);
-        return found;
-      });
-    })
-    .then(
-      (found) => {
-        settle(item, found);
-        return item._resolved ?? null;
-      },
-      (error: Error) => {
-        item._asking = null; // a failed lookup is worth retrying
-        debug(`resolve ${item.title}: ${error.message}`);
-        return null;
-      },
-    );
+  item._asking = ask(item);
   return item._asking;
+}
+
+async function ask(item: DiscoveryEntry): Promise<PlexItem | null> {
+  let found: PlexItem | null;
+  try {
+    const hit = await cached.lookup.get(item._tmdb.id);
+    if (hit !== undefined) {
+      found = hit;
+    } else {
+      found = await askServers(item._tmdb.id);
+      void cached.lookup.put(item._tmdb.id, found);
+    }
+  } catch (error) {
+    item._asking = null; // a failed lookup is worth retrying
+    debug(`resolve ${item.title}: ${(error as Error).message}`);
+    return null;
+  }
+  /* Outside the try on purpose: only a failed lookup is worth retrying, so a
+     throw from settle must not clear _asking and ask the servers again. */
+  settle(item, found);
+  return item._resolved ?? null;
 }
 
 interface LoadContext {
@@ -90,32 +91,31 @@ interface LoadContext {
   add(title: string, items: DiscoveryEntry[]): void;
 }
 
-function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
+async function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
   const seeds = context.seeds ?? [];
   const key = `${category.kind}:${category.id ?? seeds.join('-')}`;
-  return cached.catalogue
-    .get(key)
-    .then((hit) => {
-      if (hit?.length) return hit;
-      return tmdb.catalogue(category, seeds).then((found) => {
-        void cached.catalogue.put(key, found);
-        return found;
-      });
-    })
-    .then(
-      (found) => {
-        if (!context.isCurrent()) return;
-        if (!found.length) {
-          debug(`${category.title}: TMDB returned nothing`);
-          return;
-        }
-        context.add(category.title, found.map(entry));
-        debug(`${category.title}: ${found.length} from TMDB`);
-      },
-      (error: Error) => {
-        debug(`${category.title} failed: ${error.message}`);
-      },
-    );
+  let found: TmdbFilm[];
+  try {
+    const hit = await cached.catalogue.get(key);
+    if (hit?.length) {
+      found = hit;
+    } else {
+      found = await tmdb.catalogue(category, seeds);
+      void cached.catalogue.put(key, found);
+    }
+  } catch (error) {
+    debug(`${category.title} failed: ${(error as Error).message}`);
+    return;
+  }
+  /* Outside the try: a throw from the rail's own drawing is not a failed
+     TMDB fetch and must not be reported as one. */
+  if (!context.isCurrent()) return;
+  if (!found.length) {
+    debug(`${category.title}: TMDB returned nothing`);
+    return;
+  }
+  context.add(category.title, found.map(entry));
+  debug(`${category.title}: ${found.length} from TMDB`);
 }
 
 /* One row per category in core/config, each a TMDB request cached for the day
@@ -124,11 +124,14 @@ function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
    caller already holds. */
 export function load(context: LoadContext): Promise<void> {
   const categories = settings.categories ?? [];
-  let at = 0;
-  function step(): Promise<void> {
-    const category = categories[at++];
-    if (!context.isCurrent() || !category) return Promise.resolve();
-    return one(context, category).then(step);
+  /* One at a time, and recursive rather than a loop: the rows go to a server we
+     do not own, so they are asked for in order, which `no-await-in-loop` reads
+     as the mistake it usually is. */
+  async function step(at: number): Promise<void> {
+    const category = categories[at];
+    if (!context.isCurrent() || !category) return;
+    await one(context, category);
+    return step(at + 1);
   }
-  return step();
+  return step(0);
 }
