@@ -13,6 +13,7 @@ module.exports = function (h) {
     focusedRowTypes,
     backToLibrary,
     detailFace,
+    episodeDetails,
     page,
   } = h;
 
@@ -346,11 +347,9 @@ module.exports = function (h) {
             })
             /* And onward: the next episode is right there, with its own copies. */
             .then(function () {
-              return press('ArrowDown');
+              return press('ArrowRight');
             })
-            .then(function () {
-              return page.keyboard.press('ArrowRight');
-            })
+            .then(episodeDetails)
             .then(function () {
               return waitFor(
                 '!document.getElementById("detail").classList.contains("hidden") &&' +

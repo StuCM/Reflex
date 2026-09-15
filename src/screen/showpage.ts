@@ -1,18 +1,21 @@
-/* A show: its series across the top, its episodes down the side.
-   Each episode row carries the same verdict the film page would give it,
-   checked for the focused one as you move. OK plays when the preferred copy
-   will direct play and opens the copy chooser when it will not — the only time
-   you need to care which server an episode came from. Held, OK opens a menu
-   against the card instead, which is why OK here acts on release. */
-import { artUrl, posterUrl, themeUrl } from '../api/plex/images';
+/* A show: its series across the top, its episodes across the middle and its
+   cast below them, which is screen 6d.
+   Each episode card carries the same verdict the film page would give it,
+   checked for the focused one as you move, and the header strip's chips say
+   what that copy would really play. Held, OK opens a menu against the card,
+   which is why OK here acts on release. */
+import { artUrl, photoUrl, posterUrl, themeUrl } from '../api/plex/images';
 import { scrobble as plexScrobble } from '../api/plex/library';
 import * as youtube from '../api/youtube';
 import { KEY, clamp, debug, isBack, show as showView, toast } from '../core/ui';
+import * as art from '../data/art';
 import * as cached from '../data/cached';
 import * as guard from '../data/guard';
 import * as merge from '../data/merge';
+import * as meta from '../data/meta';
 import * as servers from '../data/servers';
 import * as shows from '../data/shows';
+import { audioLabel } from '../rules/audio';
 import { identity } from '../rules/identity';
 import { div, span, fill, put, must } from '../view/dom';
 import * as glyphs from '../view/glyphs';
@@ -20,9 +23,13 @@ import * as menu from '../view/menu';
 
 const titleElement = must('sh-title');
 const metaElement = must('sh-meta');
+const chipsElement = must('sh-chips');
 const summaryElement = must('sh-summary');
 const seasonsElement = must('sh-seasons');
+const stripElement = must('sh-strip');
 const episodesElement = must('sh-episodes');
+const castLabelElement = must('sh-cast-label');
+const castElement = must('sh-cast');
 const artElement = must('sh-art');
 const hintElement = must('sh-hint');
 const recapsElement = must('sh-recaps');
@@ -33,9 +40,14 @@ const menuElement = div('hidden');
 menuElement.id = 'sh-menu';
 put(viewElement, menuElement);
 
-/** Episode rows on screen at once, at 111px each. */
-const EPISODE_POOL = 6;
-const EPISODE_LEAD = 3;
+/** 6d's card is 472 wide with 36 after it, so the strip steps by this. */
+const CARD_STRIDE = 508;
+/** Cards kept to the left of the focused one. */
+const CARD_LEAD = 1;
+/** Whole cards on screen at 1920 less the page margins. */
+const CARDS_VISIBLE = 3;
+/** Faces in the cast row — six fit across without the row having to wind. */
+const CAST_MAX = 6;
 /** Recap cards on screen at once, at 222px each. */
 const RECAP_POOL = 7;
 const RECAP_LEAD = 2;
@@ -53,7 +65,11 @@ let seasons: PlexItem[] = [];
 let seasonIndex = 0;
 let episodes: PlexItem[] = [];
 let episodeIndex = 0;
-let zone: 'seasons' | 'episodes' | 'recaps' = 'episodes';
+/** Cards scrolled off the left of the strip. */
+let stripShift = 0;
+let cast: PlexTag[] = [];
+let castIndex = 0;
+let zone: 'seasons' | 'episodes' | 'cast' | 'recaps' = 'episodes';
 let recaps: Recap[] | null = null;
 let recapIndex = 0;
 let searching = false;
@@ -109,67 +125,172 @@ function minutes(episode: PlexItem): string {
   return episode.duration ? `${Math.round(episode.duration / 60000)} min` : '';
 }
 
+function seenLabel(episode: PlexItem): string {
+  if (episode.viewOffset && episode.duration) {
+    return `${Math.round((100 * episode.viewOffset) / episode.duration)}%`;
+  }
+  return (episode as { viewCount?: number }).viewCount ? 'watched' : '';
+}
+
 function hint(): string {
   if (holding) return '↑ ↓ choose · OK confirms · ← → or BACK closes';
   if (zone === 'seasons') return '← → choose a series · ↓ to the episodes · BACK to the rail';
+  if (zone === 'cast') return '← → along the cast · ↑ back to the episodes · BACK to the rail';
   if (zone === 'recaps') {
     return recaps?.length
-      ? '← → choose a recap · OK to play it · ↑ back to the episodes'
-      : 'OK to look for season recaps · ↑ back to the episodes';
+      ? '← → choose a recap · OK to play it · ↑ back up the page'
+      : 'OK to look for season recaps · ↑ back up the page';
   }
-  return '↑ ↓ choose an episode · OK to play · → other copies · BACK to the rail';
+  return '← → choose an episode · OK to play · hold OK for more · BACK to the rail';
 }
 
+/* The whole series, not a window: the strip slides on one transform, and a
+   window that moved with the focus would jump each time instead. */
 function renderEpisodes(): void {
   if (!episodes.length) {
     fill(episodesElement, div('sh-episode', 'No episodes in this series.'));
     return;
   }
-  /* A window, not the lot: a 24-episode series is common and drawing all of
-     them costs more than it is worth. */
-  const first = clamp(episodeIndex - EPISODE_LEAD, 0, Math.max(0, episodes.length - EPISODE_POOL));
-  const drawn: HTMLDivElement[] = [];
+  fill(episodesElement, ...episodes.map(episodeCard));
+  focusEpisodes();
+}
 
-  for (let at = first; at < Math.min(first + EPISODE_POOL, episodes.length); at++) {
-    const episode = episodes[at];
-    if (!episode) continue;
-    const focused = at === episodeIndex && zone === 'episodes';
-    const watched =
-      episode.viewOffset && episode.duration
-        ? `${Math.round((100 * episode.viewOffset) / episode.duration)}%`
-        : (episode as { viewCount?: number }).viewCount
-          ? 'watched'
-          : '';
+function episodeCard(episode: PlexItem): HTMLDivElement {
+  const card = div('sh-episode');
+  /* An episode's thumb *is* its still, so the picture is already paid for. */
+  const still = span('sh-ep-still');
+  const url = posterUrl(episode, 480, 270);
+  if (url) still.style.setProperty('--still', `url("${url}")`);
+  put(
+    still,
+    span('sh-ep-num', episode.index === undefined ? '·' : String(episode.index)),
+    span('sh-ep-mins', minutes(episode)),
+    span('sh-ep-seen', seenLabel(episode)),
+  );
+  put(
+    card,
+    still,
+    span('sh-ep-title', episode.title ?? ''),
+    span('sh-ep-blurb', episode.summary ?? ''),
+  );
+  const badge = verdictBadge(episode);
+  if (badge) put(card, badge);
+  return card;
+}
 
-    const row = div(`sh-episode${focused ? ' on' : ''}`);
-    /* An episode's thumb *is* its still, so the picture is already paid for. */
-    const still = span('sh-ep-still');
-    const url = posterUrl(episode, 160, 90);
-    if (url) still.style.setProperty('--still', `url("${url}")`);
-
-    put(
-      row,
-      still,
-      span('sh-ep-num', episode.index === undefined ? '·' : String(episode.index)),
-      span('sh-ep-title', episode.title ?? ''),
-      span('sh-ep-mins', minutes(episode)),
-      span('sh-ep-seen', watched),
-    );
-    const badge = verdictBadge(episode);
-    if (badge) put(row, badge);
-    drawn.push(row);
+/* Moving along the strip is a ring, an offset and three chips — never a redraw
+   of the cards, which would refetch a still for every press. */
+function focusEpisodes(): void {
+  const cards = episodesElement.children;
+  for (let at = 0; at < cards.length; at++) {
+    const card = cards[at] as HTMLElement;
+    card.classList.toggle('on', at === episodeIndex && zone === 'episodes');
   }
-
-  fill(episodesElement, ...drawn);
+  stripShift = clamp(episodeIndex - CARD_LEAD, 0, Math.max(0, episodes.length - CARDS_VISIBLE));
+  episodesElement.style.setProperty('--strip-x', `${-stripShift * CARD_STRIDE}px`);
   /* The scrim, the dim on every other card and the ring on the held one are all
      this class: the menu is over the page, so nothing else redraws. */
   viewElement.classList.toggle('holding', holding);
+  renderChips();
   hintElement.textContent = hint();
 }
 
+/* 6d's "4K HDR". HDR only when the server says so — a claim we cannot check is
+   worse than silence. */
+function qualityLabel(media: PlexMedia | null | undefined): string {
+  const resolution = String(media?.videoResolution ?? '').toLowerCase();
+  if (!resolution) return '';
+  const name =
+    resolution === '4k'
+      ? '4K'
+      : /^\d+$/.test(resolution)
+        ? `${resolution}p`
+        : resolution.toUpperCase();
+  return /hdr|dovi|dolby/i.test(media?.videoDynamicRange ?? '') ? `${name} HDR` : name;
+}
+
+/* What the focused episode would really play. The audio chip is the verdict's
+   own track — what pickAudio settled on — because naming the file's best track
+   beside a stream that will play something else is a lie nobody can act on. */
+function renderChips(): void {
+  const episode = episodes[episodeIndex];
+  const verdict = episode ? verdicts[verdictKey(episode)] : null;
+  if (!verdict) {
+    fill(chipsElement);
+    return;
+  }
+  const quality = qualityLabel(verdict.media);
+  fill(
+    chipsElement,
+    quality ? span('sh-chip', quality) : null,
+    span('sh-chip', audioLabel(verdict.audio)),
+    span('sh-chip', 'Subtitles off'),
+  );
+}
+
+/* Plex's Role first rather than TMDB's names: the row wants the character and
+   the photograph, and only Plex carries those. TMDB is the fallback the header
+   line already uses. */
+function castFrom(metadata: PlexItem | null): PlexTag[] {
+  const roles = metadata?.Role ?? [];
+  if (roles.length) return roles.slice(0, CAST_MAX);
+  const facts = art.factsFor(show);
+  return (facts?.cast ?? []).slice(0, CAST_MAX).map((name) => ({ tag: name }));
+}
+
+function renderCast(): void {
+  viewElement.classList.toggle('no-cast', !cast.length);
+  fill(castElement, ...cast.map(actorCard));
+  focusCast();
+}
+
+function actorCard(role: PlexTag): HTMLDivElement {
+  const name = role.tag ?? '';
+  const face = span('sh-actor-face');
+  const url = photoUrl(servers.of(show), role.thumb, 160, 160);
+  /* Initials rather than an empty disc: plenty of a library has no photographs. */
+  if (url) face.style.setProperty('--face', `url("${url}")`);
+  else face.textContent = initials(name);
+  const actor = div('sh-actor');
+  put(actor, face, div('sh-actor-name', name), div('sh-actor-role', role.role ?? ''));
+  return actor;
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join('');
+}
+
+function focusCast(): void {
+  const faces = castElement.children;
+  for (let at = 0; at < faces.length; at++) {
+    (faces[at] as HTMLElement).classList.toggle('on', at === castIndex && zone === 'cast');
+  }
+}
+
+/* One zone at a time carries the focus, so every change redraws all of them
+   rather than leaving a ring behind in the one being left. */
+function goZone(to: typeof zone): void {
+  zone = to;
+  if (to === 'cast') castIndex = clamp(castIndex, 0, Math.max(0, cast.length - 1));
+  renderSeasons();
+  focusEpisodes();
+  focusCast();
+  renderRecaps();
+}
+
+/* Down the page: the cast, then the recaps strip when there is a key for it.
+   A show with neither stays where it is. */
+function stepDown(): void {
+  if (zone === 'episodes' && cast.length) goZone('cast');
+  else if (youtube.enabled()) goZone('recaps');
+}
+
 /* The recaps strip, which costs nothing to draw: one action until it is
-   pressed, then the rail it turned into. Entering the zone lifts the episode
-   list to make room — a transform, not a height. */
+   pressed, then the rail it turned into. Entering the zone lifts the page to
+   make room — a transform, not a height. */
 function renderRecaps(): void {
   if (!youtube.enabled()) {
     fill(recapsElement);
@@ -178,10 +299,12 @@ function renderRecaps(): void {
   const showing = zone === 'recaps';
   hintElement.textContent = hint();
   recapsElement.classList.toggle('open', showing);
-  /* The whole column moves, or the episode rows would slide over the title. */
+  /* The whole page moves, or the cast would sit under the recap cards. */
   headElement.classList.toggle('lifted', showing);
   seasonsElement.classList.toggle('lifted', showing);
-  episodesElement.classList.toggle('lifted', showing);
+  stripElement.classList.toggle('lifted', showing);
+  castLabelElement.classList.toggle('lifted', showing);
+  castElement.classList.toggle('lifted', showing);
 
   if (!recaps?.length) {
     fill(
@@ -349,6 +472,7 @@ function loadEpisodes(): void {
   episodes = [];
   episodeIndex = 0;
   fill(episodesElement, div('sh-episode', 'Loading…'));
+  focusEpisodes();
 
   void shows
     .episodes(season)
@@ -409,8 +533,10 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   generation++;
   seasons = [];
   episodes = [];
+  cast = [];
   seasonIndex = 0;
   episodeIndex = 0;
+  castIndex = 0;
   zone = 'episodes';
   verdicts = {};
   recaps = null;
@@ -424,10 +550,21 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   silence(); // whatever the last series was, it is over
   playTheme();
   renderRecaps();
+  renderCast();
+  fill(chipsElement);
   fill(seasonsElement);
   fill(episodesElement, div('sh-episode', 'Loading…'));
+  focusEpisodes();
 
   const mine = generation;
+  /* One metadata call for the show, which is where its cast lives — the season
+     and episode lists carry none. */
+  void meta.load(entry).then((metadata) => {
+    if (mine !== generation) return;
+    cast = castFrom(metadata);
+    renderCast();
+  });
+
   void shows
     .seasons(entry)
     .then((list) => {
@@ -471,7 +608,7 @@ function playFocused(at?: number): void {
 }
 
 function openCopies(): void {
-  clearHold(); // ▶ while OK is held would otherwise open the menu behind the film page
+  clearHold(); // or the menu opens behind the film page
   const episode = episodes[episodeIndex];
   if (episode) options.onChoose?.(episode);
 }
@@ -556,12 +693,13 @@ function holdRows(episode: PlexItem): menu.MenuRow[] {
   ];
 }
 
-/* Against the card, and never off the screen: the first episode's menu would
-   hang off the top and the last one's off the bottom. Same move as the player's
-   openPanelFor — the number comes from here, the position stays in CSS. */
+/* Against the card, and never off the screen: on a strip it is the sides that
+   the menu hangs off, so the card's own offset is taken back through the shift
+   the strip is sitting at. Same move as the player's openPanelFor — the number
+   comes from here, the position stays in CSS. */
 function anchorMenu(card: HTMLElement): void {
-  const left = episodesElement.offsetLeft + card.offsetLeft;
-  const top = episodesElement.offsetTop + card.offsetTop;
+  const left = stripElement.offsetLeft + card.offsetLeft - stripShift * CARD_STRIDE;
+  const top = stripElement.offsetTop + card.offsetTop;
   const lowest = 1080 - menuElement.offsetHeight - MENU_EDGE;
   menuElement.style.setProperty(
     '--menu-left',
@@ -579,7 +717,7 @@ function openHoldMenu(): void {
   if (!episode || holding) return;
 
   holding = true;
-  renderEpisodes();
+  focusEpisodes();
   const card = episodesElement.querySelector('.sh-episode.on') as HTMLElement | null;
   if (!card) {
     holding = false;
@@ -595,7 +733,7 @@ function openHoldMenu(): void {
     },
     onClose: () => {
       holding = false;
-      renderEpisodes();
+      focusEpisodes();
     },
   });
   anchorMenu(card);
@@ -650,77 +788,80 @@ function chooseRecap(): void {
   if (video) options.onRecap?.(video);
 }
 
+function seasonsKey(code: number): void {
+  if (code === KEY.LEFT && seasonIndex > 0) {
+    seasonIndex--;
+    renderSeasons();
+    loadEpisodes();
+  } else if (code === KEY.RIGHT && seasonIndex < seasons.length - 1) {
+    seasonIndex++;
+    renderSeasons();
+    loadEpisodes();
+  } else if (code === KEY.DOWN || code === KEY.OK) {
+    goZone('episodes');
+  } else if (isBack(code)) {
+    close();
+  }
+}
+
+function castKey(code: number): void {
+  if (code === KEY.UP) goZone('episodes');
+  else if (code === KEY.DOWN) stepDown();
+  else if (code === KEY.LEFT && castIndex > 0) {
+    castIndex--;
+    focusCast();
+  } else if (code === KEY.RIGHT && castIndex < cast.length - 1) {
+    castIndex++;
+    focusCast();
+  } else if (isBack(code)) {
+    close();
+  }
+}
+
+function recapsKey(code: number): void {
+  if (code === KEY.UP) {
+    goZone(cast.length ? 'cast' : 'episodes');
+  } else if (code === KEY.LEFT && recapIndex > 0) {
+    recapIndex--;
+    renderRecaps();
+  } else if (code === KEY.RIGHT && recaps && recapIndex < recaps.length - 1) {
+    recapIndex++;
+    renderRecaps();
+  } else if (code === KEY.OK) {
+    chooseRecap();
+  } else if (isBack(code)) {
+    close();
+  }
+}
+
 export function key(code: number): boolean {
   if (code === KEY.OK && okHeld) return true;
   if (menu.isOpen()) return menu.key(code);
 
   if (zone === 'seasons') {
-    if (code === KEY.LEFT && seasonIndex > 0) {
-      seasonIndex--;
-      renderSeasons();
-      loadEpisodes();
-    } else if (code === KEY.RIGHT && seasonIndex < seasons.length - 1) {
-      seasonIndex++;
-      renderSeasons();
-      loadEpisodes();
-    } else if (code === KEY.DOWN || code === KEY.OK) {
-      zone = 'episodes';
-      renderSeasons();
-      renderEpisodes();
-    } else if (isBack(code)) {
-      close();
-    }
+    seasonsKey(code);
     return true;
   }
-
+  if (zone === 'cast') {
+    castKey(code);
+    return true;
+  }
   if (zone === 'recaps') {
-    if (code === KEY.UP) {
-      zone = 'episodes';
-      renderEpisodes();
-      renderRecaps();
-    } else if (code === KEY.LEFT && recapIndex > 0) {
-      recapIndex--;
-      renderRecaps();
-    } else if (code === KEY.RIGHT && recaps && recapIndex < recaps.length - 1) {
-      recapIndex++;
-      renderRecaps();
-    } else if (code === KEY.OK) {
-      chooseRecap();
-    } else if (isBack(code)) {
-      close();
-    }
+    recapsKey(code);
     return true;
   }
 
-  if (code === KEY.UP) {
-    if (episodeIndex > 0) {
-      episodeIndex--;
-      renderEpisodes();
-      scheduleCheck();
-    } else {
-      zone = 'seasons';
-      renderSeasons();
-      renderEpisodes();
-    }
-    return true;
-  }
-  if (code === KEY.DOWN) {
-    if (episodeIndex < episodes.length - 1) {
-      episodeIndex++;
-      renderEpisodes();
-      scheduleCheck();
-      return true;
-    }
-    /* Past the last episode is the recaps strip, when there is a key for it. */
-    if (youtube.enabled()) {
-      zone = 'recaps';
-      renderEpisodes();
-      renderRecaps();
-    }
-    return true;
-  }
-  if (code === KEY.RIGHT) openCopies();
-  else if (code === KEY.OK) okDown();
+  if (code === KEY.UP) goZone('seasons');
+  else if (code === KEY.DOWN) stepDown();
+  else if (code === KEY.LEFT && episodeIndex > 0) {
+    episodeIndex--;
+    focusEpisodes();
+    scheduleCheck();
+  } else if (code === KEY.RIGHT && episodeIndex < episodes.length - 1) {
+    episodeIndex++;
+    focusEpisodes();
+    scheduleCheck();
+  } else if (code === KEY.OK) okDown();
   else if (isBack(code)) close();
   return true; // this page swallows everything else
 }

@@ -49,7 +49,10 @@ module.exports = function (h) {
           .then(intoRecaps)
           .then(function (st) {
             if (st.html) throw new Error('a recaps strip with no key: ' + st.html);
-            if (!st.episode) throw new Error('down past the last episode left the list');
+            /* 6d put the cast below the episodes, so down off the strip lands
+               there rather than nowhere — and never on a strip that has no key
+               to fill it. */
+            if (!st.cast) throw new Error('down off the episode strip reached no cast');
             if (ytCalls.length) throw new Error('asked YouTube anyway: ' + ytCalls.join(', '));
           })
           .then(function () {

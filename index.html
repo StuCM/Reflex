@@ -50,14 +50,21 @@
 <div id="show" class="view hidden">
   <div id="sh-art"></div>
   <div id="sh-shade"></div>
+  <!-- 6d: a header strip rather than a tall block, so a whole row of landscape
+       stills is on screen without the page having to move. -->
   <div id="sh-head">
     <div id="sh-title"></div>
     <div id="sh-meta"></div>
+    <div id="sh-chips"></div>
     <div id="sh-summary"></div>
   </div>
   <div id="sh-seasons"></div>
-  <div id="sh-episodes"></div>
-  <!-- Season recaps, below the episodes and empty until asked for: a search
+  <!-- The strip clips; the row of cards inside it carries the scroll offset on
+       a transform, which is the only thing that may animate here. -->
+  <div id="sh-strip"><div id="sh-episodes"></div></div>
+  <div id="sh-cast-label">Cast</div>
+  <div id="sh-cast"></div>
+  <!-- Season recaps, below the cast and empty until asked for: a search
        costs 100 units of a day's 10,000, so it waits for a keypress. -->
   <div id="sh-recaps"></div>
   <div class="msg-hint" id="sh-hint"></div>
