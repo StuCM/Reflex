@@ -491,13 +491,7 @@ function makeExtra(parent, n, withStreams) {
   /* Extras direct play: h264 + AAC stereo is inside the declared profile. */
   if (withStreams) {
     out.Media[0].Part[0].Stream = [
-      {
-        id: Number(key) * 10,
-        streamType: 1,
-        codec: 'h264',
-        width: 1920,
-        height: 1080,
-      },
+      { id: Number(key) * 10, streamType: 1, codec: 'h264', width: 1920, height: 1080 },
       {
         id: Number(key) * 10 + 1,
         streamType: 2,
@@ -596,12 +590,7 @@ function fullMetadata(item, film) {
   const runtime = copy.duration || film.duration || 0;
   if (runtime) {
     copy.Marker = [
-      {
-        id: base + 90,
-        type: 'intro',
-        startTimeOffset: 5000,
-        endTimeOffset: 12000,
-      },
+      { id: base + 90, type: 'intro', startTimeOffset: 5000, endTimeOffset: 12000 },
       {
         id: base + 91,
         type: 'credits',
@@ -836,12 +825,7 @@ function holdings(count) {
 }
 
 const SERVERS = [
-  {
-    index: 1,
-    id: 'mockmachine00000000000000000000000000main',
-    name: 'Main',
-    prefix: '/__plex',
-  },
+  { index: 1, id: 'mockmachine00000000000000000000000000main', name: 'Main', prefix: '/__plex' },
   {
     index: 2,
     id: 'mockmachine0000000000000000000000000backup',
@@ -901,12 +885,7 @@ function build(counts) {
        holds at 1080 — one film, two copies, one server, which is what folding
        the libraries into one Movies section has to survive. */
     if (n === 0) {
-      sections.splice(1, 0, {
-        key: '2',
-        title: '4K Films',
-        type: 'movie',
-        updatedAt: 1700000100,
-      });
+      sections.splice(1, 0, { key: '2', title: '4K Films', type: 'movie', updatedAt: 1700000100 });
       items['2'] = allFilms
         .filter(function (m) {
           return m._profile === 'h264-eac3';
@@ -943,6 +922,14 @@ function build(counts) {
       collect('9001', 'Heist', [14, 13, 12, 10, 9, 8, 6, 5, 4, 2, 1, 0]);
       collect('9002', 'Road Trip', [20, 21, 22, 24, 25, 26]);
       collect('9003', 'Lonely', [30]);
+      /* More films than one page of the merge walk, to prove paging keeps order. */
+      collect(
+        '9004',
+        'Marathon',
+        Array.from({ length: 150 }, function (_, i) {
+          return i;
+        }),
+      );
     } else {
       collect('9101', 'Heist', [15, 12, 11, 9, 7, 6, 3]);
     }

@@ -116,10 +116,7 @@ const GREEN = 404;
 
 /* One section per kind of thing this app can play, whatever the servers call
    their libraries. Music and photos are neither, so they are left out. */
-const SECTION_TITLES: Record<'movie' | 'show', string> = {
-  movie: 'Movies',
-  show: 'TV Shows',
-};
+const SECTION_TITLES: Record<'movie' | 'show', string> = { movie: 'Movies', show: 'TV Shows' };
 const SECTION_ORDER: ('movie' | 'show')[] = ['movie', 'show'];
 
 export function init(chosen: BrowseOptions) {
@@ -684,10 +681,7 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
         }
         return plexItems(one.part.server, one.part.key, 0, 0, one.part.filter).then((page) => {
           one.total = page.total;
-          void cached.total.put(cacheKey, {
-            updatedAt: one.part.updatedAt,
-            total: page.total,
-          });
+          void cached.total.put(cacheKey, { updatedAt: one.part.updatedAt, total: page.total });
         });
       })
       .catch((error: Error) => {

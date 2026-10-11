@@ -94,10 +94,7 @@ function modes(): SidebarRow[] {
   out.push({ label: 'Search', kind: 'search' });
   if (servers.count() > 1) {
     const preferred = servers.get(servers.preferred() ?? undefined);
-    out.push({
-      label: `Prefer ${preferred ? preferred.name : '?'}`,
-      kind: 'prefer',
-    });
+    out.push({ label: `Prefer ${preferred ? preferred.name : '?'}`, kind: 'prefer' });
   }
   /* An action on Continue watching rather than a mode, but this remote has no
      colour buttons, so this is the route. Absent when the row is empty. */
@@ -164,13 +161,7 @@ function build(): SidebarRow[] {
       /* Continue watching has its own entry above, and every section builds
          one — listing them all is the duplication this is rid of. */
       if (category === 'Continue watching') return;
-      out.push({
-        label: category,
-        kind: 'row',
-        index: position,
-        row,
-        sub: true,
-      });
+      out.push({ label: category, kind: 'row', index: position, row, sub: true });
     });
   });
   return out.concat(modes());

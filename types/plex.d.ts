@@ -266,11 +266,7 @@ interface YoutubeThumb {
 
 interface YoutubeSnippet {
   title?: string;
-  thumbnails?: {
-    medium?: YoutubeThumb;
-    high?: YoutubeThumb;
-    default?: YoutubeThumb;
-  };
+  thumbnails?: { medium?: YoutubeThumb; high?: YoutubeThumb; default?: YoutubeThumb };
 }
 
 interface YoutubeContentDetails {

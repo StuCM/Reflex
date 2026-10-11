@@ -904,8 +904,8 @@ module.exports = function (h) {
                 return r.indexOf('- ') === 0 || r.indexOf('* - ') === 0;
               });
               const at = rows.indexOf('Collections');
-              const after = rows.slice(at + 1, at + 3);
-              if (after.join('|') !== '- Heist|- Road Trip') {
+              const after = rows.slice(at + 1, at + 4);
+              if (after.join('|') !== '- Heist|- Marathon|- Road Trip') {
                 throw new Error(
                   'collections listed: ' + after.join('|') + ' of ' + listed.join('|'),
                 );
@@ -962,8 +962,69 @@ module.exports = function (h) {
             })
             .then(function () {
               page.off('request', onRequest);
-              return backToLibrary();
-            });
+              return walkTo('Marathon');
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var l=document.querySelector("#rows .row.on .row-label");return !!l && /^Marathon/.test(l.textContent.trim());})()',
+                'the Marathon row',
+                8000,
+              );
+            })
+            .then(function () {
+              /* Past the first page of 100: page two has to follow page one, so
+                 each film is checked as the focus steps across the boundary. */
+              return press('ArrowRight', 95);
+            })
+            .then(function () {
+              return page.waitForTimeout(500);
+            })
+            .then(function () {
+              const held = [];
+              for (let i = 0; i < 150; i++) if (i % 4 !== 3) held.push(lib.films[i].title);
+              const focusedTitle = function () {
+                return page.evaluate(function () {
+                  const t = document.querySelector('#rows .row.on .tile.on .tile-title');
+                  return t ? t.textContent.trim() : '';
+                });
+              };
+              const stepTo = function (k) {
+                return press('ArrowRight').then(function () {
+                  return waitFor(
+                    '(function(){var t=document.querySelector("#rows .row.on .tile.on .tile-title");return !!t && t.textContent.trim() === ' +
+                      JSON.stringify(held[k]) +
+                      ';})()',
+                    'film ' + k + ' of Marathon, ' + held[k],
+                    8000,
+                  );
+                });
+              };
+              return focusedTitle().then(function (title) {
+                const start = held.indexOf(title);
+                if (start < 80 || start > 99) {
+                  throw new Error('Marathon focus at ' + start + ' before the boundary: ' + title);
+                }
+                let walk = Promise.resolve();
+                for (let k = start + 1; k <= 106; k++) {
+                  walk = walk.then(stepTo.bind(null, k));
+                }
+                return walk;
+              });
+            })
+            .then(function () {
+              return press('Backspace');
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var l=document.querySelector("#rows .row.on .row-label");return !!l && l.textContent.trim().length > 0 && !/^Marathon/.test(l.textContent.trim());})()',
+                'the library rows after BACK',
+                8000,
+              );
+            })
+            .then(backToLibrary);
         },
       );
     });

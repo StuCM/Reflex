@@ -1,11 +1,11 @@
 ---
 id: 038
 slug: plex-collections-in-the-sidebar
-status: building
+status: review
 branch: crew/038-plex-collections-in-the-sidebar
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: plex-collections-sidebar
 files:
   - src/api/plex/library.ts
@@ -17,6 +17,9 @@ files:
   - dev/library.js
   - dev/mock-plex.js
   - dev/smoke/sections.js
+gate: pass
+gateSha: c33ef530d075b36b3738309e24bd8af99265349a
+gateAt: 2026-10-11T11:08:14.206Z
 ---
 
 # The servers' own collections are in the sidebar
@@ -233,6 +236,34 @@ its collection order, followed by the other copies' extras in theirs.
 
 ## Review rounds
 
+Round 1 (CHANGES): paging past one page untested; BACK from a collection
+untested; formatting churn in four hunks (SECTION_TITLES, cached.total.put,
+YoutubeSnippet, sidebar pushes); "failing on main" not in the report. Fixed: the
+mock gained "Marathon" (113 films, Main only) and the step walks the focus
+across the 100-film page boundary asserting every film, then BACKs and asserts
+the Marathon row is gone; churn reverted; the failure line is below.
+
+## Worker report
+
+Observed failing against `main`'s `src/` + `types/` (mock and step kept):
+`FAIL  the sidebar lists the servers' collections, in the curator's order` /
+`no Collections row: Continue watching | Movies | * TV Shows | - Recently Added | ...`.
+Passes with the change: 110/110.
+
+- `src/api/plex/library.ts`: `collections` and `collectionItems` (`/library/collections/{key}/children`).
+- `types/plex.d.ts`: `PlexCollection`; `MergePart.title` (library name, for the LQ skip).
+- `src/data/cached.ts`: `collections`, daily.
+- `src/screen/browse.ts`: `listCollections` (per-library, session-memoised, LQ skipped, merged by title, floor 5), `loadCollection` (merged row, `titleSort` rewritten to rank+position), `'collection'` mode, activate branches, sidebar data.
+- `src/view/sidebar.ts`: collapsed Collections group, expands in place.
+- `dev/library.js`, `dev/mock-plex.js`: Heist (both servers), Road Trip, Lonely (junk), Marathon (113); list and children endpoints.
+- `dev/smoke/sections.js`: the step, counted from a cold start.
+- No `css/sidebar.css` exists; the existing `.sub` rows needed nothing.
+
+Spec was wrong: `rowModel.merged` walks by title (see Blocked); resolved by Stuart.
+
 ## Graph writes proposed
+- Decision: collection rows get curator order by rewriting `titleSort` to (server rank, position) in the fetcher, because `merge.stream` is a title-ordered k-way merge. Revisit if `merge.ts` grows a position ordering.
+- Pattern: resource timing buffer (250) is empty by the time later smoke areas run; count boot requests by clearing the cache key and reloading under a `page.on('request')` collector.
+- Pattern: never run prettier here; `npx oxfmt --write <file>` only.
 - Pattern: Plex `?collection=<ratingKey>` section filter returns nothing; use
   `/library/collections/{ratingKey}/children`.
