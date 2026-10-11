@@ -1,7 +1,7 @@
 ---
 id: 038
 slug: plex-collections-in-the-sidebar
-status: approved
+status: building
 branch: crew/038-plex-collections-in-the-sidebar
 model: sonnet
 env: laptop
@@ -195,6 +195,41 @@ is 038.
       (`npx crew gate .claude/tasks/038-plex-collections-in-the-sidebar.md`).
 - [ ] No file outside `files:` is touched.
 - [ ] Commits follow the convention (the hook enforces it).
+
+## Blocked
+
+Approach 4 builds the collection row with `rowModel.merged(...)`, and the Goal
+says "in the curator's order". These cannot both hold. `merge.stream` /
+`fold` (`src/data/merge.ts:18-23, 205-215`) is a k-way merge that picks the
+head of whichever stream sorts first by `titleSort`, and assumes every stream is
+already title-sorted. Collection children arrive in `collectionSort` order, not
+title order, so:
+
+- With one part the order survives (only one head to pick).
+- With two or more parts (Bond is 3, Nicholas Sparks is 3, and the mock's
+  large collection is 2 by design) the heads are compared by title and the
+  result is neither collection order nor either server's order.
+
+The smoke step "first tile titles match the mock's first films in collection
+order" would therefore fail on the two-server collection, or pass only if the
+mock's order happens to be alphabetical, which would prove nothing.
+
+Decision needed, none of which I can make inside `files:` (merge.ts is not
+listed):
+1. Add an ordering option to `merge.stream` (e.g. fold by position rather than
+   title; across servers, keep the preferred server's order and append the
+   others' extras), then list `src/data/merge.ts` (+ its test) in `files:`.
+2. Or accept title order for collections (drop "curator's order" from the Goal
+   and the smoke assertion).
+3. Or fetch each collection whole (it is bounded, 5-60 films) and build a
+   `list` row in the preferred server's order, deduped with `merge.lists`;
+   this loses paging, which the Definition of done asks for.
+
+**Resolved 2026-10-11 by Stuart: "go with the curator's order for now".**
+Done inside `files:` without touching merge.ts: the collection fetcher rewrites
+each item's `titleSort` to a zero-padded (part rank, position) key, parts ranked
+preferred server first. The merge then yields the preferred server's films in
+its collection order, followed by the other copies' extras in theirs.
 
 ## Review rounds
 
