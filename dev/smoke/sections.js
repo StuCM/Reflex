@@ -1,5 +1,7 @@
 'use strict';
 /* the sidebar: modes, categories, Continue watching */
+const buildLibrary = require('../library').build;
+
 module.exports = function (h) {
   const {
     shot,
@@ -791,5 +793,144 @@ module.exports = function (h) {
             })
         );
       });
+    })
+
+    .then(function () {
+      return step(
+        "the sidebar lists the servers' collections, in the curator's order",
+        function () {
+          const lib = buildLibrary({ films: h.FILMS });
+          /* "Heist" on each server in its own order (dev/library.js); the
+           preferred server's films lead and the other's extras follow. */
+          const mainHeist = [14, 13, 12, 10, 9, 8, 6, 5, 4, 2, 1, 0];
+          const backupHeist = [15, 12, 11, 9, 7, 6, 3];
+          const named = function (indexes) {
+            return indexes.map(function (i) {
+              return lib.films[i].title;
+            });
+          };
+          const leading = function (first, second) {
+            return named(first).concat(
+              named(second).filter(function (t) {
+                return named(first).indexOf(t) < 0;
+              }),
+            );
+          };
+          let wanted;
+          const listRequests = function () {
+            return page.evaluate(function () {
+              return performance.getEntriesByType('resource').filter(function (e) {
+                return /\/library\/sections\/\w+\/collections/.test(e.name);
+              }).length;
+            });
+          };
+          let before;
+          const walkTo = function (label) {
+            return page
+              .evaluate(function (want) {
+                const rows = document.querySelectorAll('#sidebar .sb-row');
+                let on = 0,
+                  at = -1;
+                for (let i = 0; i < rows.length; i++) {
+                  if (rows[i].classList.contains('on')) on = i;
+                  if (at < 0 && rows[i].textContent.trim() === want) at = i;
+                }
+                return [on, at];
+              }, label)
+              .then(function (idx) {
+                if (idx[1] < 0) throw new Error('no "' + label + '" in the sidebar');
+                return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]));
+              });
+          };
+          return backToLibrary()
+            .then(openSidebar)
+            .then(sidebarRows)
+            .then(function (rows) {
+              const backupFirst = rows.indexOf('Prefer Backup') >= 0;
+              wanted = backupFirst
+                ? leading(backupHeist, mainHeist)
+                : leading(mainHeist, backupHeist);
+              if (wanted.length !== 16)
+                throw new Error('mock Heist is ' + wanted.length + ' films, not 16');
+              if (rows.indexOf('Collections') < 0)
+                throw new Error('no Collections row: ' + rows.join(' | '));
+              if (rows.indexOf('- Heist') >= 0)
+                throw new Error('Collections is not collapsed: ' + rows.join(' | '));
+              return listRequests();
+            })
+            .then(function (n) {
+              before = n;
+              /* One per movie library: Main's two and Backup's one. */
+              if (n !== 3) throw new Error('collection list requests: ' + n + ', wanted 3');
+              return walkTo('Collections');
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(sidebarRows)
+            .then(function (rows) {
+              const listed = rows.filter(function (r) {
+                return r.indexOf('- ') === 0 || r.indexOf('* - ') === 0;
+              });
+              const at = rows.indexOf('Collections');
+              const after = rows.slice(at + 1, at + 3);
+              if (after.join('|') !== '- Heist|- Road Trip') {
+                throw new Error(
+                  'collections listed: ' + after.join('|') + ' of ' + listed.join('|'),
+                );
+              }
+              if (rows.join('|').indexOf('Lonely') >= 0)
+                throw new Error('the 1-film collection is listed');
+              return walkTo('Heist');
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var l=document.querySelector("#rows .row.on .row-label");return !!l && l.textContent.replace(/\\s+/g, " ").trim() === "Heist (16)";})()',
+                'the Heist row',
+                8000,
+              );
+            })
+            .then(function () {
+              return page.waitForTimeout(600);
+            })
+            .then(function () {
+              return page.evaluate(function () {
+                const row = document.querySelector('#rows .row.on');
+                /* Tiles are a recycled pool, so DOM order is not screen order. */
+                return Array.prototype.slice
+                  .call(row.querySelectorAll('.tile'))
+                  .sort(function (x, y) {
+                    return (
+                      parseFloat(x.style.getPropertyValue('--tx')) -
+                      parseFloat(y.style.getPropertyValue('--tx'))
+                    );
+                  })
+                  .map(function (t) {
+                    return t.querySelector('.tile-title').textContent.trim();
+                  });
+              });
+            })
+            .then(function (shownTitles) {
+              const got = shownTitles.slice(0, 10);
+              if (got.join('|') !== wanted.slice(0, 10).join('|')) {
+                throw new Error(
+                  'order: ' + got.join(' | ') + ' wanted ' + wanted.slice(0, 10).join(' | '),
+                );
+              }
+              return openSidebar().then(sidebarRows);
+            })
+            .then(function () {
+              return listRequests();
+            })
+            .then(function (n) {
+              if (n !== before)
+                throw new Error('reopening the sidebar asked again: ' + before + ' -> ' + n);
+            })
+            .then(backToLibrary);
+        },
+      );
     });
 };

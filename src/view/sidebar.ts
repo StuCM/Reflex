@@ -14,6 +14,9 @@ const VIEW_H = 968;
 /** Nothing expanded; sections are 0-up and Continue watching is -1. */
 const NONE = -2;
 
+/** The Collections group's place among the expandable entries. */
+const COLLECTIONS = -3;
+
 interface SidebarRow {
   label: string;
   kind: string;
@@ -28,6 +31,11 @@ interface SidebarRow {
 interface Section {
   title: string;
   categories?: string[];
+  current?: boolean;
+}
+
+interface CollectionEntry {
+  title: string;
   current?: boolean;
 }
 
@@ -47,6 +55,7 @@ const listElement = must('sidebar-list');
 
 let offset = 0;
 let sections: Section[] = [];
+let collections: CollectionEntry[] = [];
 let watching: WatchingState | null = null;
 let rows: SidebarRow[] = [];
 let selected = 0;
@@ -61,11 +70,34 @@ function modes(): SidebarRow[] {
   const out: SidebarRow[] = [
     { label: 'Discovery', kind: 'discover', current: atMode === 'discover' },
     { label: 'Kids', kind: 'kids', current: atMode === 'kids' },
-    { label: 'Search', kind: 'search' },
   ];
+  if (collections.length) {
+    out.push({
+      label: 'Collections',
+      kind: 'collections',
+      index: COLLECTIONS,
+      opens: true,
+      current: atMode === 'collection',
+    });
+    if (expanded === COLLECTIONS) {
+      collections.forEach((collection, index) => {
+        out.push({
+          label: collection.title,
+          kind: 'collection',
+          index,
+          sub: true,
+          current: !!collection.current,
+        });
+      });
+    }
+  }
+  out.push({ label: 'Search', kind: 'search' });
   if (servers.count() > 1) {
     const preferred = servers.get(servers.preferred() ?? undefined);
-    out.push({ label: `Prefer ${preferred ? preferred.name : '?'}`, kind: 'prefer' });
+    out.push({
+      label: `Prefer ${preferred ? preferred.name : '?'}`,
+      kind: 'prefer',
+    });
   }
   /* An action on Continue watching rather than a mode, but this remote has no
      colour buttons, so this is the route. Absent when the row is empty. */
@@ -132,7 +164,13 @@ function build(): SidebarRow[] {
       /* Continue watching has its own entry above, and every section builds
          one — listing them all is the duplication this is rid of. */
       if (category === 'Continue watching') return;
-      out.push({ label: category, kind: 'row', index: position, row, sub: true });
+      out.push({
+        label: category,
+        kind: 'row',
+        index: position,
+        row,
+        sub: true,
+      });
     });
   });
   return out.concat(modes());
@@ -180,8 +218,10 @@ export function open(
   pick: (row: SidebarRow) => void,
   mode: string,
   watchingState: WatchingState | null,
+  collectionList: CollectionEntry[] = [],
 ): void {
   sections = list ?? [];
+  collections = collectionList;
   watching = watchingState ?? null;
   onPick = pick;
   atMode = mode || '';
@@ -192,8 +232,10 @@ export function open(
   /* The section is current too whenever Continue watching is, so this comes
      second: the list opens on where the focus actually is, not a level up. */
   if (watching?.current) expanded = -1;
+  if (collections.some((collection) => collection.current)) expanded = COLLECTIONS;
   rows = build();
-  selected = at(expanded === -1 ? 'watching' : 'section', expanded);
+  if (expanded === COLLECTIONS) selected = at('collections', COLLECTIONS);
+  else selected = at(expanded === -1 ? 'watching' : 'section', expanded);
   offset = 0;
   showing = true;
   (listElement.parentNode as HTMLElement).classList.add('open');

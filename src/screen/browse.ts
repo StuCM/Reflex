@@ -3,6 +3,8 @@
    Nothing here holds a whole section. The All row is virtual over the servers'
    own totals and walks them in title order only as far as you scroll. */
 import {
+  collectionItems as plexCollectionItems,
+  collections as plexCollections,
   contentRatings as plexContentRatings,
   hideFromDeck as plexHideFromDeck,
   hubs as plexHubs,
@@ -53,6 +55,17 @@ interface BrowseSection {
   current?: boolean;
 }
 
+type Mode = 'library' | 'kids' | 'discover' | 'collection';
+
+interface CollectionEntry {
+  title: string;
+  count: number;
+  parts: { server: string; key: string }[];
+}
+
+/** Fewer films than this across every server and it is not a collection worth a place. */
+const MIN_COLLECTION = 5;
+
 interface BrowseOptions {
   onOpen?: (item: PlexItem) => void;
   onShow?: (item: PlexItem) => void;
@@ -72,7 +85,11 @@ let deckItems: PlexItem[] = [];
 let watchingType: string | null = null;
 /** Row to land on once the next section is built. */
 let wantRow = 0;
-let mode: 'library' | 'kids' | 'discover' = 'library';
+let mode: Mode = 'library';
+/** The movie collections worth listing, merged by title across servers. */
+let collectionEntries: CollectionEntry[] = [];
+/** The one showing, while mode is 'collection'. */
+let collectionTitle = '';
 /** Rows parked while showing search results. */
 let savedRows: Row[] | null = null;
 /** Non-null while the results page is showing. */
@@ -99,7 +116,10 @@ const GREEN = 404;
 
 /* One section per kind of thing this app can play, whatever the servers call
    their libraries. Music and photos are neither, so they are left out. */
-const SECTION_TITLES: Record<'movie' | 'show', string> = { movie: 'Movies', show: 'TV Shows' };
+const SECTION_TITLES: Record<'movie' | 'show', string> = {
+  movie: 'Movies',
+  show: 'TV Shows',
+};
 const SECTION_ORDER: ('movie' | 'show')[] = ['movie', 'show'];
 
 export function init(chosen: BrowseOptions) {
@@ -180,6 +200,7 @@ export function setSections(perServer: { server: PlexServer; sections: PlexSecti
         server: entry.server,
         key: section.key,
         updatedAt: section.updatedAt || 0,
+        title: section.title,
       });
     });
   });
@@ -189,6 +210,7 @@ export function setSections(perServer: { server: PlexServer; sections: PlexSecti
     (section): section is BrowseSection => !!section,
   );
   const at = sections.findIndex((section) => section.title === currentTitle);
+  void listCollections(byType.movie);
   return at < 0 ? 0 : at;
 }
 
@@ -230,6 +252,10 @@ function openSidebar() {
     activate,
     mode,
     watching,
+    collectionEntries.map((entry) => ({
+      title: entry.title,
+      current: mode === 'collection' && entry.title === collectionTitle,
+    })),
   );
 }
 
@@ -526,6 +552,12 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
     loadDiscover();
     return;
   }
+  if (choice.kind === 'collections') return;
+  if (choice.kind === 'collection') {
+    const entry = collectionEntries[choice.index ?? -1];
+    if (entry) loadCollection(entry);
+    return;
+  }
   if (choice.kind === 'prefer') {
     const now = servers.get(servers.cyclePreferred() ?? undefined);
     debug(`preferring ${now ? now.name : '?'} where both servers have a film`);
@@ -580,7 +612,7 @@ function noteCategories(section: BrowseSection) {
 
 /* ---------- building rows ---------- */
 
-function reset(newMode: 'library' | 'kids' | 'discover') {
+function reset(newMode: Mode) {
   generation++;
   mode = newMode;
   rows = [];
@@ -652,7 +684,10 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
         }
         return plexItems(one.part.server, one.part.key, 0, 0, one.part.filter).then((page) => {
           one.total = page.total;
-          void cached.total.put(cacheKey, { updatedAt: one.part.updatedAt, total: page.total });
+          void cached.total.put(cacheKey, {
+            updatedAt: one.part.updatedAt,
+            total: page.total,
+          });
         });
       })
       .catch((error: Error) => {
@@ -793,6 +828,82 @@ function scheduleWalk() {
         debug(`walk: ${error.message}`);
       });
   }, 150);
+}
+
+/* ---------- collections ---------- */
+
+/* Each movie library's collections, from the daily cache or one request. LQ
+   libraries hold only cam copies, so their collections are skipped. */
+async function fetchCollections(part: MergePart): Promise<PlexCollection[]> {
+  const id = `${part.server.id}:${part.key}`;
+  const hit = await cached.collections.get(id);
+  if (hit) return hit;
+  const found = await plexCollections(part.server, part.key);
+  void cached.collections.put(id, found);
+  return found;
+}
+
+/* setSections runs twice at boot, from cache and then live, so the first ask
+   is shared rather than repeated before the cache has been written. */
+const asked: Record<string, Promise<PlexCollection[]>> = {};
+function libraryCollections(part: MergePart): Promise<PlexCollection[]> {
+  const id = `${part.server.id}:${part.key}`;
+  asked[id] ??= fetchCollections(part);
+  return asked[id];
+}
+
+/* Merged by title across servers; a failure leaves the sidebar group empty. */
+async function listCollections(section: BrowseSection | undefined): Promise<void> {
+  if (!section) return;
+  const parts = section.parts.filter((part) => !/\bLQ\b/i.test(part.title ?? ''));
+  const perPart = await Promise.all(parts.map((part) => libraryCollections(part)));
+  const byTitle: Record<string, CollectionEntry> = {};
+  const merged: CollectionEntry[] = [];
+  perPart.forEach((list) => {
+    list.forEach((one) => {
+      if (!one.title) return;
+      let entry = byTitle[one.title];
+      if (!entry) {
+        entry = { title: one.title, count: 0, parts: [] };
+        byTitle[one.title] = entry;
+        merged.push(entry);
+      }
+      entry.count += one.count;
+      entry.parts.push({ server: one.server, key: one.ratingKey });
+    });
+  });
+  collectionEntries = merged
+    .filter((entry) => entry.count >= MIN_COLLECTION)
+    .sort((one, two) => (one.title < two.title ? -1 : 1));
+}
+
+/* One row of the collection's films. The merge walks by title, so each page is
+   keyed by (server rank, position) instead: the preferred server's films in its
+   own collection order, then the other copies' extras. */
+function loadCollection(entry: CollectionEntry) {
+  reset('collection');
+  collectionTitle = entry.title;
+  const preferred = servers.preferred();
+  const ranked = entry.parts
+    .map((one) => ({ server: servers.get(one.server), key: one.key }))
+    .filter((one): one is { server: PlexServer; key: string } => !!one.server)
+    .sort((one, two) => Number(two.server.id === preferred) - Number(one.server.id === preferred));
+  const parts: MergePart[] = ranked.map((one) => ({
+    server: one.server,
+    key: one.key,
+    updatedAt: 0,
+    tag: `col${one.key}`,
+  }));
+  const fetch: MergeFetch = async (part, offset) => {
+    const rank = parts.indexOf(part);
+    const page = await plexCollectionItems(part.server, part.key, offset, rowModel.PAGE);
+    page.items.forEach((item, position) => {
+      item.titleSort = `${String(100 + rank)}${String(1000000 + offset + position)}`;
+    });
+    return page;
+  };
+  rows = [rowModel.merged(entry.title, parts, fetch)];
+  render();
 }
 
 /* ---------- kids ---------- */
