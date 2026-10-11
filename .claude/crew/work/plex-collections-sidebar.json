@@ -1,0 +1,20 @@
+{
+  "title": "Plex collections in the sidebar",
+  "summary": "List the server-curated Plex collections of the Movies section in the sidebar; opening one shows its films as a merge row. Measured against the real servers 2026-10-11.",
+  "stage": "spec",
+  "questions": [
+    { "id": "q-servers", "q": "Apollo only, or every server merged by collection title?", "why": "Maverick carries the same Kometa set; merging is the existing one-entry-per-film shape.", "refs": [{ "path": "src/screen/browse.ts", "line": 750, "name": "mergeHubs" }] },
+    { "id": "q-junk", "q": "Drop collections with fewer than N films in total?", "why": "Both servers hold one-film junk collections named after disc rips, plus empty vSports ones.", "refs": [] }
+  ],
+  "gaps": [],
+  "findings": [
+    { "title": "Measured against the real servers", "rows": [
+      { "src": "live", "text": "GET /library/sections/{key}/collections works: Apollo Movies 66, Apollo 4K 52, Apollo LQ 1, Apollo vSports 81 (junk); Maverick Movies 46, Archive 51, Foreign 1." },
+      { "src": "live", "text": "/library/sections/{key}/all?collection=<ratingKey> returns totalSize=0 on every library: the filter does NOT work with a ratingKey. Use /library/collections/{ratingKey}/children, which honours X-Plex-Container-Start/Size, returns totalSize, Guid with includeGuids=1, and Media." },
+      { "src": "live", "text": "Handoff guid check: /library/all?guid=tmdb://27205 returns 0 on Apollo though Inception is there carrying tmdb://27205; its plex:// guid returns 2. Discovery bug confirmed." }
+    ] },
+    { "title": "Reuse", "rows": [
+      { "src": "code", "text": "rowModel.merged(title, parts, fetch) with hand-built MergePart[]; loadKids is the closest loader; sidebar modes() and activate() kinds.", "refs": [{ "path": "src/screen/browse.ts", "line": 613 }, { "path": "src/view/sidebar.ts", "line": 60 }] }
+    ] }
+  ]
+}
