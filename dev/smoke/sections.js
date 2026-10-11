@@ -817,11 +817,33 @@ module.exports = function (h) {
             );
           };
           let wanted;
+          /* Counted from a cold start: the cached lists are cleared and the page
+           reloaded, so the three requests are on this collector rather than in
+           a resource timing buffer the earlier areas have long since filled. */
+          const asked = [];
+          const onRequest = function (r) {
+            if (/\/library\/sections\/\w+\/collections/.test(r.url())) asked.push(r.url());
+          };
           const listRequests = function () {
+            return Promise.resolve(asked.length);
+          };
+          const forgetLists = function () {
             return page.evaluate(function () {
-              return performance.getEntriesByType('resource').filter(function (e) {
-                return /\/library\/sections\/\w+\/collections/.test(e.name);
-              }).length;
+              return new Promise(function (resolve) {
+                const open = indexedDB.open('reflex', 1);
+                open.onsuccess = function () {
+                  const tx = open.result.transaction('kv', 'readwrite');
+                  tx.oncomplete = function () {
+                    resolve();
+                  };
+                  tx.objectStore('kv').openCursor().onsuccess = function (event) {
+                    const cursor = event.target.result;
+                    if (!cursor) return;
+                    if (String(cursor.key).indexOf('col:') === 0) cursor.delete();
+                    cursor.continue();
+                  };
+                };
+              });
             });
           };
           let before;
@@ -842,7 +864,16 @@ module.exports = function (h) {
                 return press(idx[1] > idx[0] ? 'ArrowDown' : 'ArrowUp', Math.abs(idx[1] - idx[0]));
               });
           };
+          page.on('request', onRequest);
           return backToLibrary()
+            .then(forgetLists)
+            .then(function () {
+              return page.reload();
+            })
+            .then(h.ready)
+            .then(function () {
+              return page.waitForTimeout(500);
+            })
             .then(openSidebar)
             .then(sidebarRows)
             .then(function (rows) {
@@ -929,7 +960,10 @@ module.exports = function (h) {
               if (n !== before)
                 throw new Error('reopening the sidebar asked again: ' + before + ' -> ' + n);
             })
-            .then(backToLibrary);
+            .then(function () {
+              page.off('request', onRequest);
+              return backToLibrary();
+            });
         },
       );
     });
