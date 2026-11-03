@@ -641,6 +641,51 @@ function create(opts) {
       return true;
     }
 
+    m = pathname.match(/^\/library\/sections\/(\w+)\/collections$/);
+    if (m) {
+      const found = m[1] === '1' ? srv.collections : [];
+      json(
+        res,
+        200,
+        container({
+          size: found.length,
+          Metadata: found.map(function (c) {
+            return {
+              ratingKey: c.ratingKey,
+              title: c.title,
+              subtype: 'movie',
+              smart: false,
+              childCount: c.items.length,
+            };
+          }),
+        }),
+      );
+      return true;
+    }
+
+    m = pathname.match(/^\/library\/collections\/(\d+)\/children$/);
+    if (m) {
+      const found = srv.collections.find(function (c) {
+        return c.ratingKey === m[1];
+      });
+      if (!found) {
+        json(res, 404, container({ size: 0 }));
+        return true;
+      }
+      const cut = slice(found.items, q);
+      json(
+        res,
+        200,
+        container({
+          size: cut.page.length,
+          totalSize: cut.total,
+          offset: Number(q['X-Plex-Container-Start'] || 0),
+          Metadata: cut.page.map(stripStreams),
+        }),
+      );
+      return true;
+    }
+
     m = pathname.match(/^\/library\/sections\/(\w+)\/contentRating$/);
     if (m) {
       const ratings = srv.contentRatings(m[1]);

@@ -174,6 +174,8 @@ interface MergePart {
   updatedAt?: number;
   filter?: Record<string, string | number>;
   tag?: string;
+  /** The library's own name. */
+  title?: string;
 }
 
 type MergeFetch = (
@@ -312,6 +314,14 @@ interface CachedSections {
 interface PlexHub {
   title: string;
   items: PlexItem[];
+}
+
+/** A server's curated collection, as listed by its movie library. */
+interface PlexCollection {
+  ratingKey: string;
+  title: string;
+  count: number;
+  server: string;
 }
 
 interface PlexDevice {

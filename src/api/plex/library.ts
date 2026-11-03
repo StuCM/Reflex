@@ -151,6 +151,44 @@ export function children(server: PlexServer, ratingKey: string): Promise<PlexIte
     .catch(() => []);
 }
 
+/* The curated collections of one movie library. */
+export function collections(server: PlexServer, sectionKey: string): Promise<PlexCollection[]> {
+  return ask(server, `/library/sections/${sectionKey}/collections`)
+    .then((response) =>
+      metadataOf(response).map((entry) => ({
+        ratingKey: String(entry.ratingKey),
+        title: entry.title ?? '',
+        count: entry.childCount ?? 0,
+        server: server.id,
+      })),
+    )
+    .catch(() => []);
+}
+
+/* A collection's films in the curator's order. The section's own
+   ?collection= filter answers nothing on these servers. */
+export function collectionItems(
+  server: PlexServer,
+  ratingKey: string,
+  start: number,
+  size: number,
+): Promise<{ total: number; items: PlexItem[] }> {
+  const parameters = {
+    includeGuids: 1,
+    'X-Plex-Container-Start': start,
+    'X-Plex-Container-Size': size,
+  };
+  return ask(server, `/library/collections/${ratingKey}/children?${queryString(parameters)}`, {
+    timeout: 20000,
+  }).then((response) => {
+    const container = (response as Container).MediaContainer ?? {};
+    return {
+      total: container.totalSize ?? container.size ?? 0,
+      items: servers.stamp(container.Metadata ?? [], server),
+    };
+  });
+}
+
 /* The section's own categories. One request returns every hub with its items,
    which is how the stock app shows a huge library without listing it. */
 export function hubs(server: PlexServer, sectionKey: string): Promise<PlexHub[]> {

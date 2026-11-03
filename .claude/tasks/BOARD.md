@@ -6,6 +6,7 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 035 | The guard reads as async/await, and is finally tested | `draft` | laptop | crew/035-the-guard-converts-and-gains-a-test *(gone)* |
+| 039 | Cam copies and sports matches never appear as films | `approved` | laptop | crew/039-cam-and-sports-libraries-are-not-films *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -40,6 +41,7 @@ Task files are the source of truth; this is the glance view.
 | 032 | The series page carries its episodes across, not down | `done` | laptop | crew/032-the-series-page-to-6d |
 | 033 | The fetching half of data/ reads as async/await | `done` | laptop | crew/033-async-await-in-the-fetching-half-of-data |
 | 034 | The holding half of data/ reads as async/await | `done` | laptop | crew/034-async-await-in-the-holding-half-of-data |
+| 038 | The servers' own collections are in the sidebar | `done` | laptop | crew/038-plex-collections-in-the-sidebar |
 
 ## Waiting on you
 
@@ -47,4 +49,4 @@ Task files are the source of truth; this is the glance view.
 
 ## In flight
 
-Nothing running.
+- **039 Cam copies and sports matches never appear as films** — `approved` on `crew/039-cam-and-sports-libraries-are-not-films`

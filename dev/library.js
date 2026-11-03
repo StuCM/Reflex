@@ -894,6 +894,46 @@ function build(counts) {
         .map(makeRemux);
     }
 
+    /* Curated collections, in the curator's order (not title order). Both
+       servers carry "Heist" with some films in common; Main also has a small
+       real one and a one-film junk one that the app must not list. */
+    const byFilm = {};
+    allFilms.forEach(function (m) {
+      byFilm[m._film] = m;
+    });
+    function members(indexes) {
+      return indexes
+        .filter(function (i) {
+          return byFilm[i];
+        })
+        .map(function (i) {
+          return byFilm[i];
+        });
+    }
+    const collections = [];
+    function collect(ratingKey, title, indexes) {
+      collections.push({
+        ratingKey: ratingKey,
+        title: title,
+        items: members(indexes),
+      });
+    }
+    if (n === 0) {
+      collect('9001', 'Heist', [14, 13, 12, 10, 9, 8, 6, 5, 4, 2, 1, 0]);
+      collect('9002', 'Road Trip', [20, 21, 22, 24, 25, 26]);
+      collect('9003', 'Lonely', [30]);
+      /* More films than one page of the merge walk, to prove paging keeps order. */
+      collect(
+        '9004',
+        'Marathon',
+        Array.from({ length: 150 }, function (_, i) {
+          return i;
+        }),
+      );
+    } else {
+      collect('9101', 'Heist', [15, 12, 11, 9, 7, 6, 3]);
+    }
+
     const byKey = {};
     allFilms.forEach(function (m) {
       byKey[m.ratingKey] = m;
@@ -928,6 +968,7 @@ function build(counts) {
       sections: sections,
       items: items,
       children: children,
+      collections: collections,
       episodesByShow: episodesByShow,
       byKey: byKey,
       byGuid: byGuid,

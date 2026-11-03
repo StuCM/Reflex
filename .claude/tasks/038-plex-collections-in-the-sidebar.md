@@ -1,11 +1,11 @@
 ---
 id: 038
 slug: plex-collections-in-the-sidebar
-status: approved
+status: done
 branch: crew/038-plex-collections-in-the-sidebar
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 2
 work: plex-collections-sidebar
 files:
   - src/api/plex/library.ts
@@ -17,6 +17,9 @@ files:
   - dev/library.js
   - dev/mock-plex.js
   - dev/smoke/sections.js
+gate: pass
+gateSha: b56c5e249b825c8a27364e8b709cb78240306008
+gateAt: 2026-10-11T11:22:22.557Z
 ---
 
 # The servers' own collections are in the sidebar
@@ -196,8 +199,75 @@ is 038.
 - [ ] No file outside `files:` is touched.
 - [ ] Commits follow the convention (the hook enforces it).
 
+## Blocked
+
+Approach 4 builds the collection row with `rowModel.merged(...)`, and the Goal
+says "in the curator's order". These cannot both hold. `merge.stream` /
+`fold` (`src/data/merge.ts:18-23, 205-215`) is a k-way merge that picks the
+head of whichever stream sorts first by `titleSort`, and assumes every stream is
+already title-sorted. Collection children arrive in `collectionSort` order, not
+title order, so:
+
+- With one part the order survives (only one head to pick).
+- With two or more parts (Bond is 3, Nicholas Sparks is 3, and the mock's
+  large collection is 2 by design) the heads are compared by title and the
+  result is neither collection order nor either server's order.
+
+The smoke step "first tile titles match the mock's first films in collection
+order" would therefore fail on the two-server collection, or pass only if the
+mock's order happens to be alphabetical, which would prove nothing.
+
+Decision needed, none of which I can make inside `files:` (merge.ts is not
+listed):
+1. Add an ordering option to `merge.stream` (e.g. fold by position rather than
+   title; across servers, keep the preferred server's order and append the
+   others' extras), then list `src/data/merge.ts` (+ its test) in `files:`.
+2. Or accept title order for collections (drop "curator's order" from the Goal
+   and the smoke assertion).
+3. Or fetch each collection whole (it is bounded, 5-60 films) and build a
+   `list` row in the preferred server's order, deduped with `merge.lists`;
+   this loses paging, which the Definition of done asks for.
+
+**Resolved 2026-10-11 by Stuart: "go with the curator's order for now".**
+Done inside `files:` without touching merge.ts: the collection fetcher rewrites
+each item's `titleSort` to a zero-padded (part rank, position) key, parts ranked
+preferred server first. The merge then yields the preferred server's films in
+its collection order, followed by the other copies' extras in theirs.
+
 ## Review rounds
 
+Round 1 (CHANGES): paging past one page untested; BACK from a collection
+untested; formatting churn in four hunks (SECTION_TITLES, cached.total.put,
+YoutubeSnippet, sidebar pushes); "failing on main" not in the report. Fixed: the
+mock gained "Marathon" (113 films, Main only) and the step walks the focus
+across the 100-film page boundary asserting every film, then BACKs and asserts
+the Marathon row is gone; churn reverted; the failure line is below.
+
+Round 2 (PASS, 2026-11-03, run by the orchestrator): verify 110/110; round 1's
+four points fixed. Non-blocking: a failed list fetch caches `[]` for a day,
+hiding that library's collections until expiry (same as `hubs()`).
+
+## Worker report
+
+Observed failing against `main`'s `src/` + `types/` (mock and step kept):
+`FAIL  the sidebar lists the servers' collections, in the curator's order` /
+`no Collections row: Continue watching | Movies | * TV Shows | - Recently Added | ...`.
+Passes with the change: 110/110.
+
+- `src/api/plex/library.ts`: `collections` and `collectionItems` (`/library/collections/{key}/children`).
+- `types/plex.d.ts`: `PlexCollection`; `MergePart.title` (library name, for the LQ skip).
+- `src/data/cached.ts`: `collections`, daily.
+- `src/screen/browse.ts`: `listCollections` (per-library, session-memoised, LQ skipped, merged by title, floor 5), `loadCollection` (merged row, `titleSort` rewritten to rank+position), `'collection'` mode, activate branches, sidebar data.
+- `src/view/sidebar.ts`: collapsed Collections group, expands in place.
+- `dev/library.js`, `dev/mock-plex.js`: Heist (both servers), Road Trip, Lonely (junk), Marathon (113); list and children endpoints.
+- `dev/smoke/sections.js`: the step, counted from a cold start.
+- No `css/sidebar.css` exists; the existing `.sub` rows needed nothing.
+
+Spec was wrong: `rowModel.merged` walks by title (see Blocked); resolved by Stuart.
+
 ## Graph writes proposed
+- Decision: collection rows get curator order by rewriting `titleSort` to (server rank, position) in the fetcher, because `merge.stream` is a title-ordered k-way merge. Revisit if `merge.ts` grows a position ordering.
+- Pattern: resource timing buffer (250) is empty by the time later smoke areas run; count boot requests by clearing the cache key and reloading under a `page.on('request')` collector.
+- Pattern: never run prettier here; `npx oxfmt --write <file>` only.
 - Pattern: Plex `?collection=<ratingKey>` section filter returns nothing; use
   `/library/collections/{ratingKey}/children`.
