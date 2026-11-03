@@ -6,7 +6,6 @@ Task files are the source of truth; this is the glance view.
 | id | task | status | env | branch |
 |---|---|---|---|---|
 | 035 | The guard reads as async/await, and is finally tested | `draft` | laptop | crew/035-the-guard-converts-and-gains-a-test *(gone)* |
-| 039 | Player controls fade even when something is focused | `building` | laptop | crew/039-player-controls-fade-when-focused |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
 | 003 | Land the audio-switch fix stranded on claude/player-features | `done` | laptop | crew/003-land-audio-switch *(gone)* |
@@ -44,6 +43,7 @@ Task files are the source of truth; this is the glance view.
 | 036 | A TMDB row keeps going when you reach its end | `done` | laptop | crew/036-tmdb-rows-keep-loading |
 | 037 | Delete on the TV keyboard deletes a letter instead of leaving search | `done` | laptop | crew/037-backspace-deletes-in-search |
 | 038 | Continue watching shows what you have been watching, promptly | `done` | laptop | crew/038-continue-watching-is-fresh |
+| 039 | Player controls fade even when something is focused | `done` | laptop | crew/039-player-controls-fade-when-focused |
 
 ## Waiting on you
 
@@ -51,4 +51,4 @@ Task files are the source of truth; this is the glance view.
 
 ## In flight
 
-- **039 Player controls fade even when something is focused** — `building` on `crew/039-player-controls-fade-when-focused`
+Nothing running.
