@@ -269,23 +269,35 @@ function paintTicks(): void {
   fill(osdTicks, ...marks);
 }
 
+const [OSD_IDLE, FOCUS_IDLE, PANEL_IDLE] = [4000, 8000, 15000];
+let lastKeyAt = 0;
 function showOsd(): void {
   paintOsd();
   osd.classList.remove('hidden');
   osd.classList.remove('faded');
   subtitleElement.classList.add('lifted');
   if (osdTimer) clearTimeout(osdTimer);
-  /* While a seek is still being aimed, the OSD is the only feedback there is,
-     so it stays until the seek lands. The menu keeps it up too — it sits
-     above the bar and reads as one panel. */
+  /* Aiming a seek holds the OSD; a focus or panel holds it only while keys
+     arrive, since fading with focus kept leaves the arrows on a hidden row. */
   osdTimer = setTimeout(() => {
-    if (pending !== null || menu.isOpen() || openPanel || focus !== 'none') {
+    const idle = Date.now() - lastKeyAt;
+    const panel = menu.isOpen() || openPanel !== null;
+    if (pending !== null || (panel ? idle < PANEL_IDLE : focus !== 'none' && idle < FOCUS_IDLE)) {
       showOsd();
       return;
     }
+    closePanels();
+    setFocus('none');
+    paintControls();
     osd.classList.add('faded');
     subtitleElement.classList.remove('lifted');
-  }, 4000);
+  }, OSD_IDLE);
+}
+
+function closePanels(): void {
+  menu.close();
+  openPanel = null;
+  chaptersElement.classList.add('hidden');
 }
 
 function osdShowing(): boolean {
@@ -1241,10 +1253,8 @@ export function play(options: PlayOptions): void {
   marker = null;
   skipDismissed = null;
   skipElement.classList.add('hidden');
-  menu.close();
+  closePanels();
   setFocus('none');
-  openPanel = null;
-  chaptersElement.classList.add('hidden');
   subtitleCues = [];
   currentSub = null;
   subNote = '';
@@ -1337,10 +1347,8 @@ function summary(): string {
     onExit would bounce back to the film page mid-restart. */
 export function stop(state?: string, quiet?: boolean): void {
   if (!item) return;
-  menu.close();
+  closePanels();
   setFocus('none');
-  openPanel = null;
-  chaptersElement.classList.add('hidden');
   debug(summary());
   report(state || 'stopped');
   if (ticker) clearInterval(ticker);
@@ -1401,12 +1409,8 @@ function focusPanel(id: string): void {
    same aim-then-seek as a nudge, so holding ◀ still costs one range request;
    OK is what says "stop aiming and go there". */
 function barKey(code: number): boolean {
-  if (code === 37) {
-    seekBy(-NUDGE);
-    return true;
-  }
-  if (code === 39) {
-    seekBy(NUDGE);
+  if (code === 37 || code === 39) {
+    seekBy(code === 37 ? -NUDGE : NUDGE);
     return true;
   }
   if (code === 13 || code === 415 || code === 19) {
@@ -1435,14 +1439,8 @@ function barKey(code: number): boolean {
    still dismisses it from the row. */
 function controlKey(code: number): boolean {
   const count = controls().length;
-  if (code === 37) {
-    controlIndex = (controlIndex + count - 1) % count;
-    paintControls();
-    showOsd();
-    return true;
-  }
-  if (code === 39) {
-    controlIndex = (controlIndex + 1) % count;
+  if (code === 37 || code === 39) {
+    controlIndex = (controlIndex + count + (code === 37 ? -1 : 1)) % count;
     paintControls();
     showOsd();
     return true;
@@ -1474,6 +1472,7 @@ function controlKey(code: number): boolean {
 }
 
 export function key(code: number): boolean {
+  lastKeyAt = Date.now();
   /* The offer owns the remote while it is up: the film has ended, so seeking
      and pausing have nothing left to act on. */
   if (next) return nextKey(code);
