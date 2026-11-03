@@ -22,6 +22,9 @@ interface Claim {
 /** 'serverId:ratingKey' -> 'serverId:deviceID'. */
 let played: Record<string, string> | null = null;
 
+/** The fetch in flight, so two callers at launch share one request per server. */
+let fetching: Promise<Record<string, string>> | null = null;
+
 /** null means never configured, so nothing is filtered. */
 let claimed: Record<string, boolean> | null = null;
 
@@ -71,8 +74,24 @@ function countDevices(map: Record<string, string>): number {
 
 /* One history fetch per server per session gives "which device last played
    this". onDeck carries no device information of its own. */
-export async function ensureHistory(): Promise<Record<string, string>> {
-  if (played) return played;
+export function ensureHistory(): Promise<Record<string, string>> {
+  if (played) return Promise.resolve(played);
+  if (!fetching) {
+    fetching = loadHistory().then((map) => {
+      fetching = null;
+      return map;
+    });
+  }
+  return fetching;
+}
+
+/** Drop the snapshot, so the next ensureHistory asks the servers again. */
+export function forgetHistory(): void {
+  played = null;
+  fetching = null;
+}
+
+async function loadHistory(): Promise<Record<string, string>> {
   const reachable = servers.all();
   try {
     const perServer = await Promise.all(
