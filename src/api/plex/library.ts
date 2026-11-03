@@ -18,6 +18,13 @@ interface Container {
   };
 }
 
+/* `Movies - LQ` holds cams and telesyncs; `vSports - FV` holds matches, which Plex files as movies. */
+const NOT_FILMS = /\bLQ\b|\bvSports\b/i;
+
+function isFilm(item: PlexItem): boolean {
+  return !NOT_FILMS.test(item.librarySectionTitle ?? '');
+}
+
 function metadataOf(response: unknown): PlexItem[] {
   return (response as Container).MediaContainer?.Metadata ?? [];
 }
@@ -29,6 +36,7 @@ export function sections(server: PlexServer): Promise<PlexSection[]> {
         /* Movies and shows. Music and photos are not something this app has any
            business drawing. */
         .filter((entry) => entry.type === 'movie' || entry.type === 'show')
+        .filter((entry) => !NOT_FILMS.test(entry.title))
         .map((entry) => ({
           key: entry.key,
           title: entry.title,
@@ -211,7 +219,7 @@ export function search(server: PlexServer, query: string): Promise<PlexItem[]> {
       const found: PlexItem[] = [];
       ((response as Container).MediaContainer?.Hub ?? []).forEach((hub) => {
         (hub.Metadata ?? []).forEach((item) => {
-          if (item.type === 'movie' || item.type === 'show') found.push(item);
+          if ((item.type === 'movie' || item.type === 'show') && isFilm(item)) found.push(item);
         });
       });
       return servers.stamp(found, server);
@@ -251,7 +259,7 @@ export function devices(server: PlexServer): Promise<PlexDevice[]> {
    that lets a curated external list be asked about, instead of crawling. */
 export function copiesByGuid(server: PlexServer, guid: string): Promise<PlexItem[]> {
   return ask(server, `/library/all?${queryString({ guid, includeGuids: 1 })}`, { timeout: 15000 })
-    .then((response) => servers.stamp(metadataOf(response), server))
+    .then((response) => servers.stamp(metadataOf(response).filter(isFilm), server))
     .catch(() => []);
 }
 

@@ -423,3 +423,11 @@ second ordering, the collection fetcher rewrites each item's `titleSort` to
 (server rank, position), preferred server first. Revisit if `merge.ts` ever
 grows a position ordering. The section filter `?collection=` returns nothing on
 these servers; `/library/collections/{key}/children` is the endpoint.
+
+## 039 — cam and sports libraries are not films
+
+2026-10-11. `Movies - LQ` (cams and telesyncs) and `vSports - FV` (matches
+that Plex files as movies) are dropped where the library is read:
+`sections`, `copiesByGuid` and `search`, matched on the library title. This
+narrows the 2026-09-07 decision that every movie library is a part of Movies.
+There is no setting, and no file-name detection of cams elsewhere.
