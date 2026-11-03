@@ -1,7 +1,7 @@
 ---
 id: 038
 slug: continue-watching-is-fresh
-status: draft
+status: building
 branch: crew/038-continue-watching-is-fresh
 model: sonnet
 env: laptop

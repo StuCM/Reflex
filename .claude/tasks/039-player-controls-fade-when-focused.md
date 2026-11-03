@@ -1,7 +1,7 @@
 ---
 id: 039
 slug: player-controls-fade-when-focused
-status: draft
+status: building
 branch: crew/039-player-controls-fade-when-focused
 model: sonnet
 env: laptop
