@@ -432,3 +432,9 @@ rightly refused as not the user's. The rule is now in `crew-worker` itself.
 **Smoke in a cloud container** wants `chromium_headless_shell-1243` and the
 image has `-1194`. Point `PLAYWRIGHT_BROWSERS_PATH` at a copy with the newer name
 linked to the older binary. It is the bench, not the app.
+
+**038: Continue watching is fetched on its own and drawn when it lands**, ahead
+of plex.tv discovery and the hubs, and again on the way back from the player
+with the history snapshot dropped. A prefetched onDeck answer is never reused
+across a hide (`dropFromDeck` clears it), or the hidden entry comes straight
+back.
