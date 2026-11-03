@@ -381,6 +381,7 @@ function watchedKey(copy: PlexItem): string {
    they are refetched on the next visit anyway. */
 function dropFromDeck(entry: PlexItem) {
   const gone = identity(entry);
+  prefetched = null;
   deckItems = deckItems.filter((held) => identity(held) !== gone);
   sections.forEach((section) => void cached.rows.drop(section.title));
   const at = watchingRowIndex();
@@ -675,6 +676,102 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
   });
 }
 
+/* onDeck is per server, not per section, and hands back films and episodes
+   together — which is what you want to carry on with, so it is kept whole
+   rather than cut to the section's own type. Most recently watched first. */
+function buildDeck(perServer: PlexItem[][]): PlexItem[] {
+  const deck = devices.mine(merge.lists(perServer));
+  deck.sort((one, two) => (two.lastViewedAt ?? 0) - (one.lastViewedAt ?? 0));
+  return deck;
+}
+
+interface DeckFetch {
+  ids: string;
+  at: number;
+  lists: Promise<PlexItem[][]>;
+}
+/** The last refreshDeck, for loadSection to take once instead of asking again. */
+let prefetched: DeckFetch | null = null;
+const PREFETCH_FOR = 30000;
+
+/* One onDeck per server, and the history `mine` needs. A launch asks twice —
+   once from the cached servers, once after discovery — so loadSection takes
+   the answer refreshDeck already has rather than asking again. */
+function fetchDeck(reachable: PlexServer[], fresh: boolean): Promise<PlexItem[][]> {
+  const ids = reachable.map((server) => server.id).join(',');
+  const held = prefetched;
+  prefetched = null;
+  if (!fresh && held && held.ids === ids && Date.now() - held.at < PREFETCH_FOR) return held.lists;
+  const lists = Promise.all([
+    Promise.all(reachable.map((server) => plexOnDeck(server))),
+    devices.ensureHistory(),
+  ]).then((results) => results[0]);
+  if (fresh) prefetched = { ids, at: Date.now(), lists };
+  return lists;
+}
+
+/* Replace Continue watching in the rows, keeping focus where it is. Select
+   mode owns the row while it lasts, so it is left alone; a results page has
+   parked the rows, and those are the ones that get the new deck. */
+function landDeck(deck: PlexItem[]) {
+  if (picking || mode !== 'library') return;
+  deckItems = deck;
+  const parked = searchQuery !== null && savedRows !== null;
+  const target = (parked ? savedRows : rows) ?? rows;
+  const at = target.findIndex((row) => row.title === WATCHING);
+  const current = target[at];
+  if (current) {
+    if (!deck.length) {
+      target.splice(at, 1);
+      if (!parked) {
+        rowIndex = clamp(rowIndex > at ? rowIndex - 1 : rowIndex, 0, Math.max(0, rows.length - 1));
+      }
+    } else {
+      const row = rowModel.list(WATCHING, deckCut());
+      row.focus = clamp(current.focus, 0, Math.max(0, row.total - 1));
+      target[at] = row;
+    }
+  } else if (deck.length) {
+    target.unshift(rowModel.list(WATCHING, deckCut()));
+    if (!parked && target.length > 1) rowIndex++;
+  }
+  const section = sections[sectionIndex];
+  if (section) {
+    if (!parked) noteCategories(section);
+    cacheLists(section, target);
+  }
+  if (parked) return;
+  rail.invalidateEmpty();
+  render();
+}
+
+/* The cache holds the rows as they are, so a deck that landed ahead of the
+   hubs is what the next launch paints. */
+function cacheLists(section: BrowseSection, held: Row[]) {
+  const lists: { title: string; items: PlexItem[] }[] = [];
+  held.forEach((row) => {
+    if (row.kind !== 'list') return;
+    lists.push({ title: row.title, items: row.title === WATCHING ? deckItems : row.items });
+  });
+  void cached.rows.put(section.title, { rows: lists });
+}
+
+/* Ask the servers again what is on deck. Called on coming back from the
+   player, when the history `mine` filters by is also a launch old. */
+export function refreshDeck(forgetHistory?: boolean) {
+  const section = sections[sectionIndex];
+  if (!section || mode !== 'library') return;
+  if (forgetHistory) devices.forgetHistory();
+  const isCurrent = generationGuard();
+  fetchDeck(serversOf(section), true)
+    .then((lists) => {
+      if (isCurrent()) landDeck(buildDeck(lists));
+    })
+    .catch((error: Error) => {
+      debug(`deck: ${error.message}`);
+    });
+}
+
 /* focusRow lands on a named category once its section is built, which is what
    picking one out of the sidebar has to do when it belongs to another
    section. */
@@ -700,24 +797,26 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
       }
       if (!allowFetch) return;
 
-      /* Continue watching is per server; the category rows are per section. Two
-       requests per server for the whole browse screen, however big the
-       library is. */
+      /* Continue watching is per server; the category rows are per section. The
+       deck is one request per server and is painted the moment it lands, rather
+       than waiting behind the hubs, which are one per section part. */
       const reachable = serversOf(section);
+      const deckLists = fetchDeck(reachable, false);
+      deckLists
+        .then((lists) => {
+          if (isCurrent()) landDeck(buildDeck(lists));
+        })
+        .catch((error: Error) => {
+          debug(`deck: ${error.message}`);
+        });
       return Promise.all([
-        Promise.all(reachable.map((server) => plexOnDeck(server))),
+        deckLists,
         Promise.all(section.parts.map((part) => plexHubs(part.server, part.key))),
-        devices.ensureHistory(),
       ]).then((results) => {
         if (!isCurrent()) return;
         const built: { title: string; items: PlexItem[] }[] = [];
 
-        /* onDeck is per server, not per section, and hands back films and
-         episodes together — which is what you want to carry on with, so it is
-         kept whole rather than cut to the section's own type. Most recently
-         watched first. */
-        const deck = devices.mine(merge.lists(results[0]));
-        deck.sort((one, two) => (two.lastViewedAt ?? 0) - (one.lastViewedAt ?? 0));
+        const deck = buildDeck(results[0]);
         if (deck.length) built.push({ title: WATCHING, items: deck });
 
         mergeHubs(results[1]).forEach((hub) => {
