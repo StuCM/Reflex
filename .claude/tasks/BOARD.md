@@ -49,5 +49,5 @@ Task files are the source of truth; this is the glance view.
 
 ## In flight
 
-- **038 The servers' own collections are in the sidebar** — `review` on `crew/038-plex-collections-in-the-sidebar`, round 1/2
+- **038 The servers' own collections are in the sidebar** — `review` on `crew/038-plex-collections-in-the-sidebar`, round 2/2
 - **039 Cam copies and sports matches never appear as films** — `approved` on `crew/039-cam-and-sports-libraries-are-not-films`

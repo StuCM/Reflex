@@ -5,7 +5,7 @@ status: review
 branch: crew/038-plex-collections-in-the-sidebar
 model: sonnet
 env: laptop
-rounds: 1
+rounds: 2
 work: plex-collections-sidebar
 files:
   - src/api/plex/library.ts
@@ -18,8 +18,8 @@ files:
   - dev/mock-plex.js
   - dev/smoke/sections.js
 gate: pass
-gateSha: c33ef530d075b36b3738309e24bd8af99265349a
-gateAt: 2026-10-11T11:08:14.206Z
+gateSha: b56c5e249b825c8a27364e8b709cb78240306008
+gateAt: 2026-10-11T11:22:22.557Z
 ---
 
 # The servers' own collections are in the sidebar
@@ -242,6 +242,10 @@ YoutubeSnippet, sidebar pushes); "failing on main" not in the report. Fixed: the
 mock gained "Marathon" (113 films, Main only) and the step walks the focus
 across the 100-film page boundary asserting every film, then BACKs and asserts
 the Marathon row is gone; churn reverted; the failure line is below.
+
+Round 2 (PASS, 2026-11-03, run by the orchestrator): verify 110/110; round 1's
+four points fixed. Non-blocking: a failed list fetch caches `[]` for a day,
+hiding that library's collections until expiry (same as `hubs()`).
 
 ## Worker report
 
