@@ -4,6 +4,7 @@
      node dev/server.js                    mock server, 2000 films
      node dev/server.js --films 30000      the real library's size, for feel
      node dev/server.js --latency 140      pretend the server is far away
+     node dev/server.js --slow-hubs 5000   hold only the hub rows back by 5s
      node dev/server.js --proxy            talk to the real plex.tv instead
 
    Then open http://localhost:8080, or whatever $PORT says — the harness that
@@ -42,6 +43,7 @@ function parseArgs(argv) {
     port: envPort === undefined || envPort === '' ? 8080 : Number(envPort),
     films: 2000,
     latency: 0,
+    slowHubs: 0,
     pinPolls: 2,
     proxy: false,
     quiet: false,
@@ -52,6 +54,7 @@ function parseArgs(argv) {
     if (a === '--port') out.port = Number(argv[++i]);
     else if (a === '--films') out.films = Number(argv[++i]);
     else if (a === '--latency') out.latency = Number(argv[++i]);
+    else if (a === '--slow-hubs') out.slowHubs = Number(argv[++i]);
     else if (a === '--pin-polls') out.pinPolls = Number(argv[++i]);
     else if (a === '--proxy') out.proxy = true;
     else if (a === '--built') out.built = true;
@@ -121,7 +124,12 @@ function start(opts) {
   /* In proxy mode there is no fake library at all — see the /__plex handler. */
   const api = opts.proxy
     ? null
-    : mock.create({ films: opts.films, pinPolls: opts.pinPolls, log: log });
+    : mock.create({
+        films: opts.films,
+        pinPolls: opts.pinPolls,
+        slowHubs: opts.slowHubs,
+        log: log,
+      });
   /* TMDB is mocked alongside Plex, and off the same generated library, so the
      artwork path runs without a request leaving the machine. In --proxy mode
      there is no library to derive it from and the real TMDB is used instead. */

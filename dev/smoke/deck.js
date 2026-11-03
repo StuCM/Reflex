@@ -25,11 +25,249 @@ module.exports = function (h) {
     pressButton,
     page,
     titles,
+    hasFixture,
   } = h;
+
+  /* The rows the rail holds, by label, with the title each opens on. */
+  function railRows() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(document.querySelectorAll('#rows .row'), function (el) {
+        const row = el._rowRef;
+        const first = row && row.items && row.items[0];
+        return {
+          label: el.querySelector('.row-label').textContent.trim(),
+          first: first ? first.grandparentTitle || first.title : null,
+          viewedAt: first ? first.lastViewedAt || 0 : 0,
+        };
+      });
+    });
+  }
+
+  /* Page-side, so it can be handed to waitFor: Continue watching is on screen
+     and opens on this title. */
+  function deckOpensOn(title, after) {
+    return (
+      '(function(){var r=document.querySelectorAll("#rows .row"),i,f;' +
+      'for(i=0;i<r.length;i++){' +
+      'if(r[i].querySelector(".row-label").textContent.trim()!=="Continue watching") continue;' +
+      'f=r[i]._rowRef&&r[i]._rowRef.items&&r[i]._rowRef.items[0];' +
+      'if(f&&(f.grandparentTitle||f.title)===' +
+      JSON.stringify(title) +
+      '&&(f.lastViewedAt||0)>' +
+      (after || 0) +
+      ') return true;}return false;})()'
+    );
+  }
+
+  function slowHubs(ms) {
+    return page.evaluate(function (n) {
+      return fetch('/__plextv/slow-hubs?ms=' + n).then(function (r) {
+        return r.json();
+      });
+    }, ms);
+  }
+
+  function writeRows(section, value) {
+    return page.evaluate(
+      function (args) {
+        return new Promise(function (resolve, reject) {
+          const req = indexedDB.open('reflex', 1);
+          req.onerror = function () {
+            reject(new Error('no database'));
+          };
+          req.onsuccess = function () {
+            const tx = req.result.transaction('kv', 'readwrite');
+            tx.objectStore('kv').put(args.value, 'rows:' + args.section);
+            tx.oncomplete = function () {
+              resolve(true);
+            };
+          };
+        });
+      },
+      { section: section, value: value },
+    );
+  }
+
+  function titleOf(m) {
+    return m.grandparentTitle || m.title;
+  }
+
+  function cachedDeckFirst(section) {
+    return cachedRows(section).then(function (hit) {
+      const row =
+        hit &&
+        hit.rows &&
+        hit.rows.find(function (r) {
+          return r.title === 'Continue watching';
+        });
+      return row && row.items.length ? titleOf(row.items[0]) : null;
+    });
+  }
 
   return (
     h
       .ready()
+
+      /* ---- Continue watching is the servers' list, promptly ---- */
+
+      .then(function () {
+        return step('the deck lands before the hubs do', function () {
+          let expected;
+          return cachedRows('Movies')
+            .then(function (hit) {
+              const row = hit.rows.find(function (r) {
+                return r.title === 'Continue watching';
+              });
+              if (!row || row.items.length < 3) throw new Error('no cached deck to make stale');
+              expected = titleOf(row.items[0]);
+              /* Stale: the same entries with the first one moved to the back, and
+                 no hub rows at all, so a hub row can only have come from the
+                 network. */
+              const stale = row.items.slice(1).concat(row.items.slice(0, 1));
+              if (titleOf(stale[0]) === expected) throw new Error('could not make a stale deck');
+              return writeRows('Movies', {
+                rows: [{ title: 'Continue watching', items: stale }],
+              });
+            })
+            .then(function () {
+              return slowHubs(5000);
+            })
+            .then(function () {
+              return page.reload();
+            })
+            .then(function () {
+              /* Well inside the 5s the hubs are held for. */
+              return waitFor(
+                deckOpensOn('' + expected),
+                'the deck to refresh to ' + expected,
+                3500,
+              );
+            })
+            .then(railRows)
+            .then(function (rows) {
+              const hubs = rows.filter(function (r) {
+                return r.label === 'Recently Added';
+              });
+              if (hubs.length) throw new Error('a hub row was already on screen');
+              if (!rows.length) throw new Error('no rows read');
+            })
+            .then(function () {
+              /* The control: the hubs do arrive, so the check above was looking
+                 at a screen that had somewhere to put one. */
+              return waitFor(
+                '(function(){var l=document.querySelectorAll("#rows .row .row-label"),i;' +
+                  'for(i=0;i<l.length;i++) if(l[i].textContent.trim()==="Recently Added") return true;' +
+                  'return false;})()',
+                'the hub row to arrive',
+                12000,
+              );
+            })
+            .then(
+              function () {
+                return slowHubs(0);
+              },
+              function (error) {
+                return slowHubs(0).then(function () {
+                  throw error;
+                });
+              },
+            );
+        });
+      })
+
+      .then(function () {
+        if (!hasFixture()) return;
+        let watched, before;
+        return step('what you watched comes first when you come back', function () {
+          watched = titles.directPlays.title;
+          return h
+            .ready()
+            .then(railRows)
+            .then(function (rows) {
+              const deck = rows.find(function (r) {
+                return r.label === 'Continue watching';
+              });
+              if (!deck || !deck.first) throw new Error('no Continue watching to start from');
+              /* It may already lead, if an earlier area played it: what must change
+                 then is when it was watched, not where it sits. */
+              before = deck.viewedAt;
+              return openTitle(watched);
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var v=document.getElementById("video");' +
+                  'return !v.classList.contains("hidden") && !v.paused && v.currentTime > 1;})()',
+                'the film to be playing',
+                15000,
+              );
+            })
+            .then(function () {
+              return press('Backspace');
+            }) // stop: back on the detail page
+            .then(function () {
+              return page.waitForTimeout(300);
+            })
+            .then(function () {
+              return backToLibrary();
+            })
+            .then(function () {
+              return waitFor(
+                deckOpensOn(watched, before),
+                watched + ' to lead Continue watching, watched just now',
+                8000,
+              );
+            });
+        });
+      })
+
+      .then(function () {
+        if (!hasFixture()) return;
+        return step('the refreshed deck is what the cache holds', function () {
+          const watched = titles.directPlays.title;
+          return cachedDeckFirst('Movies')
+            .then(function (first) {
+              if (first !== watched) {
+                throw new Error('cache opens Continue watching on "' + first + '"');
+              }
+              /* Servers that never answer, so the only place the deck can come
+                 from is what was stored. A held request logs no error when the
+                 reload cancels it; a refused one would. */
+              return page.route(/\/__plex/, function () {});
+            })
+            .then(function () {
+              return page.reload();
+            })
+            .then(function () {
+              return waitFor(deckOpensOn(watched), 'the cached deck to open on ' + watched, 8000);
+            })
+            .then(function () {
+              return page.waitForTimeout(1500);
+            })
+            .then(railRows)
+            .then(function (rows) {
+              const deck = rows.find(function (r) {
+                return r.label === 'Continue watching';
+              });
+              if (!deck || deck.first !== watched) {
+                throw new Error(
+                  'the unanswered servers changed the deck to ' + (deck && deck.first),
+                );
+              }
+            })
+            .then(function () {
+              return page.unroute(/\/__plex/);
+            })
+            .then(function () {
+              return page.reload();
+            })
+            .then(function () {
+              return h.ready();
+            });
+        });
+      })
 
       /* ---- getting things out of Continue watching ----
 

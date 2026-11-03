@@ -63,6 +63,7 @@ const THEME_WAV = (function () {
 function create(opts) {
   const log = opts.log || function () {};
   const lib = buildLibrary({ films: opts.films });
+  lib.slowHubs = opts.slowHubs || 0;
   const pins = {};
   let nextPin = 4000;
 
@@ -546,6 +547,12 @@ function create(opts) {
   /* ---------- plex.tv ---------- */
 
   function plexTv(req, res, pathname, q, origin) {
+    /* Lets a running suite set the hub delay without a restart. */
+    if (pathname === '/slow-hubs') {
+      lib.slowHubs = Number(q.ms || 0);
+      json(res, 200, { slowHubs: lib.slowHubs });
+      return true;
+    }
     if (pathname === '/api/v2/pins' && req.method === 'POST') {
       const id = nextPin++;
       pins[id] = { code: 'MOCK', polls: 0 };
@@ -703,6 +710,14 @@ function create(opts) {
     }
 
     m = pathname.match(/^\/hubs\/sections\/(\w+)$/);
+    if (m && lib.slowHubs && !q.__held) {
+      /* Only the hubs wait; everything else answers at once, which is what
+         lets a test see the order the app asks and paints in. */
+      setTimeout(function () {
+        server(srv, req, res, pathname, Object.assign({ __held: '1' }, q));
+      }, lib.slowHubs);
+      return true;
+    }
     if (m) {
       const list = srv.items[m[1]] || [];
       const kind = list.length ? list[0].type : 'movie';
@@ -985,6 +1000,17 @@ function create(opts) {
 
     if (pathname === '/:/timeline') {
       log(srv.name + ' timeline ' + q.state + ' ' + Math.round(Number(q.time || 0) / 1000) + 's');
+      /* A real server puts what was just watched at the front of its deck. */
+      const watched = q.state === 'stopped' && srv.byKey[q.ratingKey];
+      if (watched && Number(q.time) > 0) {
+        const copy = JSON.parse(JSON.stringify(watched));
+        copy.viewOffset = Math.floor(Number(q.time));
+        copy.lastViewedAt = Math.floor(Date.now() / 1000);
+        srv.deck = srv.deck.filter(function (d) {
+          return String(d.ratingKey) !== String(q.ratingKey);
+        });
+        srv.deck.unshift(copy);
+      }
       json(res, 200, container({ size: 0 }));
       return true;
     }

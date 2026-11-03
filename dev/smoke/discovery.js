@@ -17,6 +17,21 @@ module.exports = function (h) {
     if (guid) guids.push(decodeURIComponent(guid[1]));
   });
 
+  /* Every page of Trending TMDB was asked for, off the wire — the control for
+     the paging step is that this collector is not empty. */
+  const trendingPages = [];
+  page.on('request', function (r) {
+    const m = /\/trending\/movie\/week\?(.*)$/.exec(r.url());
+    const n = m && /(?:^|&)page=(\d+)/.exec(m[1]);
+    if (n) trendingPages.push(Number(n[1]));
+  });
+
+  function asked(n) {
+    return trendingPages.filter(function (p) {
+      return p === n;
+    }).length;
+  }
+
   function titlesAsked(from) {
     const seen = [];
     guids.slice(from).forEach(function (g) {
@@ -336,6 +351,53 @@ module.exports = function (h) {
                   'was already in the cache',
               );
             }
+          })
+          .then(backToLibrary);
+      });
+    })
+
+    .then(function () {
+      return step('a Trending row asks for its next page and stops at the last', function () {
+        function total() {
+          return page.evaluate(function () {
+            const el = document.querySelector('#rows .row.on');
+            return el && el._rowRef ? el._rowRef.total : -1;
+          });
+        }
+        let grown = 0;
+        return sidebarPick('Discovery')
+          .then(function () {
+            return waitFor(
+              '(function(){var el=document.querySelector("#rows .row.on");' +
+                'return !!el && !!el._rowRef && el._rowRef.title === "Trending this week";})()',
+              'the Trending row focused',
+              20000,
+            );
+          })
+          .then(function () {
+            return press('ArrowRight', 40);
+          })
+          .then(settle)
+          .then(total)
+          .then(function (n) {
+            /* ROW is 12 in the mock: more than that is a second page arriving. */
+            if (n <= 12)
+              throw new Error('Trending still holds ' + n + ' titles after walking to its end');
+            grown = n;
+            /* The control: the same collector saw page 1, so a zero for page 4
+               means the app did not ask rather than that nothing was counted. */
+            if (asked(1) < 1)
+              throw new Error('no page=1 request counted; the collector sees nothing');
+            if (asked(2) !== 1) throw new Error('page 2 was requested ' + asked(2) + ' times');
+            if (asked(3) !== 1) throw new Error('page 3 was requested ' + asked(3) + ' times');
+            return press('ArrowRight', 20);
+          })
+          .then(settle)
+          .then(total)
+          .then(function (n) {
+            if (n !== grown)
+              throw new Error('the row grew from ' + grown + ' to ' + n + ' past its last page');
+            if (asked(4) !== 0) throw new Error('page 4 was requested ' + asked(4) + ' times');
           })
           .then(backToLibrary);
       });

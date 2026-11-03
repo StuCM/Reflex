@@ -6,3 +6,15 @@
 {"at":"2026-09-15T07:36:51.420Z","event":"dispatch","id":"032","slug":"the-series-page-to-6d","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":4,"commits":null}
 {"at":"2026-09-15T07:36:52.408Z","event":"dispatch","id":"033","slug":"async-await-in-the-fetching-half-of-data","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":3,"commits":null}
 {"at":"2026-09-15T07:36:53.353Z","event":"dispatch","id":"034","slug":"async-await-in-the-holding-half-of-data","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":5,"commits":null}
+{"at":"2026-11-03T08:17:59.639Z","event":"spec","id":"036","slug":"tmdb-rows-keep-loading","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":10,"commits":null}
+{"at":"2026-11-03T08:18:00.079Z","event":"dispatch","id":"036","slug":"tmdb-rows-keep-loading","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":10,"commits":null}
+{"at":"2026-11-03T08:18:00.585Z","event":"spec","id":"037","slug":"backspace-deletes-in-search","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":2,"commits":null}
+{"at":"2026-11-03T08:18:01.044Z","event":"dispatch","id":"037","slug":"backspace-deletes-in-search","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":2,"commits":null}
+{"at":"2026-11-03T08:18:01.525Z","event":"spec","id":"038","slug":"continue-watching-is-fresh","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":6,"commits":null}
+{"at":"2026-11-03T08:18:01.968Z","event":"dispatch","id":"038","slug":"continue-watching-is-fresh","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":6,"commits":null}
+{"at":"2026-11-03T08:18:02.454Z","event":"spec","id":"039","slug":"player-controls-fade-when-focused","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":2,"commits":null}
+{"at":"2026-11-03T08:18:03.044Z","event":"dispatch","id":"039","slug":"player-controls-fade-when-focused","status":"building","env":"laptop","model":"sonnet","rounds":0,"session":null,"declared":2,"commits":null}
+{"at":"2026-11-03T08:43:59.293Z","event":"close","id":"036","slug":"tmdb-rows-keep-loading","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":10,"commits":"5"}
+{"at":"2026-11-03T08:43:59.888Z","event":"close","id":"037","slug":"backspace-deletes-in-search","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":2,"commits":"5"}
+{"at":"2026-11-03T09:06:25.790Z","event":"close","id":"038","slug":"continue-watching-is-fresh","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":6,"commits":"6"}
+{"at":"2026-11-03T09:58:45.727Z","event":"close","id":"039","slug":"player-controls-fade-when-focused","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":2,"commits":"5"}

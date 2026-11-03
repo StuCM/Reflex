@@ -19,6 +19,46 @@ test('row model', () => {
   assert.strictEqual(Rows.itemAt(list, 2), null);
   assert.strictEqual(Rows.itemAt(list, -1), null);
 
+  /* ---- paged rows grow when the focus nears the end ---- */
+
+  function film(id: string) {
+    return { title: 'T' + id, _tmdb: { id: id } };
+  }
+  function films(from: number, n: number) {
+    const out = [];
+    for (let i = from; i < from + n; i++) out.push(film(String(i)));
+    return out;
+  }
+
+  var paged = Rows.paged('Trending', films(0, 12), 2, 3);
+  assert.strictEqual(paged.kind, 'paged');
+  assert.strictEqual(paged.total, 12);
+  assert.strictEqual(Rows.itemAt(paged, 11).title, 'T11');
+  assert.strictEqual(Rows.itemAt(paged, 12), null);
+
+  paged.focus = 0;
+  assert.strictEqual(Rows.wantsMore(paged), true, '12 held, 24 needed from the first tile');
+  paged.asking = true;
+  assert.strictEqual(Rows.wantsMore(paged), false, 'one request in flight per row');
+  paged.asking = false;
+  assert.strictEqual(Rows.wantsMore(list), false, 'a list row never asks');
+  var farFrom = Rows.paged('Far', films(0, 100), 2, 3);
+  assert.strictEqual(Rows.wantsMore(farFrom), false, 'focus far from the end');
+  farFrom.focus = 80;
+  assert.strictEqual(Rows.wantsMore(farFrom), true, 'and near it');
+  farFrom.next = 4;
+  assert.strictEqual(Rows.wantsMore(farFrom), false, 'exhausted: next is past pages');
+
+  /* Page 2 repeats two titles from page 1 and adds ten. */
+  Rows.extend(paged, films(10, 12));
+  assert.strictEqual(paged.total, 22, 'duplicates by TMDB id are dropped');
+  assert.strictEqual(paged.items.length, 22);
+  assert.strictEqual(paged.next, 3);
+  assert.strictEqual(Rows.itemAt(paged, 21).title, 'T21');
+  Rows.extend(paged, films(0, 5));
+  assert.strictEqual(paged.total, 22, 'an all-duplicate page adds nothing');
+  assert.strictEqual(paged.next, 4, 'but still counts as asked');
+
   /* ---- merge rows are virtual over the servers' own totals ---- */
 
   var LIBRARY = 5000;

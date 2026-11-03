@@ -48,10 +48,10 @@ test('catalogue dispatch and the vote floor', () => {
     return m;
   }
 
-  function fetched(category, seeds) {
+  function fetched(category, seeds, page?) {
     asked.length = 0;
-    return Tmdb.catalogue(category, seeds).then(function (films) {
-      return { films: films, asked: asked.slice() };
+    return Tmdb.catalogue(category, seeds, page).then(function (got) {
+      return { films: got.films, pages: got.pages, asked: asked.slice() };
     });
   }
 
@@ -102,6 +102,44 @@ test('catalogue dispatch and the vote floor', () => {
         assert.ok(/\/movie\/11\/recommendations\?/.test(got.asked[0]), got.asked[0]);
         /* A seed is not a recommendation, and both seeds return both seeds. */
         assert.strictEqual(got.films.length, 0);
+      });
+    })
+
+    /* ---- paging: the page reaches the URL and the total comes back ---- */
+
+    .then(function () {
+      payload = { results: [result(11)], total_pages: 7 };
+      return fetched({ kind: 'trending' }, undefined, 3).then(function (got) {
+        assert.ok(/[?&]page=3(&|$)/.test(got.asked[0]), got.asked[0]);
+        assert.strictEqual(got.pages, 7);
+      });
+    })
+
+    .then(function () {
+      return fetched({ kind: 'provider', id: 8 }, undefined, 2).then(function (got) {
+        assert.ok(/[?&]page=2(&|$)/.test(got.asked[0]), got.asked[0]);
+      });
+    })
+
+    .then(function () {
+      return fetched({ kind: 'genre', id: 878 }).then(function (got) {
+        assert.ok(/[?&]page=1(&|$)/.test(got.asked[0]), 'page defaults to 1: ' + got.asked[0]);
+      });
+    })
+
+    .then(function () {
+      payload = { results: [result(11)], total_pages: 41000 };
+      return fetched({ kind: 'genre', id: 878 }).then(function (got) {
+        assert.strictEqual(got.pages, 500, 'TMDB refuses above page 500');
+      });
+    })
+
+    .then(function () {
+      payload = { results: [result(11)] };
+      return fetched({ kind: 'recommended' }, ['99']).then(function (got) {
+        assert.strictEqual(got.pages, 1, 'recommended is computed across seeds, not paged');
+        assert.ok(!/page=/.test(got.asked[0]), got.asked[0]);
+        payload = { results: [result(11), result(22)] };
       });
     })
 

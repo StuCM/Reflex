@@ -415,7 +415,7 @@ shadowed them) were cleared here, at the merge, which is where a shared file
 belongs. That is the fix for the deadlock 019 and 020 hit, where two tasks each
 needed one line in a file neither could write.
 
-## 038 — a collection row keeps the curator's order by lying about titleSort
+## 040 — a collection row keeps the curator's order by lying about titleSort
 
 `merge.stream` is a k-way merge on `titleSort`, so a collection spread over two
 servers came out in neither server's order. Rather than teach `merge.ts` a
@@ -424,10 +424,38 @@ second ordering, the collection fetcher rewrites each item's `titleSort` to
 grows a position ordering. The section filter `?collection=` returns nothing on
 these servers; `/library/collections/{key}/children` is the endpoint.
 
-## 039 — cam and sports libraries are not films
+## 041 — cam and sports libraries are not films
 
 2026-10-11. `Movies - LQ` (cams and telesyncs) and `vSports - FV` (matches
 that Plex files as movies) are dropped where the library is read:
 `sections`, `copiesByGuid` and `search`, matched on the library title. This
 narrows the 2026-09-07 decision that every movie library is a part of Movies.
 There is no setting, and no file-name detection of cams elsewhere.
+## 2026-11-03 — A TMDB row is a third row kind, and a cloud worker pushes
+
+**036 made TMDB rows page.** A `paged` row joins `list` and `merge`. Its fetch
+lives in the screen (`walkPaged` in `screen/browse.ts`) and only its arithmetic
+(`wantsMore`, `extend`) in `rules/rows.ts`, so `rules/` gained no second `data/`
+import beside the layering debt it already carries. Popularity-sorted TMDB pages
+shift between requests, which is why `extend` drops ids it already holds.
+
+**Workers in cloud sessions push their own task branch.** "Never push" was
+written for local worktrees, where the orchestrator reads the branch in place.
+Dispatched to cloud sessions, all four of 036–039 finished with their work in
+containers nothing else could reach, and an orchestrator's message to push was
+rightly refused as not the user's. The rule is now in `crew-worker` itself.
+
+**Smoke in a cloud container** wants `chromium_headless_shell-1243` and the
+image has `-1194`. Point `PLAYWRIGHT_BROWSERS_PATH` at a copy with the newer name
+linked to the older binary. It is the bench, not the app.
+
+**038: Continue watching is fetched on its own and drawn when it lands**, ahead
+of plex.tv discovery and the hubs, and again on the way back from the player
+with the history snapshot dropped. A prefetched onDeck answer is never reused
+across a hide (`dropFromDeck` clears it), or the hidden entry comes straight
+back.
+
+**039: focused player controls fade after 8s idle, and an open panel closes
+after 15s.** Focus is cleared with the fade, never kept behind it, because the
+control row is a mode and an invisible focus would steal the arrows from
+seeking. The timer re-arms every 4s, so each threshold lands up to 4s late.

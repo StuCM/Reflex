@@ -213,6 +213,64 @@ module.exports = function (h) {
         });
       })
 
+      /* Real time, because the timers are the thing under test: the OSD timer
+       re-arms every 4s, so focus clears between 8s and 12s idle and a panel
+       closes between 15s and 19s. Paused throughout, so the thirty-second
+       fixture cannot end underneath the waits. */
+      .then(function () {
+        if (!hasFixture()) return;
+        return step('focused controls fade and the arrows seek again; a panel closes', function () {
+          const faded = 'document.getElementById("osd").classList.contains("faded")';
+          return press('Enter')
+            .then(function () {
+              return waitFor(
+                '/PAUSED/.test(document.getElementById("osd-time").textContent)',
+                'OK to pause',
+              );
+            })
+            .then(function () {
+              return press('ArrowDown');
+            })
+            .then(controlRow)
+            .then(function (row) {
+              if (row.foc < 0) throw new Error('down did not reach the control row');
+            })
+            .then(function () {
+              return waitFor(faded, 'the focused OSD to fade', 14000);
+            })
+            .then(controlRow)
+            .then(function (row) {
+              if (row.foc >= 0) throw new Error('fading left the row focused: ' + row.foc);
+            })
+            .then(function () {
+              return press('ArrowRight');
+            })
+            .then(function () {
+              return waitFor(
+                '/SEEKING/.test(document.getElementById("osd-time").textContent)',
+                'right to aim a seek after the fade',
+              );
+            })
+            .then(barFocused)
+            .then(function (on) {
+              if (on) throw new Error('right after the fade focused the trackbar');
+            })
+            .then(function () {
+              return openMenu('subs');
+            })
+            .then(function () {
+              return waitFor(
+                faded + ' && document.getElementById("menu").classList.contains("hidden")',
+                'the idle panel to close and the OSD to fade',
+                22000,
+              );
+            })
+            .then(function () {
+              return press('Enter');
+            });
+        });
+      })
+
       .then(function () {
         if (!hasFixture()) return;
         return step('every documented key still means what it says unfocused', function () {

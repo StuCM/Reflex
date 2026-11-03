@@ -19,6 +19,8 @@ permanently.** LG does not update Chromium within a major webOS version.
   chosen. A record, so entries are superseded rather than rewritten.
 - **[Backlog](/backlog)** — what is next, ordered outward from the video: if
   playback is wrong, nothing further out matters.
+- **[The browse rework](/browse-design)** — Home, Movies, TV, collections,
+  the filter overlay and settings. Designed 2026-10-04, not yet built.
 - **[The refactor](/refactor-plan)** — the Vite and TypeScript migration.
   Finished 2026-09-13; kept as the record of what was decided.
 - **[Layering debt](/layering-debt)** — the imports that cross `src/`'s layers

@@ -34,7 +34,8 @@ that section looks empty or wrong, say so in the task file.
 - Touch only the paths in `files:`. If the scope hook is installed it will
   refuse the write; if it is not, the gate will fail. Either way the answer is
   the same: a path the spec did not authorise is a spec bug, not an obstacle.
-- Never push, never merge, never deploy. `npx crew preflight <env>` says what
+- Never merge, never deploy, and never push anything but your own task branch
+  (see **Pushing**, below). `npx crew preflight <env>` says what
   this machine can prove. If a deploy command fails, that is the bench, not a
   bug — do not try to fix it.
 - Never edit the spec's Goal, Approach, Out of scope or Definition of done.
@@ -118,7 +119,25 @@ Append every round to **Review rounds** in the task file.
 no full stop. Body optional and short. No attribution footers; the commit-msg
 hook rejects them and will reject you.
 
-Commit in your worktree as you go. Never push.
+Commit in your worktree as you go.
+
+## Pushing
+
+Locally the orchestrator shares your repository and reads your branch where it
+is, so do not push. **In a cloud session it cannot**: your container is the
+only copy, and unpushed work is lost when the session ends. You are in one when
+`CLAUDE_CODE_REMOTE=true`.
+
+There, when you have set the final `status:` — `done`, `pending-<env>` or
+`blocked` alike — push the task branch, and only it:
+
+    git push -u origin <the task file's branch:>
+
+Never `main`, never another task's branch, never `--force`. This instruction is
+the user's, given when they dispatched the task; it is the whole of your push
+permission. If the push is refused anyway, say so in the task file and in your
+last message, with the exact command for the user to run, and stop — do not
+find another way.
 
 ## Finishing
 
@@ -134,4 +153,5 @@ learnt. A Decision with its rationale, or a Pattern for a trap that cost you
 time. The orchestrator decides what gets committed to the graph; you only
 propose.
 
-Then run `npx crew board` and stop. Do not start anything else.
+Then run `npx crew board`, push if you are in a cloud session, and stop. Do
+not start anything else.

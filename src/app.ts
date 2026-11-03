@@ -31,9 +31,16 @@ import * as rail from './view/rail';
    checks each one before you choose. Playing is a decision made there, with
    the verdict already on screen. */
 
+/* Set when playback started, so the next return to the rail refetches what is
+   on deck: the film just watched belongs at the front of it. */
+let playedSince = false;
+
 function toBrowse() {
   showView('browse');
   browse.render();
+  if (!playedSince) return;
+  playedSince = false;
+  browse.refreshDeck(true);
 }
 
 function toShow() {
@@ -245,6 +252,7 @@ function playChecked(
       ? item.viewOffset || metadata.viewOffset || 0
       : resumeAt * 1000;
   debug(`starting at ${Math.round(metadata.viewOffset / 1000)}s`);
+  playedSince = true;
   showView('player');
   player.play({
     server,
@@ -440,6 +448,9 @@ function start() {
     .then((list) => {
       if (list && list.length && servers.count()) {
         browse.loadSection(browse.setSections(rehydrate(list)), false);
+        /* The cached servers can answer for Continue watching now, without
+           waiting on plex.tv and the section lists. */
+        browse.refreshDeck();
       }
       return plexDiscover();
     })

@@ -116,7 +116,10 @@ const GREEN = 404;
 
 /* One section per kind of thing this app can play, whatever the servers call
    their libraries. Music and photos are neither, so they are left out. */
-const SECTION_TITLES: Record<'movie' | 'show', string> = { movie: 'Movies', show: 'TV Shows' };
+const SECTION_TITLES: Record<'movie' | 'show', string> = {
+  movie: 'Movies',
+  show: 'TV Shows',
+};
 const SECTION_ORDER: ('movie' | 'show')[] = ['movie', 'show'];
 
 export function init(chosen: BrowseOptions) {
@@ -404,6 +407,7 @@ function watchedKey(copy: PlexItem): string {
    they are refetched on the next visit anyway. */
 function dropFromDeck(entry: PlexItem) {
   const gone = identity(entry);
+  prefetched = null;
   deckItems = deckItems.filter((held) => identity(held) !== gone);
   sections.forEach((section) => void cached.rows.drop(section.title));
   const at = watchingRowIndex();
@@ -681,7 +685,10 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
         }
         return plexItems(one.part.server, one.part.key, 0, 0, one.part.filter).then((page) => {
           one.total = page.total;
-          void cached.total.put(cacheKey, { updatedAt: one.part.updatedAt, total: page.total });
+          void cached.total.put(cacheKey, {
+            updatedAt: one.part.updatedAt,
+            total: page.total,
+          });
         });
       })
       .catch((error: Error) => {
@@ -702,6 +709,102 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
         (row.state.streams.length === 1 ? '' : 's'),
     );
   });
+}
+
+/* onDeck is per server, not per section, and hands back films and episodes
+   together — which is what you want to carry on with, so it is kept whole
+   rather than cut to the section's own type. Most recently watched first. */
+function buildDeck(perServer: PlexItem[][]): PlexItem[] {
+  const deck = devices.mine(merge.lists(perServer));
+  deck.sort((one, two) => (two.lastViewedAt ?? 0) - (one.lastViewedAt ?? 0));
+  return deck;
+}
+
+interface DeckFetch {
+  ids: string;
+  at: number;
+  lists: Promise<PlexItem[][]>;
+}
+/** The last refreshDeck, for loadSection to take once instead of asking again. */
+let prefetched: DeckFetch | null = null;
+const PREFETCH_FOR = 30000;
+
+/* One onDeck per server, and the history `mine` needs. A launch asks twice —
+   once from the cached servers, once after discovery — so loadSection takes
+   the answer refreshDeck already has rather than asking again. */
+function fetchDeck(reachable: PlexServer[], fresh: boolean): Promise<PlexItem[][]> {
+  const ids = reachable.map((server) => server.id).join(',');
+  const held = prefetched;
+  prefetched = null;
+  if (!fresh && held && held.ids === ids && Date.now() - held.at < PREFETCH_FOR) return held.lists;
+  const lists = Promise.all([
+    Promise.all(reachable.map((server) => plexOnDeck(server))),
+    devices.ensureHistory(),
+  ]).then((results) => results[0]);
+  if (fresh) prefetched = { ids, at: Date.now(), lists };
+  return lists;
+}
+
+/* Replace Continue watching in the rows, keeping focus where it is. Select
+   mode owns the row while it lasts, so it is left alone; a results page has
+   parked the rows, and those are the ones that get the new deck. */
+function landDeck(deck: PlexItem[]) {
+  if (picking || mode !== 'library') return;
+  deckItems = deck;
+  const parked = searchQuery !== null && savedRows !== null;
+  const target = (parked ? savedRows : rows) ?? rows;
+  const at = target.findIndex((row) => row.title === WATCHING);
+  const current = target[at];
+  if (current) {
+    if (!deck.length) {
+      target.splice(at, 1);
+      if (!parked) {
+        rowIndex = clamp(rowIndex > at ? rowIndex - 1 : rowIndex, 0, Math.max(0, rows.length - 1));
+      }
+    } else {
+      const row = rowModel.list(WATCHING, deckCut());
+      row.focus = clamp(current.focus, 0, Math.max(0, row.total - 1));
+      target[at] = row;
+    }
+  } else if (deck.length) {
+    target.unshift(rowModel.list(WATCHING, deckCut()));
+    if (!parked && target.length > 1) rowIndex++;
+  }
+  const section = sections[sectionIndex];
+  if (section) {
+    if (!parked) noteCategories(section);
+    cacheLists(section, target);
+  }
+  if (parked) return;
+  rail.invalidateEmpty();
+  render();
+}
+
+/* The cache holds the rows as they are, so a deck that landed ahead of the
+   hubs is what the next launch paints. */
+function cacheLists(section: BrowseSection, held: Row[]) {
+  const lists: { title: string; items: PlexItem[] }[] = [];
+  held.forEach((row) => {
+    if (row.kind !== 'list') return;
+    lists.push({ title: row.title, items: row.title === WATCHING ? deckItems : row.items });
+  });
+  void cached.rows.put(section.title, { rows: lists });
+}
+
+/* Ask the servers again what is on deck. Called on coming back from the
+   player, when the history `mine` filters by is also a launch old. */
+export function refreshDeck(forgetHistory?: boolean) {
+  const section = sections[sectionIndex];
+  if (!section || mode !== 'library') return;
+  if (forgetHistory) devices.forgetHistory();
+  const isCurrent = generationGuard();
+  fetchDeck(serversOf(section), true)
+    .then((lists) => {
+      if (isCurrent()) landDeck(buildDeck(lists));
+    })
+    .catch((error: Error) => {
+      debug(`deck: ${error.message}`);
+    });
 }
 
 /* focusRow lands on a named category once its section is built, which is what
@@ -729,24 +832,26 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
       }
       if (!allowFetch) return;
 
-      /* Continue watching is per server; the category rows are per section. Two
-       requests per server for the whole browse screen, however big the
-       library is. */
+      /* Continue watching is per server; the category rows are per section. The
+       deck is one request per server and is painted the moment it lands, rather
+       than waiting behind the hubs, which are one per section part. */
       const reachable = serversOf(section);
+      const deckLists = fetchDeck(reachable, false);
+      deckLists
+        .then((lists) => {
+          if (isCurrent()) landDeck(buildDeck(lists));
+        })
+        .catch((error: Error) => {
+          debug(`deck: ${error.message}`);
+        });
       return Promise.all([
-        Promise.all(reachable.map((server) => plexOnDeck(server))),
+        deckLists,
         Promise.all(section.parts.map((part) => plexHubs(part.server, part.key))),
-        devices.ensureHistory(),
       ]).then((results) => {
         if (!isCurrent()) return;
         const built: { title: string; items: PlexItem[] }[] = [];
 
-        /* onDeck is per server, not per section, and hands back films and
-         episodes together — which is what you want to carry on with, so it is
-         kept whole rather than cut to the section's own type. Most recently
-         watched first. */
-        const deck = devices.mine(merge.lists(results[0]));
-        deck.sort((one, two) => (two.lastViewedAt ?? 0) - (one.lastViewedAt ?? 0));
+        const deck = buildDeck(results[0]);
         if (deck.length) built.push({ title: WATCHING, items: deck });
 
         mergeHubs(results[1]).forEach((hub) => {
@@ -801,6 +906,10 @@ function scheduleWalk() {
   if (pageTimer) clearTimeout(pageTimer);
   pageTimer = setTimeout(() => {
     const row = focusedRow();
+    if (row?.kind === 'paged') {
+      void walkPaged(row);
+      return;
+    }
     if (!row || row.kind !== 'merge') return;
     if (rowModel.haveUpTo(row) > rowModel.needsUpTo(row)) return;
     const isCurrent = generationGuard();
@@ -897,6 +1006,49 @@ function loadCollection(entry: CollectionEntry) {
     return page;
   };
   rows = [rowModel.merged(entry.title, parts, fetch)];
+  render();
+}
+
+/* Three empty pages running and the row is taken to be spent, so a list that
+   TMDB pads with titles under the vote floor cannot ask for ever. */
+const MAX_EMPTY_PAGES = 3;
+
+/* Which category a paged row came from; the row model holds no config. */
+const categoryOf = new WeakMap<PagedRow, DiscoveryCategory>();
+
+/* Asks for pages until the row has what the focus needs, one request in flight,
+   and only for the row that is focused when the walk starts. */
+async function walkPaged(row: PagedRow): Promise<void> {
+  if (!rowModel.wantsMore(row)) return;
+  const category = categoryOf.get(row);
+  if (!category) return;
+  const isCurrent = generationGuard();
+  const was = row.total;
+  row.asking = true;
+  let empty = 0;
+  try {
+    while (
+      empty < MAX_EMPTY_PAGES &&
+      row.next <= row.pages &&
+      rowModel.haveUpTo(row) <= rowModel.needsUpTo(row)
+    ) {
+      const before = row.total;
+      // eslint-disable-next-line no-await-in-loop -- one page at a time, by design
+      const got = await discovery.more(category, deckSeeds(), row.next);
+      if (!isCurrent()) return;
+      row.pages = got.pages;
+      rowModel.extend(row, got.entries);
+      empty = row.total === before ? empty + 1 : 0;
+    }
+    if (empty >= MAX_EMPTY_PAGES) row.next = row.pages + 1;
+  } catch (error) {
+    if (isCurrent()) debug(`walk: ${(error as Error).message}`);
+    return;
+  } finally {
+    row.asking = false;
+  }
+  if (!isCurrent() || row.total === was) return;
+  rail.invalidateEmpty();
   render();
 }
 
@@ -1021,8 +1173,14 @@ function loadDiscover() {
       seeds: deckSeeds(),
       /* Rows appear as they arrive rather than all at the end — the first one
        lands while the rest are still being fetched. */
-      add: (title, items) => {
-        rows.push(rowModel.list(title, items));
+      add: (title, items, category, pages) => {
+        if (category.kind === 'recommended') {
+          rows.push(rowModel.list(title, items));
+        } else {
+          const row = rowModel.paged(title, items, 2, pages);
+          categoryOf.set(row, category);
+          rows.push(row);
+        }
         render();
       },
     })
@@ -1126,8 +1284,10 @@ function clearResults() {
 /* ---------- keys ---------- */
 
 /* The search view: the system keyboard owns every key, OK included — pressing
-   OK picks a letter. Only Back is ours; Enter is handled on the input. */
+   OK picks a letter. Only Back is ours; Enter is handled on the input.
+   Backspace passes `isBack` but is the keyboard's delete key here. */
 export function searchKey(code: number): boolean {
+  if (code === KEY.BACKSPACE) return false;
   if (isBack(code)) {
     closeSearch();
     return true;
