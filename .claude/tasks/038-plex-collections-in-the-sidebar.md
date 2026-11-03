@@ -1,7 +1,7 @@
 ---
 id: 038
 slug: plex-collections-in-the-sidebar
-status: review
+status: done
 branch: crew/038-plex-collections-in-the-sidebar
 model: sonnet
 env: laptop
