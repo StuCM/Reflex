@@ -1,14 +1,17 @@
 ---
 id: 037
 slug: backspace-deletes-in-search
-status: building
+status: review
 branch: crew/037-backspace-deletes-in-search
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 files:
   - src/screen/browse.ts
   - dev/smoke/search.js
+gate: pass
+gateSha: 8f93442f0ad7e0e5504543790c42552c17c70368
+gateAt: 2026-11-03T08:25:36.786Z
 ---
 
 # Delete on the TV keyboard deletes a letter instead of leaving search
@@ -70,4 +73,14 @@ the session that wrote this. Checked by hand: no branch other than `main` and
 
 ## Review rounds
 
+Round 1: PASS. Reviewer re-ran the step with browse.ts reverted; it failed with
+`the query reads "abc", wanted "ab"`. Keycode 461 was not tested directly (it
+shares the `isBack` path with Esc).
+
+## Changes
+- src/screen/browse.ts: `searchKey()` returns false for Backspace so the input deletes.
+- dev/smoke/search.js: new step — Backspace turns `abc` into `ab`, search stays open, Escape closes it.
+
 ## Graph writes proposed
+
+- Pattern: `isBack()` includes Backspace for laptops, so any view where a real text input has focus must exempt Backspace before calling it.
