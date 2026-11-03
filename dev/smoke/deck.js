@@ -37,6 +37,7 @@ module.exports = function (h) {
         return {
           label: el.querySelector('.row-label').textContent.trim(),
           first: first ? first.grandparentTitle || first.title : null,
+          viewedAt: first ? first.lastViewedAt || 0 : 0,
         };
       });
     });
@@ -44,7 +45,7 @@ module.exports = function (h) {
 
   /* Page-side, so it can be handed to waitFor: Continue watching is on screen
      and opens on this title. */
-  function deckOpensOn(title) {
+  function deckOpensOn(title, after) {
     return (
       '(function(){var r=document.querySelectorAll("#rows .row"),i,f;' +
       'for(i=0;i<r.length;i++){' +
@@ -52,6 +53,8 @@ module.exports = function (h) {
       'f=r[i]._rowRef&&r[i]._rowRef.items&&r[i]._rowRef.items[0];' +
       'if(f&&(f.grandparentTitle||f.title)===' +
       JSON.stringify(title) +
+      '&&(f.lastViewedAt||0)>' +
+      (after || 0) +
       ') return true;}return false;})()'
     );
   }
@@ -174,7 +177,7 @@ module.exports = function (h) {
 
       .then(function () {
         if (!hasFixture()) return;
-        let watched;
+        let watched, before;
         return step('what you watched comes first when you come back', function () {
           watched = titles.directPlays.title;
           return h
@@ -185,7 +188,9 @@ module.exports = function (h) {
                 return r.label === 'Continue watching';
               });
               if (!deck || !deck.first) throw new Error('no Continue watching to start from');
-              if (deck.first === watched) throw new Error(watched + ' is already first');
+              /* It may already lead, if an earlier area played it: what must change
+                 then is when it was watched, not where it sits. */
+              before = deck.viewedAt;
               return openTitle(watched);
             })
             .then(function () {
@@ -209,7 +214,11 @@ module.exports = function (h) {
               return backToLibrary();
             })
             .then(function () {
-              return waitFor(deckOpensOn(watched), watched + ' to lead Continue watching', 8000);
+              return waitFor(
+                deckOpensOn(watched, before),
+                watched + ' to lead Continue watching, watched just now',
+                8000,
+              );
             });
         });
       })
