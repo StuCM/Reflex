@@ -414,3 +414,21 @@ the harness's three ▲-pressing control helpers dead once the player area
 shadowed them) were cleared here, at the merge, which is where a shared file
 belongs. That is the fix for the deadlock 019 and 020 hit, where two tasks each
 needed one line in a file neither could write.
+
+## 2026-11-03 — A TMDB row is a third row kind, and a cloud worker pushes
+
+**036 made TMDB rows page.** A `paged` row joins `list` and `merge`. Its fetch
+lives in the screen (`walkPaged` in `screen/browse.ts`) and only its arithmetic
+(`wantsMore`, `extend`) in `rules/rows.ts`, so `rules/` gained no second `data/`
+import beside the layering debt it already carries. Popularity-sorted TMDB pages
+shift between requests, which is why `extend` drops ids it already holds.
+
+**Workers in cloud sessions push their own task branch.** "Never push" was
+written for local worktrees, where the orchestrator reads the branch in place.
+Dispatched to cloud sessions, all four of 036–039 finished with their work in
+containers nothing else could reach, and an orchestrator's message to push was
+rightly refused as not the user's. The rule is now in `crew-worker` itself.
+
+**Smoke in a cloud container** wants `chromium_headless_shell-1243` and the
+image has `-1194`. Point `PLAYWRIGHT_BROWSERS_PATH` at a copy with the newer name
+linked to the older binary. It is the bench, not the app.

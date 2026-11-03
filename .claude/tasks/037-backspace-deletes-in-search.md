@@ -1,7 +1,7 @@
 ---
 id: 037
 slug: backspace-deletes-in-search
-status: review
+status: done
 branch: crew/037-backspace-deletes-in-search
 model: sonnet
 env: laptop

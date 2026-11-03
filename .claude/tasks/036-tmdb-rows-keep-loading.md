@@ -1,7 +1,7 @@
 ---
 id: 036
 slug: tmdb-rows-keep-loading
-status: review
+status: done
 branch: crew/036-tmdb-rows-keep-loading
 model: sonnet
 env: laptop
