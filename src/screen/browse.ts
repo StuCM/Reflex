@@ -1080,8 +1080,10 @@ function clearResults() {
 /* ---------- keys ---------- */
 
 /* The search view: the system keyboard owns every key, OK included — pressing
-   OK picks a letter. Only Back is ours; Enter is handled on the input. */
+   OK picks a letter. Only Back is ours; Enter is handled on the input.
+   Backspace passes `isBack` but is the keyboard's delete key here. */
 export function searchKey(code: number): boolean {
+  if (code === KEY.BACKSPACE) return false;
   if (isBack(code)) {
     closeSearch();
     return true;
