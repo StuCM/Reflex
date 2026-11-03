@@ -1,0 +1,112 @@
+{
+  "title": "Discovery matches the library, opens what we lack, and has TV",
+  "summary": "Discovery asks the servers by guid=tmdb://, which real servers ignore, so every title reads as missing; the mock answers it, so smoke passes. Add a page for titles we lack, and TV rows.",
+  "stage": "build",
+  "questions": [],
+  "gaps": [],
+  "findings": [
+    {
+      "title": "Root cause, measured 2026-11-03 on Maverick",
+      "rows": [
+        {
+          "src": "server",
+          "text": "/library/all?guid=tmdb://1396 and guid=imdb://tt0903747 return 0 for Breaking Bad, which the server holds."
+        },
+        {
+          "src": "server",
+          "text": "/hubs/search?query=…&includeGuids=1 returns the item with Guid [imdb, tmdb, tvdb] and its year, for films and shows. Search returns albums and episodes too, so filter by type and year."
+        },
+        {
+          "src": "code",
+          "text": "askServers -> copiesByGuid(tmdb://) swallows the empty answer as 'Not in your library'.",
+          "refs": [
+            {
+              "path": "src/data/discovery.ts",
+              "line": 50
+            },
+            {
+              "path": "src/api/plex/library.ts",
+              "line": 260
+            }
+          ]
+        },
+        {
+          "src": "code",
+          "text": "The mock answers guid=tmdb://, so smoke passes on the broken lookup.",
+          "refs": [
+            {
+              "path": "dev/mock-plex.js",
+              "line": 862
+            },
+            {
+              "path": "dev/library.js",
+              "line": 985
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "brief": {
+    "shape": "replace",
+    "target": [
+      {
+        "path": "src/data/discovery.ts",
+        "line": 50,
+        "name": "askServers"
+      }
+    ],
+    "direction": "Replace the tmdb:// guid lookup with a title search verified by the hit's TMDB id; then add TV rows on the same path, and let an unheld title open the detail page with no copy and a TMDB trailer through the recap player.",
+    "rejected": [
+      {
+        "option": "Look up by imdb:// guid via TMDB external_ids",
+        "why": "measured: guid=imdb:// also returns 0 on Maverick"
+      },
+      {
+        "option": "Match on title and year alone",
+        "why": "same-titled films collide; the TMDB id in the hit's Guid is exact"
+      },
+      {
+        "option": "A separate screen for unheld titles",
+        "why": "detail.ts already draws TMDB facts; a no-copy mode is smaller than a second page"
+      }
+    ],
+    "decided": [
+      "it can't link the tmdb to my library so it says everything is not available",
+      "just a message saying not available on the server",
+      "own rows and open the series page",
+      "pull from tmdb for a trailer or from plex",
+      "fix both (keep TV rows small now; the four default rows)"
+    ],
+    "exploring": [],
+    "approved": "2026-11-03"
+  },
+  "order": [
+    "043",
+    "045",
+    "044"
+  ],
+  "challenge": {
+    "verdict": "QUESTION",
+    "points": [
+      {
+        "q": "Build TV as four more categories + a media flag, or do backlog item 4 (row definitions as data) first and build TV on it, given the design gives TV its own page (item 5)?",
+        "evidence": "docs/backlog.md:204-207; docs/browse-design.md:62-64; src/core/config.ts:32; src/api/tmdb.ts:142-145",
+        "if": "item 4 first adds a task before 045",
+        "answer": "Stuart, 2026-11-03: 'fix both' — keep 045 small, four TV rows in Discovery now; item 4 absorbs them later."
+      },
+      {
+        "q": "Are the four TV rows (trending, Netflix, Prime, sci-fi & fantasy) the ones you want?",
+        "evidence": "brief.exploring; 045 Background",
+        "if": "only 045's config and smoke titles change",
+        "answer": "Stuart, 2026-11-03: 'fix both' — the four default rows stand."
+      },
+      {
+        "q": "044 detects an unheld title by empty copies, which never happens.",
+        "evidence": "src/data/merge.ts:106-109; detail.ts:143,299,826",
+        "if": "use discovery.isEntry",
+        "answer": "Spec bug, fixed in 044 step 2 by the orchestrator: isEntry, copies=[] before loadDetails and the guard."
+      }
+    ]
+  }
+}
