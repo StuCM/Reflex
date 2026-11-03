@@ -36,10 +36,14 @@ Task files are the source of truth; this is the glance view.
 | 028 | One press moves the strip and changes one tile, not twelve | `done` | laptop | crew/028-the-rail-recycles-one-tile-a-move *(gone)* |
 | 029 | The migration bridge becomes a named test seam | `done` | laptop | crew/029-delete-the-bridge *(gone)* |
 | 030 | The layer rules resolve imports instead of matching text | `done` | laptop | crew/030-the-layers-become-import-lint *(gone)* |
-| 031 | Holding OK on an episode opens a menu against the card | `done` | laptop | crew/031-long-press-opens-a-menu-on-an-episode |
-| 032 | The series page carries its episodes across, not down | `done` | laptop | crew/032-the-series-page-to-6d |
-| 033 | The fetching half of data/ reads as async/await | `done` | laptop | crew/033-async-await-in-the-fetching-half-of-data |
-| 034 | The holding half of data/ reads as async/await | `done` | laptop | crew/034-async-await-in-the-holding-half-of-data |
+| 031 | Holding OK on an episode opens a menu against the card | `done` | laptop | crew/031-long-press-opens-a-menu-on-an-episode *(gone)* |
+| 032 | The series page carries its episodes across, not down | `done` | laptop | crew/032-the-series-page-to-6d *(gone)* |
+| 033 | The fetching half of data/ reads as async/await | `done` | laptop | crew/033-async-await-in-the-fetching-half-of-data *(gone)* |
+| 034 | The holding half of data/ reads as async/await | `done` | laptop | crew/034-async-await-in-the-holding-half-of-data *(gone)* |
+| 036 | A TMDB row keeps going when you reach its end | `done` | laptop | crew/036-tmdb-rows-keep-loading |
+| 037 | Delete on the TV keyboard deletes a letter instead of leaving search | `done` | laptop | crew/037-backspace-deletes-in-search |
+| 038 | Continue watching shows what you have been watching, promptly | `done` | laptop | crew/038-continue-watching-is-fresh |
+| 039 | Player controls fade even when something is focused | `done` | laptop | crew/039-player-controls-fade-when-focused |
 
 ## Waiting on you
 

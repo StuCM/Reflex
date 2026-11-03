@@ -55,7 +55,7 @@ export const branches = (cwd) =>
 /**
  * The branch point against the configured base, trying the local ref then the
  * remote one. A merge base is right whichever of the two is stale — and one of
- * them usually is, because workers never push.
+ * them usually is, because local workers never push.
  */
 export const mergeBase = (baseBranch, cwd) => {
   for (const ref of [baseBranch, `origin/${baseBranch}`]) {

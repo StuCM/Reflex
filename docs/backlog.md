@@ -177,6 +177,39 @@ separate things is how they end up impossible to unify later. Nothing here is
 scheduled; it is here so the next person designing a row model knows where it
 is meant to go.
 
+**Designed 2026-10-04** — see 0e and [the browse rework](/browse-design).
+
+### 0e. The browse rework — designed 2026-10-04
+
+[The design](/browse-design) answers 0d and most of 0c: "the correct lists and
+categories", "TMDB categories as the default rows", the Discover fault and the
+customisable home screen are one piece of work, and this is its order. The
+first three are fixes that every later item depends on, and are takeable now.
+
+1. **The guard transcodes what it cannot direct play, below 4K.** `guard.check`
+   refuses `state: 'codec'` when the server offers direct play of a format the
+   panel does not list, and never asks again with `directPlay=0`. Seen on a
+   trailer and on non-4K films. Needs one debug line from the panel first, to
+   confirm it is this state and not `error` or a stream failing mid-play.
+2. **Discovery finds what the servers hold.** Every TMDB title reads "Not in
+   your library" on the real server. Likely cause: `guid=tmdb://` is answered
+   by the mock and not by Plex. Confirm with one request, then resolve on focus
+   by title and year, verified against the result's TMDB guid.
+3. **TMDB rows keep loading.** Page 1 and stop, today. Make them virtual like
+   the `merge` rows: fetch the next page as focus nears the end.
+4. **Row definitions as data.** A row is a title plus a TMDB query; pages are
+   lists of rows; collections are recipes. Replaces `categories` in
+   `core/config` and the `kind` dispatch in `api/tmdb.ts`.
+5. **Home, Movies and TV pages**, from those definitions. Server hubs out of the
+   menu; Plex's Recently Added dropped.
+6. **Collection pages and the grid.** A recycling tile pool like the rail's,
+   paged on demand; OK on a row header opens it as a grid.
+7. **The filter overlay** — mocked on the laptop and tried by hand before it is
+   specced.
+8. **Settings on the TV**: services, rows, collections, excluded genres. Blocked
+   on where they are stored.
+9. **Authored collections** loaded at boot. Blocked on where the file lives.
+
 ### 1. Playback itself
 
 - **TV** Does an MKV direct play through the HTML5 video element on webOS 4 at

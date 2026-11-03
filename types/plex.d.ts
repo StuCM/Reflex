@@ -220,7 +220,18 @@ interface MergeRow {
   state: MergeState;
 }
 
-type Row = ListRow | MergeRow;
+interface PagedRow {
+  kind: 'paged';
+  title: string;
+  items: PlexItem[];
+  total: number;
+  focus: number;
+  next: number;
+  pages: number;
+  asking: boolean;
+}
+
+type Row = ListRow | MergeRow | PagedRow;
 
 /* ---------- TMDB ---------- */
 
@@ -246,6 +257,7 @@ interface TmdbFilm {
 
 interface TmdbResponse {
   results?: TmdbResult[];
+  total_pages?: number;
   [key: string]: unknown;
 }
 
@@ -264,7 +276,11 @@ interface YoutubeThumb {
 
 interface YoutubeSnippet {
   title?: string;
-  thumbnails?: { medium?: YoutubeThumb; high?: YoutubeThumb; default?: YoutubeThumb };
+  thumbnails?: {
+    medium?: YoutubeThumb;
+    high?: YoutubeThumb;
+    default?: YoutubeThumb;
+  };
 }
 
 interface YoutubeContentDetails {

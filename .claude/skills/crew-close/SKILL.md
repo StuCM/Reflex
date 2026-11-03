@@ -5,7 +5,8 @@ description: Merge a finished task, record what was learnt to the memory graph, 
 
 # Closing a task
 
-Only the orchestrator does this. Workers never push and never deploy.
+Only the orchestrator does this. Workers never deploy, and push only their own
+task branch, and only from a cloud session.
 
 ## 1. Check the status, and the stamp
 
