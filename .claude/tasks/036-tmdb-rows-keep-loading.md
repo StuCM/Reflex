@@ -1,11 +1,11 @@
 ---
 id: 036
 slug: tmdb-rows-keep-loading
-status: building
+status: review
 branch: crew/036-tmdb-rows-keep-loading
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 files:
   - src/api/tmdb.ts
   - src/data/discovery.ts
@@ -17,6 +17,9 @@ files:
   - dev/smoke/discovery.js
   - test/tmdb.test.ts
   - test/rows.test.ts
+gate: pass
+gateSha: ef4cfacefba222b0f481e81489660580360faa01
+gateAt: 2026-11-03T08:28:50.939Z
 ---
 
 # A TMDB row keeps going when you reach its end
@@ -156,4 +159,34 @@ only and does not overlap. None.
 
 ## Review rounds
 
+Round 1: PASS. Non-blocking: an unused `eslint-disable no-await-in-loop` in
+`walkPaged` (lint warning), and oxfmt churn in `dev/mock-tmdb.js`,
+`SECTION_TITLES`/`cached.total.put` in browse.ts and `YoutubeSnippet`.
+
+## Worker report
+
+Smoke step observed failing against main's `src/`:
+`FAIL  a Trending row asks for its next page and stops at the last`. Gate: 110/110.
+
+- `src/api/tmdb.ts`: page argument, `{ films, pages }`, cap 500; recommended is `pages: 1`.
+- `src/data/discovery.ts`: per-page cache key, old array format is a miss, `more()`, `add` gains category and pages.
+- `src/rules/rows.ts`: `paged`, `wantsMore`, `extend`; `itemAt` treats paged like list.
+- `src/screen/browse.ts`: paged rows built in `loadDiscover`; `walkPaged` from `scheduleWalk`.
+- `types/plex.d.ts`: `total_pages`, `PagedRow`.
+- `dev/mock-tmdb.js`: page shift, `total_pages: 3`, unique unheld ids per page.
+- `dev/smoke/discovery.js`, `test/tmdb.test.ts`, `test/rows.test.ts`: new coverage.
+- `src/view/rail.ts`: untouched, not needed.
+
+Spec gaps: `src/data/cached.ts` types the catalogue cache as `TmdbFilm[]` and is
+not in `files:`, so discovery.ts casts. With LOOKAHEAD 24 and 12 per page a
+focused paged row fetches pages 2 and 3 on paint, before any key. The branch was
+not pushed: the push was denied by the auto mode classifier.
+
 ## Graph writes proposed
+
+- Decision: paged rows keep the fetch in the screen (`walkPaged`) and the
+  arithmetic in `rules/rows.ts`, so `rules/` gains no `data/` import.
+- Pattern: run `npx oxfmt --write <files>`, never prettier; prettier reformats the
+  whole tree.
+- Pattern: a smoke counter for cached requests must run from the top of the
+  file, since a second visit comes from the daily cache.
