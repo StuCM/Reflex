@@ -28,6 +28,9 @@ function noCredits(index) {
    server, and forty of them make the smoke test crawl for no more coverage. */
 const ROW = 12;
 
+/* Pages a list has, so the end of a row is reachable. */
+const PAGES = 3;
+
 function create(opts) {
   const films = opts.films || [];
   const lonely = {};
@@ -38,16 +41,20 @@ function create(opts) {
   });
 
   function json(res, body) {
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    });
     res.end(JSON.stringify(body));
   }
 
   /* A deterministic slice of the library, so each row is a different set and
      the same request always answers the same way. */
-  function results(offset) {
+  function results(offset, page) {
     const out = [];
+    const shift = ((page || 1) - 1) * ROW;
     for (let i = 0; i < ROW && i < films.length; i++) {
-      const f = films[(offset + i * 3) % films.length];
+      const f = films[(offset + (shift + i) * 3) % films.length];
       out.push({
         id: f.tmdb,
         title: f.title,
@@ -58,19 +65,20 @@ function create(opts) {
         vote_average: 7.5,
       });
     }
-    return { results: out };
+    return { results: out, total_pages: PAGES };
   }
 
   /* A genre row is titles the fake servers deliberately do NOT hold — the
      library's own ids are 1000-ish and these are nowhere near them — so the
      not-in-your-library path is walked rather than assumed. */
-  function unheld(genreId) {
+  function unheld(genreId, page) {
     const out = [];
+    const p = page || 1;
     for (let i = 0; i < ROW; i++) {
-      const id = 900000 + Number(genreId) * 100 + i;
+      const id = 900000 + Number(genreId) * 100 + (p - 1) * ROW + i;
       out.push({
         id: id,
-        title: 'Genre ' + genreId + ' Film ' + (i + 1),
+        title: 'Genre ' + genreId + ' Film ' + ((p - 1) * ROW + i + 1),
         release_date: '2019-01-01',
         poster_path: '/poster/' + id + '/0.svg',
         backdrop_path: '/backdrop/' + id + '/0.svg',
@@ -78,7 +86,7 @@ function create(opts) {
         vote_average: 7.5,
       });
     }
-    return { results: out };
+    return { results: out, total_pages: PAGES };
   }
 
   /* Descending, so the pick is the payload's own order only by accident —
@@ -128,7 +136,11 @@ function create(opts) {
   function castFor(id) {
     const out = [];
     for (let k = 0; k < 5; k++) {
-      out.push({ order: k, name: 'Actor ' + id + '-' + k, character: 'Someone ' + k });
+      out.push({
+        order: k,
+        name: 'Actor ' + id + '-' + k,
+        character: 'Someone ' + k,
+      });
     }
     return out;
   }
@@ -136,7 +148,7 @@ function create(opts) {
   function api(res, p, query) {
     let m = p.match(/^\/movie\/(\d+)\/recommendations$/);
     if (m) {
-      json(res, results(Number(m[1]) % Math.max(1, films.length)));
+      json(res, results(Number(m[1]) % Math.max(1, films.length), 1));
       return true;
     }
     m = p.match(/^\/movie\/(\d+)$/);
@@ -145,15 +157,15 @@ function create(opts) {
       return true;
     }
     if (p === '/trending/movie/week') {
-      json(res, results(0));
+      json(res, results(0, Number(query.page || 1)));
       return true;
     }
     if (p === '/discover/movie') {
       if (query.with_genres) {
-        json(res, unheld(query.with_genres));
+        json(res, unheld(query.with_genres, Number(query.page || 1)));
         return true;
       }
-      json(res, results(Number(query.with_watch_providers || 0)));
+      json(res, results(Number(query.with_watch_providers || 0), Number(query.page || 1)));
       return true;
     }
     return false;
@@ -173,7 +185,10 @@ function create(opts) {
     const hue = (Number(id) * 13 + k * 60 + (kind === 'poster' ? 180 : 0)) % 360;
     const w = kind === 'poster' ? 200 : 320,
       h = kind === 'poster' ? 300 : 180;
-    res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
+    res.writeHead(200, {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'max-age=60',
+    });
     res.end(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
         w +
@@ -228,4 +243,8 @@ function create(opts) {
   };
 }
 
-module.exports = { create: create, oneBackdrop: oneBackdrop, noCredits: noCredits };
+module.exports = {
+  create: create,
+  oneBackdrop: oneBackdrop,
+  noCredits: noCredits,
+};

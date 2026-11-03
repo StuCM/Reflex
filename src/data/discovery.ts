@@ -88,21 +88,43 @@ async function ask(item: DiscoveryEntry): Promise<PlexItem | null> {
 interface LoadContext {
   isCurrent(): boolean;
   seeds?: string[];
-  add(title: string, items: DiscoveryEntry[]): void;
+  add(title: string, items: DiscoveryEntry[], category: DiscoveryCategory, pages: number): void;
+}
+
+/* One page of a category, from the day's cache or TMDB. A bare array is
+   yesterday's format and counts as a miss. */
+async function fetchPage(
+  category: DiscoveryCategory,
+  seeds: string[],
+  page: number,
+): Promise<tmdb.TmdbPage> {
+  const key = `${category.kind}:${category.id ?? seeds.join('-')}:${page}`;
+  const store = cached.catalogue as unknown as {
+    get(id: string): Promise<tmdb.TmdbPage | TmdbFilm[] | undefined>;
+    put(id: string, value: tmdb.TmdbPage): Promise<unknown>;
+  };
+  const hit = await store.get(key);
+  if (hit && !Array.isArray(hit) && hit.films.length) return hit;
+  const found = await tmdb.catalogue(category, seeds, page);
+  void store.put(key, found);
+  return found;
+}
+
+/** The next page of a paged row, as entries the rail can draw. */
+export async function more(
+  category: DiscoveryCategory,
+  seeds: string[],
+  page: number,
+): Promise<{ entries: DiscoveryEntry[]; pages: number }> {
+  const got = await fetchPage(category, seeds, page);
+  return { entries: got.films.map(entry), pages: got.pages };
 }
 
 async function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
   const seeds = context.seeds ?? [];
-  const key = `${category.kind}:${category.id ?? seeds.join('-')}`;
-  let found: TmdbFilm[];
+  let found: tmdb.TmdbPage;
   try {
-    const hit = await cached.catalogue.get(key);
-    if (hit?.length) {
-      found = hit;
-    } else {
-      found = await tmdb.catalogue(category, seeds);
-      void cached.catalogue.put(key, found);
-    }
+    found = await fetchPage(category, seeds, 1);
   } catch (error) {
     debug(`${category.title} failed: ${(error as Error).message}`);
     return;
@@ -110,12 +132,12 @@ async function one(context: LoadContext, category: DiscoveryCategory): Promise<v
   /* Outside the try: a throw from the rail's own drawing is not a failed
      TMDB fetch and must not be reported as one. */
   if (!context.isCurrent()) return;
-  if (!found.length) {
+  if (!found.films.length) {
     debug(`${category.title}: TMDB returned nothing`);
     return;
   }
-  context.add(category.title, found.map(entry));
-  debug(`${category.title}: ${found.length} from TMDB`);
+  context.add(category.title, found.films.map(entry), category, found.pages);
+  debug(`${category.title}: ${found.films.length} from TMDB`);
 }
 
 /* One row per category in core/config, each a TMDB request cached for the day
