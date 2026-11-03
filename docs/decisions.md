@@ -414,3 +414,12 @@ the harness's three ▲-pressing control helpers dead once the player area
 shadowed them) were cleared here, at the merge, which is where a shared file
 belongs. That is the fix for the deadlock 019 and 020 hit, where two tasks each
 needed one line in a file neither could write.
+
+## 038 — a collection row keeps the curator's order by lying about titleSort
+
+`merge.stream` is a k-way merge on `titleSort`, so a collection spread over two
+servers came out in neither server's order. Rather than teach `merge.ts` a
+second ordering, the collection fetcher rewrites each item's `titleSort` to
+(server rank, position), preferred server first. Revisit if `merge.ts` ever
+grows a position ordering. The section filter `?collection=` returns nothing on
+these servers; `/library/collections/{key}/children` is the endpoint.
