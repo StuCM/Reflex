@@ -1,14 +1,17 @@
 ---
 id: 039
 slug: player-controls-fade-when-focused
-status: building
+status: review
 branch: crew/039-player-controls-fade-when-focused
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 files:
   - src/screen/player.ts
   - dev/smoke/player.js
+gate: pass
+gateSha: 2078216a50be272b5e921fa89af9229322f46906
+gateAt: 2026-11-03T08:31:31.195Z
 ---
 
 # Player controls fade even when something is focused
@@ -96,5 +99,16 @@ None.
 - [ ] Commits follow the convention.
 
 ## Review rounds
+Round 1: PASS. Verify 110/110. Notes: fade is checked on the 4s re-arm, so
+focus clears at 8-12s idle and panels close at 15-19s; the smoke step asserts
+SEEKING text rather than a 30s currentTime delta (fixture is 30s long).
+
+## Changes
+- src/screen/player.ts: idle constants, `lastKeyAt`, timer clears focus and closes panels when idle; `closePanels()` extracted and used by play/stop; barKey/controlKey left-right branches merged to stay under max-lines (1547/1548).
+- dev/smoke/player.js: new step; failed on main (6 steps incl. cascade), passes now (23/23).
+
+Spec note: ▶ check uses SEEKING text, not currentTime +30s, as the fixture clamps.
 
 ## Graph writes proposed
+- Pattern: the OSD timer re-arms every 4s, so idle thresholds resolve to threshold..threshold+4s; smoke waits must allow for it.
+- Pattern: player.ts sits at 1547/1548 lines; merging mirrored key branches is the cheap way to pay for additions.
