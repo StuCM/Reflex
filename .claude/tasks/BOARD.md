@@ -8,7 +8,7 @@ Task files are the source of truth; this is the glance view.
 | 035 | The guard reads as async/await, and is finally tested | `draft` | laptop | crew/035-the-guard-converts-and-gains-a-test *(gone)* |
 | 036 | A TMDB row keeps going when you reach its end | `building` | laptop | crew/036-tmdb-rows-keep-loading *(gone)* |
 | 037 | Delete on the TV keyboard deletes a letter instead of leaving search | `building` | laptop | crew/037-backspace-deletes-in-search *(gone)* |
-| 038 | Continue watching shows what you have been watching, promptly | `building` | laptop | crew/038-continue-watching-is-fresh *(gone)* |
+| 038 | Continue watching shows what you have been watching, promptly | `review` | laptop | crew/038-continue-watching-is-fresh |
 | 039 | Player controls fade even when something is focused | `building` | laptop | crew/039-player-controls-fade-when-focused *(gone)* |
 | 001 | Make a fresh clone verify green | `done` | laptop | crew/001-verify-fixture *(gone)* |
 | 002 | Make the collision check see unmerged branches | `done` | laptop | crew/002-branch-collision *(gone)* |
@@ -53,5 +53,5 @@ Task files are the source of truth; this is the glance view.
 
 - **036 A TMDB row keeps going when you reach its end** — `building` on `crew/036-tmdb-rows-keep-loading`
 - **037 Delete on the TV keyboard deletes a letter instead of leaving search** — `building` on `crew/037-backspace-deletes-in-search`
-- **038 Continue watching shows what you have been watching, promptly** — `building` on `crew/038-continue-watching-is-fresh`
+- **038 Continue watching shows what you have been watching, promptly** — `review` on `crew/038-continue-watching-is-fresh`, round 1/2
 - **039 Player controls fade even when something is focused** — `building` on `crew/039-player-controls-fade-when-focused`

@@ -1,11 +1,11 @@
 ---
 id: 038
 slug: continue-watching-is-fresh
-status: building
+status: review
 branch: crew/038-continue-watching-is-fresh
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 files:
   - src/screen/browse.ts
   - src/app.ts
@@ -13,6 +13,9 @@ files:
   - dev/mock-plex.js
   - dev/server.js
   - dev/smoke/deck.js
+gate: pass
+gateSha: 52023d46fa600bc5905d60a3401306ddb5c75d83
+gateAt: 2026-11-03T08:53:16.978Z
 ---
 
 # Continue watching shows what you have been watching, promptly
@@ -136,5 +139,33 @@ round trip, so that would be found here.
 - [ ] Commits follow the convention.
 
 ## Review rounds
+
+Round 1: PASS. verify 112/112. Reviewer's note: a failed launch prefetch is
+reused once by loadSection rather than retried; minor, left.
+
+Observed failing on the base `src/` (merge-base 6d8a520), mock and smoke kept:
+
+    FAIL  the deck lands before the hubs do
+          timed out waiting for the deck to refresh to Absent Dispatch
+    FAIL  what you watched comes first when you come back
+          timed out waiting for Absent Crossing to lead Continue watching, watched just now
+    FAIL  the refreshed deck is what the cache holds
+
+## What changed
+
+- src/screen/browse.ts: deck fetched on its own and drawn on arrival (`landDeck`), `buildDeck` shared by both paths, `refreshDeck()` exported, cache written from the rows as they are (parked search rows included), a launch prefetch taken once by `loadSection`.
+- src/app.ts: `playedSince` set in `playChecked`; `toBrowse` refreshes the deck and history once after playback; `start()` refreshes from cached servers before discovery.
+- src/data/devices.ts: `forgetHistory()`; `ensureHistory` shares its in-flight fetch.
+- dev/mock-plex.js: `stopped` timeline moves the item to the deck front; hub delay, settable at runtime via `/__plextv/slow-hubs?ms=N`.
+- dev/server.js: `--slow-hubs <ms>`.
+- dev/smoke/deck.js: three steps (deck before hubs, watched comes first, cache round trip).
+
+Spec notes: smoke.js is outside `files:`, so the 5s hub delay is set per step through the runtime endpoint. The cache step holds requests open instead of refusing them, because a refused request is a console error and fails the suite's last step. The "watched comes first" step compares lastViewedAt, since earlier areas may already have played the film.
+
+## Graph writes proposed
+
+- Pattern: `oxfmt` is the formatter (`npx oxfmt --write <files>`); prettier with no config reformats the whole tree. `git apply --unidiff-zero` of -U0 hunks misplaces them; use text-anchored edits.
+- Pattern: a smoke step that reads state earlier areas may have changed must not assume position; compare a timestamp.
+- Decision: an onDeck answer must not be reused across a hide (`dropFromDeck` clears the prefetch), or removal steps see stale data.
 
 ## Graph writes proposed
