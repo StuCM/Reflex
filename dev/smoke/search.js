@@ -45,5 +45,37 @@ module.exports = function (h) {
             return press('Backspace');
           });
       });
+    })
+
+    .then(function () {
+      return step('backspace in the search box deletes a letter and Escape leaves', function () {
+        return backToLibrary()
+          .then(function () {
+            return press('F1');
+          })
+          .then(function () {
+            return page.waitForSelector('#search-input', { state: 'visible' });
+          })
+          .then(function () {
+            return page.fill('#search-input', 'abc');
+          })
+          .then(function () {
+            return press('Backspace');
+          })
+          .then(function () {
+            return page.inputValue('#search-input');
+          })
+          .then(function (value) {
+            if (value !== 'ab') throw new Error('the query reads "' + value + '", wanted "ab"');
+            return page.isVisible('#search-input');
+          })
+          .then(function (visible) {
+            if (!visible) throw new Error('search closed on Backspace');
+            return press('Escape');
+          })
+          .then(function () {
+            return page.waitForSelector('#search-input', { state: 'hidden' });
+          });
+      });
     });
 };
