@@ -110,6 +110,8 @@ interface PlexItem {
   year?: number;
   duration?: number;
   contentRating?: string;
+  /** Present on server-wide lookups such as search and guid. */
+  librarySectionTitle?: string;
   thumb?: string;
   art?: string;
   summary?: string;

@@ -17,6 +17,10 @@ module.exports = function (h) {
     detailFace,
     episodeDetails,
     page,
+    titles,
+    openTitle,
+    openChooser,
+    sourceRows,
   } = h;
 
   /* Inside a section and off its Continue watching row, which is where the
@@ -1027,5 +1031,73 @@ module.exports = function (h) {
             .then(backToLibrary);
         },
       );
+    })
+
+    .then(function () {
+      return step('cam and sports libraries never reach films, search or copies', function () {
+        const header = function () {
+          return page.textContent('#mh-row').then(function (t) {
+            return t.trim();
+          });
+        };
+        const searchHeader = function (query) {
+          return backToLibrary()
+            .then(function () {
+              return sidebarPick('Movies');
+            })
+            .then(function () {
+              return press('F1');
+            })
+            .then(function () {
+              return page.fill('#search-input', query);
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return waitFor(
+                'document.getElementById("browse").classList.contains("results") &&' +
+                  ' document.getElementById("mh-row").textContent.indexOf(' +
+                  JSON.stringify(query + '  ') +
+                  ') === 0',
+                'the results for ' + query,
+              );
+            })
+            .then(header);
+        };
+        return searchHeader(titles.shared.title)
+          .then(function (text) {
+            if (text.indexOf('\u00b7  1 film') < 0)
+              throw new Error('the control search read: ' + text);
+            return searchHeader('Zz');
+          })
+          .then(function (text) {
+            if (text.indexOf('\u00b7  0 films') < 0) throw new Error('"Zz" found films: ' + text);
+            /* The walk is Films, 4K Films and Backup's Films, and nothing else. */
+            if (!h.tracedThat(/All films: about \d+ across 3 servers/)) {
+              throw new Error('All films was not built from the three film libraries');
+            }
+            if (h.tracedThat(/All films: about \d+ across [45] servers/)) {
+              throw new Error('All films walks a cam or sports library');
+            }
+            return openTitle(titles.shared.title);
+          })
+          .then(function () {
+            return openChooser('source');
+          })
+          .then(function () {
+            return waitFor(
+              '(function(){var r=document.querySelectorAll("#dt-menu:not(.hidden) .menu-row");' +
+                'return r.length === 2 && !/checking/.test(r[0].textContent + r[1].textContent);})()',
+              'exactly two copies, none from Movies - LQ',
+              15000,
+            );
+          })
+          .then(sourceRows)
+          .then(function (src) {
+            if (src.length !== 2) throw new Error('copies: ' + src.length);
+          })
+          .then(backToLibrary);
+      });
     });
 };

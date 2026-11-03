@@ -801,7 +801,11 @@ function create(opts) {
         container({
           size: 3,
           Hub: [
-            { title: 'Movies', type: 'movie', Metadata: match(srv.items['1']) },
+            {
+              title: 'Movies',
+              type: 'movie',
+              Metadata: match(srv.items['1'].concat(srv.items['4'] || [], srv.items['5'] || [])),
+            },
             { title: 'Shows', type: 'show', Metadata: match(srv.items['3']) },
             { title: 'People', type: 'actor', Metadata: [] },
           ],
@@ -840,8 +844,8 @@ function create(opts) {
     }
 
     if (pathname === '/library/all') {
-      const hit = srv.byGuid[q.guid];
-      json(res, 200, container({ size: hit ? 1 : 0, Metadata: hit ? [stripStreams(hit)] : [] }));
+      const hits = srv.byGuid[q.guid] || [];
+      json(res, 200, container({ size: hits.length, Metadata: hits.map(stripStreams) }));
       return true;
     }
 

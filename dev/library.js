@@ -894,6 +894,36 @@ function build(counts) {
         .map(makeRemux);
     }
 
+    /* Backup also files cams and sports as movies: a cam of every film it
+       holds, and one title of each that exists nowhere else. */
+    function inSection(copy, title) {
+      copy.librarySectionTitle = title;
+      return copy;
+    }
+    const extraGuid = [];
+    if (n === 1) {
+      sections.push({ key: '4', title: 'Movies - LQ', type: 'movie', updatedAt: 1700000300 });
+      sections.push({ key: '5', title: 'vSports - FV', type: 'movie', updatedAt: 1700000400 });
+      function only(index, title, section) {
+        const film = makeFilm(index);
+        film.title = title;
+        const copy = inSection(makeCopy(film, spec.index), section);
+        copy.titleSort = title;
+        return copy;
+      }
+      items['4'] = allFilms.map(function (m) {
+        const cam = inSection(JSON.parse(JSON.stringify(m)), 'Movies - LQ');
+        cam.ratingKey = String(Number(m.ratingKey) + 700000);
+        cam.key = '/library/metadata/' + cam.ratingKey;
+        return cam;
+      });
+      items['4'].push(only(filmCount, 'Zz Cam Copy', 'Movies - LQ'));
+      items['5'] = [only(filmCount + 1, 'Zz Match Highlights', 'vSports - FV')];
+      items['4'].concat(items['5']).forEach(function (m) {
+        extraGuid.push(m);
+      });
+    }
+
     /* Curated collections, in the curator's order (not title order). Both
        servers carry "Heist" with some films in common; Main also has a small
        real one and a one-film junk one that the app must not list. */
@@ -952,12 +982,22 @@ function build(counts) {
       });
     });
 
+    /* A guid lookup is server-wide, so it answers with every copy. */
     const byGuid = {};
+    function addGuid(guid, m) {
+      (byGuid[guid] = byGuid[guid] || []).push(m);
+    }
     allFilms.forEach(function (m) {
-      byGuid['tmdb://' + films[m._film].tmdb] = m;
+      addGuid('tmdb://' + films[m._film].tmdb, m);
     });
     allShows.forEach(function (m) {
-      byGuid['tmdb://' + shows[m._show].tmdb] = m;
+      addGuid('tmdb://' + shows[m._show].tmdb, m);
+    });
+
+    extraGuid.forEach(function (m) {
+      byKey[m.ratingKey] = m;
+      const tmdb = m.Guid[0].id;
+      addGuid(tmdb, m);
     });
 
     return {
