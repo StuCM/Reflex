@@ -438,3 +438,8 @@ of plex.tv discovery and the hubs, and again on the way back from the player
 with the history snapshot dropped. A prefetched onDeck answer is never reused
 across a hide (`dropFromDeck` clears it), or the hidden entry comes straight
 back.
+
+**039: focused player controls fade after 8s idle, and an open panel closes
+after 15s.** Focus is cleared with the fade, never kept behind it, because the
+control row is a mode and an invisible focus would steal the arrows from
+seeking. The timer re-arms every 4s, so each threshold lands up to 4s late.

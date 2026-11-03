@@ -17,3 +17,4 @@
 {"at":"2026-11-03T08:43:59.293Z","event":"close","id":"036","slug":"tmdb-rows-keep-loading","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":10,"commits":"5"}
 {"at":"2026-11-03T08:43:59.888Z","event":"close","id":"037","slug":"backspace-deletes-in-search","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":2,"commits":"5"}
 {"at":"2026-11-03T09:06:25.790Z","event":"close","id":"038","slug":"continue-watching-is-fresh","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":6,"commits":"6"}
+{"at":"2026-11-03T09:58:45.727Z","event":"close","id":"039","slug":"player-controls-fade-when-focused","status":"done","env":"laptop","model":"sonnet","rounds":1,"session":null,"declared":2,"commits":"5"}
