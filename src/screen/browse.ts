@@ -99,7 +99,10 @@ const GREEN = 404;
 
 /* One section per kind of thing this app can play, whatever the servers call
    their libraries. Music and photos are neither, so they are left out. */
-const SECTION_TITLES: Record<'movie' | 'show', string> = { movie: 'Movies', show: 'TV Shows' };
+const SECTION_TITLES: Record<'movie' | 'show', string> = {
+  movie: 'Movies',
+  show: 'TV Shows',
+};
 const SECTION_ORDER: ('movie' | 'show')[] = ['movie', 'show'];
 
 export function init(chosen: BrowseOptions) {
@@ -652,7 +655,10 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
         }
         return plexItems(one.part.server, one.part.key, 0, 0, one.part.filter).then((page) => {
           one.total = page.total;
-          void cached.total.put(cacheKey, { updatedAt: one.part.updatedAt, total: page.total });
+          void cached.total.put(cacheKey, {
+            updatedAt: one.part.updatedAt,
+            total: page.total,
+          });
         });
       })
       .catch((error: Error) => {
@@ -772,6 +778,10 @@ function scheduleWalk() {
   if (pageTimer) clearTimeout(pageTimer);
   pageTimer = setTimeout(() => {
     const row = focusedRow();
+    if (row?.kind === 'paged') {
+      void walkPaged(row);
+      return;
+    }
     if (!row || row.kind !== 'merge') return;
     if (rowModel.haveUpTo(row) > rowModel.needsUpTo(row)) return;
     const isCurrent = generationGuard();
@@ -793,6 +803,49 @@ function scheduleWalk() {
         debug(`walk: ${error.message}`);
       });
   }, 150);
+}
+
+/* Three empty pages running and the row is taken to be spent, so a list that
+   TMDB pads with titles under the vote floor cannot ask for ever. */
+const MAX_EMPTY_PAGES = 3;
+
+/* Which category a paged row came from; the row model holds no config. */
+const categoryOf = new WeakMap<PagedRow, DiscoveryCategory>();
+
+/* Asks for pages until the row has what the focus needs, one request in flight,
+   and only for the row that is focused when the walk starts. */
+async function walkPaged(row: PagedRow): Promise<void> {
+  if (!rowModel.wantsMore(row)) return;
+  const category = categoryOf.get(row);
+  if (!category) return;
+  const isCurrent = generationGuard();
+  const was = row.total;
+  row.asking = true;
+  let empty = 0;
+  try {
+    while (
+      empty < MAX_EMPTY_PAGES &&
+      row.next <= row.pages &&
+      rowModel.haveUpTo(row) <= rowModel.needsUpTo(row)
+    ) {
+      const before = row.total;
+      // eslint-disable-next-line no-await-in-loop -- one page at a time, by design
+      const got = await discovery.more(category, deckSeeds(), row.next);
+      if (!isCurrent()) return;
+      row.pages = got.pages;
+      rowModel.extend(row, got.entries);
+      empty = row.total === before ? empty + 1 : 0;
+    }
+    if (empty >= MAX_EMPTY_PAGES) row.next = row.pages + 1;
+  } catch (error) {
+    if (isCurrent()) debug(`walk: ${(error as Error).message}`);
+    return;
+  } finally {
+    row.asking = false;
+  }
+  if (!isCurrent() || row.total === was) return;
+  rail.invalidateEmpty();
+  render();
 }
 
 /* ---------- kids ---------- */
@@ -916,8 +969,14 @@ function loadDiscover() {
       seeds: deckSeeds(),
       /* Rows appear as they arrive rather than all at the end — the first one
        lands while the rest are still being fetched. */
-      add: (title, items) => {
-        rows.push(rowModel.list(title, items));
+      add: (title, items, category, pages) => {
+        if (category.kind === 'recommended') {
+          rows.push(rowModel.list(title, items));
+        } else {
+          const row = rowModel.paged(title, items, 2, pages);
+          categoryOf.set(row, category);
+          rows.push(row);
+        }
         render();
       },
     })

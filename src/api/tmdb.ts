@@ -45,27 +45,48 @@ function films(results: TmdbResult[] | undefined): TmdbFilm[] {
   return (results ?? []).filter(goodEnough).map(film);
 }
 
-export function trending(): Promise<TmdbFilm[]> {
-  return get('/trending/movie/week').then((body) => films(body.results));
+/* TMDB refuses a page above 500, whatever total_pages claims. */
+const MAX_PAGES = 500;
+
+export interface TmdbPage {
+  films: TmdbFilm[];
+  pages: number;
+}
+
+function paged(body: TmdbResponse): TmdbPage {
+  return {
+    films: films(body.results),
+    pages: Math.min(Math.max(body.total_pages ?? 1, 1), MAX_PAGES),
+  };
+}
+
+export async function trending(page = 1): Promise<TmdbPage> {
+  return paged(await get('/trending/movie/week', { page }));
 }
 
 /** What is on a streaming service right now, in this region. */
-export function onProvider(providerId: number): Promise<TmdbFilm[]> {
-  return get('/discover/movie', {
-    with_watch_providers: providerId,
-    watch_region: REGION,
-    sort_by: 'popularity.desc',
-    'vote_count.gte': MIN_VOTES,
-  }).then((body) => films(body.results));
+export async function onProvider(providerId: number, page = 1): Promise<TmdbPage> {
+  return paged(
+    await get('/discover/movie', {
+      with_watch_providers: providerId,
+      watch_region: REGION,
+      sort_by: 'popularity.desc',
+      'vote_count.gte': MIN_VOTES,
+      page,
+    }),
+  );
 }
 
 /** One genre, most popular first. Ids come from /genre/movie/list. */
-export function byGenre(genreId: number): Promise<TmdbFilm[]> {
-  return get('/discover/movie', {
-    with_genres: genreId,
-    sort_by: 'popularity.desc',
-    'vote_count.gte': MIN_VOTES,
-  }).then((body) => films(body.results));
+export async function byGenre(genreId: number, page = 1): Promise<TmdbPage> {
+  return paged(
+    await get('/discover/movie', {
+      with_genres: genreId,
+      sort_by: 'popularity.desc',
+      'vote_count.gte': MIN_VOTES,
+      page,
+    }),
+  );
 }
 
 /** One at a time, on purpose — this is a courtesy API and the rows are small. */
@@ -113,15 +134,16 @@ export function recommendedFrom(seedTmdbIds: string[] | undefined): Promise<Tmdb
 /* One category from settings.categories to its films. An unknown kind is a typo
    in the config rather than a crash: it gives an empty row. `seeds` are TMDB
    ids of what has been watched, and only the recommended kind uses them. */
-export function catalogue(
+export async function catalogue(
   category: DiscoveryCategory | null | undefined,
   seeds?: string[],
-): Promise<TmdbFilm[]> {
-  if (category?.kind === 'trending') return trending();
-  if (category?.kind === 'provider') return onProvider(category.id as number);
-  if (category?.kind === 'genre') return byGenre(category.id as number);
-  if (category?.kind === 'recommended') return recommendedFrom(seeds);
-  return Promise.resolve([]);
+  page = 1,
+): Promise<TmdbPage> {
+  if (category?.kind === 'trending') return trending(page);
+  if (category?.kind === 'provider') return onProvider(category.id as number, page);
+  if (category?.kind === 'genre') return byGenre(category.id as number, page);
+  if (category?.kind === 'recommended') return { films: await recommendedFrom(seeds), pages: 1 };
+  return { films: [], pages: 1 };
 }
 
 /* Everything js/data/art.js keeps about a film in one request: the backdrops,
