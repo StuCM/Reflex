@@ -131,11 +131,11 @@
    Under the strip, and the third thing ▼ reaches. */
 
 #sh-cast-label {
-  position: absolute; top: 746px; left: var(--sp-page);
+  position: absolute; top: 730px; left: var(--sp-page);
   font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim);
 }
 #sh-cast {
-  position: absolute; top: 792px; left: var(--sp-page); width: 1792px; height: 210px;
+  position: absolute; top: 772px; left: var(--sp-page); width: 1792px; height: 240px;
   white-space: nowrap; overflow: hidden;
 }
 /* No cast to draw is the ordinary case on a thin library, and a label over

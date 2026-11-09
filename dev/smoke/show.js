@@ -1356,6 +1356,10 @@ module.exports = function (h) {
                 cards: cards.length,
                 cardOn: !!document.querySelector('.sh-actor.on'),
                 faceWidth: cards.length ? cards[0].querySelector('.sh-actor-face').offsetWidth : 0,
+                roleInside: cards.length
+                  ? cards[0].querySelector('.sh-actor-role').getBoundingClientRect().bottom <=
+                    document.getElementById('sh-cast').getBoundingClientRect().bottom
+                  : false,
                 stripShown: document.getElementById('sh-strip').offsetParent !== null,
               };
             });
@@ -1428,6 +1432,7 @@ module.exports = function (h) {
             })
             .then(function (st) {
               if (st.faceWidth !== 160) throw new Error('a cast face is ' + st.faceWidth + 'px');
+              if (!st.roleInside) throw new Error('the role line is clipped by the cast row');
               return openActor(8);
             })
             .then(function (st) {
