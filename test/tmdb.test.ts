@@ -8,6 +8,7 @@
 import assert from 'node:assert';
 import { test } from 'vitest';
 import { Discovery, Plex, Tmdb } from './modules';
+import settings from '../src/core/config';
 
 test('catalogue dispatch and the vote floor', () => {
   /* What TMDB was asked for, and what it answered. The client is XHR, so a fake
@@ -181,6 +182,65 @@ test('catalogue dispatch and the vote floor', () => {
           'only titles over the vote floor, and only ones with an id',
         );
       });
+    })
+
+    /* ---- the kids rows: discover and upcoming ---- */
+
+    .then(function () {
+      payload = {
+        results: [result(1, { vote_count: 5 }), result(2, { vote_count: 20 })],
+      };
+      const kidsFilm = settings.kidsCategories.find((c) => c.title === 'On Netflix');
+      return fetched(kidsFilm).then(function (got) {
+        const url = got.asked[0];
+        assert.ok(/\/discover\/movie\?/.test(url), url);
+        assert.ok(/with_watch_providers=8/.test(url), url);
+        assert.ok(/watch_region=GB/.test(url), url);
+        assert.ok(/certification_country=GB/.test(url), url);
+        assert.ok(/certification\.lte=PG/.test(url), url);
+        assert.strictEqual(got.films.map((f) => f.id).join(','), '2', 'minVotes 20 drops 5 votes');
+      });
+    })
+
+    .then(function () {
+      const upcoming = settings.kidsCategories.find((c) => c.kind === 'upcoming');
+      payload = { results: [result(7, { vote_count: 0 })] };
+      return fetched(upcoming).then(function (got) {
+        const url = got.asked[0];
+        const today = new Date().toISOString().slice(0, 10);
+        assert.ok(/\/discover\/movie\?/.test(url), url);
+        assert.ok(url.indexOf('primary_release_date.gte=' + today) >= 0, url);
+        assert.ok(!/certification/.test(url), 'unreleased films have no certificate: ' + url);
+        assert.strictEqual(got.films.length, 1, 'a zero-vote film is kept');
+      });
+    })
+
+    .then(function () {
+      const films = settings.kidsCategories.filter(
+        (c) => c.kind === 'discover' && c.media === 'movie',
+      );
+      assert.ok(films.length > 0);
+      films.forEach((c) => {
+        assert.strictEqual(c.params?.certification_country, 'GB', c.title);
+        assert.strictEqual(c.params?.['certification.lte'], 'PG', c.title);
+      });
+    })
+
+    .then(function () {
+      const one = {
+        title: 'A',
+        kind: 'discover',
+        params: { with_genres: '1' },
+      };
+      const two = {
+        title: 'B',
+        kind: 'discover',
+        params: { with_genres: '2' },
+      };
+      assert.notStrictEqual(Discovery.pageKey(one, [], 1), Discovery.pageKey(two, [], 1));
+      const reversed = { title: 'C', kind: 'discover', params: { b: 1, a: 2 } };
+      const sorted = { title: 'C', kind: 'discover', params: { a: 2, b: 1 } };
+      assert.strictEqual(Discovery.pageKey(reversed, [], 1), Discovery.pageKey(sorted, [], 1));
     })
 
     /* ---- and the entry the rail is handed ---- */

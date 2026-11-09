@@ -101,6 +101,20 @@ interface LoadContext {
   isCurrent(): boolean;
   seeds?: string[];
   add(title: string, items: DiscoveryEntry[], category: DiscoveryCategory, pages: number): void;
+  categories?: DiscoveryCategory[];
+}
+
+/* The cache key for one page of a category. Two rows that differ only in their
+   filters must not read each other's page, so the filters are in it. */
+export function pageKey(category: DiscoveryCategory, seeds: string[], page: number): string {
+  const parameters = category.params ?? {};
+  const filters = Object.keys(parameters)
+    .sort()
+    .map((name) => `${name}=${parameters[name]}`)
+    .join('&');
+  const extra =
+    filters || category.minVotes !== undefined ? `:${filters}:${category.minVotes}` : '';
+  return `${category.media === 'tv' ? 'tv:' : ''}${category.kind}:${category.id ?? seeds.join('-')}:${page}${extra}`;
 }
 
 /* One page of a category, from the day's cache or TMDB. A bare array is
@@ -110,7 +124,7 @@ async function fetchPage(
   seeds: string[],
   page: number,
 ): Promise<tmdb.TmdbPage> {
-  const key = `${category.media === 'tv' ? 'tv:' : ''}${category.kind}:${category.id ?? seeds.join('-')}:${page}`;
+  const key = pageKey(category, seeds, page);
   const store = cached.catalogue as unknown as {
     get(id: string): Promise<tmdb.TmdbPage | TmdbFilm[] | undefined>;
     put(id: string, value: tmdb.TmdbPage): Promise<unknown>;
@@ -157,7 +171,7 @@ async function one(context: LoadContext, category: DiscoveryCategory): Promise<v
    switch mid-flight; seeds are the TMDB ids of what has been watched, which the
    caller already holds. */
 export function load(context: LoadContext): Promise<void> {
-  const categories = settings.categories ?? [];
+  const categories = context.categories ?? settings.categories ?? [];
   /* One at a time, and recursive rather than a loop: the rows go to a server we
      do not own, so they are asked for in order, which `no-await-in-loop` reads
      as the mistake it usually is. */
