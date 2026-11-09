@@ -101,7 +101,7 @@
 #osd-knob {
   position: absolute; top: -7px; left: 0; margin-left: -11px;
   width: 22px; height: 22px;
-  background: rgba(238, 241, 243, 0.7); border-radius: var(--r-pill);
+  background: var(--fg); border-radius: var(--r-pill);
   -webkit-transform: translateX(var(--at, 0)); transform: translateX(var(--at, 0));
 }
 /* The trackbar has the focus, and 7a's ring round the knob is what says so —
