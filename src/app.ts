@@ -68,16 +68,12 @@ function openItem(item: PlexItem | null | undefined) {
 
 /* A Discovery tile is a film TMDB knows about, which neither server need
    have. Resolving it is one request and resting on it has usually paid for it
-   already; a title we do not hold reaches no guard and no player, so it says
-   so rather than opening a page about nothing. */
+   already; a title we do not hold still gets its page, which says so and has
+   no Play. */
 function openDiscovered(item: DiscoveryEntry) {
   discovery.resolve(item).then((found) => {
-    if (found) {
-      openItem(found);
-      return;
-    }
-    const named = `${item.title}${item.year ? ` (${item.year})` : ''}`;
-    message('Not in your library', `${named} is on neither server.  ·  BACK to the rows`);
+    if (found) openItem(found);
+    else openDetail(item, toBrowse);
   });
 }
 
@@ -211,6 +207,9 @@ function openDetail(item: PlexItem | null | undefined, back?: () => void) {
         },
         language,
       );
+    },
+    onTrailer: (key) => {
+      openRecap({ id: key, title: `${item.title} trailer`, thumb: '', season: null, length: '' });
     },
     onExit: back || toBrowse,
   });
