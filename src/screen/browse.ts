@@ -239,7 +239,7 @@ function openSidebar() {
   const watching = {
     current: mode === 'library' && rowIndex === at,
     type: watchingType,
-    has: at >= 0 && (rows[at]?.total ?? 0) > 0,
+    has: mode === 'library' && at >= 0 && (rows[at]?.total ?? 0) > 0,
   };
   sidebar.open(
     sections.map((section, i) => {
