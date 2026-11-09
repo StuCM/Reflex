@@ -202,9 +202,19 @@ function openEpisode(item: PlexItem) {
   );
 }
 
-function openDetail(item: PlexItem | null | undefined, back?: () => void) {
+function openDetail(
+  item: PlexItem | null | undefined,
+  back?: () => void,
+  actor?: detail.ActorState,
+) {
   if (!item) return;
   detail.open(item, {
+    actor,
+    onOpenTitle: (credit, state) => {
+      openItem(discovery.entry(credit), () => {
+        openDetail(item, back, state);
+      });
+    },
     /* `at` is 0 when the page's second play was pressed and undefined when
        Play was — the difference between starting again and picking up, so it
        must not be collapsed to `at || 0`. */
