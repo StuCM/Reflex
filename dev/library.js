@@ -689,7 +689,8 @@ function makeShow(i) {
     i: i,
     guid: 'plex://show/' + (7000000 + i),
     tvdb: 80000 + i * 3,
-    tmdb: 60000 + i * 5,
+    /* Show 1 shares film 0's TMDB number, as TMDB's separate numbering allows. */
+    tmdb: i === 1 ? 1000 : 60000 + i * 5,
     title: title,
     year: year,
     contentRating: pick(rng, RATINGS),
@@ -1092,6 +1093,7 @@ function resolveExtra(byKey, key) {
 
 module.exports = {
   build: build,
+  makeShow: makeShow,
   PROFILES: PROFILES,
   SERVERS: SERVERS,
   resolveExtra: resolveExtra,

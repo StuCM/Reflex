@@ -11,6 +11,8 @@ const REGION = 'GB';
 /** The rubbish filter. Junk has almost no votes, so a floor removes most of it. */
 const MIN_VOTES = 500;
 
+type Media = 'movie' | 'tv';
+
 export function enabled(): boolean {
   return !!KEY;
 }
@@ -30,19 +32,20 @@ function goodEnough(result: TmdbResult): boolean {
 
 /* Enough to draw a tile with and nothing more: the rest of a TMDB result is
    never shown, and a discovery row holds a dozen of these per category. */
-function film(result: TmdbResult): TmdbFilm {
+function film(result: TmdbResult, media: Media): TmdbFilm {
   return {
     id: String(result.id),
-    title: result.title ?? '',
-    year: Number(String(result.release_date ?? '').slice(0, 4)) || null,
+    media,
+    title: result.title ?? result.name ?? '',
+    year: Number(String(result.release_date ?? result.first_air_date ?? '').slice(0, 4)) || null,
     poster_path: result.poster_path ?? null,
     backdrop_path: result.backdrop_path ?? null,
     vote_average: result.vote_average ?? 0,
   };
 }
 
-function films(results: TmdbResult[] | undefined): TmdbFilm[] {
-  return (results ?? []).filter(goodEnough).map(film);
+function films(results: TmdbResult[] | undefined, media: Media = 'movie'): TmdbFilm[] {
+  return (results ?? []).filter(goodEnough).map((result) => film(result, media));
 }
 
 /* TMDB refuses a page above 500, whatever total_pages claims. */
@@ -53,39 +56,49 @@ export interface TmdbPage {
   pages: number;
 }
 
-function paged(body: TmdbResponse): TmdbPage {
+function paged(body: TmdbResponse, media: Media): TmdbPage {
   return {
-    films: films(body.results),
+    films: films(body.results, media),
     pages: Math.min(Math.max(body.total_pages ?? 1, 1), MAX_PAGES),
   };
 }
 
-export async function trending(page = 1): Promise<TmdbPage> {
-  return paged(await get('/trending/movie/week', { page }));
+export async function trending(page = 1, media: Media = 'movie'): Promise<TmdbPage> {
+  return paged(await get(`/trending/${media}/week`, { page }), media);
 }
 
 /** What is on a streaming service right now, in this region. */
-export async function onProvider(providerId: number, page = 1): Promise<TmdbPage> {
+export async function onProvider(
+  providerId: number,
+  page = 1,
+  media: Media = 'movie',
+): Promise<TmdbPage> {
   return paged(
-    await get('/discover/movie', {
+    await get(`/discover/${media}`, {
       with_watch_providers: providerId,
       watch_region: REGION,
       sort_by: 'popularity.desc',
       'vote_count.gte': MIN_VOTES,
       page,
     }),
+    media,
   );
 }
 
 /** One genre, most popular first. Ids come from /genre/movie/list. */
-export async function byGenre(genreId: number, page = 1): Promise<TmdbPage> {
+export async function byGenre(
+  genreId: number,
+  page = 1,
+  media: Media = 'movie',
+): Promise<TmdbPage> {
   return paged(
-    await get('/discover/movie', {
+    await get(`/discover/${media}`, {
       with_genres: genreId,
       sort_by: 'popularity.desc',
       'vote_count.gte': MIN_VOTES,
       page,
     }),
+    media,
   );
 }
 
@@ -139,9 +152,10 @@ export async function catalogue(
   seeds?: string[],
   page = 1,
 ): Promise<TmdbPage> {
-  if (category?.kind === 'trending') return trending(page);
-  if (category?.kind === 'provider') return onProvider(category.id as number, page);
-  if (category?.kind === 'genre') return byGenre(category.id as number, page);
+  const media = category?.media ?? 'movie';
+  if (category?.kind === 'trending') return trending(page, media);
+  if (category?.kind === 'provider') return onProvider(category.id as number, page, media);
+  if (category?.kind === 'genre') return byGenre(category.id as number, page, media);
   if (category?.kind === 'recommended') return { films: await recommendedFrom(seeds), pages: 1 };
   return { films: [], pages: 1 };
 }
@@ -151,7 +165,9 @@ export async function catalogue(
    matters — without it the appended images are filtered to the request language
    and most backdrops disappear. */
 export function details(tmdbId: string): Promise<TmdbResponse> {
-  return get(`/movie/${tmdbId}`, {
+  /* A show's id is `tv/<id>` everywhere it is keyed, so it is its own path. */
+  const path = tmdbId.startsWith('tv/') ? `/${tmdbId}` : `/movie/${tmdbId}`;
+  return get(path, {
     append_to_response: 'images,credits',
     include_image_language: 'en,null',
   });

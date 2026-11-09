@@ -20,13 +20,19 @@ export function enabled(): boolean {
    undefined until someone asks whether we hold it. */
 export function entry(result: TmdbFilm): DiscoveryEntry {
   return {
-    type: 'movie',
+    type: result.media === 'tv' ? 'show' : 'movie',
     title: result.title,
     year: result.year,
-    Guid: [{ id: `tmdb://${result.id}` }],
+    Guid: [{ id: `tmdb://${keyOf(result)}` }],
     _tmdb: result,
     _resolved: undefined,
   } as DiscoveryEntry;
+}
+
+/* TMDB numbers films and shows separately, so a show's id is prefixed to keep
+   it from reading a film's cache or art entry. */
+function keyOf(result: TmdbFilm): string {
+  return result.media === 'tv' ? `tv/${result.id}` : result.id;
 }
 
 /** Is this a title drawn from TMDB rather than out of a library? */
@@ -48,11 +54,11 @@ function settle(item: DiscoveryEntry, found: PlexItem | null): void {
 
 /* The servers ignore a tmdb:// guid filter, so search by title and keep the film whose TMDB id is
    this one. A show can share the number, hence the type. */
-async function askServers(title: string, id: string): Promise<PlexItem | null> {
+async function askServers(title: string, id: string, type: string): Promise<PlexItem | null> {
   const perServer = await Promise.all(
     servers.all().map(async (server) => {
       const found = await search(server, title);
-      return found.find((hit) => hit.type === 'movie' && tmdbId(hit) === id) ?? null;
+      return found.find((hit) => hit.type === type && tmdbId(hit) === id) ?? null;
     }),
   );
   const hits = perServer.filter((hit): hit is PlexItem => !!hit);
@@ -72,12 +78,13 @@ export function resolve(item: DiscoveryEntry): Promise<PlexItem | null> {
 async function ask(item: DiscoveryEntry): Promise<PlexItem | null> {
   let found: PlexItem | null;
   try {
-    const hit = await cached.lookup.get(item._tmdb.id);
+    const key = keyOf(item._tmdb);
+    const hit = await cached.lookup.get(key);
     if (hit !== undefined) {
       found = hit;
     } else {
-      found = await askServers(item.title ?? '', item._tmdb.id);
-      void cached.lookup.put(item._tmdb.id, found);
+      found = await askServers(item.title ?? '', item._tmdb.id, item.type ?? 'movie');
+      void cached.lookup.put(key, found);
     }
   } catch (error) {
     item._asking = null; // a failed lookup is worth retrying
@@ -103,7 +110,7 @@ async function fetchPage(
   seeds: string[],
   page: number,
 ): Promise<tmdb.TmdbPage> {
-  const key = `${category.kind}:${category.id ?? seeds.join('-')}:${page}`;
+  const key = `${category.media === 'tv' ? 'tv:' : ''}${category.kind}:${category.id ?? seeds.join('-')}:${page}`;
   const store = cached.catalogue as unknown as {
     get(id: string): Promise<tmdb.TmdbPage | TmdbFilm[] | undefined>;
     put(id: string, value: tmdb.TmdbPage): Promise<unknown>;

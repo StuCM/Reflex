@@ -242,7 +242,9 @@ type Row = ListRow | MergeRow | PagedRow;
 interface TmdbResult {
   id?: number | string;
   title?: string;
+  name?: string;
   release_date?: string;
+  first_air_date?: string;
   poster_path?: string | null;
   backdrop_path?: string | null;
   vote_average?: number;
@@ -257,6 +259,7 @@ interface TmdbFilm {
   poster_path: string | null;
   backdrop_path: string | null;
   vote_average: number;
+  media?: 'movie' | 'tv';
 }
 
 interface TmdbResponse {
@@ -270,6 +273,7 @@ interface DiscoveryCategory {
   title: string;
   kind: 'trending' | 'provider' | 'genre' | 'recommended';
   id?: number;
+  media?: 'movie' | 'tv';
 }
 
 /* ---------- YouTube ---------- */
