@@ -90,6 +90,47 @@ function create(opts) {
     return { results: out, total_pages: PAGES };
   }
 
+  /* The kids rows: the first few films of the mock's Kids library (every
+     seventh) on page one, then titles nobody holds. The upcoming row is one
+     film nobody holds. */
+  function kidsFilms(page) {
+    const p = page || 1;
+    const out = [];
+    if (p === 1) {
+      for (let i = 0; i < films.length && out.length < 4; i += 7) {
+        const f = films[i];
+        out.push({
+          id: f.tmdb,
+          title: f.title,
+          release_date: f.year + '-01-01',
+          poster_path: '/poster/' + f.tmdb + '/0.svg',
+          backdrop_path: '/backdrop/' + f.tmdb + '/0.svg',
+          vote_count: 900,
+          vote_average: 7.5,
+        });
+      }
+    }
+    return { results: out.concat(unheld(10751, p).results.slice(0, 4)), total_pages: PAGES };
+  }
+
+  function comingSoon() {
+    const id = 990001;
+    return {
+      results: [
+        {
+          id: id,
+          title: 'Coming Soon Kids Film',
+          release_date: '2099-01-01',
+          poster_path: '/poster/' + id + '/0.svg',
+          backdrop_path: '/backdrop/' + id + '/0.svg',
+          vote_count: 0,
+          vote_average: 0,
+        },
+      ],
+      total_pages: 1,
+    };
+  }
+
   /* Descending, so the pick is the payload's own order only by accident —
      js/art.js sorts, and the test for that has to have something to sort. */
   function shots(kind, id, n) {
@@ -234,6 +275,14 @@ function create(opts) {
       return true;
     }
     if (p === '/discover/movie') {
+      if (query['primary_release_date.gte']) {
+        json(res, comingSoon());
+        return true;
+      }
+      if (query['certification.lte']) {
+        json(res, kidsFilms(Number(query.page || 1)));
+        return true;
+      }
       if (query.with_genres) {
         json(res, unheld(query.with_genres, Number(query.page || 1)));
         return true;
