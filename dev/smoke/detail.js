@@ -661,7 +661,7 @@ module.exports = function (h) {
                 '#dt-cast .dt-actor img, #dt-cast .dt-actor-blank',
               );
               const last = faces.length ? faces[faces.length - 1] : null;
-              const shot = document.querySelector('#dt-extras .dt-extra-shot');
+              const still = document.querySelector('#dt-extras .dt-extra-shot');
               const lastExtra = document.querySelector('#dt-extras .dt-extra:last-child');
               const extras = document.getElementById('dt-extras');
               function text(sel) {
@@ -679,8 +679,8 @@ module.exports = function (h) {
                     cast.getBoundingClientRect().bottom
                   : false,
                 name0: faces.length ? faces[0].querySelector('.dt-actor-name').textContent : '',
-                shot: shot
-                  ? [shot.getBoundingClientRect().width, shot.getBoundingClientRect().height]
+                shot: still
+                  ? [still.getBoundingClientRect().width, still.getBoundingClientRect().height]
                   : [0, 0],
                 extraInside: lastExtra
                   ? lastExtra.getBoundingClientRect().bottom <=
