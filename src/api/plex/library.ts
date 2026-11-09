@@ -214,7 +214,9 @@ export function hubs(server: PlexServer, sectionKey: string): Promise<PlexHub[]>
 }
 
 export function search(server: PlexServer, query: string): Promise<PlexItem[]> {
-  return ask(server, `/hubs/search?${queryString({ query, limit: 40 })}`, { timeout: 20000 })
+  return ask(server, `/hubs/search?${queryString({ query, limit: 40, includeGuids: 1 })}`, {
+    timeout: 20000,
+  })
     .then((response) => {
       const found: PlexItem[] = [];
       ((response as Container).MediaContainer?.Hub ?? []).forEach((hub) => {
@@ -261,10 +263,6 @@ export function copiesByGuid(server: PlexServer, guid: string): Promise<PlexItem
   return ask(server, `/library/all?${queryString({ guid, includeGuids: 1 })}`, { timeout: 15000 })
     .then((response) => servers.stamp(metadataOf(response).filter(isFilm), server))
     .catch(() => []);
-}
-
-export function findByGuid(server: PlexServer, guid: string): Promise<PlexItem | null> {
-  return copiesByGuid(server, guid).then((found) => found[0] ?? null);
 }
 
 /* Every copy of a film on this server, wherever it lives. /library/all is

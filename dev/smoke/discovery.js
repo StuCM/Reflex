@@ -4,17 +4,17 @@
 module.exports = function (h) {
   const { shot, press, waitFor, step, sidebarPick, backToLibrary, page, pictures, actionRow } = h;
 
-  /* Every title any server was asked about by guid. This is the cost the whole
-     page exists to avoid: one per title you stop on, and never one per title
-     drawn. Counted off the wire rather than off the app's own account of
-     itself, and by title rather than by request — a title costs one lookup per
-     server, which is two here. */
+  /* Every title any server was searched for. This is the cost the whole page
+     exists to avoid: one per title you stop on, and never one per title drawn.
+     Counted off the wire, and by title rather than by request — a title costs
+     one search per server, which is two here. The control is the step that
+     asserts exactly one after resting on a tile. */
   const guids = [];
   page.on('request', function (r) {
-    const query = r.url().match(/\/library\/all\?(.*)$/);
+    const query = r.url().match(/\/hubs\/search\?(.*)$/);
     if (!query) return;
-    const guid = /(?:^|&)guid=([^&]+)/.exec(query[1]);
-    if (guid) guids.push(decodeURIComponent(guid[1]));
+    const term = /(?:^|&)query=([^&]+)/.exec(query[1]);
+    if (term) guids.push(decodeURIComponent(term[1]));
   });
 
   /* Every page of Trending TMDB was asked for, off the wire — the control for
@@ -145,7 +145,7 @@ module.exports = function (h) {
                   throw new Error(
                     'painting Discovery cost ' +
                       spent +
-                      ' guid lookups, ' +
+                      ' searches, ' +
                       'and the point of the page is that it costs none',
                   );
                 }
@@ -347,7 +347,7 @@ module.exports = function (h) {
               throw new Error(
                 'a second visit cost ' +
                   spent +
-                  ' guid lookups; every answer ' +
+                  ' searches; every answer ' +
                   'was already in the cache',
               );
             }

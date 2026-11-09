@@ -64,7 +64,7 @@ export const recaps = kept<Recap[]>('recaps:');
 
 /* A film can be added to a library but is rarely taken out, so a hit stands
    and only a miss is ever asked again. */
-export const lookup = misses<PlexItem>('tmdb:', 7 * DAY);
+export const lookup = misses<PlexItem>('tmdb2:', 7 * DAY);
 /** Per server and library; the sidebar must not ask on every open. */
 export const collections = daily<PlexCollection[]>('col:', DAY);
 export const catalogue = daily<TmdbFilm[]>('disc:', DAY);
