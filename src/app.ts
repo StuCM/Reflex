@@ -348,7 +348,6 @@ function playNext(episode: PlexItem, back: () => void) {
 
 function onKey(event: KeyboardEvent) {
   const code = event.keyCode;
-  let handled: boolean;
 
   if (player.playing()) {
     if (player.key(code)) event.preventDefault();
@@ -366,6 +365,20 @@ function onKey(event: KeyboardEvent) {
     return;
   }
 
+  if (code === KEY.YELLOW && hasToken()) {
+    for (let step = 0; step < 4 && view() !== 'browse'; step++) dispatch(KEY.BACK);
+    if (view() === 'browse') {
+      browse.openKids();
+      event.preventDefault();
+    }
+    return;
+  }
+
+  if (dispatch(code)) event.preventDefault();
+}
+
+function dispatch(code: number): boolean {
+  let handled: boolean;
   switch (view()) {
     case 'search':
       handled = browse.searchKey(code);
@@ -388,7 +401,7 @@ function onKey(event: KeyboardEvent) {
     default:
       handled = false; // the link screen waits, that is all
   }
-  if (handled) event.preventDefault();
+  return handled;
 }
 
 /* Release, routed the same way. The show page and the browse rows want it: OK

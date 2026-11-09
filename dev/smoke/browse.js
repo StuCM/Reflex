@@ -1147,6 +1147,55 @@ module.exports = function (h) {
     })
 
     .then(function () {
+      const kidsUp =
+        'document.querySelectorAll("#rows .row:not(.hidden) .row-label").length >= 4 &&' +
+        ' /Popular kids films/.test(document.querySelector("#rows").textContent)';
+      return step('yellow opens Kids from the library', function () {
+        return press('F4')
+          .then(function () {
+            return waitFor(kidsUp, 'the kids rows after yellow', 20000);
+          })
+          .then(railRows)
+          .then(function (rows) {
+            if (rows[0].label !== 'Continue watching') {
+              throw new Error('kids first row was ' + rows[0].label);
+            }
+            return press('Backspace');
+          })
+          .then(function () {
+            return waitFor(
+              '!/Popular kids films/.test(document.querySelector("#rows").textContent)',
+              'the library back',
+            );
+          });
+      }).then(function () {
+        return step('yellow opens Kids from a film page', function () {
+          return press('Enter')
+            .then(function () {
+              return waitFor(
+                '!document.getElementById("detail").classList.contains("hidden")',
+                'a film page',
+                20000,
+              );
+            })
+            .then(function () {
+              return press('F4');
+            })
+            .then(function () {
+              return waitFor(
+                'document.getElementById("detail").classList.contains("hidden") &&' + kidsUp,
+                'the kids rows from the film page',
+                20000,
+              );
+            })
+            .then(function () {
+              return press('Backspace');
+            });
+        });
+      });
+    })
+
+    .then(function () {
       const writes = [];
       page.on('request', function (r) {
         if (/\/:\/(un)?scrobble\?|removeFromContinueWatching/.test(r.url())) writes.push(r.url());

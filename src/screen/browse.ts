@@ -1074,6 +1074,14 @@ function kidsWatching(set: Set<string> | null): PlexItem[] {
   });
 }
 
+/** Yellow: straight to the Kids page, whatever the rail was showing. */
+export function openKids(): void {
+  sidebar.close();
+  menu.close();
+  if (mode === 'kids') return;
+  loadKids();
+}
+
 function loadKids() {
   reset('kids');
   const isCurrent = generationGuard();
