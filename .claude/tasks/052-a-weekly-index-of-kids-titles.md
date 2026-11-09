@@ -1,7 +1,7 @@
 ---
 id: 052
 slug: a-weekly-index-of-kids-titles
-status: approved
+status: building
 branch: crew/052-a-weekly-index-of-kids-titles
 model: sonnet
 env: laptop
