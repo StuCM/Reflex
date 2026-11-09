@@ -1353,8 +1353,9 @@ function setWatched(film: PlexItem, watched: boolean) {
   }
   void Promise.all(writes).then(
     () => {
-      film.viewCount = watched ? 1 : 0;
-      film.viewOffset = 0;
+      const seen = film as { viewCount?: number; viewOffset?: number };
+      seen.viewCount = watched ? 1 : 0;
+      seen.viewOffset = 0;
       if (watched && isOnDeck(film)) dropFromDeck(film);
       render();
       toast(watched ? 'Marked watched' : 'Marked unwatched');
