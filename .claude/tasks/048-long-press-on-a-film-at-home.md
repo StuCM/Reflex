@@ -1,7 +1,7 @@
 ---
 id: 048
 slug: long-press-on-a-film-at-home
-status: approved
+status: building
 branch: crew/048-long-press-on-a-film-at-home
 model: sonnet
 env: laptop

@@ -379,12 +379,13 @@ function onKey(event: KeyboardEvent) {
   if (handled) event.preventDefault();
 }
 
-/* Release, routed the same way. Only the show page wants it: OK on an episode
-   acts on keyup so a hold can open its menu instead of playing. A screen with
+/* Release, routed the same way. The show page and the browse rows want it: OK
+   acts on keyup so a hold can open a menu instead. A screen with
    no keyUp() never hears about it. */
 function onKeyUp(event: KeyboardEvent) {
   if (player.playing() || recapVideo) return;
   if (view() === 'show') showpage.keyUp(event.keyCode);
+  else if (view() === 'browse') browse.keyUp(event.keyCode);
 }
 
 /* Back from a message goes where you came from — the detail page if one is

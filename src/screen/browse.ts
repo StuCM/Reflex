@@ -11,6 +11,7 @@ import {
   items as plexItems,
   onDeck as plexOnDeck,
   scrobble as plexScrobble,
+  unscrobble as plexUnscrobble,
   search as plexSearch,
   tmdbId as plexTmdbId,
 } from '../api/plex/library';
@@ -28,6 +29,7 @@ import * as devices from '../data/devices';
 import { report as panelReport } from '../core/panel';
 import * as discovery from '../data/discovery';
 import * as masthead from '../view/masthead';
+import { createHold } from '../view/hold';
 import * as menu from '../view/menu';
 import * as merge from '../data/merge';
 import * as rail from '../view/rail';
@@ -1298,7 +1300,79 @@ export function searchKey(code: number): boolean {
   return false;
 }
 
+/* A tap opens the film; holding OK on a film offers to change its watched
+   state. Anything else held is a tap. */
+const okHold = createHold(openFocused, () => {
+  const chosen = focusedItem();
+  if (chosen && chosen.type === 'movie') openFilmMenu(chosen);
+  else openFocused();
+});
+
+function openFocused() {
+  const chosen = focusedItem();
+  if (chosen && options.onOpen) options.onOpen(chosen);
+}
+
+function openFilmMenu(film: PlexItem) {
+  menu.open({
+    host: confirmHost,
+    tabs: [
+      {
+        label: film.title ?? '',
+        rows: () => {
+          const list = [
+            { label: 'Mark watched', value: 'watched' },
+            { label: 'Mark unwatched', value: 'unwatched' },
+          ];
+          if (isOnDeck(film)) list.push({ label: 'Remove from Continue watching', value: 'hide' });
+          return list;
+        },
+      },
+    ],
+    onChoose: (value: unknown) => {
+      if (value === 'hide') clearOne(film);
+      else if (value) setWatched(film, value === 'watched');
+    },
+    onClose: render,
+  });
+}
+
+/* Every copy, because each server keeps its own watch state. */
+function setWatched(film: PlexItem, watched: boolean) {
+  const writes: Promise<unknown>[] = [];
+  jobFor(film).copies.forEach((copy) => {
+    const server = servers.of(copy);
+    if (!server) return;
+    writes.push(
+      watched ? plexScrobble(server, copy.ratingKey) : plexUnscrobble(server, copy.ratingKey),
+    );
+  });
+  if (!writes.length) {
+    toast('No server to mark it on');
+    return;
+  }
+  void Promise.all(writes).then(
+    () => {
+      film.viewCount = watched ? 1 : 0;
+      film.viewOffset = 0;
+      if (watched && isOnDeck(film)) dropFromDeck(film);
+      render();
+      toast(watched ? 'Marked watched' : 'Marked unwatched');
+    },
+    (error: Error) => {
+      debug(`watched: ${error.message}`);
+      toast('Could not change it');
+    },
+  );
+}
+
+/** OK acts on release, so a hold can open the film menu instead. */
+export function keyUp(code: number): void {
+  if (code === KEY.OK) okHold.up();
+}
+
 export function key(code: number): boolean {
+  if (okHold.swallow(code)) return true;
   if (menu.isOpen()) return menu.key(code);
   if (sidebar.isOpen()) return sidebar.key(code);
 
@@ -1338,10 +1412,7 @@ export function key(code: number): boolean {
         togglePick();
         break;
       }
-      {
-        const chosen = focusedItem();
-        if (chosen && options.onOpen) options.onOpen(chosen);
-      }
+      okHold.down();
       break;
     case K.RED: // red, on remotes that have it
       openSearch();
