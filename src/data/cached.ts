@@ -71,6 +71,7 @@ export const rows = kept<{ rows: unknown[] } | null>('rows:');
 export const total = kept<{ updatedAt?: number; total: number }>('total:');
 export const art = kept<unknown>('art:');
 export const meta = kept<PlexItem>('meta:');
+export const people = kept<TmdbPerson>('person:');
 export const recaps = kept<Recap[]>('recaps:');
 
 /* A film can be added to a library but is rarely taken out, so a hit stands

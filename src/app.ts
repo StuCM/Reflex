@@ -49,38 +49,50 @@ function toShow() {
 
 /* A film opens its detail page; a show and an episode both open the series
    page, and an episode chosen there opens the same detail page a film would. */
-function openItem(item: PlexItem | null | undefined) {
+function openItem(item: PlexItem | null | undefined, back?: () => void) {
   if (!item) return;
   if (discovery.isEntry(item)) {
-    openDiscovered(item as DiscoveryEntry);
+    openDiscovered(item as DiscoveryEntry, back);
     return;
   }
   if (item.type === 'show') {
-    openShow(item);
+    openShow(item, undefined, undefined, back);
     return;
   }
   if (item.type === 'episode') {
     openEpisode(item);
     return;
   }
-  openDetail(item, toBrowse);
+  openDetail(item, back ?? toBrowse);
 }
 
 /* A Discovery tile is a film TMDB knows about, which neither server need
    have. Resolving it is one request and resting on it has usually paid for it
    already; a title we do not hold still gets its page, which says so and has
    no Play. */
-function openDiscovered(item: DiscoveryEntry) {
+function openDiscovered(item: DiscoveryEntry, back?: () => void) {
   discovery.resolve(item).then((found) => {
-    if (found) openItem(found);
-    else openDetail(item, toBrowse);
+    if (found) openItem(found, back);
+    else openDetail(item, back ?? toBrowse);
   });
 }
 
-function openShow(entry: PlexItem, at?: { season?: number; episode?: number }) {
+function openShow(
+  entry: PlexItem,
+  at?: { season?: number; episode?: number },
+  actor?: showpage.ActorState,
+  back?: () => void,
+) {
   showpage.open(entry, {
     at,
-    onExit: toBrowse,
+    actor,
+    onExit: back ?? toBrowse,
+    onOpenTitle: (credit, state) => {
+      showpage.silence();
+      openItem(discovery.entry(credit), () => {
+        openShow(entry, state.at, state, back);
+      });
+    },
     /* `startAt` is 0 only when the hold menu's Play from start was chosen, and
        undefined otherwise — the difference between starting again and picking
        up, so it must not be collapsed to `startAt || 0`. */

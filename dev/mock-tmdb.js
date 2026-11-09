@@ -118,7 +118,7 @@ function create(opts) {
   /* One request now carries the pictures, the description and the billing —
      append_to_response, as the real API does it. The overview names TMDB so a
      test can tell it apart from the Plex mock's summary, and so can an eye. */
-  function detailsFor(id) {
+  function detailsFor(id, tv) {
     const body = {
       id: Number(id),
       overview:
@@ -145,21 +145,65 @@ function create(opts) {
         ],
       },
     };
-    if (!creditless[id]) body.credits = { cast: castFor(id) };
+    if (!creditless[id]) body.credits = { cast: castFor(id, tv) };
     return body;
   }
 
   /* In billing order, so taking the first four is taking the top of the bill. */
-  function castFor(id) {
+  function castFor(id, tv) {
     const out = [];
+    /* A held show's billing is the names its Plex roles carry, which is how
+       the series page matches an actor to a TMDB person. */
+    const shown =
+      tv &&
+      held.find(function (s) {
+        return String(s.tmdb) === String(id);
+      });
     for (let k = 0; k < 5; k++) {
       out.push({
         order: k,
-        name: 'Actor ' + id + '-' + k,
+        id: Number(id) * 10 + k,
+        name: shown && shown.cast[k] ? shown.cast[k].name : 'Actor ' + id + '-' + k,
         character: 'Someone ' + k,
+        profile_path: '/profile/' + (Number(id) * 10 + k) + '/0.svg',
       });
     }
     return out;
+  }
+
+  /* Unsorted on purpose, with years in common and one undated; the low-vote
+     one is filtered. Film 0 and show 0 are held by the mock servers. */
+  function personFor(id) {
+    const credits = [];
+    function add(media, cid, title, date, votes) {
+      const credit = { id: cid, media_type: media, vote_count: votes, vote_average: 7 };
+      credit[media === 'tv' ? 'name' : 'title'] = title;
+      credit[media === 'tv' ? 'first_air_date' : 'release_date'] = date;
+      credits.push(credit);
+    }
+    add('movie', 910001, 'Credit A', '2001-03-01', 900);
+    add('movie', 910002, 'Credit B', '2019-01-01', 900);
+    add('movie', 910003, 'Credit C', '2019-06-01', 900);
+    add('movie', films[0].tmdb, films[0].title, films[0].year + '-01-01', 900);
+    add('movie', 910004, 'Credit D', '2019-09-01', 900);
+    add('tv', held[0].tmdb, held[0].title, held[0].year + '-01-01', 900);
+    add('movie', 910005, 'Credit E', '1998-01-01', 900);
+    add('movie', 910006, 'Credit F', '2012-01-01', 900);
+    add('tv', 910007, 'Credit G', '2012-05-01', 900);
+    add('movie', 910008, 'Credit H', '2019-11-01', 900);
+    add('movie', 910009, 'Credit I', '2001-09-01', 900);
+    add('movie', 910010, 'Credit J', '', 900);
+    add('movie', 910011, 'Credit K', '2005-01-01', 900);
+    add('movie', 910012, 'Hardly Seen', '2015-01-01', 3);
+    return {
+      id: Number(id),
+      name: 'Person ' + id,
+      birthday: '1962-05-12',
+      deathday: Number(id) % 2 ? null : '2020-01-03',
+      place_of_birth: 'London, England',
+      profile_path: '/profile/' + id + '/0.svg',
+      combined_credits: { cast: credits },
+    };
   }
 
   /* The shows the mock servers hold: show 0, and show 1, whose TMDB number is
@@ -205,7 +249,12 @@ function create(opts) {
       discovered.push(Object.assign({ path: p }, query));
     let m = p.match(/^\/tv\/(\d+)$/);
     if (m) {
-      json(res, detailsFor(m[1]));
+      json(res, detailsFor(m[1], true));
+      return true;
+    }
+    m = p.match(/^\/person\/(\d+)$/);
+    if (m) {
+      json(res, personFor(m[1]));
       return true;
     }
     if (p === '/trending/tv/week') {
@@ -249,7 +298,7 @@ function create(opts) {
      backdrop of the same title can be told apart at a glance, by shape as well
      as by caption. */
   function image(res, p) {
-    const m = p.match(/^\/(\w+)\/(backdrop|poster)\/(\d+)\/(\d+)\.svg$/);
+    const m = p.match(/^\/(\w+)\/(backdrop|poster|profile)\/(\d+)\/(\d+)\.svg$/);
     if (!m) return false;
     const size = m[1],
       kind = m[2],
