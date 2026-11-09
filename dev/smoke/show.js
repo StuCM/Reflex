@@ -429,7 +429,15 @@ module.exports = function (h) {
           })
           .then(function (n) {
             if (n < 2) return; // this show has one series; nothing to switch
-            return press('ArrowUp') // up off the strip, to the series chips
+            /* The mock airs series N in 2000 + N. */
+            return waitFor(
+              'document.getElementById("sh-meta").textContent.indexOf("2001") === 0',
+              'the meta line to open with series 1 year',
+              5000,
+            )
+              .then(function () {
+                return press('ArrowUp'); // up off the strip, to the series chips
+              })
               .then(function () {
                 return waitFor(
                   'document.querySelector("#sh-seasons .chip.on") !== null',
@@ -447,14 +455,9 @@ module.exports = function (h) {
                 );
               })
               .then(function () {
-                /* The mock airs series N in 2000 + N, so the year follows the chip. */
                 return waitFor(
-                  '(function () {' +
-                    'var c = document.querySelector("#sh-seasons .chip.cur");' +
-                    'var n = c && /\\d+/.exec(c.textContent);' +
-                    'return !!n && document.getElementById("sh-meta").textContent.indexOf(String(2000 + Number(n[0]))) === 0;' +
-                    '})()',
-                  'the meta line to open with the current series year',
+                  'document.getElementById("sh-meta").textContent.indexOf("2002") === 0',
+                  'the meta line to open with series 2 year',
                   5000,
                 );
               });
