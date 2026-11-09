@@ -26,8 +26,8 @@ function get(
   }) as Promise<TmdbResponse>;
 }
 
-function goodEnough(result: TmdbResult): boolean {
-  return !!result.id && (result.vote_count ?? 0) >= MIN_VOTES;
+function goodEnough(result: TmdbResult, minVotes = MIN_VOTES): boolean {
+  return !!result.id && (result.vote_count ?? 0) >= minVotes;
 }
 
 /* Enough to draw a tile with and nothing more: the rest of a TMDB result is
@@ -44,8 +44,14 @@ function film(result: TmdbResult, media: Media): TmdbFilm {
   };
 }
 
-function films(results: TmdbResult[] | undefined, media: Media = 'movie'): TmdbFilm[] {
-  return (results ?? []).filter(goodEnough).map((result) => film(result, media));
+function films(
+  results: TmdbResult[] | undefined,
+  media: Media = 'movie',
+  minVotes = MIN_VOTES,
+): TmdbFilm[] {
+  return (results ?? [])
+    .filter((result) => goodEnough(result, minVotes))
+    .map((result) => film(result, media));
 }
 
 /* TMDB refuses a page above 500, whatever total_pages claims. */
@@ -56,9 +62,9 @@ export interface TmdbPage {
   pages: number;
 }
 
-function paged(body: TmdbResponse, media: Media): TmdbPage {
+function paged(body: TmdbResponse, media: Media, minVotes = MIN_VOTES): TmdbPage {
   return {
-    films: films(body.results, media),
+    films: films(body.results, media, minVotes),
     pages: Math.min(Math.max(body.total_pages ?? 1, 1), MAX_PAGES),
   };
 }
@@ -100,6 +106,18 @@ export async function byGenre(
     }),
     media,
   );
+}
+
+/** A free-form /discover query; the kids rows are built from these. */
+export async function discover(
+  media: Media,
+  parameters: Record<string, string | number>,
+  page = 1,
+  minVotes = MIN_VOTES,
+): Promise<TmdbPage> {
+  const query: Record<string, string | number> = { ...parameters, page };
+  if ('with_watch_providers' in parameters) query.watch_region = REGION;
+  return paged(await get(`/discover/${media}`, query), media, minVotes);
 }
 
 /** One at a time, on purpose — this is a courtesy API and the rows are small. */
@@ -156,6 +174,20 @@ export async function catalogue(
   if (category?.kind === 'trending') return trending(page, media);
   if (category?.kind === 'provider') return onProvider(category.id as number, page, media);
   if (category?.kind === 'genre') return byGenre(category.id as number, page, media);
+  const parameters = category?.params ?? {};
+  if (category?.kind === 'discover') {
+    return discover(media, parameters, page, category.minVotes);
+  }
+  /* No votes yet is the point of an unreleased film, so this row has no floor. */
+  if (category?.kind === 'upcoming') {
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = {
+      ...parameters,
+      'primary_release_date.gte': today,
+      sort_by: 'primary_release_date.asc',
+    };
+    return discover('movie', upcoming, page, 0);
+  }
   if (category?.kind === 'recommended') return { films: await recommendedFrom(seeds), pages: 1 };
   return { films: [], pages: 1 };
 }

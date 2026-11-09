@@ -130,8 +130,18 @@ function create(opts) {
       images: imagesFor(id),
       videos: {
         results: [
-          { key: 'teaser' + id, site: 'YouTube', type: 'Teaser', official: true },
-          { key: 'trailer' + id, site: 'YouTube', type: 'Trailer', official: true },
+          {
+            key: 'teaser' + id,
+            site: 'YouTube',
+            type: 'Teaser',
+            official: true,
+          },
+          {
+            key: 'trailer' + id,
+            site: 'YouTube',
+            type: 'Trailer',
+            official: true,
+          },
         ],
       },
     };
@@ -187,7 +197,12 @@ function create(opts) {
     return { results: out, total_pages: PAGES };
   }
 
+  /* Every /discover query, so a test can read what the app asked for. */
+  const discovered = [];
+
   function api(res, p, query) {
+    if (p === '/discover/movie' || p === '/discover/tv')
+      discovered.push(Object.assign({ path: p }, query));
     let m = p.match(/^\/tv\/(\d+)$/);
     if (m) {
       json(res, detailsFor(m[1]));
@@ -288,6 +303,7 @@ function create(opts) {
   }
 
   return {
+    discovered: discovered,
     /* Returns true if it answered. /__tmdbimg first: it also starts with /__tmdb. */
     handle: function (req, res, pathname, query) {
       if (pathname.indexOf('/__tmdbimg') === 0) {

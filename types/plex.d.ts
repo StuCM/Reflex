@@ -273,9 +273,11 @@ interface TmdbResponse {
 /** One row of the Discovery page, from js/core/config.js. */
 interface DiscoveryCategory {
   title: string;
-  kind: 'trending' | 'provider' | 'genre' | 'recommended';
+  kind: 'trending' | 'provider' | 'genre' | 'recommended' | 'discover' | 'upcoming';
   id?: number;
   media?: 'movie' | 'tv';
+  params?: Record<string, string | number>;
+  minVotes?: number;
 }
 
 /* ---------- YouTube ---------- */
