@@ -47,7 +47,7 @@
 }
 #sh-summary {
   margin-top: 10px; font-size: 21px; line-height: 1.4; color: var(--dim);
-  max-height: 60px; overflow: hidden; width: 1180px;
+  max-height: 90px; overflow: hidden; width: 1180px;
 }
 
 /* What the copy that would play actually is: its quality, the audio track that
@@ -59,12 +59,21 @@
   font-size: 21px; color: var(--ac);
 }
 
-#sh-seasons { position: absolute; top: 232px; left: var(--sp-page); height: 42px; }
+#sh-seasons {
+  position: absolute; top: 262px; left: var(--sp-page); width: 1792px; height: 42px;
+  overflow: hidden;
+}
+#sh-seasons-row {
+  white-space: nowrap;
+  -webkit-transform: translateX(var(--seasons-x, 0)); transform: translateX(var(--seasons-x, 0));
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
 
 /* The strip clips and the row inside it slides, so nothing here lays out twice
    on a keypress. */
 #sh-strip {
-  position: absolute; top: 292px; left: var(--sp-page); width: 1792px; height: 400px;
+  position: absolute; top: 322px; left: var(--sp-page); width: 1792px; height: 400px;
   overflow: hidden;
 }
 #sh-episodes {
@@ -122,11 +131,11 @@
    Under the strip, and the third thing ▼ reaches. */
 
 #sh-cast-label {
-  position: absolute; top: 716px; left: var(--sp-page);
+  position: absolute; top: 746px; left: var(--sp-page);
   font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim);
 }
 #sh-cast {
-  position: absolute; top: 762px; left: var(--sp-page); width: 1792px; height: 210px;
+  position: absolute; top: 792px; left: var(--sp-page); width: 1792px; height: 210px;
   white-space: nowrap; overflow: hidden;
 }
 /* No cast to draw is the ordinary case on a thin library, and a label over
@@ -217,7 +226,7 @@
    transform each way, nothing that lays out or paints. */
 
 #sh-recaps {
-  position: absolute; top: 786px; left: var(--sp-page); width: 1792px; height: 222px;
+  position: absolute; top: 816px; left: var(--sp-page); width: 1792px; height: 222px;
   white-space: nowrap; overflow: hidden;
   opacity: 0;
   -webkit-transition: opacity var(--t-quick) var(--ease); transition: opacity var(--t-quick) var(--ease);

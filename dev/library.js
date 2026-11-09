@@ -650,7 +650,8 @@ function makeShow(i) {
   const rng = rand(i * 40503 + 7);
   const title = pick(rng, ADJECTIVES) + ' ' + pick(rng, NOUNS) + pick(rng, SHOW_SUFFIX);
   const year = 1990 + Math.floor(rng() * 34);
-  const seasonCount = 1 + Math.floor(rng() * 5);
+  /* Show 2 is the one with more series than fit on a line. */
+  const seasonCount = i === 2 ? 14 : 1 + Math.floor(rng() * 5);
   const cast = [];
   for (let n = 0; n < 4 + Math.floor(rng() * 5); n++) {
     cast.push({

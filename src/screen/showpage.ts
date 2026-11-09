@@ -26,7 +26,8 @@ const titleElement = must('sh-title');
 const metaElement = must('sh-meta');
 const chipsElement = must('sh-chips');
 const summaryElement = must('sh-summary');
-const seasonsElement = must('sh-seasons');
+const seasonsElement = must('sh-seasons-row');
+const seasonsWindow = must('sh-seasons');
 const stripElement = must('sh-strip');
 const episodesElement = must('sh-episodes');
 const castLabelElement = must('sh-cast-label');
@@ -114,6 +115,21 @@ function renderSeasons(): void {
       ),
     ),
   );
+  slideSeasons();
+}
+
+let seasonsShift = 0;
+
+function slideSeasons(): void {
+  const chip = seasonsElement.children[seasonIndex] as HTMLElement | undefined;
+  if (!chip) return;
+  const room = seasonsWindow.clientWidth;
+  if (chip.offsetLeft + chip.offsetWidth - seasonsShift > room) {
+    seasonsShift = chip.offsetLeft + chip.offsetWidth - room;
+  } else if (chip.offsetLeft < seasonsShift) {
+    seasonsShift = chip.offsetLeft;
+  }
+  seasonsElement.style.setProperty('--seasons-x', `${-seasonsShift}px`);
 }
 
 function verdictBadge(episode: PlexItem): HTMLSpanElement | null {
@@ -303,7 +319,7 @@ function renderRecaps(): void {
   recapsElement.classList.toggle('open', showing);
   /* The whole page moves, or the cast would sit under the recap cards. */
   headElement.classList.toggle('lifted', showing);
-  seasonsElement.classList.toggle('lifted', showing);
+  seasonsWindow.classList.toggle('lifted', showing);
   stripElement.classList.toggle('lifted', showing);
   castLabelElement.classList.toggle('lifted', showing);
   castElement.classList.toggle('lifted', showing);
@@ -539,6 +555,7 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   episodes = [];
   cast = [];
   seasonIndex = 0;
+  seasonsShift = 0;
   episodeIndex = 0;
   castIndex = 0;
   zone = 'episodes';
