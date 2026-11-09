@@ -1090,32 +1090,60 @@ function loadKids() {
   if (watching.length) rows.push(rowModel.list(WATCHING, watching));
   render();
 
-  /* The held set may take a full build on a cold cache, so the page is drawn
-     first and the rest follows when it lands. */
-  void kids.held().then((set) => {
-    if (!isCurrent()) return;
-    const full = kidsWatching(set);
-    if (full.length > watching.length) {
-      const row = rowModel.list(WATCHING, full);
-      if (watching.length) rows[0] = row;
-      else rows.unshift(row);
-      render();
-    }
-    keepHeld = (entry) => kids.isHeld(set, entry);
-    return discovery
-      .load({
-        isCurrent: isCurrent,
-        categories: settings.kidsCategories,
-        keep: keepHeld,
-        add: addDiscoveryRow,
-      })
-      .then(() => {
-        if (!isCurrent() || rows.length) return;
-        message(
-          'Nothing to show',
-          'No kids titles on the servers match what TMDB lists. BACK to return.',
-        );
+  /* The index may take a full build on a cold cache, and may fail. The TMDB
+     rows start at once: New and coming needs no index, and the others are held
+     back until the set lands. */
+  let set: Set<string> | null = null;
+  let failed = false;
+  const waiting: {
+    title: string;
+    items: DiscoveryEntry[];
+    category: DiscoveryCategory;
+    pages: number;
+  }[] = [];
+  keepHeld = (entry) => (set ? kids.isHeld(set, entry) : !failed);
+
+  const rowsDone = discovery.load({
+    isCurrent: isCurrent,
+    categories: settings.kidsCategories,
+    keep: keepHeld,
+    add: (title, items, category, pages) => {
+      if (category.kind !== 'upcoming' && !set) {
+        if (!failed) waiting.push({ title, items, category, pages });
+        return;
+      }
+      addDiscoveryRow(title, items, category, pages);
+    },
+  });
+
+  const heldDone = kids.held().then(
+    (got) => {
+      if (!isCurrent()) return;
+      set = got;
+      const full = kidsWatching(got);
+      if (full.length > watching.length) {
+        const row = rowModel.list(WATCHING, full);
+        if (watching.length) rows[0] = row;
+        else rows.unshift(row);
+        render();
+      }
+      waiting.forEach((held) => {
+        const entries = held.items.filter((entry) => kids.isHeld(got, entry));
+        if (entries.length) addDiscoveryRow(held.title, entries, held.category, held.pages);
       });
+    },
+    (error: Error) => {
+      failed = true;
+      debug(`kids index failed: ${error.message}`);
+    },
+  );
+
+  void Promise.all([rowsDone, heldDone]).then(() => {
+    if (!isCurrent() || rows.length) return;
+    message(
+      'Nothing to show',
+      'No kids titles on the servers match what TMDB lists. BACK to return.',
+    );
   });
 }
 

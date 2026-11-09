@@ -1,7 +1,7 @@
 ---
 id: 056
 slug: kids-rows-do-not-wait-for-the-index
-status: approved
+status: building
 branch: crew/056-kids-rows-do-not-wait-for-the-index
 model: sonnet
 env: laptop

@@ -1147,6 +1147,140 @@ module.exports = function (h) {
     })
 
     .then(function () {
+      function kidsIndex(ms, fail) {
+        return page.evaluate(
+          function (a) {
+            return fetch('/__plextv/kids-index?ms=' + a[0] + '&fail=' + a[1]).then(function (r) {
+              return r.json();
+            });
+          },
+          [ms, fail],
+        );
+      }
+      function indexReads() {
+        return page.evaluate(function () {
+          return fetch('/__plextv/kids-index-reads').then(function (r) {
+            return r.json();
+          });
+        });
+      }
+      /* The held index is cached a week, so each step starts from none. */
+      function forgetIndex() {
+        return page.evaluate(function () {
+          return new Promise(function (resolve) {
+            const req = indexedDB.open('reflex', 1);
+            req.onsuccess = function () {
+              const store = req.result.transaction('kv', 'readwrite').objectStore('kv');
+              const cursor = store.openCursor();
+              cursor.onsuccess = function () {
+                const at = cursor.result;
+                if (!at) return resolve(true);
+                if (String(at.key).startsWith('kids:')) at.delete();
+                at.continue();
+              };
+            };
+          });
+        });
+      }
+      const rowText = 'document.querySelector("#rows").textContent';
+      const newAndComing = '/New and coming/.test(' + rowText + ')';
+      const popular = '/Popular kids films/.test(' + rowText + ')';
+      return step('a slow index does not hold back New and coming', function () {
+        return forgetIndex()
+          .then(function () {
+            return kidsIndex(2500, 0);
+          })
+          .then(function () {
+            return press('F4');
+          })
+          .then(function () {
+            return waitFor(newAndComing, 'New and coming before the index', 20000);
+          })
+          .then(function () {
+            return page.evaluate(popular);
+          })
+          .then(function (early) {
+            if (early) throw new Error('a held row was drawn before the index landed');
+            return indexReads();
+          })
+          .then(function (reads) {
+            if (!reads.length) throw new Error('no index read was made');
+            reads.forEach(function (r) {
+              if (r.indexOf('/all') > 0 && r.indexOf('excludeElements=') < 0) {
+                throw new Error('index page without excludeElements: ' + r);
+              }
+            });
+            return waitFor(popular, 'the held rows once the index lands', 90000);
+          })
+          .then(function () {
+            return kidsIndex(0, 0);
+          })
+          .then(function () {
+            return press('Backspace');
+          })
+          .then(function () {
+            return waitFor('!' + popular, 'the library back');
+          });
+      }).then(function () {
+        return step('a failing index leaves New and coming reachable', function () {
+          return forgetIndex()
+            .then(function () {
+              return kidsIndex(0, 1);
+            })
+            .then(function () {
+              return press('F4');
+            })
+            .then(function () {
+              return waitFor(newAndComing, 'New and coming with the index failing', 20000);
+            })
+            .then(function () {
+              return page.waitForTimeout(1500);
+            })
+            .then(railRows)
+            .then(function (rows) {
+              const labels = rows.map(function (r) {
+                return r.label;
+              });
+              if (labels.join(' | ') !== 'Continue watching | New and coming') {
+                throw new Error('kids rows with a failed index: ' + labels.join(' | '));
+              }
+              return indexReads();
+            })
+            .then(function (reads) {
+              if (!reads.length) throw new Error('the failing index was never asked');
+              return press('ArrowDown');
+            })
+            .then(function () {
+              return page.waitForTimeout(400);
+            })
+            .then(function () {
+              return press('Enter');
+            })
+            .then(function () {
+              return waitFor(
+                '!document.getElementById("detail").classList.contains("hidden") &&' +
+                  ' document.getElementById("dt-title").textContent.trim() === "Coming Soon Kids Film"',
+                'down from Continue watching reaching New and coming',
+                20000,
+              );
+            })
+            .then(function () {
+              return press('Backspace');
+            })
+            .then(function () {
+              return press('Backspace');
+            })
+            .then(function () {
+              return kidsIndex(0, 0);
+            })
+            .then(function () {
+              return waitFor('!' + popular, 'the library back');
+            });
+        });
+      });
+    })
+
+    .then(function () {
       const kidsUp =
         'document.querySelectorAll("#rows .row:not(.hidden) .row-label").length >= 4 &&' +
         ' /Popular kids films/.test(document.querySelector("#rows").textContent)';

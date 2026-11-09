@@ -8,6 +8,11 @@ import { debug } from '../core/ui';
 
 const PAGE = 500;
 const KIDS_LIBRARY = /kids/i;
+/* An index page needs only the guids; the default page is twice the size. */
+const SLIM = {
+  excludeElements: 'Media,Genre,Country,Director,Writer,Role',
+  excludeFields: 'summary,tagline',
+};
 const KIDS_GENRE = /^(family|animation|children|kids)$/i;
 
 /** The key discovery uses for a title: `tv/<id>` for a show, else the id. */
@@ -23,7 +28,7 @@ async function read(
   extra: Record<string, string | number>,
   into: Set<string>,
 ): Promise<void> {
-  const filter = { type: section.type === 'show' ? 2 : 1, ...extra };
+  const filter = { type: section.type === 'show' ? 2 : 1, ...SLIM, ...extra };
   let start = 0;
   let total = 1;
   while (start < total) {
@@ -39,22 +44,33 @@ async function read(
   }
 }
 
-async function build(server: PlexServer): Promise<string[]> {
+/* A library that fails is skipped and the build marked incomplete, so what the
+   rest held is used and the whole is asked again next time. */
+async function build(server: PlexServer): Promise<{ keys: string[]; complete: boolean }> {
   const found = new Set<string>();
+  let complete = true;
+  async function tryRead(section: PlexSection, extra: Record<string, string | number>) {
+    try {
+      await read(server, section, extra, found);
+    } catch (error) {
+      complete = false;
+      debug(`kids index ${server.id} ${section.title}: ${(error as Error).message}`);
+    }
+  }
   for (const section of await sections(server)) {
     if (KIDS_LIBRARY.test(section.title)) {
       // eslint-disable-next-line no-await-in-loop -- serial, by design
-      await read(server, section, {}, found);
+      await tryRead(section, {});
       continue;
     }
     // eslint-disable-next-line no-await-in-loop -- serial, by design
     for (const genre of await genres(server, section.key)) {
       if (!KIDS_GENRE.test(genre.title)) continue;
       // eslint-disable-next-line no-await-in-loop -- serial, by design
-      await read(server, section, { genre: genre.key }, found);
+      await tryRead(section, { genre: genre.key });
     }
   }
-  return Array.from(found);
+  return { keys: Array.from(found), complete };
 }
 
 const building: Record<string, Promise<string[]> | undefined> = {};
@@ -63,9 +79,10 @@ function rebuild(server: PlexServer): Promise<string[]> {
   const running = building[server.id];
   if (running) return running;
   const started = build(server).then(
-    (keys) => {
+    ({ keys, complete }) => {
       building[server.id] = undefined;
-      void cached.kids.put(server.id, keys);
+      /* An empty result is how sections() and genres() report their own failure. */
+      if (complete && keys.length) void cached.kids.put(server.id, keys);
       return keys;
     },
     (error: Error) => {

@@ -66,6 +66,10 @@ function create(opts) {
   lib.slowHubs = opts.slowHubs || 0;
   /* The kids library joins the section list only when asked, so areas that count film libraries are unchanged. */
   lib.kids = opts.kids || 0;
+  /* The kids index is the app's one big read: a smoke step can slow it or fail it, and read what it asked. */
+  lib.indexDelay = 0;
+  lib.indexFail = 0;
+  lib.indexReads = [];
   const pins = {};
   let nextPin = 4000;
 
@@ -565,6 +569,17 @@ function create(opts) {
       json(res, 200, { slowHubs: lib.slowHubs });
       return true;
     }
+    if (pathname === '/kids-index') {
+      lib.indexDelay = Number(q.ms || 0);
+      lib.indexFail = Number(q.fail || 0);
+      lib.indexReads = [];
+      json(res, 200, { delay: lib.indexDelay, fail: lib.indexFail });
+      return true;
+    }
+    if (pathname === '/kids-index-reads') {
+      json(res, 200, lib.indexReads);
+      return true;
+    }
     if (pathname === '/api/v2/pins' && req.method === 'POST') {
       const id = nextPin++;
       pins[id] = { code: 'MOCK', polls: 0 };
@@ -644,6 +659,29 @@ function create(opts) {
         }),
       );
       return true;
+    }
+
+    const isIndexRead =
+      /^\/library\/sections\/\w+\/genre$/.test(pathname) ||
+      (/^\/library\/sections\/(\w+)\/all$/.test(pathname) &&
+        (q.genre ||
+          /Kids/.test(
+            (srv.sections.find((s) => s.key === pathname.split('/')[3]) || {}).title || '',
+          )));
+    if (isIndexRead && !q.__idx) {
+      lib.indexReads.push(req.url);
+      if (lib.indexFail) {
+        /* A 200 with a page for a body: Plex does this, and a 5xx would be a console error the suite reads as a bug. */
+        res.writeHead(200, { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' });
+        res.end('<html>bad gateway</html>');
+        return true;
+      }
+      if (lib.indexDelay) {
+        setTimeout(function () {
+          server(srv, req, res, pathname, Object.assign({ __idx: '1' }, q));
+        }, lib.indexDelay);
+        return true;
+      }
     }
 
     let m = pathname.match(/^\/library\/sections\/(\w+)\/all$/);
