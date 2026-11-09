@@ -1231,5 +1231,84 @@ module.exports = function (h) {
           );
         });
       })
+
+      .then(function () {
+        return step(
+          'fourteen series sit on one line and the focused one stays in the bar',
+          function () {
+            return openShowPage(pickLong())
+              .then(function () {
+                return press('ArrowUp');
+              })
+              .then(function () {
+                return waitFor(
+                  'document.querySelectorAll("#sh-seasons .chip").length === 14',
+                  'fourteen series chips',
+                  15000,
+                );
+              })
+              .then(function () {
+                return page.evaluate(function () {
+                  const chips = document.querySelectorAll('#sh-seasons .chip');
+                  const tops = {};
+                  Array.prototype.forEach.call(chips, function (c) {
+                    tops[Math.round(c.getBoundingClientRect().top)] = true;
+                  });
+                  return Object.keys(tops).length;
+                });
+              })
+              .then(function (lines) {
+                if (lines !== 1) throw new Error('the series chips sit on ' + lines + ' lines');
+                let walk = Promise.resolve();
+                for (let n = 0; n < 13; n++) {
+                  walk = walk.then(function () {
+                    return press('ArrowRight');
+                  });
+                }
+                return walk;
+              })
+              .then(function () {
+                return waitFor(
+                  'document.querySelectorAll("#sh-seasons .chip")[13].classList.contains("on")',
+                  'the last series focused',
+                );
+              })
+              .then(function () {
+                /* Read page-side once the 180ms slide has settled. */
+                return page.evaluate(function () {
+                  return new Promise(function (resolve) {
+                    setTimeout(function () {
+                      const chip = document
+                        .querySelector('#sh-seasons .chip.on')
+                        .getBoundingClientRect();
+                      const bar = document.getElementById('sh-seasons').getBoundingClientRect();
+                      const strip = document.getElementById('sh-strip').getBoundingClientRect();
+                      resolve({
+                        /* offsetWidth rounds, so a chip can overhang by a fraction. */
+                        inside: chip.left >= bar.left - 1 && chip.right <= bar.right + 1,
+                        above: chip.bottom <= strip.top,
+                        right: Math.round(chip.right),
+                      });
+                    }, 600);
+                  });
+                });
+              })
+              .then(function (st) {
+                if (!st.inside) throw new Error('the focused series is outside the bar');
+                if (!st.above) throw new Error('the focused series is under the episode strip');
+                if (!(st.right > 0)) throw new Error('no chip was measured');
+              })
+              .then(backToLibrary);
+          },
+        );
+      })
   );
+
+  function pickLong() {
+    const hit = buildLibrary({ films: h.FILMS }).shows.find(function (sh) {
+      return sh.seasons.length === 14;
+    });
+    if (!hit) throw new Error('the mock has no fourteen-series show');
+    return hit.title;
+  }
 };
