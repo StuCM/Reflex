@@ -1302,6 +1302,249 @@ module.exports = function (h) {
           },
         );
       })
+
+      .then(function () {
+        return step('OK on an actor opens their work in place, and BACK walks out', function () {
+          const lib = buildLibrary({ films: h.FILMS });
+          const first = lib.shows[0];
+          const film = lib.films[0];
+          /* The mock's person: the same credits whoever it is. Years are unsorted
+             there, with ties and one undated; equal years keep that order. */
+          const credits = [
+            ['Credit A', 2001],
+            ['Credit B', 2019],
+            ['Credit C', 2019],
+            [film.title, film.year],
+            ['Credit D', 2019],
+            [first.title, first.year],
+            ['Credit E', 1998],
+            ['Credit F', 2012],
+            ['Credit G', 2012],
+            ['Credit H', 2019],
+            ['Credit I', 2001],
+            ['Credit J', 0],
+            ['Credit K', 2005],
+          ];
+          const expected = credits
+            .map(function (c, at) {
+              return { title: c[0], year: c[1], at: at };
+            })
+            .sort(function (a, b) {
+              return b.year - a.year || a.at - b.at;
+            })
+            .map(function (c) {
+              return c.title;
+            });
+
+          function person() {
+            return page.evaluate(function () {
+              const root = document.querySelector('.sh-person');
+              function text(sel) {
+                const found = root && root.querySelector(sel);
+                return found ? found.textContent.trim() : '';
+              }
+              const cards = document.querySelectorAll('.sh-actor');
+              return {
+                open: !!root,
+                name: text('.sh-person-name'),
+                bio: text('.sh-person-bio'),
+                focused: text('.sh-credit.on .sh-credit-title'),
+                rows: root ? root.querySelectorAll('.sh-credit').length : 0,
+                shownCards: Array.prototype.filter.call(cards, function (c) {
+                  return c.offsetParent !== null;
+                }).length,
+                cards: cards.length,
+                cardOn: !!document.querySelector('.sh-actor.on'),
+                faceWidth: cards.length ? cards[0].querySelector('.sh-actor-face').offsetWidth : 0,
+                roleInside: cards.length
+                  ? cards[0].querySelector('.sh-actor-role').getBoundingClientRect().bottom <=
+                    document.getElementById('sh-cast').getBoundingClientRect().bottom
+                  : false,
+                stripShown: document.getElementById('sh-strip').offsetParent !== null,
+              };
+            });
+          }
+
+          function openActor(tries) {
+            return press('Enter')
+              .then(function () {
+                return page.waitForTimeout(300);
+              })
+              .then(person)
+              .then(function (st) {
+                if (st.open) return st;
+                if (!tries) throw new Error('OK on the first actor opened nothing');
+                return openActor(tries - 1);
+              });
+          }
+
+          function onCredit(title) {
+            return waitFor(
+              '(document.querySelector(".sh-credit.on .sh-credit-title") || {}).textContent' +
+                ' === ' +
+                JSON.stringify(title),
+              'the credit ' + title + ' focused',
+              20000,
+            );
+          }
+
+          function moveTo(title) {
+            return person().then(function (st) {
+              const by = expected.indexOf(title) - expected.indexOf(st.focused);
+              return press(by < 0 ? 'ArrowUp' : 'ArrowDown', Math.abs(by));
+            });
+          }
+
+          function openCredit(title, check) {
+            return moveTo(title)
+              .then(function () {
+                return onCredit(title);
+              })
+              .then(function () {
+                return press('Enter');
+              })
+              .then(function () {
+                return waitFor(
+                  '!document.getElementById("detail").classList.contains("hidden") &&' +
+                    ' document.getElementById("dt-title").textContent.trim() === ' +
+                    JSON.stringify(title),
+                  'the page for ' + title,
+                  20000,
+                );
+              })
+              .then(check)
+              .then(function () {
+                return press('Backspace');
+              })
+              .then(function () {
+                return onCredit(title);
+              });
+          }
+
+          return openShowPage(first.title)
+            .then(function () {
+              return press('ArrowDown');
+            })
+            .then(castRow)
+            .then(function (st) {
+              if (!st.faces[0].on) throw new Error('▼ did not land on the first cast member');
+              return person();
+            })
+            .then(function (st) {
+              if (st.faceWidth !== 160) throw new Error('a cast face is ' + st.faceWidth + 'px');
+              if (!st.roleInside) throw new Error('the role line is clipped by the cast row');
+              return openActor(8);
+            })
+            .then(function (st) {
+              if (st.shownCards !== 0 || st.cards < 2) {
+                throw new Error(st.shownCards + ' of ' + st.cards + ' cast cards still show');
+              }
+              if (st.stripShown) throw new Error('the episode strip is still showing');
+              if (st.name !== first.cast[0].name) {
+                throw new Error('the panel names "' + st.name + '"');
+              }
+              if (
+                st.bio.indexOf('Born 12 May 1962, London, England') !== 0 ||
+                st.bio.indexOf('Died 3 January 2020') < 0
+              ) {
+                throw new Error('the bio reads "' + st.bio + '"');
+              }
+              if (st.rows !== 6) throw new Error(st.rows + ' credit rows, not 6');
+              const seen = [st.focused];
+              let walk = Promise.resolve();
+              for (let n = 1; n < expected.length; n++) {
+                walk = walk
+                  .then(function () {
+                    return press('ArrowDown');
+                  })
+                  .then(person)
+                  .then(function (now) {
+                    seen.push(now.focused);
+                  });
+              }
+              return walk.then(function () {
+                if (seen.join(' | ') !== expected.join(' | ')) {
+                  throw new Error('credits ran "' + seen.join(' | ') + '"');
+                }
+                if (seen.indexOf('Hardly Seen') >= 0)
+                  throw new Error('a low-vote credit is listed');
+                return shot('show-person');
+              });
+            })
+            .then(function () {
+              return openCredit(film.title, function () {
+                return page
+                  .evaluate(function () {
+                    return document.getElementById('dt-chips').textContent;
+                  })
+                  .then(function (chips) {
+                    if (chips.indexOf('Not available on the server') >= 0) {
+                      throw new Error('the held film opened as not available');
+                    }
+                  });
+              });
+            })
+            .then(function () {
+              return openCredit('Credit A', function () {
+                return page
+                  .evaluate(function () {
+                    return document.getElementById('dt-chips').textContent;
+                  })
+                  .then(function (chips) {
+                    if (chips.indexOf('Not available on the server') < 0) {
+                      throw new Error('an unheld credit did not open as not available');
+                    }
+                  });
+              });
+            })
+            .then(person)
+            .then(function (st) {
+              if (!st.open || st.name !== first.cast[0].name) {
+                throw new Error('BACK from a title did not return to the actor');
+              }
+              return press('Backspace');
+            })
+            .then(person)
+            .then(function (st) {
+              if (st.open) throw new Error('BACK left the actor open');
+              if (st.shownCards !== st.cards) throw new Error('the cast did not come back');
+              if (!st.cardOn) throw new Error('no cast member is focused after BACK');
+              return press('Enter');
+            })
+            .then(function () {
+              return waitFor('!!document.querySelector(".sh-person")', 'the actor again', 5000);
+            })
+            .then(function () {
+              return press('ArrowUp');
+            })
+            .then(person)
+            .then(function (st) {
+              if (st.open || !st.cardOn)
+                throw new Error('▲ from the top did not return to the cast');
+            })
+            .then(function () {
+              /* Opening a credit cached which titles the servers hold; the
+                 discovery steps count those lookups and must find them unasked. */
+              return page.evaluate(function () {
+                return new Promise(function (resolve) {
+                  const open = indexedDB.open('reflex', 1);
+                  open.onsuccess = function () {
+                    const tx = open.result.transaction('kv', 'readwrite');
+                    const store = tx.objectStore('kv');
+                    store.openCursor().onsuccess = function (event) {
+                      const cursor = event.target.result;
+                      if (!cursor) return;
+                      if (String(cursor.key).indexOf('tmdb2:') === 0) cursor.delete();
+                      cursor.continue();
+                    };
+                    tx.oncomplete = resolve;
+                  };
+                });
+              });
+            })
+            .then(backToLibrary);
+        });
+      })
   );
 
   function pickLong() {

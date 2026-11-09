@@ -14,6 +14,7 @@ import * as cached from '../data/cached';
 import * as guard from '../data/guard';
 import * as merge from '../data/merge';
 import * as meta from '../data/meta';
+import * as people from '../data/people';
 import * as servers from '../data/servers';
 import * as shows from '../data/shows';
 import { audioLabel } from '../rules/audio';
@@ -21,6 +22,7 @@ import { identity } from '../rules/identity';
 import { div, span, fill, put, must } from '../view/dom';
 import * as glyphs from '../view/glyphs';
 import * as menu from '../view/menu';
+import * as personView from '../view/person';
 
 const titleElement = must('sh-title');
 const metaElement = must('sh-meta');
@@ -50,12 +52,23 @@ const CARD_LEAD = 1;
 const CARDS_VISIBLE = 3;
 /** Faces in the cast row — six fit across without the row having to wind. */
 const CAST_MAX = 6;
+/** Asked of Plex for a face drawn at 160px, twice over for the panel's own scaling. */
+const FACE_ASKED = 240;
 /** Recap cards on screen at once, at 222px each. */
 const RECAP_POOL = 7;
 const RECAP_LEAD = 2;
 
+/** Enough to reopen the series page on the same actor and credit. */
+export interface ActorState {
+  name: string;
+  credit: number;
+  at?: { season?: number; episode?: number };
+}
+
 interface ShowOptions {
   at?: { season?: number; episode?: number };
+  actor?: ActorState;
+  onOpenTitle?: (credit: TmdbFilm, actor: ActorState) => void;
   onExit?: () => void;
   onPlay?: (episode: PlexItem, verdict: Verdict, at?: number) => void;
   onChoose?: (episode: PlexItem) => void;
@@ -71,7 +84,15 @@ let episodeIndex = 0;
 let stripShift = 0;
 let cast: PlexTag[] = [];
 let castIndex = 0;
-let zone: 'seasons' | 'episodes' | 'cast' | 'recaps' = 'episodes';
+let zone: 'seasons' | 'episodes' | 'cast' | 'person' | 'recaps' = 'episodes';
+let castIds: CastId[] = [];
+/** The actor open in place, or null. */
+let opened: {
+  panel: personView.PersonPanel;
+  name: string;
+  credits: TmdbFilm[];
+  index: number;
+} | null = null;
 let recaps: Recap[] | null = null;
 let recapIndex = 0;
 let searching = false;
@@ -154,6 +175,7 @@ function hint(): string {
   if (holding) return '↑ ↓ choose · OK confirms · ← → or BACK closes';
   if (zone === 'seasons') return '← → choose a series · ↓ to the episodes · BACK to the rail';
   if (zone === 'cast') return '← → along the cast · ↑ back to the episodes · BACK to the rail';
+  if (zone === 'person') return '↑ ↓ along their work · OK to open it · BACK to the cast';
   if (zone === 'recaps') {
     return recaps?.length
       ? '← → choose a recap · OK to play it · ↑ back up the page'
@@ -265,7 +287,7 @@ function renderCast(): void {
 function actorCard(role: PlexTag): HTMLDivElement {
   const name = role.tag ?? '';
   const face = span('sh-actor-face');
-  const url = photoUrl(servers.of(show), role.thumb, 160, 160);
+  const url = photoUrl(servers.of(show), role.thumb, FACE_ASKED, FACE_ASKED);
   /* Initials rather than an empty disc: plenty of a library has no photographs. */
   if (url) face.style.setProperty('--face', `url("${url}")`);
   else face.textContent = initials(name);
@@ -554,6 +576,9 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   seasons = [];
   episodes = [];
   cast = [];
+  castIds = [];
+  opened = null;
+  viewElement.classList.remove('person');
   seasonIndex = 0;
   seasonsShift = 0;
   episodeIndex = 0;
@@ -584,6 +609,12 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
     if (mine !== generation) return;
     cast = castFrom(metadata);
     renderCast();
+    resumeActor();
+  });
+  void art.castIds(entry).then((list) => {
+    if (mine !== generation) return;
+    castIds = list;
+    resumeActor();
   });
 
   void shows
@@ -789,8 +820,96 @@ function seasonsKey(code: number): void {
   }
 }
 
+/* Reopened from a title the actor's page led to: needs both the roles and the
+   TMDB ids, which arrive separately. */
+function resumeActor(): void {
+  const want = options.actor;
+  if (!want || !cast.length || !castIds.length) return;
+  options.actor = undefined;
+  const at = cast.findIndex((role) => role.tag === want.name);
+  if (at < 0) return;
+  castIndex = at;
+  zone = 'cast';
+  focusEpisodes();
+  focusCast();
+  void openPerson(want.credit);
+}
+
+async function openPerson(credit = 0): Promise<void> {
+  const role = cast[castIndex];
+  const known = role?.tag ? people.match(role.tag, castIds) : undefined;
+  if (!role?.tag || !known) return;
+  const mine = generation;
+  const wanted = castIndex;
+  let got: TmdbPerson;
+  try {
+    got = await people.person(known.id);
+  } catch (error) {
+    debug(`person: ${(error as Error).message}`);
+    toast('Could not read their credits');
+    return;
+  }
+  if (mine !== generation || zone !== 'cast' || castIndex !== wanted) return;
+  const face = got.profile
+    ? art.url(got.profile, 'w300')
+    : photoUrl(servers.of(show), role.thumb, 300, 300);
+  const credits = people.newestFirst(got.credits);
+  const panel = personView.build(got, face, role.tag);
+  opened = {
+    panel,
+    name: role.tag,
+    credits,
+    index: personView.step(credit, 0, credits.length),
+  };
+  personView.paintList(panel.list, credits, opened.index);
+  put(castElement, panel.root);
+  viewElement.classList.add('person');
+  zone = 'person';
+  hintElement.textContent = hint();
+}
+
+function closePerson(): void {
+  if (!opened) return;
+  castElement.removeChild(opened.panel.root);
+  opened = null;
+  viewElement.classList.remove('person');
+  zone = 'cast';
+  focusCast();
+  hintElement.textContent = hint();
+}
+
+function personKey(code: number): void {
+  if (!opened) return;
+  const moves: Record<number, number> = {
+    [KEY.UP]: -1,
+    [KEY.LEFT]: -1,
+    [KEY.DOWN]: 1,
+    [KEY.RIGHT]: 1,
+  };
+  const delta = moves[code];
+  if (code === KEY.UP && opened.index === 0) {
+    closePerson();
+  } else if (delta !== undefined) {
+    opened.index = personView.step(opened.index, delta, opened.credits.length);
+    personView.paintList(opened.panel.list, opened.credits, opened.index);
+  } else if (code === KEY.OK) {
+    const credit = opened.credits[opened.index];
+    const episode = episodes[episodeIndex];
+    if (credit) {
+      options.onOpenTitle?.(credit, {
+        name: opened.name,
+        credit: opened.index,
+        at: { season: episode?.parentIndex, episode: episode?.index },
+      });
+    }
+  } else if (isBack(code)) {
+    closePerson();
+  }
+}
+
 function castKey(code: number): void {
-  if (code === KEY.UP) goZone('episodes');
+  if (code === KEY.OK) void openPerson();
+  else if (code === KEY.UP) goZone('episodes');
   else if (code === KEY.DOWN) stepDown();
   else if (code === KEY.LEFT && castIndex > 0) {
     castIndex--;
@@ -829,6 +948,10 @@ export function key(code: number): boolean {
   }
   if (zone === 'cast') {
     castKey(code);
+    return true;
+  }
+  if (zone === 'person') {
+    personKey(code);
     return true;
   }
   if (zone === 'recaps') {

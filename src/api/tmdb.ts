@@ -32,7 +32,7 @@ function goodEnough(result: TmdbResult, minVotes = MIN_VOTES): boolean {
 
 /* Enough to draw a tile with and nothing more: the rest of a TMDB result is
    never shown, and a discovery row holds a dozen of these per category. */
-function film(result: TmdbResult, media: Media): TmdbFilm {
+export function film(result: TmdbResult, media: Media): TmdbFilm {
   return {
     id: String(result.id),
     media,
@@ -203,4 +203,31 @@ export function details(tmdbId: string): Promise<TmdbResponse> {
     append_to_response: 'images,credits,videos',
     include_image_language: 'en,null',
   });
+}
+
+interface PersonBody {
+  name?: string;
+  birthday?: string | null;
+  deathday?: string | null;
+  place_of_birth?: string | null;
+  profile_path?: string | null;
+  combined_credits?: { cast?: TmdbResult[] };
+}
+
+/** An actor's dates, place and acting credits, in TMDB's order. */
+export async function person(id: string): Promise<TmdbPerson> {
+  const body = (await get(`/person/${id}`, {
+    append_to_response: 'combined_credits',
+  })) as PersonBody;
+  const cast = body.combined_credits?.cast ?? [];
+  return {
+    name: body.name ?? '',
+    birthday: body.birthday || null,
+    deathday: body.deathday || null,
+    placeOfBirth: body.place_of_birth || null,
+    profile: body.profile_path ?? null,
+    credits: cast
+      .filter((credit) => goodEnough(credit))
+      .map((credit) => film(credit, credit.media_type === 'tv' ? 'tv' : 'movie')),
+  };
 }

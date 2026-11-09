@@ -251,6 +251,8 @@ interface TmdbResult {
   backdrop_path?: string | null;
   vote_average?: number;
   vote_count?: number;
+  /** Only on a person's combined credits. */
+  media_type?: string;
 }
 
 /** Enough to draw a tile with, and nothing else. */
@@ -409,7 +411,7 @@ interface TmdbDetails {
   images?: { backdrops?: TmdbImage[]; posters?: TmdbImage[] };
   backdrops?: TmdbImage[];
   posters?: TmdbImage[];
-  credits?: { cast?: { name?: string }[] };
+  credits?: { cast?: { name?: string; id?: number; profile_path?: string | null }[] };
   videos?: { results?: TmdbVideo[] };
   overview?: string;
   runtime?: number;
@@ -430,6 +432,24 @@ interface ArtFacts {
   runtime: number | null;
   rating: number | null;
   cast: string[];
+  /** Billing order, with the TMDB person id; absent on an entry cached before it. */
+  castIds?: CastId[];
+}
+
+interface CastId {
+  name: string;
+  id: string;
+  profile: string | null;
+}
+
+/** An actor, and what they have been in. */
+interface TmdbPerson {
+  name: string;
+  birthday: string | null;
+  deathday: string | null;
+  placeOfBirth: string | null;
+  profile: string | null;
+  credits: TmdbFilm[];
 }
 
 interface ArtEntry {

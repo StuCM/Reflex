@@ -16,6 +16,8 @@ const MAX_IN_FLIGHT = 4;
 
 /** Names in the header's key-actors line. */
 const CAST = 4;
+/** People kept with an id, which is what the series page matches Plex's roles against. */
+const CAST_IDS = 30;
 
 const held: Record<string, ArtEntry> = {};
 const pending: Record<string, true> = {};
@@ -65,6 +67,16 @@ export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
   billing.forEach((person) => {
     if (person?.name && cast.length < CAST) cast.push(person.name);
   });
+  const ids: CastId[] = [];
+  billing.forEach((person) => {
+    if (person?.name && person.id && ids.length < CAST_IDS) {
+      ids.push({
+        name: person.name,
+        id: String(person.id),
+        profile: person.profile_path ?? null,
+      });
+    }
+  });
   const score = typeof payload?.vote_average === 'number' ? payload.vote_average : 0;
   return {
     overview: typeof payload?.overview === 'string' ? payload.overview : '',
@@ -72,6 +84,7 @@ export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
     /* Out of ten, one decimal. Zero is TMDB's "nobody has voted", not a score. */
     rating: score ? Math.round(score * 10) / 10 : null,
     cast,
+    castIds: ids,
     trailerKey: trailerOf(payload),
   };
 }
@@ -160,7 +173,12 @@ async function lookUp(id: string): Promise<ArtEntry> {
   /* An entry cached before the facts or the poster existed is a miss for them,
      or an old cache would leave a title short of one for ever. */
   const entry = (await cached.art.get(id)) as ArtEntry | undefined;
-  if (entry?.facts && entry.facts.trailerKey !== undefined && entry.poster !== undefined) {
+  if (
+    entry?.facts &&
+    entry.facts.trailerKey !== undefined &&
+    entry.facts.castIds !== undefined &&
+    entry.poster !== undefined
+  ) {
     return entry;
   }
   const payload = (await details(id)) as TmdbDetails;
@@ -178,4 +196,17 @@ function landed(id: string, got: ArtEntry): void {
   held[id] = got;
   pump();
   listeners.forEach((listener) => listener(id));
+}
+
+/* A series' cast with TMDB person ids. Asked by the show's own `tv/` key, since
+   a Plex show's bare id is also some film's. */
+export async function castIds(item: PlexItem | null | undefined): Promise<CastId[]> {
+  const id = item ? tmdbId(item) : null;
+  if (!id || !enabled()) return [];
+  const key = id.startsWith('tv/') ? id : `tv/${id}`;
+  try {
+    return (await lookUp(key)).facts?.castIds ?? [];
+  } catch {
+    return [];
+  }
 }
