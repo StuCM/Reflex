@@ -2,7 +2,11 @@ import assert from 'node:assert';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const server = { id: 'a' } as PlexServer;
+const flaky = { id: 'b' } as PlexServer;
+const active = [server];
 const calls: string[] = [];
+const extras: Record<string, string | number>[] = [];
+let flakyReads = 0;
 
 function film(id: string, type = 'movie'): PlexItem {
   return { type, Guid: [{ id: `tmdb://${id}` }] } as PlexItem;
@@ -31,12 +35,18 @@ vi.mock('../src/api/plex/library', async () => {
           ]
         : [],
     items: async (
-      _s: unknown,
+      s: PlexServer,
       key: string,
       _start: number,
       _size: number,
-      extra: { genre?: string },
+      extra: { genre?: string; excludeElements?: string },
     ) => {
+      extras.push(extra);
+      if (s.id === 'b') {
+        flakyReads++;
+        if (key === '2') throw new Error('down');
+        return { total: 1, items: [film('30')] };
+      }
       calls.push(`${key}:${extra.genre ?? ''}`);
       if (key === '1')
         return {
@@ -53,13 +63,14 @@ vi.mock('../src/api/plex/library', async () => {
   };
 });
 
-vi.mock('../src/data/servers', () => ({ all: () => [server] }));
+vi.mock('../src/data/servers', () => ({ all: () => active }));
 
 import { held, isHeld, keyOf } from '../src/data/kids';
 import * as discovery from '../src/data/discovery';
 
 beforeEach(() => {
   calls.length = 0;
+  extras.length = 0;
 });
 
 test('keyOf: shows are tv/<id>, films the id, no tmdb guid is skipped', () => {
@@ -71,6 +82,11 @@ test('keyOf: shows are tv/<id>, films the id, no tmdb guid is skipped', () => {
 test('held reads kids libraries whole and the Family genre elsewhere, once a week', async () => {
   const set = await held();
   expect(Array.from(set).sort()).toEqual(['10', '20', 'tv/21']);
+  expect(extras.length).toBeGreaterThan(0);
+  extras.forEach((extra) => {
+    expect(extra.excludeElements).toBe('Media,Genre,Country,Director,Writer,Role');
+    expect(extra.excludeFields).toBe('summary,tagline');
+  });
   expect(calls.sort()).toEqual(['1:f', '2:']);
   const entry = (id: string) => ({ Guid: [{ id: `tmdb://${id}` }] }) as DiscoveryEntry;
   expect(isHeld(set, entry('10'))).toBe(true);
@@ -78,6 +94,17 @@ test('held reads kids libraries whole and the Family genre elsewhere, once a wee
 
   await held();
   expect(calls.length).toBe(2);
+});
+
+test('a failing library keeps what the rest held and is asked again, not cached as empty', async () => {
+  active.push(flaky);
+  const set = await held();
+  expect(Array.from(set).sort()).toEqual(['10', '20', '30', 'tv/21']);
+  const reads = flakyReads;
+  expect(reads).toBeGreaterThan(0);
+  await held();
+  expect(flakyReads).toBeGreaterThan(reads);
+  active.pop();
 });
 
 test('keep drops unheld entries from every row but upcoming', async () => {
