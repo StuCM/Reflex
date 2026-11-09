@@ -95,13 +95,16 @@ function create(opts) {
     /* Part-watched episodes too — onDeck on a real server is mostly these, and
        an episode is a different shape from a film: it needs its show's name and
        its season and episode numbers to make any sense on screen. */
+    const serverAt = lib.servers.indexOf(srv);
     srv.items['3'].slice(0, 4).forEach(function (show, n) {
       const eps = srv.episodesByShow[show.ratingKey] || [];
-      const ep = eps[Math.min(2 + n, eps.length - 1)];
+      /* The servers hold different episodes of each show, as the real ones do;
+         the later one is on Main for odd shows and on Backup for even. */
+      const ep = eps[Math.min(2 + n - serverAt, eps.length - 1)];
       if (!ep) return;
       const m = JSON.parse(JSON.stringify(ep));
       m.viewOffset = Math.floor(m.duration * (0.2 + (n % 5) / 10));
-      m.lastViewedAt = 1720000500 + n;
+      m.lastViewedAt = 1720000500 + n + (n % 2 === serverAt ? 0 : 10);
       srv.deck.push(m);
     });
     srv.deck.forEach(function (m, i) {
