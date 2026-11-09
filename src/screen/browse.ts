@@ -422,7 +422,10 @@ function dropFromDeck(entry: PlexItem) {
    both servers is still in the row if only one of them is told, and a copy
    that has already been hidden must not then be marked watched as well. */
 function jobFor(entry: PlexItem): DeckJob {
-  return { entry: entry, copies: merge.sources(entry) };
+  const folded = (entry as merge.Folded)._folded ?? [];
+  const copies = merge.sources(entry);
+  folded.forEach((item) => copies.push(...merge.sources(item)));
+  return { entry: entry, copies };
 }
 
 /* The entry leaves the row only once every copy of it has gone; whatever a
@@ -715,7 +718,7 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
    together — which is what you want to carry on with, so it is kept whole
    rather than cut to the section's own type. Most recently watched first. */
 function buildDeck(perServer: PlexItem[][]): PlexItem[] {
-  const deck = devices.mine(merge.lists(perServer));
+  const deck = merge.newestPerShow(devices.mine(merge.lists(perServer)));
   deck.sort((one, two) => (two.lastViewedAt ?? 0) - (one.lastViewedAt ?? 0));
   return deck;
 }

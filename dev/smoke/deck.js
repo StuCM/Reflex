@@ -279,6 +279,55 @@ module.exports = function (h) {
        described. These steps come last because they shorten the row. */
 
       .then(function () {
+        return step('a show held on two servers is one tile, its newest episode', function () {
+          return page
+            .evaluate(function () {
+              const el = document.querySelector('#rows .row.on');
+              const row = el && el._rowRef;
+              if (!row || !row.items) return null;
+              return row.items
+                .filter(function (m) {
+                  return m.type === 'episode';
+                })
+                .map(function (m) {
+                  return {
+                    show: m.grandparentTitle,
+                    when: m.lastViewedAt,
+                    text: 'S' + m.parentIndex + 'E' + m.index,
+                    folded: (m._folded || []).map(function (f) {
+                      return 'S' + f.parentIndex + 'E' + f.index + '@' + f.lastViewedAt;
+                    }),
+                  };
+                });
+            })
+            .then(function (eps) {
+              if (!eps || !eps.length) throw new Error('no episodes in the deck to count');
+              const seen = {};
+              eps.forEach(function (e) {
+                seen[e.show] = (seen[e.show] || 0) + 1;
+              });
+              Object.keys(seen).forEach(function (show) {
+                if (seen[show] !== 1) throw new Error(show + ' has ' + seen[show] + ' tiles');
+              });
+              const folded = eps.filter(function (e) {
+                return e.folded.length;
+              });
+              if (!folded.length) throw new Error('no show folded two servers into one tile');
+              folded.forEach(function (e) {
+                e.folded.forEach(function (f) {
+                  if (Number(f.split('@')[1]) >= e.when) {
+                    throw new Error(e.show + ' ' + e.text + ' kept over a newer ' + f);
+                  }
+                  if (f.split('@')[0] === e.text) {
+                    throw new Error(e.show + ' folded the same episode ' + e.text);
+                  }
+                });
+              });
+            });
+        });
+      })
+
+      .then(function () {
         return step(
           'green picks things off Continue watching, and BACK changes nothing',
           function () {
@@ -612,6 +661,49 @@ module.exports = function (h) {
                 }
               })
           );
+        });
+      })
+
+      .then(function () {
+        return step('clearing a folded show leaves no tile of it', function () {
+          let entry;
+          return backToLibrary()
+            .then(function () {
+              return sidebarPick('Continue watching');
+            })
+            .then(function () {
+              return focusDeck(function (e) {
+                return e.type === 'episode' && onBackup(e);
+              });
+            })
+            .then(function (e) {
+              entry = e;
+              return press('F3');
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return press('F3');
+            })
+            .then(function () {
+              return waitForConfirm('to hide the show');
+            })
+            .then(takeConfirm)
+            .then(function () {
+              return waitForConfirm('to mark the show watched');
+            })
+            .then(takeConfirm)
+            .then(function () {
+              return page.waitForTimeout(300);
+            })
+            .then(reloadDeck)
+            .then(function (row) {
+              const left = row.entries.filter(function (e) {
+                return e.title === entry.title;
+              });
+              if (left.length) throw new Error(entry.title + ' still has a tile');
+            });
         });
       })
 

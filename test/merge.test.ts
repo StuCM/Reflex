@@ -287,3 +287,39 @@ test('merge across servers', () => {
       process.exit(1);
     });
 });
+
+test('newestPerShow keeps the latest episode of each show', () => {
+  const ep = (key: string, season: number, index: number, seen: number, extra = {}) => ({
+    ratingKey: key,
+    type: 'episode' as const,
+    grandparentGuid: 'plex://show/paw',
+    grandparentTitle: 'Paw Patrol',
+    parentIndex: season,
+    index,
+    lastViewedAt: seen,
+    ...extra,
+  });
+  const maverick = ep('1', 10, 8, 1793730796);
+  const kids = ep('2', 10, 7, 1793729517);
+  const hdr = ep('3', 1, 3, 1793037354);
+  const film = { ratingKey: '9', type: 'movie' as const, title: 'Heat' };
+
+  const out = Merge.newestPerShow([kids, film, hdr, maverick]);
+  assert.deepStrictEqual(
+    out.map((one) => one.ratingKey),
+    ['1', '9'],
+  );
+  assert.deepStrictEqual(out[0]._folded.map((one) => one.ratingKey).sort(), ['2', '3']);
+
+  const bare = (key: string, seen: number) => ({
+    ratingKey: key,
+    type: 'episode' as const,
+    grandparentTitle: key === 'a' ? 'Octonauts' : 'OCTONAUTS',
+    lastViewedAt: seen,
+  });
+  const folded = Merge.newestPerShow([bare('a', 5), bare('b', 9)]);
+  assert.deepStrictEqual(
+    folded.map((one) => one.ratingKey),
+    ['b'],
+  );
+});

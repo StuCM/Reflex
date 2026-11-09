@@ -102,6 +102,36 @@ export function lists(arrays: (PlexItem[] | null | undefined)[]): PlexItem[] {
   return into.out;
 }
 
+export type Folded = PlexItem & { _folded?: PlexItem[] };
+
+/** One episode per show, the most recently viewed; the others ride on it as `_folded`. */
+export function newestPerShow(episodes: PlexItem[]): PlexItem[] {
+  const keep = new Map<string, Folded>();
+  const out: PlexItem[] = [];
+  episodes.forEach((item: Folded) => {
+    const show = item.grandparentGuid ?? item.grandparentTitle?.toLowerCase();
+    if (item.type !== 'episode' || !show) {
+      out.push(item);
+      return;
+    }
+    const held = keep.get(show);
+    if (!held) {
+      keep.set(show, item);
+      out.push(item);
+      return;
+    }
+    const newer = (item.lastViewedAt ?? 0) > (held.lastViewedAt ?? 0);
+    const winner = newer ? item : held;
+    const loser = newer ? held : item;
+    winner._folded = [...(held._folded ?? []), ...(item._folded ?? []), loser].filter(
+      (one) => one !== winner,
+    );
+    keep.set(show, winner);
+    out[out.indexOf(held)] = winner;
+  });
+  return out;
+}
+
 /** Every copy of this film, the one being displayed first. */
 export function sources(item: PlexItem | null | undefined): PlexItem[] {
   if (!item) return [];
