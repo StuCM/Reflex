@@ -445,6 +445,18 @@ module.exports = function (h) {
                   'the next series to load',
                   15000,
                 );
+              })
+              .then(function () {
+                /* The mock airs series N in 2000 + N, so the year follows the chip. */
+                return waitFor(
+                  '(function () {' +
+                    'var c = document.querySelector("#sh-seasons .chip.cur");' +
+                    'var n = c && /\\d+/.exec(c.textContent);' +
+                    'return !!n && document.getElementById("sh-meta").textContent.indexOf(String(2000 + Number(n[0]))) === 0;' +
+                    '})()',
+                  'the meta line to open with the current series year',
+                  5000,
+                );
               });
           });
       });

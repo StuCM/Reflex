@@ -108,6 +108,8 @@ interface PlexItem {
   type?: 'movie' | 'show' | 'season' | 'episode' | 'clip';
   title?: string;
   year?: number;
+  /** `YYYY-MM-DD`; episodes carry it, seasons do not. */
+  originallyAvailableAt?: string;
   duration?: number;
   contentRating?: string;
   /** Present on server-wide lookups such as search and guid. */
