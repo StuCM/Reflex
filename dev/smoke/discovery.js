@@ -69,6 +69,67 @@ module.exports = function (h) {
     });
   }
 
+  /* Every Plex metadata read: an unheld page must make none, and the held
+     film's page is the control that this collector sees them at all. */
+  const metadataReads = [];
+  page.on('request', function (r) {
+    if (/\/library\/metadata\//.test(r.url())) metadataReads.push(r.url());
+  });
+
+  /* OK on a title neither server holds: its TMDB page, no Play, a Trailer that
+     loads the recap frame, and nothing asked of Plex. Leaves the rail focused. */
+  function unheldPage(title) {
+    let reads;
+    return settle()
+      .then(function () {
+        reads = metadataReads.length;
+        return page.keyboard.press('Enter');
+      })
+      .then(function () {
+        return waitFor(
+          '!document.getElementById("detail").classList.contains("hidden") &&' +
+            ' document.getElementById("dt-title").textContent.trim() === ' +
+            JSON.stringify(title) +
+            ' && document.getElementById("dt-chips").textContent' +
+            '.indexOf("Not available on the server") >= 0' +
+            ' && document.getElementById("dt-summary").textContent' +
+            '.indexOf("TMDB overview for") >= 0' +
+            ' && !!document.querySelector("#dt-actions [data-act=trailer]")',
+          'the page for ' + title + ' with its TMDB overview and trailer',
+          20000,
+        );
+      })
+      .then(actionRow)
+      .then(function (row) {
+        if (
+          row.some(function (a) {
+            return a.act === 'play';
+          })
+        ) {
+          throw new Error('a title nobody holds has a Play button');
+        }
+      })
+      .then(function () {
+        return page.keyboard.press('Enter');
+      })
+      .then(function () {
+        return waitFor(
+          '/^\\/__ytembed\\/trailer\\d+\\?autoplay=1$/.test(' +
+            'document.getElementById("recap-frame").getAttribute("src"))',
+          'the recap frame to load the TMDB trailer',
+        );
+      })
+      .then(function () {
+        return press('Backspace');
+      })
+      .then(function () {
+        if (metadataReads.length !== reads) {
+          throw new Error('an unheld page read Plex metadata: ' + metadataReads.slice(reads));
+        }
+        return press('Backspace');
+      });
+  }
+
   /* The masthead's own line about the focused title, and which title that is. */
   function masthead() {
     return page.evaluate(function () {
@@ -245,34 +306,24 @@ module.exports = function (h) {
     .then(function () {
       return step('a title neither server has says so before OK is pressed', function () {
         let film;
-        return (
-          toRow('Science fiction')
-            .then(function () {
-              return waitFor(
-                'document.getElementById("mh-meta").textContent.trim() === ' +
-                  '"Not in your library"',
-                'the masthead to say we have not got it',
-              );
-            })
-            .then(masthead)
-            .then(function (mh) {
-              film = mh.title;
-            })
-            .then(function () {
-              return shot('discovery-unheld');
-            })
-            /* OK on it explains rather than doing nothing — and names the film,
-             which is the difference between an answer and a shrug. */
-            .then(function () {
-              return page.keyboard.press('Enter');
-            })
-            .then(function () {
-              return waitFor(h.shown('Not in your library', film), 'the refusal for ' + film);
-            })
-            .then(function () {
-              return press('Backspace');
-            })
-        );
+        return toRow('Science fiction')
+          .then(function () {
+            return waitFor(
+              'document.getElementById("mh-meta").textContent.trim() === ' +
+                '"Not in your library"',
+              'the masthead to say we have not got it',
+            );
+          })
+          .then(masthead)
+          .then(function (mh) {
+            film = mh.title;
+          })
+          .then(function () {
+            return shot('discovery-unheld');
+          })
+          .then(function () {
+            return unheldPage(film);
+          });
       });
     })
 
@@ -316,6 +367,7 @@ module.exports = function (h) {
               });
               if (!play) throw new Error('no Play button on the page');
               if (!play.caption) throw new Error('Play says nothing about what it would do');
+              if (!metadataReads.length) throw new Error('a held page read no Plex metadata');
             })
             .then(function () {
               return shot('discovery-detail');
@@ -393,6 +445,9 @@ module.exports = function (h) {
               })
               .then(function () {
                 return resting('TV 0 Show 3', 'Not in your library');
+              })
+              .then(function () {
+                return unheldPage('TV 0 Show 3');
               })
           );
         },

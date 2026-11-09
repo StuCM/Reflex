@@ -10,6 +10,7 @@ import { artUrl as plexArtUrl, photoUrl as plexPhotoUrl } from '../api/plex/imag
 import { probeFeatures } from '../core/panel';
 import { KEY, clamp, debug, isBack, message, show as showView, toast } from '../core/ui';
 import * as art from '../data/art';
+import * as discovery from '../data/discovery';
 import * as guard from '../data/guard';
 import * as merge from '../data/merge';
 import * as meta from '../data/meta';
@@ -90,6 +91,7 @@ interface DetailOptions {
   ) => void;
   onExit?: () => void;
   onShow?: (item: PlexItem) => void;
+  onTrailer?: (youtubeKey: string) => void;
 }
 
 /** One button on the action row. */
@@ -105,6 +107,8 @@ interface Action {
 
 /** The merged entry. */
 let item: PlexItem | null = null;
+/** A TMDB title neither server holds: no copies, so no guard and no Play. */
+let unheld = false;
 /** One per server that has it. */
 let copies: Copy[] = [];
 /** Flattened: one per server × version. */
@@ -140,9 +144,14 @@ export function open(entry: PlexItem | null, chosen?: DetailOptions) {
 
   /* Merge already put the preferred server's copy first, so source 0 is the
      one the preference asks for. */
-  copies = merge.sources(entry).map((copy) => {
-    return { item: copy, server: servers.of(copy), versions: null };
-  });
+  unheld = discovery.isEntry(entry);
+  /* merge.sources of an entry is the entry itself, which has no server. */
+  copies = unheld
+    ? []
+    : merge.sources(entry).map((copy) => {
+        return { item: copy, server: servers.of(copy), versions: null };
+      });
+  if (unheld) art.warm(entry);
   extras = [];
   onDeck = browse.isOnDeck(entry);
   strip = 0;
@@ -159,6 +168,12 @@ export function open(entry: PlexItem | null, chosen?: DetailOptions) {
   render();
   loadDetails();
 }
+
+art.onReady(() => {
+  if (!unheld || !item) return;
+  paintSkeleton();
+  render();
+});
 
 function close() {
   /* Metadata and verdicts for the page we are leaving are still in flight;
@@ -477,17 +492,29 @@ function removeFromDeck() {
    Trailer is only here when there is one, and Remove only when the thing is
    actually on the deck. */
 function actions(): Action[] {
-  const out: Action[] = [
-    {
-      act: 'play',
-      label: 'Play',
-      primary: true,
-      caption: playCaption(),
-      run: () => {
-        start(verdict, false);
-      },
+  const out: Action[] = [];
+  const tmdbTrailer = art.factsFor(item)?.trailerKey;
+  const onTrailer = options.onTrailer;
+  if (unheld) {
+    if (tmdbTrailer && onTrailer) {
+      out.push({
+        act: 'trailer',
+        glyph: glyphs.trailer,
+        caption: 'Trailer',
+        run: () => onTrailer(tmdbTrailer),
+      });
+    }
+    return out;
+  }
+  out.push({
+    act: 'play',
+    label: 'Play',
+    primary: true,
+    caption: playCaption(),
+    run: () => {
+      start(verdict, false);
     },
-  ];
+  });
   /* Part way through, resuming and starting again are two different things to
      want. Both are the verdict the buttons already settled — the second only
      says where to begin. */
@@ -512,6 +539,13 @@ function actions(): Action[] {
       run: () => {
         start(trailer.verdict, true);
       },
+    });
+  } else if (tmdbTrailer && onTrailer) {
+    out.push({
+      act: 'trailer',
+      glyph: glyphs.trailer,
+      caption: 'Trailer',
+      run: () => onTrailer(tmdbTrailer),
     });
   }
   out.push({
@@ -698,7 +732,7 @@ function paintSkeleton() {
   fill(castElement);
   renderHead();
 
-  const backdrop = plexArtUrl(item, 960, 540);
+  const backdrop = unheld ? art.hero(item) : plexArtUrl(item, 960, 540);
   artElement.style.setProperty('--art', backdrop ? `url("${backdrop}")` : 'none');
 }
 
@@ -795,6 +829,7 @@ function chipNodes(): HTMLElement[] {
   add(item.year, false);
   add(runtimeChip(), false);
   add(qualityChip(), true);
+  if (unheld) out.push(span('dt-chip out unavailable', 'Not available on the server'));
   return out;
 }
 
@@ -952,7 +987,7 @@ export function key(code: number): boolean {
   if (code === K.OK) {
     const action = strip === 0 ? actions()[index] : null;
     if (action) action.run();
-    else {
+    else if (strip === 1) {
       const extra = extras[index];
       start(extra && extra.verdict, true);
     }

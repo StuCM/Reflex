@@ -128,6 +128,12 @@ function create(opts) {
         'in the words of a database rather than a file name.',
       runtime: 90 + (Number(id) % 60),
       images: imagesFor(id),
+      videos: {
+        results: [
+          { key: 'teaser' + id, site: 'YouTube', type: 'Teaser', official: true },
+          { key: 'trailer' + id, site: 'YouTube', type: 'Trailer', official: true },
+        ],
+      },
     };
     if (!creditless[id]) body.credits = { cast: castFor(id) };
     return body;

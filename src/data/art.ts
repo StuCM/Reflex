@@ -44,6 +44,19 @@ export function pick(payload: TmdbDetails | null | undefined): ArtEntry {
   return { hero: bestOf(images.backdrops), poster: bestOf(images.posters) };
 }
 
+/* The official YouTube trailer, else any trailer, else a teaser. */
+function trailerOf(payload: TmdbDetails | null | undefined): string | null {
+  const videos = (payload?.videos?.results ?? []).filter(
+    (video) => video?.key && video.site === 'YouTube',
+  );
+  const trailers = videos.filter((video) => video.type === 'Trailer');
+  const best =
+    trailers.find((video) => video.official) ??
+    trailers[0] ??
+    videos.find((video) => video.type === 'Teaser');
+  return best?.key ?? null;
+}
+
 /* What the header says about a title, out of the same payload. Never throws:
    anything missing gives empty. */
 export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
@@ -59,6 +72,7 @@ export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
     /* Out of ten, one decimal. Zero is TMDB's "nobody has voted", not a score. */
     rating: score ? Math.round(score * 10) / 10 : null,
     cast,
+    trailerKey: trailerOf(payload),
   };
 }
 
@@ -146,7 +160,9 @@ async function lookUp(id: string): Promise<ArtEntry> {
   /* An entry cached before the facts or the poster existed is a miss for them,
      or an old cache would leave a title short of one for ever. */
   const entry = (await cached.art.get(id)) as ArtEntry | undefined;
-  if (entry?.facts && entry.poster !== undefined) return entry;
+  if (entry?.facts && entry.facts.trailerKey !== undefined && entry.poster !== undefined) {
+    return entry;
+  }
   const payload = (await details(id)) as TmdbDetails;
   const got = pick(payload);
   got.facts = facts(payload);

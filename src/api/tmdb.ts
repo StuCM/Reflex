@@ -168,7 +168,7 @@ export function details(tmdbId: string): Promise<TmdbResponse> {
   /* A show's id is `tv/<id>` everywhere it is keyed, so it is its own path. */
   const path = tmdbId.startsWith('tv/') ? `/${tmdbId}` : `/movie/${tmdbId}`;
   return get(path, {
-    append_to_response: 'images,credits',
+    append_to_response: 'images,credits,videos',
     include_image_language: 'en,null',
   });
 }

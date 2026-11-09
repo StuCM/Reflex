@@ -406,13 +406,23 @@ interface TmdbDetails {
   backdrops?: TmdbImage[];
   posters?: TmdbImage[];
   credits?: { cast?: { name?: string }[] };
+  videos?: { results?: TmdbVideo[] };
   overview?: string;
   runtime?: number;
   vote_average?: number;
 }
 
+interface TmdbVideo {
+  key?: string;
+  site?: string;
+  type?: string;
+  official?: boolean;
+}
+
 interface ArtFacts {
   overview: string;
+  /** YouTube id of the best trailer, or null. */
+  trailerKey: string | null;
   runtime: number | null;
   rating: number | null;
   cast: string[];
