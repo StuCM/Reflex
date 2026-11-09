@@ -982,22 +982,22 @@ function build(counts) {
       });
     });
 
-    /* A guid lookup is server-wide, so it answers with every copy. */
+    /* A guid lookup is server-wide, so it answers with every copy. Like the real
+       servers, only plex:// guids are indexed: tmdb:// and imdb:// find nothing. */
     const byGuid = {};
     function addGuid(guid, m) {
       (byGuid[guid] = byGuid[guid] || []).push(m);
     }
     allFilms.forEach(function (m) {
-      addGuid('tmdb://' + films[m._film].tmdb, m);
+      addGuid(m.guid, m);
     });
     allShows.forEach(function (m) {
-      addGuid('tmdb://' + shows[m._show].tmdb, m);
+      addGuid(m.guid, m);
     });
 
     extraGuid.forEach(function (m) {
       byKey[m.ratingKey] = m;
-      const tmdb = m.Guid[0].id;
-      addGuid(tmdb, m);
+      addGuid(m.guid, m);
     });
 
     return {

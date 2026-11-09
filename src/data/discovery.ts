@@ -2,7 +2,7 @@
    External-first: draw the tile from TMDB, and only ask a server whether we
    hold it for the tile that has the focus. Asking for every tile drawn is the
    crawl this page exists to avoid. */
-import { findByGuid } from '../api/plex/library';
+import { search, tmdbId } from '../api/plex/library';
 import * as tmdb from '../api/tmdb';
 import { railSub } from '../rules/labels';
 import * as cached from './cached';
@@ -46,9 +46,14 @@ function settle(item: DiscoveryEntry, found: PlexItem | null): void {
       : 'In your library';
 }
 
-async function askServers(id: string): Promise<PlexItem | null> {
+/* The servers ignore a tmdb:// guid filter, so search by title and keep the film whose TMDB id is
+   this one. A show can share the number, hence the type. */
+async function askServers(title: string, id: string): Promise<PlexItem | null> {
   const perServer = await Promise.all(
-    servers.all().map((server) => findByGuid(server, `tmdb://${id}`).catch(() => null)),
+    servers.all().map(async (server) => {
+      const found = await search(server, title);
+      return found.find((hit) => hit.type === 'movie' && tmdbId(hit) === id) ?? null;
+    }),
   );
   const hits = perServer.filter((hit): hit is PlexItem => !!hit);
   return hits.length ? (merge.lists([hits])[0] ?? null) : null;
@@ -71,7 +76,7 @@ async function ask(item: DiscoveryEntry): Promise<PlexItem | null> {
     if (hit !== undefined) {
       found = hit;
     } else {
-      found = await askServers(item._tmdb.id);
+      found = await askServers(item.title ?? '', item._tmdb.id);
       void cached.lookup.put(item._tmdb.id, found);
     }
   } catch (error) {

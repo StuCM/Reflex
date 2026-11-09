@@ -808,8 +808,38 @@ function create(opts) {
             return item.title.toLowerCase().indexOf(needle) >= 0;
           })
           .slice(0, limit)
-          .map(stripStreams);
+          .map(stripStreams)
+          .map(function (item) {
+            if (q.includeGuids === '1') return item;
+            const bare = Object.assign({}, item);
+            delete bare.Guid;
+            return bare;
+          });
       }
+      /* Another film with the unheld titles' name: a title match alone would take it. */
+      const remake = needle.startsWith('genre ')
+        ? [
+            {
+              ratingKey: 'remake',
+              type: 'movie',
+              title: q.query,
+              year: 1970,
+              Guid: [{ id: 'tmdb://1' }],
+            },
+          ]
+        : [];
+      /* An album with a film's name, as the real hub answers with: not a movie. */
+      const albums = [];
+      srv.items['1'].some(function (item) {
+        if (item.title.toLowerCase().indexOf(needle) < 0) return false;
+        albums.push({
+          ratingKey: 'album-' + item.ratingKey,
+          type: 'album',
+          title: item.title,
+          Guid: item.Guid,
+        });
+        return true;
+      });
       json(
         res,
         200,
@@ -819,9 +849,12 @@ function create(opts) {
             {
               title: 'Movies',
               type: 'movie',
-              Metadata: match(srv.items['1'].concat(srv.items['4'] || [], srv.items['5'] || [])),
+              Metadata: remake.concat(
+                match(srv.items['1'].concat(srv.items['4'] || [], srv.items['5'] || [])),
+              ),
             },
             { title: 'Shows', type: 'show', Metadata: match(srv.items['3']) },
+            { title: 'Albums', type: 'album', Metadata: albums },
             { title: 'People', type: 'actor', Metadata: [] },
           ],
         }),
