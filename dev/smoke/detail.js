@@ -1,5 +1,7 @@
 'use strict';
 /* the film page: what it says, and what Play would do */
+const buildLibrary = require('../library').build;
+
 module.exports = function (h) {
   const {
     hasFixture,
@@ -256,9 +258,9 @@ module.exports = function (h) {
                     throw new Error('no length on the card: "' + cards[0].len + '"');
                   }
                 })
-                /* Down off the action row is the extras strip. */
+                /* Down off the action row is the cast, and down again the extras. */
                 .then(function () {
-                  return press('ArrowDown');
+                  return press('ArrowDown', 2);
                 })
                 .then(function () {
                   return waitFor(
@@ -591,7 +593,7 @@ module.exports = function (h) {
               }
             })
             .then(function () {
-              return press('ArrowDown');
+              return press('ArrowDown', 2);
             })
             .then(function () {
               return waitFor(
@@ -622,7 +624,7 @@ module.exports = function (h) {
               return shot('detail-extras-down');
             })
             .then(function () {
-              return press('ArrowUp');
+              return press('ArrowUp', 2);
             })
             .then(function () {
               return waitFor(
@@ -637,6 +639,165 @@ module.exports = function (h) {
                 'the extras strip to drop back to its peek',
                 5000,
               );
+            })
+            .then(backToLibrary);
+        });
+      })
+
+      .then(function () {
+        return step('the cast is a row you step down to, and an actor opens in place', function () {
+          const film = buildLibrary({ films: h.FILMS }).films.find(function (f) {
+            return f.title === titles.directPlays.title;
+          });
+          const stub = JSON.stringify({ Guid: [{ id: 'tmdb://' + film.tmdb }] });
+          let actor = '';
+
+          function look() {
+            return page.evaluate(function () {
+              const cast = document.getElementById('dt-cast');
+              const root = document.querySelector('#dt-cast .sh-person');
+              const faces = document.querySelectorAll('#dt-cast .dt-actor');
+              const face = document.querySelector(
+                '#dt-cast .dt-actor img, #dt-cast .dt-actor-blank',
+              );
+              const last = faces.length ? faces[faces.length - 1] : null;
+              const shot = document.querySelector('#dt-extras .dt-extra-shot');
+              const lastExtra = document.querySelector('#dt-extras .dt-extra:last-child');
+              const extras = document.getElementById('dt-extras');
+              function text(sel) {
+                const found = root && root.querySelector(sel);
+                return found ? found.textContent.trim() : '';
+              }
+              return {
+                faces: faces.length,
+                on: Array.prototype.map.call(faces, function (f) {
+                  return f.classList.contains('on');
+                }),
+                faceWidth: face ? face.offsetWidth : 0,
+                roleInside: last
+                  ? last.querySelector('.dt-actor-role').getBoundingClientRect().bottom <=
+                    cast.getBoundingClientRect().bottom
+                  : false,
+                name0: faces.length ? faces[0].querySelector('.dt-actor-name').textContent : '',
+                shot: shot
+                  ? [shot.getBoundingClientRect().width, shot.getBoundingClientRect().height]
+                  : [0, 0],
+                extraInside: lastExtra
+                  ? lastExtra.getBoundingClientRect().bottom <=
+                      extras.getBoundingClientRect().bottom &&
+                    lastExtra.getBoundingClientRect().right <= extras.getBoundingClientRect().right
+                  : false,
+                extrasOn: !!document.querySelector('#dt-extras .dt-extra.on'),
+                open: !!root,
+                name: text('.sh-person-name'),
+                bio: text('.sh-person-bio'),
+                rows: root ? root.querySelectorAll('.sh-credit').length : 0,
+                focused: text('.sh-credit.on .sh-credit-title'),
+                bioInside: root
+                  ? root.querySelector('.sh-person-bio').getBoundingClientRect().bottom <=
+                    Math.min(cast.getBoundingClientRect().bottom, 1080)
+                  : false,
+                extrasShown: extras.offsetParent !== null,
+                pageShown: !document.getElementById('detail').classList.contains('hidden'),
+              };
+            });
+          }
+
+          return openTitle(titles.directPlays.title)
+            .then(function () {
+              return waitFor(
+                'document.querySelectorAll("#dt-cast .dt-actor").length > 1 &&' +
+                  ' document.querySelectorAll("#dt-extras .dt-extra").length > 0',
+                'the cast and the extras',
+                15000,
+              );
+            })
+            .then(look)
+            .then(function (st) {
+              if (st.faceWidth !== 160) throw new Error('a cast face is ' + st.faceWidth + 'px');
+              if (!st.roleInside) throw new Error('the last role line is clipped by the cast row');
+              if (st.shot[0] !== 320 || st.shot[1] !== 180) {
+                throw new Error('an extra measures ' + st.shot.join('x'));
+              }
+              actor = st.name0;
+              /* The TMDB ids arrive by the rail's lookup, which a title opened by
+                 search never had; ask for them, then name the first face. */
+              return page.evaluate(
+                'Art.warm(' +
+                  stub +
+                  ');' +
+                  'new Promise(function (r) {setInterval(function () {' +
+                  'if (Art.factsFor(' +
+                  stub +
+                  ')) r(true);}, 50);})',
+              );
+            })
+            .then(function () {
+              return page.evaluate(
+                'Art.factsFor(' +
+                  stub +
+                  ').castIds = [{id: "4242", name: ' +
+                  JSON.stringify(actor) +
+                  ', profile: null}];',
+              );
+            })
+            .then(function () {
+              return press('ArrowDown');
+            })
+            .then(look)
+            .then(function (st) {
+              if (!st.on[0] || st.extrasOn) throw new Error('▼ did not land on the first actor');
+              return press('Enter');
+            })
+            .then(function () {
+              return waitFor('!!document.querySelector("#dt-cast .sh-person")', 'the actor', 5000);
+            })
+            .then(look)
+            .then(function (st) {
+              if (st.name !== actor) throw new Error('the panel names "' + st.name + '"');
+              if (st.bio.indexOf('Born 12 May 1962, London, England') !== 0) {
+                throw new Error('the bio reads "' + st.bio + '"');
+              }
+              if (st.rows !== 6 || !st.focused) {
+                throw new Error(st.rows + ' credit rows, focused "' + st.focused + '"');
+              }
+              if (!st.bioInside) throw new Error('the bio is outside the cast area');
+              if (st.extrasShown) throw new Error('the extras still show beside the actor');
+              return shot('detail-person');
+            })
+            .then(function () {
+              return press('Backspace');
+            })
+            .then(look)
+            .then(function (st) {
+              if (st.open || !st.pageShown) throw new Error('BACK left the page or the actor open');
+              if (!st.on[0]) throw new Error('no actor is focused after BACK');
+              return press('ArrowDown');
+            })
+            .then(look)
+            .then(function (st) {
+              if (!st.extrasOn) throw new Error('▼ from the cast did not reach the extras');
+              if (!st.extraInside) throw new Error('the last extra overflows its strip');
+              return press('ArrowUp');
+            })
+            .then(look)
+            .then(function (st) {
+              if (!st.on[0]) throw new Error('▲ from the extras did not return to the cast');
+              return page.evaluate(function () {
+                return new Promise(function (resolve) {
+                  const open = indexedDB.open('reflex', 1);
+                  open.onsuccess = function () {
+                    const tx = open.result.transaction('kv', 'readwrite');
+                    tx.objectStore('kv').openCursor().onsuccess = function (event) {
+                      const cursor = event.target.result;
+                      if (!cursor) return;
+                      if (String(cursor.key).indexOf('tmdb2:') === 0) cursor.delete();
+                      cursor.continue();
+                    };
+                    tx.oncomplete = resolve;
+                  };
+                });
+              });
             })
             .then(backToLibrary);
         });

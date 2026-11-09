@@ -14,6 +14,7 @@ import * as discovery from '../data/discovery';
 import * as guard from '../data/guard';
 import * as merge from '../data/merge';
 import * as meta from '../data/meta';
+import * as people from '../data/people';
 import * as servers from '../data/servers';
 import { audioLabel, audioMenuLabel, audioTracks } from '../rules/audio';
 import { hoursAndMinutes } from '../rules/clock';
@@ -22,6 +23,7 @@ import { bitrateLabel, isUHD, qualities, versionLabel } from '../rules/quality';
 import { isTextSub, pickSubtitle, subLabel, subtitleTracks } from '../rules/subtitles';
 import * as glyphs from '../view/glyphs';
 import * as menu from '../view/menu';
+import * as personView from '../view/person';
 import { div, span, fill, put, must, svg } from '../view/dom';
 import type { MenuRow, MenuTab } from '../view/menu';
 import * as browse from './browse';
@@ -92,6 +94,14 @@ interface DetailOptions {
   onExit?: () => void;
   onShow?: (item: PlexItem) => void;
   onTrailer?: (youtubeKey: string) => void;
+  actor?: ActorState;
+  onOpenTitle?: (credit: TmdbFilm, actor: ActorState) => void;
+}
+
+/** Enough to reopen the page on the same actor and credit. */
+export interface ActorState {
+  name: string;
+  credit: number;
 }
 
 /** One button on the action row. */
@@ -117,8 +127,18 @@ let sources: Source[] = [];
 let extras: Source[] = [];
 /** Which source Play would use. */
 let sel = 0;
-/** 0 = the action row, 1 = the extras. */
+const EXTRAS = 1;
+const CAST = 2;
+const PERSON = 3;
+/** 0 = the action row, EXTRAS, CAST, or PERSON: an actor open in place. */
 let strip = 0;
+let cast: PlexTag[] = [];
+let opened: {
+  panel: personView.PersonPanel;
+  name: string;
+  credits: TmdbFilm[];
+  index: number;
+} | null = null;
 /** Within that row. */
 let index = 0;
 /** The first copy's metadata: what the header says. */
@@ -153,6 +173,9 @@ export function open(entry: PlexItem | null, chosen?: DetailOptions) {
       });
   if (unheld) art.warm(entry);
   extras = [];
+  cast = [];
+  opened = null;
+  viewElement.classList.remove('person');
   onDeck = browse.isOnDeck(entry);
   strip = 0;
   index = 0;
@@ -170,6 +193,7 @@ export function open(entry: PlexItem | null, chosen?: DetailOptions) {
 }
 
 art.onReady(() => {
+  resumeActor();
   if (!unheld || !item) return;
   paintSkeleton();
   render();
@@ -184,6 +208,9 @@ function close() {
   copies = [];
   sources = [];
   extras = [];
+  cast = [];
+  opened = null;
+  viewElement.classList.remove('person');
   verdict = null;
   if (options.onExit) options.onExit();
 }
@@ -273,7 +300,7 @@ function addOtherVersions(metadata: PlexItem) {
    is still a transcode on someone else's hardware. */
 function addExtras(metadata: PlexItem) {
   if (extras.length || !metadata.Extras || !metadata.Extras.Metadata) return;
-  extras = metadata.Extras.Metadata.slice(0, 6).map((clip) => {
+  extras = metadata.Extras.Metadata.slice(0, 5).map((clip) => {
     return {
       copy: { item: clip, server: servers.of(clip), versions: null },
       server: servers.of(clip),
@@ -689,7 +716,7 @@ function extraCard(source: Source, focused: boolean): HTMLElement {
     : '';
   const clip = source.copy.item;
   const mins = clip.duration ? `${Math.max(1, Math.round(clip.duration / 60000))} min` : '';
-  const shot = plexPhotoUrl(source.server, clip.thumb, 320, 180);
+  const shot = plexPhotoUrl(source.server, clip.thumb, 480, 270);
 
   const card = div(`dt-extra${focused ? ' on' : ''}`);
   const still = div('dt-extra-shot');
@@ -707,11 +734,15 @@ function extraCard(source: Source, focused: boolean): HTMLElement {
 function render() {
   adoptDefault();
   renderActions();
-  fill(extrasElement, ...extras.map((extra, at) => extraCard(extra, strip === 1 && at === index)));
+  fill(
+    extrasElement,
+    ...extras.map((extra, at) => extraCard(extra, strip === EXTRAS && at === index)),
+  );
+  focusCast();
   extrasLabelElement.classList.toggle('hidden', extras.length === 0);
   /* Stepping into the extras lifts them clear of the bottom edge; the
      stylesheet owns what else moves out of their way. */
-  viewElement.classList.toggle('down', strip === 1);
+  viewElement.classList.toggle('down', strip === EXTRAS);
   /* The quality chip names the copy that would play, so it follows the
      Source button. */
   fill(chipsElement, ...chipNodes());
@@ -871,7 +902,9 @@ function loadDetails() {
       summaryElement.textContent = description(metadata);
       namesElement.textContent = namesLine(metadata);
       fill(crewElement, ...crewNodes(metadata));
+      cast = (metadata.Role || []).slice(0, 8);
       fill(castElement, ...castNodes(metadata));
+      resumeActor();
       addExtras(metadata);
       addOtherVersions(metadata);
     });
@@ -913,9 +946,9 @@ function initials(name: string): string {
 }
 
 function castNodes(metadata: PlexItem): HTMLElement[] {
-  return (metadata.Role || []).slice(0, 8).map((role) => {
+  return cast.map((role) => {
     const name = role.tag || '';
-    const url = plexPhotoUrl(servers.of(metadata), role.thumb, 120, 120);
+    const url = plexPhotoUrl(servers.of(metadata), role.thumb, 240, 240);
     const actor = div('dt-actor');
     let face;
     if (url) {
@@ -928,6 +961,93 @@ function castNodes(metadata: PlexItem): HTMLElement[] {
     put(actor, face, div('dt-actor-name', name), div('dt-actor-role', role.role || ''));
     return actor;
   });
+}
+
+function focusCast(): void {
+  const faces = castElement.children;
+  for (let at = 0; at < faces.length; at++) {
+    (faces[at] as HTMLElement).classList.toggle('on', strip === CAST && at === index);
+  }
+}
+
+/* ---------- an actor, open in place ---------- */
+
+/* Reopened from a title the actor's page led to: needs the roles and the TMDB
+   ids, which arrive separately. */
+function resumeActor(): void {
+  const want = options.actor;
+  if (!want || !cast.length || !castIds().length) return;
+  options.actor = undefined;
+  const at = cast.findIndex((role) => role.tag === want.name);
+  if (at < 0) return;
+  strip = CAST;
+  index = at;
+  render();
+  void openPerson(want.credit);
+}
+
+function castIds(): CastId[] {
+  return art.factsFor(item)?.castIds ?? [];
+}
+
+async function openPerson(credit = 0): Promise<void> {
+  const role = cast[index];
+  const known = role?.tag ? people.match(role.tag, castIds()) : undefined;
+  if (!role?.tag || !known) return;
+  const mine = generation;
+  const wanted = index;
+  let got: TmdbPerson;
+  try {
+    got = await people.person(known.id);
+  } catch (error) {
+    debug(`person: ${(error as Error).message}`);
+    toast('Could not read their credits');
+    return;
+  }
+  if (mine !== generation || strip !== CAST || index !== wanted) return;
+  const face = got.profile
+    ? art.url(got.profile, 'w300')
+    : plexPhotoUrl(servers.of(item), role.thumb, 300, 300);
+  const credits = people.newestFirst(got.credits);
+  const panel = personView.build(got, face, role.tag);
+  opened = {
+    panel,
+    name: role.tag,
+    credits,
+    index: personView.step(credit, 0, credits.length),
+  };
+  personView.paintList(panel.list, credits, opened.index);
+  put(castElement, panel.root);
+  viewElement.classList.add('person');
+  strip = PERSON;
+  render();
+}
+
+function closePerson(): void {
+  if (!opened) return;
+  castElement.removeChild(opened.panel.root);
+  opened = null;
+  viewElement.classList.remove('person');
+  strip = CAST;
+  render();
+}
+
+function personKey(code: number): void {
+  if (!opened) return;
+  const K = KEY;
+  const moves: Record<number, number> = { [K.UP]: -1, [K.LEFT]: -1, [K.DOWN]: 1, [K.RIGHT]: 1 };
+  const delta = moves[code];
+  if (code === K.UP && opened.index === 0) {
+    closePerson();
+  } else if (delta !== undefined) {
+    opened.index = personView.step(opened.index, delta, opened.credits.length);
+    personView.paintList(opened.panel.list, opened.credits, opened.index);
+  } else if (code === K.OK) {
+    const credit = opened.credits[opened.index];
+    if (credit) options.onOpenTitle?.(credit, { name: opened.name, credit: opened.index });
+  } else if (isBack(code)) {
+    closePerson();
+  }
 }
 
 /* ---------- keys ---------- */
@@ -960,7 +1080,12 @@ function start(chosenVerdict: Verdict | null | undefined, isExtra?: boolean, at?
 export function key(code: number): boolean {
   const K = KEY;
   if (menu.isOpen()) return menu.key(code);
-  const last = (strip === 0 ? actions().length : extras.length) - 1;
+  if (strip === PERSON) {
+    personKey(code);
+    return true;
+  }
+  const lanes = [actions().length, extras.length, cast.length];
+  const last = (lanes[strip] ?? 0) - 1;
 
   if (code === K.LEFT && index > 0) {
     index--;
@@ -972,14 +1097,17 @@ export function key(code: number): boolean {
     render();
     return true;
   }
-  if (code === K.DOWN && strip === 0 && extras.length) {
-    strip = 1;
-    index = 0;
-    render();
+  if (code === K.DOWN && strip !== EXTRAS) {
+    const next = strip === 0 && cast.length ? CAST : extras.length ? EXTRAS : strip;
+    if (next !== strip) {
+      strip = next;
+      index = 0;
+      render();
+    }
     return true;
   }
-  if (code === K.UP && strip === 1) {
-    strip = 0;
+  if (code === K.UP && strip !== 0) {
+    strip = strip === EXTRAS && cast.length ? CAST : 0;
     index = 0;
     render();
     return true;
@@ -987,7 +1115,8 @@ export function key(code: number): boolean {
   if (code === K.OK) {
     const action = strip === 0 ? actions()[index] : null;
     if (action) action.run();
-    else if (strip === 1) {
+    else if (strip === CAST) void openPerson();
+    else if (strip === EXTRAS) {
       const extra = extras[index];
       start(extra && extra.verdict, true);
     }
