@@ -8,6 +8,7 @@
    handful of films the mock servers really hold and every title lookup the
    app makes answers for a title on screen. */
 'use strict';
+const library = require('./library');
 
 /* Every fifth film is sparse: one backdrop and no posters at all, so the "TMDB
    has nothing for the tile, fall back to Plex" path is covered. Continue
@@ -145,8 +146,59 @@ function create(opts) {
     return out;
   }
 
+  /* The shows the mock servers hold: show 0, and show 1, whose TMDB number is
+     film 0's. Both are on every TV list, then shows nobody holds. */
+  const held = [library.makeShow(0), library.makeShow(1)];
+
+  function tvResults(seed, page) {
+    const p = page || 1;
+    const out = [];
+    if (p === 1) {
+      held.forEach(function (s) {
+        out.push({
+          id: s.tmdb,
+          name: s.title,
+          first_air_date: s.year + '-01-01',
+          poster_path: '/poster/' + s.tmdb + '/0.svg',
+          backdrop_path: '/backdrop/' + s.tmdb + '/0.svg',
+          vote_count: 900,
+          vote_average: 7.5,
+        });
+      });
+    }
+    for (let i = out.length; i < ROW; i++) {
+      const id = 800000 + Number(seed) * 100 + (p - 1) * ROW + i;
+      out.push({
+        id: id,
+        name: 'TV ' + seed + ' Show ' + ((p - 1) * ROW + i + 1),
+        first_air_date: '2015-01-01',
+        poster_path: '/poster/' + id + '/0.svg',
+        backdrop_path: '/backdrop/' + id + '/0.svg',
+        vote_count: 900,
+        vote_average: 7.5,
+      });
+    }
+    return { results: out, total_pages: PAGES };
+  }
+
   function api(res, p, query) {
-    let m = p.match(/^\/movie\/(\d+)\/recommendations$/);
+    let m = p.match(/^\/tv\/(\d+)$/);
+    if (m) {
+      json(res, detailsFor(m[1]));
+      return true;
+    }
+    if (p === '/trending/tv/week') {
+      json(res, tvResults(0, Number(query.page || 1)));
+      return true;
+    }
+    if (p === '/discover/tv') {
+      json(
+        res,
+        tvResults(query.with_genres || query.with_watch_providers, Number(query.page || 1)),
+      );
+      return true;
+    }
+    m = p.match(/^\/movie\/(\d+)\/recommendations$/);
     if (m) {
       json(res, results(Number(m[1]) % Math.max(1, films.length), 1));
       return true;

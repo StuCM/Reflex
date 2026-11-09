@@ -2,6 +2,7 @@
 /* Discovery: your own categories, drawn from TMDB, asking the servers only
    when a title is actually rested on or opened. */
 module.exports = function (h) {
+  const makeShow = require('../library').makeShow;
   const { shot, press, waitFor, step, sidebarPick, backToLibrary, page, pictures, actionRow } = h;
 
   /* Every title any server was searched for. This is the cost the whole page
@@ -108,6 +109,10 @@ module.exports = function (h) {
     'On Prime Video',
     'Science fiction',
     'Because of what you have been watching',
+    'Trending shows this week',
+    'Shows on Netflix',
+    'Shows on Prime Video',
+    'Sci-fi & fantasy shows',
   ];
   const WANT = ALL.slice(0, 4);
   let mark = 0;
@@ -320,6 +325,78 @@ module.exports = function (h) {
             })
         );
       });
+    })
+
+    .then(function () {
+      return step(
+        'a TV row opens the held show and tells a show from a film with its number',
+        function () {
+          const first = makeShow(0).title;
+          const clash = makeShow(1).title;
+          function seriesPage(title) {
+            return waitFor(
+              '!document.getElementById("show").classList.contains("hidden") &&' +
+                ' document.getElementById("sh-title").textContent.trim() === ' +
+                JSON.stringify(title),
+              'the series page for ' + title,
+              20000,
+            );
+          }
+          function resting(title, meta) {
+            return waitFor(
+              'document.getElementById("mh-title").textContent.trim() === ' +
+                JSON.stringify(title) +
+                ' && ' +
+                JSON.stringify(meta) +
+                ' === document.getElementById("mh-meta").textContent.trim().slice(0, ' +
+                meta.length +
+                ')',
+              title + ' to read "' + meta + '"',
+            );
+          }
+          return (
+            toRow('Trending shows this week')
+              .then(function () {
+                return resting(first, 'In your library');
+              })
+              .then(function () {
+                return page.keyboard.press('Enter');
+              })
+              .then(function () {
+                return seriesPage(first);
+              })
+              .then(function () {
+                return shot('discovery-show');
+              })
+              .then(function () {
+                return press('Backspace');
+              })
+              /* Its TMDB number is a film's, and that film was resolved first, on
+               the Trending row: the show has to read its own cache entry. */
+              .then(function () {
+                return press('ArrowRight');
+              })
+              .then(function () {
+                return resting(clash, 'In your library');
+              })
+              .then(function () {
+                return page.keyboard.press('Enter');
+              })
+              .then(function () {
+                return seriesPage(clash);
+              })
+              .then(function () {
+                return press('Backspace');
+              })
+              .then(function () {
+                return press('ArrowRight');
+              })
+              .then(function () {
+                return resting('TV 0 Show 3', 'Not in your library');
+              })
+          );
+        },
+      );
     })
 
     .then(function () {
