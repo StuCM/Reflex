@@ -1,10 +1,10 @@
 /* Which TMDB titles the servers hold among their kids and family libraries,
    built a server at a time and kept a week — the one large read the app makes
    of servers it does not own. */
-import { genres, items, sections, tmdbId } from "../api/plex/library";
-import * as cached from "./cached";
-import * as servers from "./servers";
-import { debug } from "../core/ui";
+import { genres, items, sections, tmdbId } from '../api/plex/library';
+import * as cached from './cached';
+import * as servers from './servers';
+import { debug } from '../core/ui';
 
 const PAGE = 500;
 const KIDS_LIBRARY = /kids/i;
@@ -14,7 +14,7 @@ const KIDS_GENRE = /^(family|animation|children|kids)$/i;
 export function keyOf(item: PlexItem): string | null {
   const id = tmdbId(item);
   if (!id) return null;
-  return item.type === "show" ? `tv/${id}` : id;
+  return item.type === 'show' ? `tv/${id}` : id;
 }
 
 async function read(
@@ -23,7 +23,7 @@ async function read(
   extra: Record<string, string | number>,
   into: Set<string>,
 ): Promise<void> {
-  const filter = { type: section.type === "show" ? 2 : 1, ...extra };
+  const filter = { type: section.type === 'show' ? 2 : 1, ...extra };
   let start = 0;
   let total = 1;
   while (start < total) {
@@ -49,9 +49,9 @@ async function build(server: PlexServer): Promise<string[]> {
     }
     // eslint-disable-next-line no-await-in-loop -- serial, by design
     for (const genre of await genres(server, section.key)) {
+      if (!KIDS_GENRE.test(genre.title)) continue;
       // eslint-disable-next-line no-await-in-loop -- serial, by design
-      if (KIDS_GENRE.test(genre.title))
-        await read(server, section, { genre: genre.key }, found);
+      await read(server, section, { genre: genre.key }, found);
     }
   }
   return Array.from(found);
@@ -95,6 +95,6 @@ export async function held(): Promise<Set<string>> {
 
 /** Is this discovery entry among the titles held? */
 export function isHeld(set: Set<string>, entry: DiscoveryEntry): boolean {
-  const id = entry.Guid?.[0]?.id ?? "";
+  const id = entry.Guid?.[0]?.id ?? '';
   return set.has(id.substring(7));
 }

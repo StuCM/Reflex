@@ -143,7 +143,9 @@ function kept(
   entries: DiscoveryEntry[],
   keep?: (entry: DiscoveryEntry) => boolean,
 ): DiscoveryEntry[] {
-  return keep && category.kind !== 'upcoming' ? entries.filter((one) => keep(one)) : entries;
+  return keep && category.kind !== 'upcoming'
+    ? entries.filter((candidate) => keep(candidate))
+    : entries;
 }
 
 /** The next page of a paged row, as entries the rail can draw. */
