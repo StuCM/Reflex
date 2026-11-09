@@ -31,14 +31,14 @@ const settings: Settings = {
      /genre/movie/list and a provider id from JustWatch as TMDB exposes it. */
   categories: [
     { title: 'Trending this week', kind: 'trending' },
-    { title: 'On Netflix', kind: 'provider', id: 8 },
-    { title: 'On Prime Video', kind: 'provider', id: 9 },
-    { title: 'Science fiction', kind: 'genre', id: 878 },
-    { title: 'Because of what you have been watching', kind: 'recommended' },
     { title: 'Trending shows this week', kind: 'trending', media: 'tv' },
+    { title: 'On Netflix', kind: 'provider', id: 8 },
     { title: 'Shows on Netflix', kind: 'provider', id: 8, media: 'tv' },
+    { title: 'On Prime Video', kind: 'provider', id: 9 },
     { title: 'Shows on Prime Video', kind: 'provider', id: 9, media: 'tv' },
+    { title: 'Science fiction', kind: 'genre', id: 878 },
     { title: 'Sci-fi & fantasy shows', kind: 'genre', id: 10765, media: 'tv' },
+    { title: 'Because of what you have been watching', kind: 'recommended' },
   ],
 
   /* TMDB's API and its image CDN, unless something is standing in for them. */

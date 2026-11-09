@@ -166,14 +166,14 @@ module.exports = function (h) {
      show at once; the fifth is reached by walking down to it. */
   const ALL = [
     'Trending this week',
-    'On Netflix',
-    'On Prime Video',
-    'Science fiction',
-    'Because of what you have been watching',
     'Trending shows this week',
+    'On Netflix',
     'Shows on Netflix',
+    'On Prime Video',
     'Shows on Prime Video',
+    'Science fiction',
     'Sci-fi & fantasy shows',
+    'Because of what you have been watching',
   ];
   const WANT = ALL.slice(0, 4);
   let mark = 0;
