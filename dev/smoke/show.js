@@ -429,7 +429,15 @@ module.exports = function (h) {
           })
           .then(function (n) {
             if (n < 2) return; // this show has one series; nothing to switch
-            return press('ArrowUp') // up off the strip, to the series chips
+            /* The mock airs series N in 2000 + N. */
+            return waitFor(
+              'document.getElementById("sh-meta").textContent.indexOf("2001") === 0',
+              'the meta line to open with series 1 year',
+              5000,
+            )
+              .then(function () {
+                return press('ArrowUp'); // up off the strip, to the series chips
+              })
               .then(function () {
                 return waitFor(
                   'document.querySelector("#sh-seasons .chip.on") !== null',
@@ -444,6 +452,13 @@ module.exports = function (h) {
                   'document.querySelectorAll(".sh-episode").length > 0',
                   'the next series to load',
                   15000,
+                );
+              })
+              .then(function () {
+                return waitFor(
+                  'document.getElementById("sh-meta").textContent.indexOf("2002") === 0',
+                  'the meta line to open with series 2 year',
+                  5000,
                 );
               });
           });

@@ -91,7 +91,8 @@ function paintHeader(): void {
   titleElement.textContent = show.title ?? '';
   summaryElement.textContent = show.summary ?? '';
   const bits: (string | number)[] = [];
-  if (show.year) bits.push(show.year);
+  const year = episodes[0]?.originallyAvailableAt?.slice(0, 4) || show.year;
+  if (year) bits.push(year);
   const counts = shows.summary(show);
   if (counts) bits.push(counts);
   if (show.contentRating) bits.push(show.contentRating);
@@ -471,6 +472,7 @@ function loadEpisodes(): void {
   wantEpisode = null;
   episodes = [];
   episodeIndex = 0;
+  paintHeader();
   fill(episodesElement, div('sh-episode', 'Loading…'));
   focusEpisodes();
 
@@ -479,6 +481,7 @@ function loadEpisodes(): void {
     .then((list) => {
       if (mine !== generation) return;
       episodes = list;
+      paintHeader();
       /* Land on the episode we were opened at, or failing that the first
          unfinished one: what you want is almost always the next one. */
       const at = list.findIndex((episode) =>
