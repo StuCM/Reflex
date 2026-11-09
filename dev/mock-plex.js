@@ -99,7 +99,7 @@ function create(opts) {
     srv.items['3'].slice(0, 4).forEach(function (show, n) {
       const eps = srv.episodesByShow[show.ratingKey] || [];
       /* The second server is a different episode of each show, as the real ones are. */
-      const ep = eps[Math.min(2 + n + serverAt, eps.length - 1)];
+      const ep = eps[Math.min(2 + n - serverAt, eps.length - 1)];
       if (!ep) return;
       const m = JSON.parse(JSON.stringify(ep));
       m.viewOffset = Math.floor(m.duration * (0.2 + (n % 5) / 10));
