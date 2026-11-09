@@ -107,6 +107,8 @@ function create(opts) {
       const m = JSON.parse(JSON.stringify(ep));
       m.viewOffset = Math.floor(m.duration * (0.2 + (n % 5) / 10));
       m.lastViewedAt = 1720000500 + n + (n % 2 === serverAt ? 0 : 10);
+      /* One show lives in a Kids library, so Continue watching for children has an episode to find. */
+      if (n === 3) m.librarySectionTitle = 'TV - Kids';
       srv.deck.push(m);
     });
     srv.deck.forEach(function (m, i) {
@@ -714,22 +716,6 @@ function create(opts) {
       const found = srv.genres(m[1]);
       log(srv.name + ' genres of ' + m[1] + ' listed');
       json(res, 200, container({ size: found.length, Directory: found }));
-      return true;
-    }
-
-    m = pathname.match(/^\/library\/sections\/(\w+)\/contentRating$/);
-    if (m) {
-      const ratings = srv.contentRatings(m[1]);
-      json(
-        res,
-        200,
-        container({
-          size: ratings.length,
-          Directory: ratings.map(function (r) {
-            return { key: r, title: r };
-          }),
-        }),
-      );
       return true;
     }
 

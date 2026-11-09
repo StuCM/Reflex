@@ -1,4 +1,4 @@
-/* Certificate parsing decides what lands in the kids section, so a wrong answer
+/* Certificate parsing gives a title its age limit, so a wrong answer
    here puts an 18 in front of a child. Run: node test/rating.test.js */
 import assert from 'node:assert';
 import { test } from 'vitest';
@@ -45,20 +45,6 @@ test('certificate parsing', () => {
   assert.strictEqual(age('NR'), null);
   assert.strictEqual(age('Unrated'), null);
   assert.strictEqual(age('nonsense'), null);
-
-  // The cutoff the kids section uses.
-  var KIDS_MAX_AGE = 12;
-  function allowed(r) {
-    var a = age(r);
-    return a !== null && a <= KIDS_MAX_AGE;
-  }
-
-  ['U', 'G', 'PG', '12', '12A', 'TV-Y7', 'TV-PG'].forEach(function (r) {
-    assert.strictEqual(allowed(r), true, r + ' should be allowed');
-  });
-  ['15', '18', 'R', 'NC-17', 'TV-MA', 'PG-13', 'TV-14', 'NR', ''].forEach(function (r) {
-    assert.strictEqual(allowed(r), false, r + ' should NOT be allowed');
-  });
 
   console.log('certificate parsing: all assertions passed');
 });

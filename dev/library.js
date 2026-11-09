@@ -1026,13 +1026,6 @@ function build(counts) {
       inGenre: function (m, genre) {
         return genre === 'family' && m._film % 5 === 0;
       },
-      contentRatings: function (key) {
-        const seen = {};
-        (items[key] || []).forEach(function (m) {
-          if (m.contentRating) seen[m.contentRating] = true;
-        });
-        return Object.keys(seen).sort();
-      },
     };
   });
 

@@ -79,18 +79,6 @@ export function items(
   });
 }
 
-/* Which certificates this library actually uses. Asking beats hardcoding — a
-   server may label things BBFC, MPAA, or prefix them by region ("gb/12A"). */
-export function contentRatings(server: PlexServer, sectionKey: string): Promise<string[]> {
-  return ask(server, `/library/sections/${sectionKey}/contentRating`)
-    .then((response) =>
-      ((response as Container).MediaContainer?.Directory ?? []).map(
-        (entry) => entry.title || entry.key,
-      ),
-    )
-    .catch(() => []);
-}
-
 /** The genres a library uses, with the keys its `genre` filter takes. */
 export function genres(
   server: PlexServer,

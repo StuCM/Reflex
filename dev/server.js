@@ -128,6 +128,7 @@ function start(opts) {
         films: opts.films,
         pinPolls: opts.pinPolls,
         slowHubs: opts.slowHubs,
+        kids: 1,
         log: log,
       });
   /* TMDB is mocked alongside Plex, and off the same generated library, so the

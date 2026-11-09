@@ -13,6 +13,7 @@ module.exports = function (h) {
     sidebarPick,
     backToLibrary,
     searchFor,
+    actionRow,
     pictures,
     openTitle,
     openChooser,
@@ -73,6 +74,35 @@ module.exports = function (h) {
         },
         false,
       );
+    });
+  }
+
+  /* The rows on screen in order, each with the items of its tiles. */
+  function railRows() {
+    return page.evaluate(function () {
+      const out = [];
+      Array.prototype.forEach.call(document.querySelectorAll('#rows .row'), function (el) {
+        if (el.classList.contains('hidden') || el._row < 0) return;
+        out.push({
+          at: el._row,
+          label: el.querySelector('.row-label').textContent.trim(),
+          items: Array.prototype.filter
+            .call(el.querySelectorAll('.tile'), function (t) {
+              return !t.classList.contains('hidden') && t._item;
+            })
+            .map(function (t) {
+              return {
+                title: t._item.title,
+                type: t._item.type,
+                section: t._item.librarySectionTitle || '',
+              };
+            }),
+        });
+      });
+      out.sort(function (a, b) {
+        return a.at - b.at;
+      });
+      return out;
     });
   }
 
@@ -983,17 +1013,124 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      return step('kids rows exclude everything above the cutoff', function () {
-        return sidebarPick('Kids')
+      return step(
+        'kids opens Continue watching, then the TMDB rows with only held titles',
+        function () {
+          const lib = require('../library').build({ films: FILMS });
+          const heldTitles = lib.films
+            .filter(function (f, i) {
+              return i % 7 === 0 || i % 5 === 0;
+            })
+            .map(function (f) {
+              return f.title;
+            });
+          const kidsFilms = [0, 7, 14, 21].map(function (i) {
+            return lib.films[i].title;
+          });
+          let libraryDeck;
+          return sidebarPick('Continue watching')
+            .then(railRows)
+            .then(function (rows) {
+              libraryDeck = rows.find(function (r) {
+                return r.label === 'Continue watching';
+              });
+              if (!libraryDeck)
+                throw new Error(
+                  'no library deck: ' +
+                    JSON.stringify(
+                      rows.map(function (r) {
+                        return r.label;
+                      }),
+                    ),
+                );
+              return sidebarPick('Kids');
+            })
+            .then(function () {
+              return waitFor(
+                'document.querySelectorAll("#rows .row:not(.hidden) .row-label").length >= 4 &&' +
+                  ' /On Netflix/.test(document.querySelector("#rows").textContent)',
+                'the kids rows',
+                20000,
+              );
+            })
+            .then(railRows)
+            .then(function (rows) {
+              const labels = rows.slice(0, 4).map(function (r) {
+                return r.label;
+              });
+              const want = [
+                'Continue watching',
+                'New and coming',
+                'Popular kids films',
+                'On Netflix',
+              ];
+              if (labels.join(' | ') !== want.join(' | ')) {
+                throw new Error('kids rows were: ' + labels.join(' | '));
+              }
+              const watching = rows[0];
+              const episodes = watching.items.filter(function (i) {
+                return i.type === 'episode' && /Kids/.test(i.section);
+              });
+              if (!episodes.length)
+                throw new Error('no Kids-library episode: ' + JSON.stringify(watching.items));
+              watching.items.forEach(function (i) {
+                const kidsEpisode = i.type === 'episode' && /Kids/.test(i.section);
+                if (!kidsEpisode && heldTitles.indexOf(i.title) < 0) {
+                  throw new Error('kids Continue watching holds ' + i.title);
+                }
+              });
+              const adult = libraryDeck.items.filter(function (i) {
+                return i.type === 'movie' && heldTitles.indexOf(i.title) < 0;
+              });
+              if (!adult.length) throw new Error('control: the library deck has no adult film');
+              adult.forEach(function (i) {
+                if (
+                  watching.items.some(function (k) {
+                    return k.title === i.title;
+                  })
+                ) {
+                  throw new Error('an adult film is in kids Continue watching: ' + i.title);
+                }
+              });
+              const popular = rows[2].items.map(function (i) {
+                return i.title;
+              });
+              if (popular.length < 2 || popular.some((t) => kidsFilms.indexOf(t) < 0)) {
+                throw new Error('Popular kids films held ' + popular.join(' | '));
+              }
+              return shot('kids');
+            });
+        },
+      );
+    })
+
+    .then(function () {
+      return step('New and coming opens the page for a title nobody holds', function () {
+        return press('ArrowDown')
           .then(function () {
-            return waitFor(
-              '/Kids/.test(document.querySelector("#rows").textContent)',
-              'a kids row',
-              15000,
-            );
+            return page.waitForTimeout(400);
           })
           .then(function () {
-            return shot('kids');
+            return press('Enter');
+          })
+          .then(function () {
+            return waitFor(
+              '!document.getElementById("detail").classList.contains("hidden") &&' +
+                ' document.getElementById("dt-title").textContent.trim() === "Coming Soon Kids Film"',
+              'the page for the upcoming film',
+              20000,
+            );
+          })
+          .then(actionRow)
+          .then(function (row) {
+            if (
+              !row.some(function (a) {
+                return a.act === 'trailer';
+              })
+            ) {
+              throw new Error('no Trailer on the upcoming film');
+            }
+            return press('Backspace');
           });
       });
     })
@@ -1002,7 +1139,7 @@ module.exports = function (h) {
       return step('back leaves kids for the library', function () {
         return press('Backspace').then(function () {
           return waitFor(
-            '!/Kids/.test(document.querySelector("#rows").textContent)',
+            '!/Popular kids films/.test(document.querySelector("#rows").textContent)',
             'the library rows back',
           );
         });

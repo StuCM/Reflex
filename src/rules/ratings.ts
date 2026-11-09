@@ -19,9 +19,6 @@ const RATING_AGE: Record<string, number> = {
   x: 18,
 };
 
-/** Everything rated at or below this counts as kids viewing. */
-export const KIDS_MAX_AGE = 12;
-
 /* Unrated returns null rather than 0 — the absence of a rating is not evidence
    that something is suitable for children. */
 export function ageLimit(rating: string | null | undefined): number | null {
@@ -32,9 +29,4 @@ export function ageLimit(rating: string | null | undefined): number | null {
   const leadingNumber = /^(\d{1,2})/.exec(text); // 12, 12a, 15, 18, 6, 7
   if (leadingNumber?.[1]) return parseInt(leadingNumber[1], 10);
   return RATING_AGE[text] ?? null;
-}
-
-export function isKidsRating(rating: string | null | undefined): boolean {
-  const age = ageLimit(rating);
-  return age !== null && age <= KIDS_MAX_AGE;
 }

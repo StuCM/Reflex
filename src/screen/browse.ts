@@ -5,7 +5,6 @@
 import {
   collectionItems as plexCollectionItems,
   collections as plexCollections,
-  contentRatings as plexContentRatings,
   hideFromDeck as plexHideFromDeck,
   hubs as plexHubs,
   items as plexItems,
@@ -23,11 +22,12 @@ interface DeckJob {
   entry: PlexItem;
   copies: PlexItem[];
 }
-import { KIDS_MAX_AGE, isKidsRating } from '../rules/ratings';
 import * as cached from '../data/cached';
 import * as devices from '../data/devices';
 import { report as panelReport } from '../core/panel';
 import * as discovery from '../data/discovery';
+import * as kids from '../data/kids';
+import settings from '../core/config';
 import * as masthead from '../view/masthead';
 import { createHold } from '../view/hold';
 import * as menu from '../view/menu';
@@ -239,7 +239,7 @@ function openSidebar() {
   const watching = {
     current: mode === 'library' && rowIndex === at,
     type: watchingType,
-    has: at >= 0 && (rows[at]?.total ?? 0) > 0,
+    has: mode === 'library' && at >= 0 && (rows[at]?.total ?? 0) > 0,
   };
   sidebar.open(
     sections.map((section, i) => {
@@ -621,6 +621,7 @@ function noteCategories(section: BrowseSection) {
 function reset(newMode: Mode) {
   generation++;
   mode = newMode;
+  keepHeld = undefined;
   rows = [];
   rowIndex = 0;
   watchingType = null;
@@ -1021,6 +1022,9 @@ const MAX_EMPTY_PAGES = 3;
 /* Which category a paged row came from; the row model holds no config. */
 const categoryOf = new WeakMap<PagedRow, DiscoveryCategory>();
 
+/* Set while Kids is up, so a row's later pages are filtered as its first was. */
+let keepHeld: ((entry: DiscoveryEntry) => boolean) | undefined;
+
 /* Asks for pages until the row has what the focus needs, one request in flight,
    and only for the row that is focused when the walk starts. */
 async function walkPaged(row: PagedRow): Promise<void> {
@@ -1039,7 +1043,7 @@ async function walkPaged(row: PagedRow): Promise<void> {
     ) {
       const before = row.total;
       // eslint-disable-next-line no-await-in-loop -- one page at a time, by design
-      const got = await discovery.more(category, deckSeeds(), row.next);
+      const got = await discovery.more(category, deckSeeds(), row.next, keepHeld);
       if (!isCurrent()) return;
       row.pages = got.pages;
       rowModel.extend(row, got.entries);
@@ -1059,75 +1063,52 @@ async function walkPaged(row: PagedRow): Promise<void> {
 
 /* ---------- kids ---------- */
 
+const KIDS_LIBRARY = /kids/i;
+
+/* What on the deck is for children: from a library named Kids, or a film in the held set. */
+function kidsWatching(set: Set<string> | null): PlexItem[] {
+  return deckItems.filter((item) => {
+    if (KIDS_LIBRARY.test(item.librarySectionTitle ?? '')) return true;
+    const tmdbKey = kids.keyOf(item);
+    return set !== null && tmdbKey !== null && set.has(tmdbKey);
+  });
+}
+
 function loadKids() {
-  const section = sections[sectionIndex];
-  if (!section) return;
   reset('kids');
   const isCurrent = generationGuard();
 
-  /* Ask each library which certificates it uses, keep the ones at or below
-     the cutoff, and let the servers do the filtering. */
-  Promise.all(
-    section.parts.map((part) => {
-      return plexContentRatings(part.server, part.key);
-    }),
-  )
-    .then((perPart) => {
-      if (!isCurrent()) return;
-      const kid: string[] = [];
-      const seen: Record<string, true> = {};
-      perPart.forEach((list) => {
-        list
-          .filter((rating) => isKidsRating(rating))
-          .forEach((rating) => {
-            if (seen[rating]) return;
-            seen[rating] = true;
-            kid.push(rating);
-          });
-      });
-      debug(`kids certificates: ${kid.join(', ') || 'none'}`);
+  const watching = kidsWatching(null);
+  if (watching.length) rows.push(rowModel.list(WATCHING, watching));
+  render();
 
-      const reachable = serversOf(section);
-      return Promise.all([
-        Promise.all(reachable.map((server) => plexOnDeck(server))),
-        devices.ensureHistory(),
-      ]).then((results) => {
-        if (!isCurrent()) return;
-        const kidsWant = section.type === 'show' ? 'episode' : 'movie';
-        const watching = devices.mine(merge.lists(results[0])).filter((entry) => {
-          return entry.type === kidsWant && isKidsRating(entry.contentRating);
-        });
-        rows = [];
-        if (watching.length) rows.push(rowModel.list('Kids · carry on watching', watching));
-
-        if (kid.length) {
-          const row = allRow(
-            section,
-            'Kids · all films',
-            { contentRating: kid.join(',') },
-            `kids${KIDS_MAX_AGE}`,
-          );
-          rows.push(row);
-          render();
-          primeTotals(row, isCurrent);
-          return;
-        }
-        render();
-        if (!watching.length) {
-          message(
-            'No age ratings',
-            section.title +
-              ' has no certificate data, so ' +
-              'there is nothing to filter on. BACK to return.',
-          );
-        }
+  /* The held set may take a full build on a cold cache, so the page is drawn
+     first and the rest follows when it lands. */
+  void kids.held().then((set) => {
+    if (!isCurrent()) return;
+    const full = kidsWatching(set);
+    if (full.length > watching.length) {
+      const row = rowModel.list(WATCHING, full);
+      if (watching.length) rows[0] = row;
+      else rows.unshift(row);
+      render();
+    }
+    keepHeld = (entry) => kids.isHeld(set, entry);
+    return discovery
+      .load({
+        isCurrent: isCurrent,
+        categories: settings.kidsCategories,
+        keep: keepHeld,
+        add: addDiscoveryRow,
+      })
+      .then(() => {
+        if (!isCurrent() || rows.length) return;
+        message(
+          'Nothing to show',
+          'No kids titles on the servers match what TMDB lists. BACK to return.',
+        );
       });
-    })
-    .catch((error: Error) => {
-      if (!isCurrent()) return;
-      debug(`kids: ${error.message}`);
-      toast('Could not load the kids list');
-    });
+  });
 }
 
 /* ---------- discovery ---------- */
@@ -1158,6 +1139,24 @@ function deckSeeds() {
   return out;
 }
 
+/* Rows appear as they arrive rather than all at the end — the first one lands
+   while the rest are still being fetched. */
+function addDiscoveryRow(
+  title: string,
+  items: DiscoveryEntry[],
+  category: DiscoveryCategory,
+  pages: number,
+) {
+  if (category.kind === 'recommended') {
+    rows.push(rowModel.list(title, items));
+  } else {
+    const row = rowModel.paged(title, items, 2, pages);
+    categoryOf.set(row, category);
+    rows.push(row);
+  }
+  render();
+}
+
 function loadDiscover() {
   reset('discover');
   const isCurrent = generationGuard();
@@ -1178,16 +1177,7 @@ function loadDiscover() {
       seeds: deckSeeds(),
       /* Rows appear as they arrive rather than all at the end — the first one
        lands while the rest are still being fetched. */
-      add: (title, items, category, pages) => {
-        if (category.kind === 'recommended') {
-          rows.push(rowModel.list(title, items));
-        } else {
-          const row = rowModel.paged(title, items, 2, pages);
-          categoryOf.set(row, category);
-          rows.push(row);
-        }
-        render();
-      },
+      add: addDiscoveryRow,
     })
     .then(() => {
       if (!isCurrent() || rows.length) return;

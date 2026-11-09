@@ -895,8 +895,8 @@ module.exports = function (h) {
             })
             .then(function (n) {
               before = n;
-              /* One per movie library: Main's two and Backup's one. */
-              if (n !== 3) throw new Error('collection list requests: ' + n + ', wanted 3');
+              /* One per movie library: Main's two and Backup's two, with its Kids library. */
+              if (n !== 4) throw new Error('collection list requests: ' + n + ', wanted 4');
               return walkTo('Collections');
             })
             .then(function () {
@@ -1073,11 +1073,11 @@ module.exports = function (h) {
           })
           .then(function (text) {
             if (text.indexOf('\u00b7  0 films') < 0) throw new Error('"Zz" found films: ' + text);
-            /* The walk is Films, 4K Films and Backup's Films, and nothing else. */
-            if (!h.tracedThat(/All films: about \d+ across 3 servers/)) {
-              throw new Error('All films was not built from the three film libraries');
+            /* The walk is Films, 4K Films, Backup's Films and its Kids library, and nothing else. */
+            if (!h.tracedThat(/All films: about \d+ across 4 servers/)) {
+              throw new Error('All films was not built from the four film libraries');
             }
-            if (h.tracedThat(/All films: about \d+ across [45] servers/)) {
+            if (h.tracedThat(/All films: about \d+ across [56] servers/)) {
               throw new Error('All films walks a cam or sports library');
             }
             return openTitle(titles.shared.title);
