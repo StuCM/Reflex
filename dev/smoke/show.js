@@ -1517,6 +1517,26 @@ module.exports = function (h) {
               if (st.open || !st.cardOn)
                 throw new Error('▲ from the top did not return to the cast');
             })
+            .then(function () {
+              /* Opening a credit cached which titles the servers hold; the
+                 discovery steps count those lookups and must find them unasked. */
+              return page.evaluate(function () {
+                return new Promise(function (resolve) {
+                  const open = indexedDB.open('reflex', 1);
+                  open.onsuccess = function () {
+                    const tx = open.result.transaction('kv', 'readwrite');
+                    const store = tx.objectStore('kv');
+                    store.openCursor().onsuccess = function (event) {
+                      const cursor = event.target.result;
+                      if (!cursor) return;
+                      if (String(cursor.key).indexOf('tmdb2:') === 0) cursor.delete();
+                      cursor.continue();
+                    };
+                    tx.oncomplete = resolve;
+                  };
+                });
+              });
+            })
             .then(backToLibrary);
         });
       })
