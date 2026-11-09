@@ -879,7 +879,11 @@ module.exports = function (h) {
               const here = copies.filter(function (c) {
                 return c._server === item._server;
               });
-              return { title: item.title, copies: copies.length, sameServer: here.length };
+              return {
+                title: item.title,
+                copies: copies.length,
+                sameServer: here.length,
+              };
             })
             .then(function (st) {
               if (st && st.sameServer > 1) return st;
@@ -1003,5 +1007,98 @@ module.exports = function (h) {
           );
         });
       });
+    })
+
+    .then(function () {
+      const writes = [];
+      page.on('request', function (r) {
+        if (/\/:\/(un)?scrobble\?|removeFromContinueWatching/.test(r.url())) writes.push(r.url());
+      });
+      function confirmRows() {
+        return page.evaluate(function () {
+          const box = document.getElementById('confirm');
+          if (!box || box.classList.contains('hidden')) return null;
+          return Array.prototype.map.call(box.querySelectorAll('.menu-label'), function (r) {
+            return r.textContent.trim();
+          });
+        });
+      }
+      function rowsOf(rowNumber) {
+        return press('ArrowUp', 12)
+          .then(function () {
+            return press('ArrowDown', rowNumber);
+          })
+          .then(function () {
+            return page.waitForTimeout(300);
+          })
+          .then(function () {
+            return h.holdOk();
+          })
+          .then(confirmRows);
+      }
+      function same(got, want, what) {
+        if (JSON.stringify(got) !== JSON.stringify(want)) {
+          throw new Error(what + ': ' + JSON.stringify(got) + ' not ' + JSON.stringify(want));
+        }
+      }
+      return step(
+        'holding OK on a film offers watched, unwatched and, on the deck, removal',
+        async function () {
+          const count = (pattern) => writes.filter((u) => pattern.test(u)).length;
+          const scrobbles = () => count(/\/:\/scrobble\?/);
+          const unscrobbles = () => count(/\/:\/unscrobble\?/);
+
+          /* Continue watching: the film there is held by both servers. */
+          same(
+            await rowsOf(0),
+            ['Mark watched', 'Mark unwatched', 'Remove from Continue watching'],
+            'the deck',
+          );
+          await press('ArrowDown');
+          await press('Enter');
+          await page.waitForTimeout(400);
+          same([scrobbles(), unscrobbles()], [0, 2], 'Mark unwatched writes, one per copy');
+
+          /* The remote repeats keydown while OK is held; Playwright sends one, so
+             the repeats come from the page. They must not choose the open menu's row. */
+          await page.keyboard.down('Enter');
+          await page.waitForTimeout(700);
+          await page.evaluate(function () {
+            for (let i = 0; i < 8; i++) {
+              const e = document.createEvent('Event');
+              e.initEvent('keydown', true, true);
+              Object.defineProperty(e, 'keyCode', { get: () => 13 });
+              document.dispatchEvent(e);
+            }
+          });
+          await page.waitForTimeout(300);
+          const stillOpen = await confirmRows();
+          await page.keyboard.up('Enter');
+          same(stillOpen.length, 3, 'rows in the menu under a held OK');
+          same([scrobbles(), unscrobbles()], [0, 2], 'writes after a held OK');
+          await press('Backspace');
+
+          await h.holdOk();
+          await press('ArrowDown', 2);
+          await press('Enter');
+          await page.waitForTimeout(300);
+          same((await confirmRows()).slice(0, 2), ['Remove them', 'Cancel'], 'the confirmation');
+          /* Cancelled: the mock's deck is shared with the deck area, which clears it. */
+          await press('Backspace');
+          await page.waitForTimeout(200);
+          /* A row that is not the deck: no removal, and one copy, one write. */
+          same(await rowsOf(1), ['Mark watched', 'Mark unwatched'], 'a film row');
+          await press('Enter');
+          await page.waitForTimeout(400);
+          same([scrobbles(), unscrobbles()], [1, 2], 'Mark watched writes');
+
+          await press('Enter');
+          await waitFor(
+            '!document.getElementById("detail").classList.contains("hidden")',
+            'a tap opening the film',
+          );
+          await backToLibrary();
+        },
+      );
     });
 };

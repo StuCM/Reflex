@@ -145,6 +145,17 @@ export function scrobble(server: PlexServer, ratingKey: string): Promise<unknown
   );
 }
 
+export function unscrobble(server: PlexServer, ratingKey: string): Promise<unknown> {
+  return request(
+    'PUT',
+    `${server.base}/:/unscrobble?${queryString({
+      key: ratingKey,
+      identifier: 'com.plexapp.plugins.library',
+    })}`,
+    { token: server.token },
+  );
+}
+
 /* One level at a time: a show's children are its seasons, a season's are its
    episodes. Never /allLeaves on a library we do not own. */
 export function children(server: PlexServer, ratingKey: string): Promise<PlexItem[]> {

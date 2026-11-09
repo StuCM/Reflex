@@ -802,6 +802,12 @@ function create(opts) {
       return true;
     }
 
+    if (pathname === '/:/unscrobble' && req.method === 'PUT') {
+      log(srv.name + ' unscrobbled ' + q.key);
+      json(res, 200, container({ size: 0 }));
+      return true;
+    }
+
     if (pathname === '/hubs/search') {
       const needle = String(q.query || '').toLowerCase();
       const limit = Number(q.limit || 40);

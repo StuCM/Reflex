@@ -6,6 +6,7 @@
    which is why OK here acts on release. */
 import { artUrl, photoUrl, posterUrl, themeUrl } from '../api/plex/images';
 import { scrobble as plexScrobble } from '../api/plex/library';
+import { createHold } from '../view/hold';
 import * as youtube from '../api/youtube';
 import { KEY, clamp, debug, isBack, show as showView, toast } from '../core/ui';
 import * as art from '../data/art';
@@ -545,7 +546,7 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   recaps = null;
   recapIndex = 0;
   searching = false;
-  clearHold();
+  okHold.cancel();
   holding = false;
 
   showView('show');
@@ -590,7 +591,7 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
 
 function close(): void {
   if (checkTimer) clearTimeout(checkTimer);
-  clearHold();
+  okHold.cancel();
   silence();
   show = null;
   options.onExit?.();
@@ -611,7 +612,7 @@ function playFocused(at?: number): void {
 }
 
 function openCopies(): void {
-  clearHold(); // or the menu opens behind the film page
+  okHold.cancel(); // or the menu opens behind the film page
   const episode = episodes[episodeIndex];
   if (episode) options.onChoose?.(episode);
 }
@@ -623,47 +624,11 @@ function openCopies(): void {
    server we do not own — a side effect that cannot be fired and then taken
    back. Nothing else in the app listens for keyup. */
 
-/** How long OK is held before the menu opens, in milliseconds. */
-const HOLD_MS = 500;
 /** The box in css/show.css, and the gap it keeps from the screen edges. */
 const MENU_W = 512;
 const MENU_EDGE = 32;
 
-let holdTimer: ReturnType<typeof setTimeout> | null = null;
-
-function clearHold(): void {
-  if (holdTimer) clearTimeout(holdTimer);
-  holdTimer = null;
-}
-
-let okHeld = false;
-
-function okDown(): void {
-  /* A second keydown while the timer runs is the remote repeating, which is the
-     same hold the timer is waiting out — the player trusts that signal too. */
-  if (holdTimer) {
-    hold();
-    return;
-  }
-  holdTimer = setTimeout(hold, HOLD_MS);
-}
-
-/* The remote goes on repeating keydown for as long as OK is held, and those
-   repeats arrive after the menu is up — where key() hands them to the menu as
-   confirmations, firing the focused row again and again. `okHeld` is what makes
-   a hold one gesture rather than a stream of presses; it is cleared only by the
-   release. */
-function hold(): void {
-  okHeld = true;
-  openHoldMenu();
-}
-
-function okUp(): void {
-  okHeld = false;
-  if (!holdTimer) return; // the menu opened, or this press began elsewhere
-  clearHold();
-  playFocused();
-}
+const okHold = createHold(playFocused, openHoldMenu);
 
 function seasonNumber(episode: PlexItem): number {
   return episode.parentIndex ?? seasons[seasonIndex]?.index ?? 0;
@@ -715,7 +680,7 @@ function anchorMenu(card: HTMLElement): void {
 }
 
 function openHoldMenu(): void {
-  clearHold();
+  okHold.cancel();
   const episode = episodes[episodeIndex];
   if (!episode || holding) return;
 
@@ -838,7 +803,7 @@ function recapsKey(code: number): void {
 }
 
 export function key(code: number): boolean {
-  if (code === KEY.OK && okHeld) return true;
+  if (okHold.swallow(code)) return true;
   if (menu.isOpen()) return menu.key(code);
 
   if (zone === 'seasons') {
@@ -864,14 +829,14 @@ export function key(code: number): boolean {
     episodeIndex++;
     focusEpisodes();
     scheduleCheck();
-  } else if (code === KEY.OK) okDown();
+  } else if (code === KEY.OK) okHold.down();
   else if (isBack(code)) close();
   return true; // this page swallows everything else
 }
 
 /** OK on an episode plays on release; a hold has already opened the menu. */
 export function keyUp(code: number): void {
-  if (code === KEY.OK) okUp();
+  if (code === KEY.OK) okHold.up();
 }
 
 export function current(): PlexItem | null {
