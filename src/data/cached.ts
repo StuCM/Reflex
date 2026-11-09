@@ -41,6 +41,17 @@ function daily<T>(prefix: string, maxAge: number) {
   };
 }
 
+/** Like daily, but an expired hit is still returned, marked not fresh. */
+function refreshed<T>(prefix: string, maxAge: number) {
+  return {
+    get: async (id: string) => {
+      const hit = await get<Stamped<T>>(prefix + id);
+      return hit ? { value: hit.value, fresh: Date.now() - hit.at < maxAge } : undefined;
+    },
+    put: (id: string, value: T) => put(prefix + id, { at: Date.now(), value }),
+  };
+}
+
 /* A hit is kept; a miss is asked again after maxAge. Returns undefined for
    "never asked", null for "asked, and there is none". */
 function misses<T>(prefix: string, maxAge: number) {
@@ -68,3 +79,5 @@ export const lookup = misses<PlexItem>('tmdb2:', 7 * DAY);
 /** Per server and library; the sidebar must not ask on every open. */
 export const collections = daily<PlexCollection[]>('col:', DAY);
 export const catalogue = daily<TmdbFilm[]>('disc:', DAY);
+/** Per server: the TMDB keys of its kids and family titles. */
+export const kids = refreshed<string[]>('kids:', 7 * DAY);

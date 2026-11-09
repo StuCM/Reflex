@@ -220,6 +220,11 @@ function create(opts) {
         return m.contentRating && allow[m.contentRating];
       });
     }
+    if (q.genre) {
+      list = list.filter(function (m) {
+        return srv.inGenre(m, String(q.genre));
+      });
+    }
     return list;
   }
 
@@ -637,6 +642,9 @@ function create(opts) {
     let m = pathname.match(/^\/library\/sections\/(\w+)\/all$/);
     if (m) {
       const list = filtered(srv, m[1], q);
+      if (q.genre || /Kids/.test((srv.sections.find((s) => s.key === m[1]) || {}).title || '')) {
+        log(srv.name + ' kids index read of ' + m[1]);
+      }
       const cut = slice(list, q);
       json(
         res,
@@ -693,6 +701,14 @@ function create(opts) {
           Metadata: cut.page.map(stripStreams),
         }),
       );
+      return true;
+    }
+
+    m = pathname.match(/^\/library\/sections\/(\w+)\/genre$/);
+    if (m) {
+      const found = srv.genres(m[1]);
+      log(srv.name + ' genres of ' + m[1] + ' listed');
+      json(res, 200, container({ size: found.length, Directory: found }));
       return true;
     }
 
