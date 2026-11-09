@@ -19,6 +19,7 @@ files:
   - dev/mock-plex.js
   - dev/library.js
   - test/rating.test.ts
+  - dev/server.js
 ---
 
 # The Kids page: their Continue watching, then TMDB's kids rows
@@ -49,6 +50,17 @@ after 051 and 052.
   library title matching `/kids/i` or its show being in the index.
 - Smoke steps touching Kids: `dev/smoke/browse.js:982-1010`,
   `dev/smoke/deck.js:406-417`, `dev/smoke/sections.js:48,103`.
+
+## What 052 left for this task
+- `kids.held()` (`src/data/kids.ts`) waits for a full build when nothing is
+  cached: never await it on the critical path. Draw the page, and filter rows
+  when the set arrives (or pass a `keep` that reads the set once it lands).
+- `browse.ts` calls `discovery.more()` without `keep`; paged Kids rows must
+  pass it, or rows filter only on their first page.
+- The mock's "Movies - Kids" library is listed only when the mock is created
+  with `opts.kids` (`dev/mock-plex.js:68`). Turn it on (in `dev/server.js`
+  where the mock is created) and fix whichever smoke steps then miscount film
+  libraries (`dev/smoke/sections.js` counts them).
 
 ## Approach
 1. `src/screen/browse.ts` `loadKids`: `reset('kids')`; one page whatever
