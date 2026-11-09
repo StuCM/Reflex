@@ -102,6 +102,7 @@ interface LoadContext {
   seeds?: string[];
   add(title: string, items: DiscoveryEntry[], category: DiscoveryCategory, pages: number): void;
   categories?: DiscoveryCategory[];
+  keep?: (entry: DiscoveryEntry) => boolean;
 }
 
 /* The cache key for one page of a category. Two rows that differ only in their
@@ -136,14 +137,26 @@ async function fetchPage(
   return found;
 }
 
+/* Upcoming titles are not in any library yet, so a filter on what we hold would empty them. */
+function kept(
+  category: DiscoveryCategory,
+  entries: DiscoveryEntry[],
+  keep?: (entry: DiscoveryEntry) => boolean,
+): DiscoveryEntry[] {
+  return keep && category.kind !== 'upcoming'
+    ? entries.filter((candidate) => keep(candidate))
+    : entries;
+}
+
 /** The next page of a paged row, as entries the rail can draw. */
 export async function more(
   category: DiscoveryCategory,
   seeds: string[],
   page: number,
+  keep?: (entry: DiscoveryEntry) => boolean,
 ): Promise<{ entries: DiscoveryEntry[]; pages: number }> {
   const got = await fetchPage(category, seeds, page);
-  return { entries: got.films.map(entry), pages: got.pages };
+  return { entries: kept(category, got.films.map(entry), keep), pages: got.pages };
 }
 
 async function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
@@ -158,12 +171,13 @@ async function one(context: LoadContext, category: DiscoveryCategory): Promise<v
   /* Outside the try: a throw from the rail's own drawing is not a failed
      TMDB fetch and must not be reported as one. */
   if (!context.isCurrent()) return;
-  if (!found.films.length) {
-    debug(`${category.title}: TMDB returned nothing`);
+  const entries = kept(category, found.films.map(entry), context.keep);
+  if (!entries.length) {
+    debug(`${category.title}: nothing to show`);
     return;
   }
-  context.add(category.title, found.films.map(entry), category, found.pages);
-  debug(`${category.title}: ${found.films.length} from TMDB`);
+  context.add(category.title, entries, category, found.pages);
+  debug(`${category.title}: ${entries.length} from TMDB`);
 }
 
 /* One row per category in core/config, each a TMDB request cached for the day

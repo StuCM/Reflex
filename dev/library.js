@@ -920,6 +920,11 @@ function build(counts) {
       });
       items['4'].push(only(filmCount, 'Zz Cam Copy', 'Movies - LQ'));
       items['5'] = [only(filmCount + 1, 'Zz Match Highlights', 'vSports - FV')];
+      /* Every seventh film is a kids title, in a library of its own. */
+      sections.push({ key: '6', title: 'Movies - Kids', type: 'movie', updatedAt: 1700000500 });
+      items['6'] = allFilms.filter(function (m) {
+        return m._film % 7 === 0;
+      });
       items['4'].concat(items['5']).forEach(function (m) {
         extraGuid.push(m);
       });
@@ -1013,6 +1018,13 @@ function build(counts) {
       episodesByShow: episodesByShow,
       byKey: byKey,
       byGuid: byGuid,
+      /* Library 1 has a Family genre: every fifth film. */
+      genres: function (key) {
+        return key === '1' ? [{ key: 'family', title: 'Family' }] : [];
+      },
+      inGenre: function (m, genre) {
+        return genre === 'family' && m._film % 5 === 0;
+      },
       contentRatings: function (key) {
         const seen = {};
         (items[key] || []).forEach(function (m) {

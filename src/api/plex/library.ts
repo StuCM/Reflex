@@ -91,6 +91,21 @@ export function contentRatings(server: PlexServer, sectionKey: string): Promise<
     .catch(() => []);
 }
 
+/** The genres a library uses, with the keys its `genre` filter takes. */
+export function genres(
+  server: PlexServer,
+  sectionKey: string,
+): Promise<{ key: string; title: string }[]> {
+  return ask(server, `/library/sections/${sectionKey}/genre`)
+    .then((response) =>
+      ((response as Container).MediaContainer?.Directory ?? []).map((entry) => ({
+        key: entry.key,
+        title: entry.title,
+      })),
+    )
+    .catch(() => []);
+}
+
 /* Continue watching. /library/onDeck is the universally supported endpoint —
    /hubs/continueWatching only exists on newer servers. Films and episodes both
    turn up, and an episode is the commoner case. */
