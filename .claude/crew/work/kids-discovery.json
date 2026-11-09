@@ -1,0 +1,89 @@
+{
+  "title": "The Kids page is TMDB discovery, limited to what we hold",
+  "summary": "Kids becomes a discovery page for a four-year-old: TMDB kids rows filtered to titles the servers hold via a weekly index, a kids Continue watching, New and coming for trailers, and yellow to get there.",
+  "stage": "build",
+  "questions": [],
+  "gaps": [],
+  "findings": [
+    {
+      "title": "Measured 2026-11-09",
+      "rows": [
+        {
+          "src": "server",
+          "text": "Family genre: Apollo Movies 8,818 of 95,825; Kids libraries: Apollo TV 2,315, Maverick Movies 1,161, TV 378. ~14k ids, ~30 requests of 500."
+        },
+        {
+          "src": "tmdb",
+          "text": "Companies Disney 2, Disney Animation 6125, Pixar 3, DreamWorks Animation 521; providers Netflix 8, Prime 9, Disney+ 337; genres Animation 16, Family 10751, Kids 10762 (TV)."
+        }
+      ]
+    }
+  ],
+  "brief": {
+    "shape": "replace",
+    "target": [
+      {
+        "path": "src/screen/browse.ts",
+        "line": 1057,
+        "name": "loadKids"
+      }
+    ],
+    "direction": "Replace the certificate-filtered Kids mode with Discovery's machinery over a Kids list of TMDB rows, filtered locally against a weekly index of held kids/family titles; New and coming stays unfiltered for trailers.",
+    "rejected": [
+      {
+        "option": "Look up each tile as it appears",
+        "why": "asks the servers forever and rows fill unevenly; Stuart chose the weekly index"
+      },
+      {
+        "option": "Keep the certificate filter",
+        "why": "Stuart: trust TMDB's family and kids genres, no certificate filter"
+      },
+      {
+        "option": "Build from the library first, TMDB only for order",
+        "why": "loses TMDB's trending, service and company groupings"
+      }
+    ],
+    "decided": [
+      "should be a discovery page but only kids stuff",
+      "lets trust what tmdb is sending for family and kids",
+      "only show what we have or actually a new and coming for trailers",
+      "continue watching of the kids stuff",
+      "one of the coloured buttons takes us to kids page",
+      "add disney+",
+      "90s classics by year",
+      "Yes, weekly index",
+      "Yes allow pg but only from the tmdb kids list"
+    ],
+    "exploring": [],
+    "approved": "2026-11-09"
+  },
+  "order": [
+    "051",
+    "052",
+    "053",
+    "054"
+  ],
+  "challenge": {
+    "verdict": "QUESTION",
+    "points": [
+      {
+        "q": "Should 052's index take Animation and Children/Kids genres as well as Family outside the Kids libraries, so held kids titles tagged otherwise are not hidden?",
+        "evidence": "051 Animated row asks genre 16; kids TV asks 10762; 052 indexes Family only. Measured: Apollo Movies Animation 4,869, Children 237; Apollo TV Animation 722, Children 250.",
+        "if": "052 step 2 reads Family, Animation, Children and Kids genre keys; ~45 requests weekly instead of ~30",
+        "answer": "Orchestrator recommendation taken: Family, Animation and Children genres (~45 requests weekly)."
+      },
+      {
+        "q": "Should 053 delete the certificate path it leaves dead (isKidsRating, KIDS_MAX_AGE, contentRatings, the mock endpoint, its test)?",
+        "evidence": "src/rules/ratings.ts:23,37; src/api/plex/library.ts:84; dev/mock-plex.js:698; dev/library.js:1016; test/rating.test.ts:50 — only caller browse.ts:25,1067",
+        "if": "add those files to 053 and a delete step; ageLimit stays",
+        "answer": "Orchestrator recommendation taken: 053 deletes the dead certificate path."
+      },
+      {
+        "q": "No age cap at all, or cap the film rows at a certificate (e.g. GB PG) given a four-year-old?",
+        "evidence": "Real people and 90s Classics rows are Family films by popularity/votes with no cap; TMDB discover takes certification_country + certification.lte",
+        "if": "add certification params to 051's film rows",
+        "answer": "Stuart, 2026-11-09: \"Yes allow pg but only from the tmdb kids list\" — film rows capped at GB PG; New and coming exempt (unreleased films lack a certificate)."
+      }
+    ]
+  }
+}
