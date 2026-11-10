@@ -344,6 +344,10 @@ function makeFilm(i) {
       role: pick(rng, FIRST_NAMES) + (rng() < 0.3 ? ' ' + pick(rng, LAST_NAMES) : ''),
     });
   }
+  /* Padded after the draws, so every later number the generator makes is unchanged. */
+  while (cast.length < 8) {
+    cast.push({ name: 'Extra Actor ' + i + '-' + cast.length, role: 'Extra ' + cast.length });
+  }
   const genres = [pick(rng, GENRES)];
   if (rng() < 0.6) genres.push(pick(rng, GENRES));
   const year = 1975 + Math.floor(rng() * 50);

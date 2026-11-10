@@ -195,16 +195,17 @@ function create(opts) {
     const out = [];
     /* A held show's billing is the names its Plex roles carry, which is how
        the series page matches an actor to a TMDB person. */
-    const shown =
-      tv &&
-      held.find(function (s) {
-        return String(s.tmdb) === String(id);
-      });
-    for (let k = 0; k < 5; k++) {
+    const shown = (tv ? held : films).find(function (s) {
+      return String(s.tmdb) === String(id);
+    });
+    /* The top four of a film stay "Actor n-k": the browse smoke checks the
+       header's key actors came from TMDB by that prefix. */
+    for (let k = 0; k < 10; k++) {
+      const mirrored = shown && (tv || k >= 4);
       out.push({
         order: k,
         id: Number(id) * 10 + k,
-        name: shown && shown.cast[k] ? shown.cast[k].name : 'Actor ' + id + '-' + k,
+        name: mirrored && shown.cast[k] ? shown.cast[k].name : 'Actor ' + id + '-' + k,
         character: 'Someone ' + k,
         profile_path: '/profile/' + (Number(id) * 10 + k) + '/0.svg',
       });
@@ -235,6 +236,9 @@ function create(opts) {
     add('movie', 910009, 'Credit I', '2001-09-01', 900);
     add('movie', 910010, 'Credit J', '', 900);
     add('movie', 910011, 'Credit K', '2005-01-01', 900);
+    add('movie', 910013, 'Credit L', '2008-01-01', 900);
+    add('movie', 910014, 'Credit M', '2016-01-01', 900);
+    add('tv', 910015, 'Credit N', '2021-01-01', 900);
     add('movie', 910012, 'Hardly Seen', '2015-01-01', 3);
     return {
       id: Number(id),

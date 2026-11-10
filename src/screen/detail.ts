@@ -138,6 +138,7 @@ let opened: {
   name: string;
   credits: TmdbFilm[];
   index: number;
+  card: HTMLElement;
 } | null = null;
 /** Within that row. */
 let index = 0;
@@ -171,7 +172,7 @@ export function open(entry: PlexItem | null, chosen?: DetailOptions) {
     : merge.sources(entry).map((copy) => {
         return { item: copy, server: servers.of(copy), versions: null };
       });
-  if (unheld) art.warm(entry);
+  art.warm(entry);
   extras = [];
   cast = [];
   opened = null;
@@ -990,10 +991,21 @@ function castIds(): CastId[] {
   return art.factsFor(item)?.castIds ?? [];
 }
 
+function refuse(why: string): void {
+  debug(`person: ${why}`);
+  toast(why);
+}
+
 async function openPerson(credit = 0): Promise<void> {
   const role = cast[index];
-  const known = role?.tag ? people.match(role.tag, castIds()) : undefined;
-  if (!role?.tag || !known) return;
+  const card = castElement.children[index] as HTMLElement | undefined;
+  if (!role?.tag || !card) return refuse('No name for this actor');
+  const ids = castIds();
+  if (!ids.length) {
+    return refuse('Still reading the cast, try again in a moment');
+  }
+  const known = people.match(role.tag, ids);
+  if (!known) return refuse(`No credits found for ${role.tag}`);
   const mine = generation;
   const wanted = index;
   let got: TmdbPerson;
@@ -1004,19 +1016,22 @@ async function openPerson(credit = 0): Promise<void> {
     toast('Could not read their credits');
     return;
   }
-  if (mine !== generation || strip !== CAST || index !== wanted) return;
-  const face = got.profile
-    ? art.url(got.profile, 'w300')
-    : plexPhotoUrl(servers.of(item), role.thumb, 300, 300);
+  if (mine !== generation || strip !== CAST || index !== wanted) {
+    debug(`person: ${role.tag} arrived after the page had moved on`);
+    return;
+  }
   const credits = people.newestFirst(got.credits);
-  const panel = personView.build(got, face, role.tag);
+  const panel = personView.build(got, role.tag, credits);
   opened = {
     panel,
     name: role.tag,
     credits,
     index: personView.step(credit, 0, credits.length),
+    card,
   };
-  personView.paintList(panel.list, credits, opened.index);
+  personView.focus(panel, opened.index);
+  card.style.setProperty('--face-x', `${-card.offsetLeft}px`);
+  card.classList.add('open');
   put(castElement, panel.root);
   viewElement.classList.add('person');
   strip = PERSON;
@@ -1026,6 +1041,7 @@ async function openPerson(credit = 0): Promise<void> {
 function closePerson(): void {
   if (!opened) return;
   castElement.removeChild(opened.panel.root);
+  opened.card.classList.remove('open');
   opened = null;
   viewElement.classList.remove('person');
   strip = CAST;
@@ -1035,18 +1051,15 @@ function closePerson(): void {
 function personKey(code: number): void {
   if (!opened) return;
   const K = KEY;
-  const moves: Record<number, number> = { [K.UP]: -1, [K.LEFT]: -1, [K.DOWN]: 1, [K.RIGHT]: 1 };
-  const delta = moves[code];
-  if (code === K.UP && opened.index === 0) {
+  if (code === K.UP || isBack(code)) {
     closePerson();
-  } else if (delta !== undefined) {
+  } else if (code === K.LEFT || code === K.RIGHT) {
+    const delta = code === K.LEFT ? -1 : 1;
     opened.index = personView.step(opened.index, delta, opened.credits.length);
-    personView.paintList(opened.panel.list, opened.credits, opened.index);
+    personView.focus(opened.panel, opened.index);
   } else if (code === K.OK) {
     const credit = opened.credits[opened.index];
     if (credit) options.onOpenTitle?.(credit, { name: opened.name, credit: opened.index });
-  } else if (isBack(code)) {
-    closePerson();
   }
 }
 
