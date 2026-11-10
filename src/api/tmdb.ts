@@ -180,11 +180,13 @@ export async function catalogue(
   }
   /* No votes yet is the point of an unreleased film, so this row has no floor. */
   if (category?.kind === 'upcoming') {
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const later = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate());
     const upcoming = {
       ...parameters,
-      'primary_release_date.gte': today,
-      sort_by: 'primary_release_date.asc',
+      'primary_release_date.gte': now.toISOString().slice(0, 10),
+      'primary_release_date.lte': later.toISOString().slice(0, 10),
+      sort_by: 'popularity.desc',
     };
     return discover('movie', upcoming, page, 0);
   }

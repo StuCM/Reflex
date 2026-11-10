@@ -47,7 +47,7 @@ function kids(): DiscoveryCategory[] {
     {
       title: 'New and coming',
       kind: 'upcoming',
-      params: { with_genres: '10751|16' },
+      params: { with_genres: '10751', region: 'GB', with_release_type: 3 },
       minVotes: 0,
     },
     film('Popular kids films', {
