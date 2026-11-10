@@ -183,12 +183,13 @@
 }
 #detail.down #dt-cast { opacity: 0; }
 
-/* An actor open in place: the header and every row but the cast make way, and
-   the panel takes the cast's place from the top of the body. */
-#detail.person #dt-header, #detail.person #dt-actions, #detail.person #dt-crew,
-#detail.person #dt-extras-label, #detail.person #dt-extras, #detail.person .dt-hint,
-#detail.person .dt-actor { display: none; }
-#detail.person #dt-cast { top: -176px; height: 660px; }
+/* An actor open in place: the title stays, everything under its chips makes
+   way, and the cast row grows to hold their face, their posters and who they
+   are — 4 + 410 for the posters, then the about block, 650 in all. */
+#detail.person #dt-ratings, #detail.person #dt-tagline, #detail.person #dt-summary,
+#detail.person #dt-names, #detail.person #dt-actions, #detail.person #dt-crew,
+#detail.person #dt-extras-label, #detail.person #dt-extras, #detail.person .dt-hint { display: none; }
+#detail.person #dt-cast { top: -206px; height: 650px; }
 /* The key hint is about the action row, and the extras come up over where it
    sits. */
 #detail.down .dt-hint { opacity: 0; }
@@ -248,6 +249,17 @@
   letter-spacing: 0.04em; color: var(--dim);
 }
 .dt-actor.on img, .dt-actor.on .dt-actor-blank { box-shadow: 0 0 0 3px var(--ac); }
+/* The one that opened slides to the row's start and the rest fade out. */
+.dt-actor {
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease), opacity var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease), opacity var(--t-move) var(--ease);
+}
+#detail.person .dt-actor { opacity: 0; }
+#detail.person .dt-actor.open {
+  opacity: 1;
+  -webkit-transform: translateX(var(--face-x, 0)); transform: translateX(var(--face-x, 0));
+}
+#dt-cast .pp { --pp-left: 208px; }
 .dt-actor-name, .dt-actor-role {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }

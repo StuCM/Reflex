@@ -162,39 +162,23 @@
 .sh-actor-role { margin-top: 5px; font-size: 20px; line-height: 1.3; color: var(--dim); }
 
 /* ---- an actor, open in place ----
-   The strip and the series bar make way, the cards give up the row, and the
-   panel takes the cast area. */
+   The series bar, the episodes and the summary make way, and the cast row grows
+   to hold their face, their posters and who they are: 650 tall from 150. */
 
 #show.person #sh-strip, #show.person #sh-seasons, #show.person #sh-cast-label,
-#show.person .sh-actor { display: none; }
-#show.person #sh-cast { top: 330px; height: 620px; }
+#show.person #sh-chips, #show.person #sh-summary { display: none; }
+#show.person #sh-cast { top: 150px; height: 650px; }
 
-.sh-person { position: relative; height: 620px; white-space: normal; }
-.sh-person-face {
-  position: absolute; left: 0; top: 0; width: 300px; height: 300px;
-  background: var(--face, none) var(--surface) no-repeat center;
-  border-radius: var(--r-pill);
-  -webkit-background-size: cover; background-size: cover;
+.sh-actor {
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease), opacity var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--ease), opacity var(--t-move) var(--ease);
 }
-.sh-person-name {
-  position: absolute; left: 360px; top: 0; width: 1300px;
-  font-size: 44px; font-weight: 300; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+#show.person .sh-actor { opacity: 0; }
+#show.person .sh-actor.open {
+  opacity: 1;
+  -webkit-transform: translateX(var(--face-x, 0)); transform: translateX(var(--face-x, 0));
 }
-.sh-person-list { position: absolute; left: 360px; top: 76px; width: 1300px; }
-.sh-credit {
-  height: 56px; padding: 0 20px; border-radius: 14px;
-  font-size: 28px; line-height: 56px; color: rgba(238, 241, 243, 0.78);
-  white-space: nowrap; overflow: hidden;
-}
-.sh-credit.on { background: var(--surface); box-shadow: 0 0 0 3px var(--ac); color: var(--fg); }
-.sh-credit-title { display: inline-block; width: 900px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
-.sh-credit-year { display: inline-block; width: 120px; color: var(--dim); vertical-align: top; }
-.sh-credit-kind { color: var(--dim); }
-.sh-person-bio {
-  position: absolute; left: 0; top: 440px; width: 1500px;
-  font-size: 26px; line-height: 1.4; color: var(--dim);
-}
+#sh-cast .pp { --pp-left: 244px; }
 
 #sh-hint { position: absolute; left: var(--sp-page); bottom: 30px; margin-top: 0; }
 

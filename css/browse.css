@@ -314,3 +314,22 @@
 #browse.holding #viewport { z-index: 2; }
 #browse.holding .tile { opacity: 0.4; }
 #browse.holding .tile.on { opacity: 1; }
+
+/* ---- an actor's work, in a cast row ----
+   Poster tiles in the rail's own markup, wound along by --strip-x, and under
+   them the name, a line of facts and how many credits. 410 holds a tile and its
+   lift; the about block starts below it. */
+
+.pp { position: absolute; left: 0; top: 0; width: 100%; white-space: normal; }
+.pp-strip { position: absolute; top: 0; left: var(--pp-left); right: 0; height: 410px; overflow: hidden; }
+.pp-track {
+  padding: 8px; white-space: nowrap;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+  -webkit-transform: translateX(var(--strip-x, 0)); transform: translateX(var(--strip-x, 0));
+}
+.pp .tile { position: relative; display: inline-block; vertical-align: top; margin-right: 24px; white-space: normal; }
+.pp-about { position: absolute; left: 0; top: 440px; width: 1500px; }
+.pp-name { font-size: 44px; font-weight: 300; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-bio, .pp-count { margin-top: 6px; font-size: 26px; line-height: 1.4; color: var(--dim); }
+.pp-bio { max-height: 110px; overflow: hidden; }

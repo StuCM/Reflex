@@ -92,6 +92,7 @@ let opened: {
   name: string;
   credits: TmdbFilm[];
   index: number;
+  card: HTMLElement;
 } | null = null;
 let recaps: Recap[] | null = null;
 let recapIndex = 0;
@@ -175,7 +176,7 @@ function hint(): string {
   if (holding) return '↑ ↓ choose · OK confirms · ← → or BACK closes';
   if (zone === 'seasons') return '← → choose a series · ↓ to the episodes · BACK to the rail';
   if (zone === 'cast') return '← → along the cast · ↑ back to the episodes · BACK to the rail';
-  if (zone === 'person') return '↑ ↓ along their work · OK to open it · BACK to the cast';
+  if (zone === 'person') return '← → along their work · OK to open it · ↑ or BACK to the cast';
   if (zone === 'recaps') {
     return recaps?.length
       ? '← → choose a recap · OK to play it · ↑ back up the page'
@@ -275,7 +276,11 @@ function castFrom(metadata: PlexItem | null): PlexTag[] {
   const roles = metadata?.Role ?? [];
   if (roles.length) return roles.slice(0, CAST_MAX);
   const facts = art.factsFor(show);
-  return (facts?.cast ?? []).slice(0, CAST_MAX).map((name) => ({ tag: name }));
+  return castNamed(facts?.castIds ?? []);
+}
+
+function castNamed(list: CastId[]): PlexTag[] {
+  return list.slice(0, CAST_MAX).map((credit) => ({ tag: credit.name }));
 }
 
 function renderCast(): void {
@@ -614,6 +619,10 @@ export function open(entry: PlexItem | null, chosen?: ShowOptions): void {
   void art.castIds(entry).then((list) => {
     if (mine !== generation) return;
     castIds = list;
+    if (!cast.length) {
+      cast = castNamed(list);
+      renderCast();
+    }
     resumeActor();
   });
 
@@ -707,9 +716,8 @@ function holdRows(episode: PlexItem): menu.MenuRow[] {
   ];
 }
 
-/* Against the card, and never off the screen: on a strip it is the sides that
-   the menu hangs off, so the card's own offset is taken back through the shift
-   the strip is sitting at. Same move as the player's openPanelFor — the number
+/* Against the card: its offset is taken back through the shift the strip is
+   sitting at, and menu.holdMenuAt keeps the result on the screen. The number
    comes from here, the position stays in CSS. */
 function anchorMenu(card: HTMLElement): void {
   const at = menu.holdMenuAt(
@@ -828,10 +836,18 @@ function resumeActor(): void {
   void openPerson(want.credit);
 }
 
+function refuse(why: string): void {
+  debug(`person: ${why}`);
+  toast(why);
+}
+
 async function openPerson(credit = 0): Promise<void> {
   const role = cast[castIndex];
-  const known = role?.tag ? people.match(role.tag, castIds) : undefined;
-  if (!role?.tag || !known) return;
+  const card = castElement.children[castIndex] as HTMLElement | undefined;
+  if (!role?.tag || !card) return refuse('No name for this actor');
+  if (!castIds.length) return refuse('Still reading the cast, try again in a moment');
+  const known = people.match(role.tag, castIds);
+  if (!known) return refuse(`No credits found for ${role.tag}`);
   const mine = generation;
   const wanted = castIndex;
   let got: TmdbPerson;
@@ -842,19 +858,22 @@ async function openPerson(credit = 0): Promise<void> {
     toast('Could not read their credits');
     return;
   }
-  if (mine !== generation || zone !== 'cast' || castIndex !== wanted) return;
-  const face = got.profile
-    ? art.url(got.profile, 'w300')
-    : photoUrl(servers.of(show), role.thumb, 300, 300);
+  if (mine !== generation || zone !== 'cast' || castIndex !== wanted) {
+    debug(`person: ${role.tag} arrived after the page had moved on`);
+    return;
+  }
   const credits = people.newestFirst(got.credits);
-  const panel = personView.build(got, face, role.tag);
+  const panel = personView.build(got, role.tag, credits);
   opened = {
     panel,
     name: role.tag,
     credits,
     index: personView.step(credit, 0, credits.length),
+    card,
   };
-  personView.paintList(panel.list, credits, opened.index);
+  personView.focus(panel, opened.index);
+  card.style.setProperty('--face-x', `${-card.offsetLeft}px`);
+  card.classList.add('open');
   put(castElement, panel.root);
   viewElement.classList.add('person');
   zone = 'person';
@@ -864,6 +883,7 @@ async function openPerson(credit = 0): Promise<void> {
 function closePerson(): void {
   if (!opened) return;
   castElement.removeChild(opened.panel.root);
+  opened.card.classList.remove('open');
   opened = null;
   viewElement.classList.remove('person');
   zone = 'cast';
@@ -873,18 +893,12 @@ function closePerson(): void {
 
 function personKey(code: number): void {
   if (!opened) return;
-  const moves: Record<number, number> = {
-    [KEY.UP]: -1,
-    [KEY.LEFT]: -1,
-    [KEY.DOWN]: 1,
-    [KEY.RIGHT]: 1,
-  };
-  const delta = moves[code];
-  if (code === KEY.UP && opened.index === 0) {
+  if (code === KEY.UP || isBack(code)) {
     closePerson();
-  } else if (delta !== undefined) {
+  } else if (code === KEY.LEFT || code === KEY.RIGHT) {
+    const delta = code === KEY.LEFT ? -1 : 1;
     opened.index = personView.step(opened.index, delta, opened.credits.length);
-    personView.paintList(opened.panel.list, opened.credits, opened.index);
+    personView.focus(opened.panel, opened.index);
   } else if (code === KEY.OK) {
     const credit = opened.credits[opened.index];
     const episode = episodes[episodeIndex];
@@ -895,8 +909,6 @@ function personKey(code: number): void {
         at: { season: episode?.parentIndex, episode: episode?.index },
       });
     }
-  } else if (isBack(code)) {
-    closePerson();
   }
 }
 

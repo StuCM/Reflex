@@ -1,10 +1,7 @@
-/* One actor, drawn in the cast area: a large face, their work newest first and
-   a line of bio. Owns no state; the series page says which row is focused. */
-import { div, fill, put, span } from './dom';
-
-/** Rows of the credits list on screen at once. */
-export const ROWS = 6;
-const LEAD = 2;
+/* One actor, drawn in the cast row: their work as poster tiles, newest first,
+   and a line about them. Owns no state; the page says which tile is focused. */
+import * as art from '../data/art';
+import { div, put } from './dom';
 
 const MONTHS = [
   'January',
@@ -43,40 +40,55 @@ export function step(index: number, delta: number, length: number): number {
   return Math.min(Math.max(index + delta, 0), Math.max(0, length - 1));
 }
 
-/** First row drawn: the focus sits LEAD rows down until the list runs out. */
-export function windowStart(index: number, length: number): number {
-  return Math.min(Math.max(index - LEAD, 0), Math.max(0, length - ROWS));
+/** Tiles across the strip before it has to wind. */
+const VISIBLE = 6;
+/** Tile width and the gap after it, which is how far one step winds the strip. */
+export const STRIDE = 233;
+const LEAD = 2;
+
+/** The offset of the strip's first tile: the focus sits LEAD tiles in until the credits run out. */
+export function shift(index: number, length: number): number {
+  return Math.min(Math.max(index - LEAD, 0), Math.max(0, length - VISIBLE));
 }
 
 export interface PersonPanel {
   root: HTMLDivElement;
-  list: HTMLDivElement;
+  track: HTMLDivElement;
+  tiles: HTMLElement[];
 }
 
-export function build(person: TmdbPerson, face: string, name: string): PersonPanel {
-  const picture = span('sh-person-face');
-  if (face) picture.style.setProperty('--face', `url("${face}")`);
-  const list = div('sh-person-list');
-  const root = div('sh-person');
-  put(root, picture, div('sh-person-name', name), list, div('sh-person-bio', bio(person)));
-  return { root, list };
-}
-
-export function paintList(list: HTMLElement, credits: TmdbFilm[], index: number): void {
-  if (!credits.length) {
-    fill(list, div('sh-credit', 'No other credits listed.'));
-    return;
+function tile(credit: TmdbFilm): HTMLElement {
+  const inner = div('tile-inner');
+  if (credit.poster_path) {
+    const poster = document.createElement('img');
+    poster.src = art.url(credit.poster_path, 'w342');
+    poster.alt = '';
+    put(inner, poster);
   }
-  const first = windowStart(index, credits.length);
-  const rows = credits.slice(first, first + ROWS).map((credit, at) => {
-    const row = div(`sh-credit${first + at === index ? ' on' : ''}`);
-    put(
-      row,
-      span('sh-credit-title', credit.title),
-      span('sh-credit-year', credit.year ? String(credit.year) : ''),
-      span('sh-credit-kind', credit.media === 'tv' ? 'Show' : 'Film'),
-    );
-    return row;
-  });
-  fill(list, ...rows);
+  const kind = credit.media === 'tv' ? 'Show' : 'Film';
+  const sub = credit.year ? `${credit.year} · ${kind}` : kind;
+  const root = div('tile');
+  put(root, inner, div('tile-title', credit.title), div('tile-sub', sub));
+  return root;
+}
+
+/** Their work as poster tiles, and under it who they are. */
+export function build(person: TmdbPerson, name: string, credits: TmdbFilm[]): PersonPanel {
+  const tiles = credits.map(tile);
+  const track = div('pp-track');
+  put(track, ...tiles);
+  const strip = div('pp-strip');
+  put(strip, track);
+  const about = div('pp-about');
+  const count = credits.length ? `${credits.length} films and shows` : 'No other credits listed.';
+  put(about, div('pp-name', name), div('pp-bio', bio(person)), div('pp-count', count));
+  const root = div('pp');
+  put(root, strip, about);
+  return { root, track, tiles };
+}
+
+/** Rings the tile at `index` and winds the strip to keep it in view. */
+export function focus(panel: PersonPanel, index: number): void {
+  panel.tiles.forEach((one, at) => one.classList.toggle('on', at === index));
+  panel.track.style.setProperty('--strip-x', `${-shift(index, panel.tiles.length) * STRIDE}px`);
 }

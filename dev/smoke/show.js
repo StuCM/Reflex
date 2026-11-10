@@ -1324,7 +1324,13 @@ module.exports = function (h) {
             ['Credit I', 2001],
             ['Credit J', 0],
             ['Credit K', 2005],
+            ['Credit L', 2008],
+            ['Credit M', 2016],
+            ['Credit N', 2021],
           ];
+          const shown = Math.min(first.cast.length, 6);
+          const last = shown - 1;
+          const lastId = Number(first.tmdb) * 10 + last;
           const expected = credits
             .map(function (c, at) {
               return { title: c[0], year: c[1], at: at };
@@ -1338,27 +1344,42 @@ module.exports = function (h) {
 
           function person() {
             return page.evaluate(function () {
-              const root = document.querySelector('.sh-person');
+              const root = document.querySelector('.pp');
               function text(sel) {
                 const found = root && root.querySelector(sel);
                 return found ? found.textContent.trim() : '';
               }
               const cards = document.querySelectorAll('.sh-actor');
+              const cast = document.getElementById('sh-cast');
+              const opened = document.querySelector('.sh-actor.open');
+              const bottom = Math.min(cast.getBoundingClientRect().bottom, 1080);
               return {
                 open: !!root,
-                name: text('.sh-person-name'),
-                bio: text('.sh-person-bio'),
-                focused: text('.sh-credit.on .sh-credit-title'),
-                rows: root ? root.querySelectorAll('.sh-credit').length : 0,
+                name: text('.pp-name'),
+                bio: text('.pp-bio'),
+                focused: text('.tile.on .tile-title'),
+                firstTitle: text('.tile .tile-title'),
+                tiles: root ? root.querySelectorAll('.tile').length : 0,
                 shownCards: Array.prototype.filter.call(cards, function (c) {
-                  return c.offsetParent !== null;
+                  return getComputedStyle(c).opacity !== '0';
                 }).length,
                 cards: cards.length,
                 cardOn: !!document.querySelector('.sh-actor.on'),
+                faceLeft: opened
+                  ? opened.getBoundingClientRect().left - cast.getBoundingClientRect().left
+                  : -1,
+                aboutInside: root
+                  ? root.querySelector('.pp-bio').getBoundingClientRect().bottom <= bottom &&
+                    root.querySelector('.pp-count').getBoundingClientRect().bottom <= bottom
+                  : false,
+                tilesInside: root
+                  ? root.querySelector('.tile .tile-sub').getBoundingClientRect().bottom <=
+                    root.querySelector('.pp-strip').getBoundingClientRect().bottom
+                  : false,
                 faceWidth: cards.length ? cards[0].querySelector('.sh-actor-face').offsetWidth : 0,
                 roleInside: cards.length
                   ? cards[0].querySelector('.sh-actor-role').getBoundingClientRect().bottom <=
-                    document.getElementById('sh-cast').getBoundingClientRect().bottom
+                    cast.getBoundingClientRect().bottom
                   : false,
                 stripShown: document.getElementById('sh-strip').offsetParent !== null,
               };
@@ -1368,19 +1389,19 @@ module.exports = function (h) {
           function openActor(tries) {
             return press('Enter')
               .then(function () {
-                return page.waitForTimeout(300);
+                return page.waitForTimeout(700);
               })
               .then(person)
               .then(function (st) {
                 if (st.open) return st;
-                if (!tries) throw new Error('OK on the first actor opened nothing');
+                if (!tries) throw new Error('OK on the last actor opened nothing');
                 return openActor(tries - 1);
               });
           }
 
           function onCredit(title) {
             return waitFor(
-              '(document.querySelector(".sh-credit.on .sh-credit-title") || {}).textContent' +
+              '(document.querySelector(".pp .tile.on .tile-title") || {}).textContent' +
                 ' === ' +
                 JSON.stringify(title),
               'the credit ' + title + ' focused',
@@ -1391,7 +1412,7 @@ module.exports = function (h) {
           function moveTo(title) {
             return person().then(function (st) {
               const by = expected.indexOf(title) - expected.indexOf(st.focused);
-              return press(by < 0 ? 'ArrowUp' : 'ArrowDown', Math.abs(by));
+              return press(by < 0 ? 'ArrowLeft' : 'ArrowRight', Math.abs(by));
             });
           }
 
@@ -1428,6 +1449,14 @@ module.exports = function (h) {
             .then(castRow)
             .then(function (st) {
               if (!st.faces[0].on) throw new Error('▼ did not land on the first cast member');
+              if (st.faces.length !== shown) {
+                throw new Error(st.faces.length + ' faces, not ' + shown);
+              }
+              return press('ArrowRight', last);
+            })
+            .then(castRow)
+            .then(function (st) {
+              if (!st.faces[last].on) throw new Error('▶ did not land on the last cast member');
               return person();
             })
             .then(function (st) {
@@ -1436,26 +1465,33 @@ module.exports = function (h) {
               return openActor(8);
             })
             .then(function (st) {
-              if (st.shownCards !== 0 || st.cards < 2) {
+              if (st.shownCards !== 1 || st.cards !== shown) {
                 throw new Error(st.shownCards + ' of ' + st.cards + ' cast cards still show');
               }
+              if (Math.abs(st.faceLeft) > 2) {
+                throw new Error('the face is ' + st.faceLeft + 'px from the row start');
+              }
               if (st.stripShown) throw new Error('the episode strip is still showing');
-              if (st.name !== first.cast[0].name) {
-                throw new Error('the panel names "' + st.name + '"');
+              if (st.name !== first.cast[last].name) {
+                throw new Error('the page names "' + st.name + '"');
               }
-              if (
-                st.bio.indexOf('Born 12 May 1962, London, England') !== 0 ||
-                st.bio.indexOf('Died 3 January 2020') < 0
-              ) {
-                throw new Error('the bio reads "' + st.bio + '"');
+              if (st.bio.indexOf('Born 12 May 1962, London, England') !== 0) {
+                throw new Error('the about line reads "' + st.bio + '"');
               }
-              if (st.rows !== 6) throw new Error(st.rows + ' credit rows, not 6');
+              if (st.bio.indexOf('Died 3 January 2020') >= 0 !== (lastId % 2 === 0)) {
+                throw new Error('the about line reads "' + st.bio + '"');
+              }
+              if (!st.aboutInside) throw new Error('the about block is outside the cast area');
+              if (!st.tilesInside) throw new Error('a poster is clipped by its strip');
+              if (st.tiles !== expected.length || st.firstTitle !== expected[0]) {
+                throw new Error(st.tiles + ' tiles, the first "' + st.firstTitle + '"');
+              }
               const seen = [st.focused];
               let walk = Promise.resolve();
               for (let n = 1; n < expected.length; n++) {
                 walk = walk
                   .then(function () {
-                    return press('ArrowDown');
+                    return press('ArrowRight');
                   })
                   .then(person)
                   .then(function (now) {
@@ -1499,10 +1535,13 @@ module.exports = function (h) {
             })
             .then(person)
             .then(function (st) {
-              if (!st.open || st.name !== first.cast[0].name) {
+              if (!st.open || st.name !== first.cast[last].name) {
                 throw new Error('BACK from a title did not return to the actor');
               }
               return press('Backspace');
+            })
+            .then(function () {
+              return page.waitForTimeout(700);
             })
             .then(person)
             .then(function (st) {
@@ -1512,7 +1551,7 @@ module.exports = function (h) {
               return press('Enter');
             })
             .then(function () {
-              return waitFor('!!document.querySelector(".sh-person")', 'the actor again', 5000);
+              return waitFor('!!document.querySelector(".pp")', 'the actor again', 5000);
             })
             .then(function () {
               return press('ArrowUp');
