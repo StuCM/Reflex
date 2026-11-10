@@ -209,7 +209,17 @@ test('catalogue dispatch and the vote floor', () => {
         const url = got.asked[0];
         const today = new Date().toISOString().slice(0, 10);
         assert.ok(/\/discover\/movie\?/.test(url), url);
+        const now = new Date();
+        const later = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate());
         assert.ok(url.indexOf('primary_release_date.gte=' + today) >= 0, url);
+        assert.ok(
+          url.indexOf('primary_release_date.lte=' + later.toISOString().slice(0, 10)) >= 0,
+          url,
+        );
+        assert.ok(/sort_by=popularity\.desc/.test(url), url);
+        assert.ok(/region=GB/.test(url), url);
+        assert.ok(/with_release_type=3/.test(url), url);
+        assert.ok(/with_genres=10751(&|$)/.test(url), url);
         assert.ok(!/certification/.test(url), 'unreleased films have no certificate: ' + url);
         assert.strictEqual(got.films.length, 1, 'a zero-vote film is kept');
       });
