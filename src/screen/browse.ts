@@ -29,6 +29,7 @@ import * as discovery from '../data/discovery';
 import * as kids from '../data/kids';
 import settings from '../core/config';
 import * as masthead from '../view/masthead';
+import * as glyphs from '../view/glyphs';
 import { createHold } from '../view/hold';
 import * as menu from '../view/menu';
 import * as merge from '../data/merge';
@@ -49,6 +50,7 @@ const browseView = must('browse');
 const searchInput = must('search-input') as HTMLInputElement;
 const hintLine = must('browse-hint');
 const confirmHost = must('confirm');
+const holdHost = must('hold-menu');
 
 interface BrowseSection {
   title: string;
@@ -1331,7 +1333,10 @@ export function searchKey(code: number): boolean {
 const okHold = createHold(openFocused, () => {
   const chosen = focusedItem();
   if (chosen && chosen.type === 'movie') openFilmMenu(chosen);
-  else openFocused();
+  else {
+    okHold.cancel(); // the release will go to the page this opens
+    openFocused();
+  }
 });
 
 function openFocused() {
@@ -1340,17 +1345,27 @@ function openFocused() {
 }
 
 function openFilmMenu(film: PlexItem) {
+  const tile = browseView.querySelector('.tile.on') as HTMLElement | null;
+  if (!tile) return;
+  browseView.classList.add('holding');
   menu.open({
-    host: confirmHost,
+    host: holdHost,
+    head: { kicker: film.year ? String(film.year) : 'Film', title: film.title ?? '' },
     tabs: [
       {
-        label: film.title ?? '',
+        label: '',
         rows: () => {
           const list = [
-            { label: 'Mark watched', value: 'watched' },
-            { label: 'Mark unwatched', value: 'unwatched' },
+            { icon: glyphs.watched, label: 'Mark watched', value: 'watched' },
+            { icon: glyphs.watched, label: 'Mark unwatched', value: 'unwatched' },
           ];
-          if (isOnDeck(film)) list.push({ label: 'Remove from Continue watching', value: 'hide' });
+          if (isOnDeck(film)) {
+            list.push({
+              icon: glyphs.remove,
+              label: 'Remove from Continue watching',
+              value: 'hide',
+            });
+          }
           return list;
         },
       },
@@ -1359,8 +1374,15 @@ function openFilmMenu(film: PlexItem) {
       if (value === 'hide') clearOne(film);
       else if (value) setWatched(film, value === 'watched');
     },
-    onClose: render,
+    onClose: () => {
+      browseView.classList.remove('holding');
+      render();
+    },
   });
+  const box = tile.getBoundingClientRect();
+  const at = menu.holdMenuAt(box.left, box.top, holdHost.offsetHeight);
+  holdHost.style.setProperty('--menu-left', `${at.left}px`);
+  holdHost.style.setProperty('--menu-top', `${at.top}px`);
 }
 
 /* Every copy, because each server keeps its own watch state. */
@@ -1400,6 +1422,7 @@ export function keyUp(code: number): void {
 
 export function key(code: number): boolean {
   if (okHold.swallow(code)) return true;
+  if (code !== KEY.OK) okHold.cancel();
   if (menu.isOpen()) return menu.key(code);
   if (sidebar.isOpen()) return sidebar.key(code);
 

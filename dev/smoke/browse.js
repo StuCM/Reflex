@@ -1334,14 +1334,14 @@ module.exports = function (h) {
       page.on('request', function (r) {
         if (/\/:\/(un)?scrobble\?|removeFromContinueWatching/.test(r.url())) writes.push(r.url());
       });
-      function confirmRows() {
-        return page.evaluate(function () {
-          const box = document.getElementById('confirm');
+      function confirmRows(hostId) {
+        return page.evaluate(function (which) {
+          const box = document.getElementById(which);
           if (!box || box.classList.contains('hidden')) return null;
           return Array.prototype.map.call(box.querySelectorAll('.menu-label'), function (r) {
             return r.textContent.trim();
           });
-        });
+        }, hostId || 'hold-menu');
       }
       function rowsOf(rowNumber) {
         return press('ArrowUp', 12)
@@ -1374,6 +1374,29 @@ module.exports = function (h) {
             ['Mark watched', 'Mark unwatched', 'Remove from Continue watching'],
             'the deck',
           );
+          const look = await page.evaluate(function () {
+            const box = document.getElementById('hold-menu').getBoundingClientRect();
+            const tile = document.querySelector('.tile.on').getBoundingClientRect();
+            const title = document.querySelector('#hold-menu .menu-head-title');
+            return {
+              title: title && title.textContent,
+              icons: document.querySelectorAll('#hold-menu .menu-icon svg').length,
+              scrim: document.getElementById('browse').classList.contains('holding'),
+              box: [box.left, box.top, box.right, box.bottom],
+              apart: Math.abs(box.left - tile.left),
+              tileTop: tile.top,
+              boxTop: box.top,
+              focused: document.querySelector('.tile.on .tile-title').textContent.trim(),
+            };
+          });
+          if (!look.title || look.title !== look.focused) {
+            throw new Error('hold menu head ' + look.title + ' is not the tile ' + look.focused);
+          }
+          same([look.icons, look.scrim], [3, true], 'icons and scrim');
+          if (look.box[0] < 32 || look.box[1] < 32 || look.box[2] > 1888 || look.box[3] > 1048) {
+            throw new Error('hold menu off screen: ' + look.box);
+          }
+          if (look.apart > 300) throw new Error('hold menu is ' + look.apart + 'px from its tile');
           await press('ArrowDown');
           await press('Enter');
           await page.waitForTimeout(400);
@@ -1402,7 +1425,11 @@ module.exports = function (h) {
           await press('ArrowDown', 2);
           await press('Enter');
           await page.waitForTimeout(300);
-          same((await confirmRows()).slice(0, 2), ['Remove them', 'Cancel'], 'the confirmation');
+          same(
+            (await confirmRows('confirm')).slice(0, 2),
+            ['Remove them', 'Cancel'],
+            'the confirmation',
+          );
           /* Cancelled: the mock's deck is shared with the deck area, which clears it. */
           await press('Backspace');
           await page.waitForTimeout(200);
@@ -1419,6 +1446,50 @@ module.exports = function (h) {
           );
           await backToLibrary();
         },
-      );
+      )
+        .then(function () {
+          return step('a key during the 500ms window cancels the hold', async function () {
+            await press('ArrowUp', 12);
+            await page.waitForTimeout(300);
+            await page.keyboard.down('Enter');
+            await page.keyboard.press('ArrowRight');
+            await page.waitForTimeout(700);
+            await page.keyboard.up('Enter');
+            await page.waitForTimeout(300);
+            const open = await page.evaluate(function () {
+              return !document.getElementById('hold-menu').classList.contains('hidden');
+            });
+            if (open) throw new Error('the menu opened on a press another key interrupted');
+          });
+        })
+        .then(function () {
+          return step('a hold on a show opens it and the next tap still works', async function () {
+            await sidebarPick('TV Shows');
+            await waitFor(
+              '!document.getElementById("sidebar").classList.contains("open")',
+              'the shows section',
+              20000,
+            );
+            await page.waitForTimeout(800);
+            await press('ArrowDown');
+            await waitFor(
+              '/\\d+ series/.test(document.querySelector("#mh-meta").textContent)',
+              'a show in the masthead',
+              15000,
+            );
+            const shown = '!document.getElementById("show").classList.contains("hidden")';
+            await h.holdOk();
+            await waitFor(shown, 'a hold opening the show', 20000);
+            await press('Backspace');
+            await waitFor(
+              'document.getElementById("show").classList.contains("hidden")',
+              'back on the rail',
+            );
+            await page.waitForTimeout(300);
+            await press('Enter');
+            await waitFor(shown, 'a tap opening the show after a hold', 20000);
+            await backToLibrary();
+          });
+        });
     });
 };
