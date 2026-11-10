@@ -15,6 +15,22 @@ const CHECK =
   '<svg viewBox="0 0 256 256" fill="currentColor" width="28" height="28">' +
   '<path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>';
 
+const HOLD_MENU_W = 512;
+const HOLD_MENU_EDGE = 32;
+
+/** Where a hold menu of this height goes for a tile at (left, top), kept on the 1920x1080 screen. */
+export function holdMenuAt(
+  left: number,
+  top: number,
+  height: number,
+): { left: number; top: number } {
+  const lowest = 1080 - height - HOLD_MENU_EDGE;
+  return {
+    left: clamp(left, HOLD_MENU_EDGE, 1920 - HOLD_MENU_W - HOLD_MENU_EDGE),
+    top: clamp(top, HOLD_MENU_EDGE, Math.max(HOLD_MENU_EDGE, lowest)),
+  };
+}
+
 export interface MenuRow {
   label: string;
   note?: string;

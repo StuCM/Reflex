@@ -40,7 +40,7 @@ const recapsElement = must('sh-recaps');
 const headElement = must('sh-head');
 const themeElement = must('theme') as HTMLAudioElement;
 const viewElement = must('show');
-const menuElement = div('hidden');
+const menuElement = div('hold-menu hidden');
 menuElement.id = 'sh-menu';
 put(viewElement, menuElement);
 
@@ -673,8 +673,6 @@ function openCopies(): void {
    back. Nothing else in the app listens for keyup. */
 
 /** The box in css/show.css, and the gap it keeps from the screen edges. */
-const MENU_W = 512;
-const MENU_EDGE = 32;
 
 const okHold = createHold(playFocused, openHoldMenu);
 
@@ -714,21 +712,16 @@ function holdRows(episode: PlexItem): menu.MenuRow[] {
    the strip is sitting at. Same move as the player's openPanelFor — the number
    comes from here, the position stays in CSS. */
 function anchorMenu(card: HTMLElement): void {
-  const left = stripElement.offsetLeft + card.offsetLeft - stripShift * CARD_STRIDE;
-  const top = stripElement.offsetTop + card.offsetTop;
-  const lowest = 1080 - menuElement.offsetHeight - MENU_EDGE;
-  menuElement.style.setProperty(
-    '--menu-left',
-    `${clamp(left, MENU_EDGE, 1920 - MENU_W - MENU_EDGE)}px`,
+  const at = menu.holdMenuAt(
+    stripElement.offsetLeft + card.offsetLeft - stripShift * CARD_STRIDE,
+    stripElement.offsetTop + card.offsetTop,
+    menuElement.offsetHeight,
   );
-  menuElement.style.setProperty(
-    '--menu-top',
-    `${clamp(top, MENU_EDGE, Math.max(MENU_EDGE, lowest))}px`,
-  );
+  menuElement.style.setProperty('--menu-left', `${at.left}px`);
+  menuElement.style.setProperty('--menu-top', `${at.top}px`);
 }
 
 function openHoldMenu(): void {
-  okHold.cancel();
   const episode = episodes[episodeIndex];
   if (!episode || holding) return;
 
@@ -940,6 +933,7 @@ function recapsKey(code: number): void {
 
 export function key(code: number): boolean {
   if (okHold.swallow(code)) return true;
+  if (code !== KEY.OK) okHold.cancel();
   if (menu.isOpen()) return menu.key(code);
 
   if (zone === 'seasons') {

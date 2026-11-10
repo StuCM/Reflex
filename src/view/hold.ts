@@ -18,13 +18,13 @@ export function createHold(onTap: () => void, onHold: () => void): Hold {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let held = false;
 
-  function cancel(): void {
+  function stop(): void {
     if (timer) clearTimeout(timer);
     timer = null;
   }
 
   function fire(): void {
-    cancel();
+    stop();
     held = true;
     onHold();
   }
@@ -38,10 +38,14 @@ export function createHold(onTap: () => void, onHold: () => void): Hold {
     up() {
       held = false;
       if (!timer) return; // the menu opened, or this press began elsewhere
-      cancel();
+      stop();
       onTap();
     },
     swallow: (code) => code === KEY.OK && held,
-    cancel,
+    /** Forget the press: any other key, or leaving the screen, ends it. */
+    cancel() {
+      stop();
+      held = false;
+    },
   };
 }

@@ -302,3 +302,15 @@
   z-index: 2;
 }
 
+
+/* ---- holding OK on a film ----
+   The same scrim and box as the series page: the hero goes dark, the rail
+   stays above it with every tile but the held one dimmed. Only opacity moves. */
+#browse.holding::after {
+  content: ''; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+  z-index: 1; background: rgba(22, 24, 38, 0.55);
+  pointer-events: none;
+}
+#browse.holding #viewport { z-index: 2; }
+#browse.holding .tile { opacity: 0.4; }
+#browse.holding .tile.on { opacity: 1; }

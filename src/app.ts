@@ -419,8 +419,10 @@ function dispatch(code: number): boolean {
    no keyUp() never hears about it. */
 function onKeyUp(event: KeyboardEvent) {
   if (player.playing() || recapVideo) return;
-  if (view() === 'show') showpage.keyUp(event.keyCode);
-  else if (view() === 'browse') browse.keyUp(event.keyCode);
+  /* Both, whatever is showing: a hold that opened another page would
+     otherwise leave its screen believing OK is still down. */
+  showpage.keyUp(event.keyCode);
+  browse.keyUp(event.keyCode);
 }
 
 /* Back from a message goes where you came from — the detail page if one is
