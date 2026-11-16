@@ -58,10 +58,10 @@ module.exports = function (h) {
           var t = tiles[i];
           if (t.classList.contains('hidden') || !t._item) continue;
           var x = base + xOf(t);
-          if (x + 209 <= 0 || x >= 1920) continue; // wound off the side
+          if (x + 176 <= 0 || x >= 1920) continue; // wound off the side
           var title = t.querySelector('.tile-title').textContent.trim();
           var got = t.querySelector('img').getAttribute('src') || '';
-          var state = !got ? 'blank' : got === Art.tile(t._item, 209, 314) ? 'fresh' : 'stale';
+          var state = !got ? 'blank' : got === Art.tile(t._item, 176, 264) ? 'fresh' : 'stale';
           if (t.classList.contains('on')) out.focused = state;
           if (state === 'fresh') out.fresh++;
           else out[state].push(title || '(no title)');
@@ -264,6 +264,7 @@ module.exports = function (h) {
            rail is moving, and what it must never show is another film. */
           const SWEEP = 10;
           let before;
+          let sweepDuring = -1;
           return (
             backToLibrary()
               .then(function () {
@@ -321,6 +322,7 @@ module.exports = function (h) {
                 /* One request per tile passed is what the old code cost; anything
                near that means the sweep is still fetching what it goes by. */
                 const during = tilePosters.length - before;
+                sweepDuring = during;
                 if (during * 2 >= SWEEP) {
                   throw new Error(
                     during + ' poster requests while sweeping past ' + SWEEP + ' tiles',
@@ -336,9 +338,51 @@ module.exports = function (h) {
                   throw new Error('after the sweep settled, no poster on: ' + st.blank.join(', '));
                 }
               })
+              /* The control: the counter above sees the same collector, so once
+               the rail has stopped it must have counted the settled posters. */
+              .then(function () {
+                if (tilePosters.length - before <= sweepDuring) {
+                  throw new Error('the poster counter saw nothing after the sweep settled');
+                }
+              })
           );
         },
       );
+    })
+
+    .then(function () {
+      return step('the focused poster is 210x315 and the next row peeks', function () {
+        return backToLibrary()
+          .then(function () {
+            return topRow();
+          })
+          .then(function () {
+            return page.waitForTimeout(800);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              var b = document.querySelector('.tile.on .tile-inner').getBoundingClientRect();
+              var tops = Array.prototype.map.call(
+                document.querySelectorAll('#rows .row:not(.hidden)'),
+                function (r) {
+                  return Math.round(r.getBoundingClientRect().top);
+                },
+              );
+              return { w: Math.round(b.width), h: Math.round(b.height), tops: tops };
+            });
+          })
+          .then(function (st) {
+            if (Math.abs(st.w - 210) > 2 || Math.abs(st.h - 315) > 2) {
+              throw new Error('the focused poster is ' + st.w + '×' + st.h + ', not 210×315');
+            }
+            const next = st.tops.filter(function (t) {
+              return t > 500 && t < 1080;
+            });
+            if (next.length < 2) {
+              throw new Error('no next row top on screen: ' + JSON.stringify(st.tops));
+            }
+          });
+      });
     })
 
     .then(function () {

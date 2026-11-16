@@ -36,6 +36,7 @@
   --t-move:  360ms;   /* a row change, the hero collapsing */
   --t-fade:  620ms;   /* one backdrop crossfading into the next */
   --t-menu:  420ms;
+  --t-hero:  420ms;   /* the hero text fading in on a new title */
   --t-glow:  800ms;
   --ease:    cubic-bezier(.2, .7, .2, 1);
 
@@ -59,6 +60,10 @@
   /* Margins. The design puts every screen at 96; the film page, the show page
      and the player are still at 64, and moving them is their own task. */
   --sp-edge: 96px;
+
+  /* The only place a family is named; a rule says --font-title or --font-body. */
+  --font-title: "Space Grotesk", Inter, sans-serif;
+  --font-body:  Inter, "LG Smart UI", "Helvetica Neue", Arial, sans-serif;
   --sp-page: 64px;
 }
 
@@ -105,7 +110,7 @@ html, body {
   overflow: hidden;
   background: var(--bg);
   color: var(--fg);
-  font-family: Inter, "LG Smart UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-body);
   -webkit-user-select: none;
   cursor: none;
 }

@@ -718,13 +718,13 @@ module.exports = function (h) {
             .then(function (st) {
               if (!st.dense) throw new Error('the hero did not collapse off the first row');
               if (st.top === null) throw new Error('no focused tile on row 1');
-              /* Portrait, 2:3, seven across. The row arithmetic hangs off these,
+              /* Portrait, 2:3, nine across. The row arithmetic hangs off these,
                so a change here is a change to how much of the rail you see. */
-              if (!st.art || st.art.w !== 209 || st.art.h !== 314) {
-                throw new Error('the tile art is ' + JSON.stringify(st.art) + ', not 209×314');
+              if (!st.art || st.art.w !== 176 || st.art.h !== 264) {
+                throw new Error('the tile art is ' + JSON.stringify(st.art) + ', not 176×264');
               }
-              if (st.across !== 7) {
-                throw new Error(st.across + ' tiles fit across, not 7');
+              if (st.across !== 9) {
+                throw new Error(st.across + ' tiles fit across, not 9');
               }
               if (st.top < st.vpTop - 1 || st.bottom > st.vpBottom + 1) {
                 throw new Error(

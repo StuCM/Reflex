@@ -76,12 +76,18 @@ art.onReady((id) => {
   paintFacts(wanted);
 });
 
+const masthead = must('masthead');
+let fadeB = false;
+
 export function render(
   row: { title?: string } | null,
   item: PlexItem | null,
   hasRows: boolean,
 ): void {
   rowElement.textContent = row?.title ?? '';
+  fadeB = !fadeB;
+  masthead.classList.remove(fadeB ? 'fa' : 'fb');
+  masthead.classList.add(fadeB ? 'fb' : 'fa');
 
   if (!item) {
     titleElement.textContent = hasRows ? '…' : 'Loading…';
