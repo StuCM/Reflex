@@ -166,5 +166,83 @@ module.exports = function (h) {
             return press('F6');
           });
       });
+    })
+
+    .then(function () {
+      const menuOpen = () =>
+        page.evaluate('document.getElementById("browse").classList.contains("menu")');
+      const LABELS =
+        'Array.prototype.map.call(document.querySelectorAll("#rows .row-label"), function (t) {' +
+        ' return t.textContent.trim(); }).join("|")';
+      return step(
+        'Up opens the top menu; arrows change page and Down closes it',
+        async function () {
+          await press('ArrowUp');
+          assertEqual(await menuOpen(), true, 'menu open after Up from row 0');
+          const tiles = await page.evaluate(
+            'Array.prototype.map.call(document.querySelectorAll("#menubar .mb-tile"), function (t) {' +
+              ' return t.textContent; }).join("|")',
+          );
+          assertEqual(tiles, 'Home|Movies|TV|Collections|Discover|Kids|More', 'menu tiles');
+          const movies = await page.evaluate(LABELS);
+          assertEqual(movies.length > 0, true, 'Movies row labels are drawn');
+
+          await press('ArrowRight', 2);
+          await waitFor(
+            '(' + LABELS + ') !== ' + JSON.stringify(movies),
+            'the TV rows to replace the Movies rows',
+            10000,
+          );
+          assertEqual(await glowX(), '-180px', 'g1 --gx on the third page');
+
+          await press('ArrowDown');
+          await page.waitForTimeout(500);
+          assertEqual(await menuOpen(), false, 'menu closed after Down');
+          assertEqual(
+            await page.evaluate('document.getElementById("browse").classList.contains("dense")'),
+            false,
+            'focus is back on row 0',
+          );
+        },
+      );
+    })
+
+    .then(function () {
+      const menuOpen = () =>
+        page.evaluate('document.getElementById("browse").classList.contains("menu")');
+      const sidebarText = () =>
+        page.evaluate(
+          'Array.prototype.map.call(document.querySelectorAll("#sidebar .sb-row"), function (r) {' +
+            ' return (r.classList.contains("cur") ? "* " : "") + r.textContent.trim(); }).join("|")',
+        );
+      return step('Kids loads from the menu, and More opens the sidebar', async function () {
+        await press('ArrowUp');
+        await press('ArrowRight', 3);
+        await press('Escape');
+        assertEqual(await menuOpen(), false, 'Back closes the menu');
+        await waitFor(
+          'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0',
+          'Kids tiles',
+          15000,
+        );
+        assertEqual(await glowX(), '-450px', 'g1 --gx on the Kids page');
+        await h.openSidebar();
+        const rows = await sidebarText();
+        assertEqual(/(^|\|)\* Kids(\||$)/.test(rows), true, 'Kids is current in ' + rows);
+        await h.sidebarPick('Movies');
+        await waitFor(
+          'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0',
+          'Movies back from the sidebar',
+          10000,
+        );
+        await h.openSidebar();
+        const after = await sidebarText();
+        assertEqual(
+          /\* Movies/.test(after) && !/\* Kids/.test(after),
+          true,
+          'Movies is current in ' + after,
+        );
+        await press('ArrowLeft');
+      });
     });
 };

@@ -560,9 +560,7 @@ function drive(page, titles, port) {
 
   /* ---- the sidebar ----
 
-     What the chip row used to be. Left off the front of a row opens it, so
-     "however far into a row we are, get the sections on screen" is a loop of
-     lefts rather than a count of them. */
+     What the chip row used to be. The top menu's More tile opens it. */
 
   function sidebarIsOpen() {
     return page.evaluate(function () {
@@ -570,17 +568,52 @@ function drive(page, titles, port) {
     });
   }
 
+  /* UP to the top menu, then to its More tile and OK. Sweeping with arrows
+     loads nothing: a page loads only once the focus rests on it. */
+  function menuIsOpen() {
+    return page.evaluate(function () {
+      return document.getElementById('browse').classList.contains('menu');
+    });
+  }
+
   function openSidebar() {
-    function attempt(n) {
-      return sidebarIsOpen().then(function (isOpen) {
+    function climb(n) {
+      return menuIsOpen().then(function (isOpen) {
         if (isOpen) return true;
-        if (n <= 0) throw new Error('the sidebar would not open');
-        return press('ArrowLeft').then(function () {
-          return attempt(n - 1);
+        if (n <= 0) throw new Error('the menu would not open');
+        return press('ArrowUp').then(function () {
+          return climb(n - 1);
         });
       });
     }
-    return attempt(60);
+    function toMore(n) {
+      return page
+        .evaluate(function () {
+          const tiles = document.querySelectorAll('#menubar .mb-tile');
+          return tiles[tiles.length - 1].classList.contains('on');
+        })
+        .then(function (atMore) {
+          if (atMore) return true;
+          if (n <= 0) throw new Error('could not reach More');
+          return press('ArrowLeft').then(function () {
+            return toMore(n - 1);
+          });
+        });
+    }
+    return sidebarIsOpen().then(function (isOpen) {
+      if (isOpen) return true;
+      return climb(60)
+        .then(function () {
+          return toMore(8);
+        })
+        .then(function () {
+          return press('Enter');
+        })
+        .then(sidebarIsOpen)
+        .then(function (opened) {
+          if (!opened) throw new Error('More did not open the sidebar');
+        });
+    });
   }
 
   /* One string per row: '* ' marks the section showing, '- ' marks a category

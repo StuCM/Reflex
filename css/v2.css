@@ -48,3 +48,38 @@
   padding: 16px 20px; background: rgba(0, 0, 0, .78);
   font: 20px/1.4 monospace; white-space: pre; color: var(--fg);
 }
+
+/* The top menu: tiles slide in from above while the page moves down to make room. */
+#menubar {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 130px; z-index: 4;
+  padding: 36px 0 0 var(--sp-edge);
+  opacity: 0;
+  -webkit-transform: translateY(-130px); transform: translateY(-130px);
+  -webkit-transition: -webkit-transform var(--t-menu) var(--ease), opacity var(--t-menu) var(--ease);
+  transition: transform var(--t-menu) var(--ease), opacity var(--t-menu) var(--ease);
+}
+#browse.menu #menubar { opacity: 1; -webkit-transform: translateY(0); transform: translateY(0); }
+.mb-tile {
+  display: inline-block; margin-right: 16px; padding: 0 34px;
+  height: 64px; line-height: 64px; border-radius: 32px;
+  font-size: 28px; color: var(--dim);
+  background: rgba(31, 34, 51, .7);
+  border: 1px solid rgba(255, 255, 255, .12);
+}
+.mb-tile.on { color: var(--fg); border: 3px solid #fff; line-height: 58px; padding: 0 32px; }
+
+#masthead, #viewport {
+  -webkit-transition: -webkit-transform var(--t-menu) var(--ease);
+  transition: transform var(--t-menu) var(--ease);
+}
+#browse.menu #masthead, #browse.menu #viewport {
+  -webkit-transform: translateY(130px); transform: translateY(130px);
+}
+
+/* A chevron above the first row: up opens the menu. */
+#menu-hint {
+  position: absolute; top: 20px; left: 936px; width: 20px; height: 20px;
+  border-left: 3px solid var(--dim); border-top: 3px solid var(--dim);
+  -webkit-transform: rotate(45deg); transform: rotate(45deg);
+}
+#browse.dense #menu-hint, #browse.menu #menu-hint { display: none; }
