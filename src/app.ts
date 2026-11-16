@@ -22,6 +22,7 @@ import * as detail from './screen/detail';
 import * as showpage from './screen/showpage';
 import * as player from './screen/player';
 import { must } from './view/dom';
+import * as hud from './view/hud';
 import * as rail from './view/rail';
 
 /* ---------- opening something ----------
@@ -356,6 +357,23 @@ function playNext(episode: PlexItem, back: () => void) {
 
 /* ---------- keys ---------- */
 
+const BLUE = 406;
+let lastArrowAt = 0;
+let settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+/* A held or rapid arrow jumps instead of animating, until 160 ms after the last. */
+function skipOnRepeat(event: KeyboardEvent) {
+  if (event.keyCode < KEY.LEFT || event.keyCode > KEY.DOWN || !hud.skipOnRepeat()) return;
+  const now = Date.now();
+  const fast = event.repeat || now - lastArrowAt < 110;
+  lastArrowAt = now;
+  if (!fast) return;
+  const browseElement = must('browse');
+  browseElement.classList.add('no-anim');
+  if (settleTimer) clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => browseElement.classList.remove('no-anim'), 160);
+}
+
 function onKey(event: KeyboardEvent) {
   const code = event.keyCode;
 
@@ -373,6 +391,20 @@ function onKey(event: KeyboardEvent) {
       event.preventDefault();
     }
     return;
+  }
+
+  hud.noteKey();
+  if (view() === 'browse') {
+    if (code === BLUE) {
+      hud.toggle();
+      event.preventDefault();
+      return;
+    }
+    if (hud.visible() && hud.key(code)) {
+      event.preventDefault();
+      return;
+    }
+    skipOnRepeat(event);
   }
 
   if (code === KEY.YELLOW && hasToken()) {

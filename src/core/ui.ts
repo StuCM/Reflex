@@ -43,10 +43,29 @@ export function isBack(code: number): boolean {
   return code === KEY.BACK || code === KEY.ESC || code === KEY.BACKSPACE;
 }
 
+/* The v2 background sits behind these only once their scrims are v2 too. */
+const BARE = ['detail', 'show', 'player'];
+
 export function show(name: string): void {
   current = name;
+  document.body.classList.toggle('no-bg', BARE.indexOf(name) >= 0);
   VIEWS.forEach((each) => {
     views[each]?.classList.toggle('hidden', each !== name);
+  });
+}
+
+const GLOW_SHIFTS = [
+  ['g1', -90, 30],
+  ['g2', 70, -40],
+  ['g3', -50, 50],
+] as const;
+
+/* Moves the background glows to page `index`; the CSS transition does the glide. */
+export function setPage(index: number): void {
+  GLOW_SHIFTS.forEach(([id, across, down]) => {
+    const style = must(id).style;
+    style.setProperty('--gx', `${across * index}px`);
+    style.setProperty('--gy', `${down * index}px`);
   });
 }
 

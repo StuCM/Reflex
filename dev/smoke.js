@@ -47,6 +47,7 @@ const AREAS = [
   'detail',
   'player',
   'deck',
+  'shell',
 ];
 
 const args = process.argv.slice(2);

@@ -2,6 +2,7 @@
 import { tmdbId } from '../api/plex/library';
 import * as art from '../data/art';
 import { railSub, railTitle } from '../rules/labels';
+import { heroHold } from './hud';
 
 function must(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -19,10 +20,6 @@ const castElement = must('mh-cast');
    picture is written into the other and faded up over it. */
 const layers = [must('hero-art-a'), must('hero-art-b')];
 let shown = 0;
-
-/* Long enough that sweeping a row never starts a full-screen image, short
-   enough that a deliberate step still feels answered. */
-const HOLD = 420;
 
 let timer: ReturnType<typeof setTimeout> | null = null;
 let wanted: PlexItem | null = null;
@@ -59,7 +56,7 @@ function paintArt(): void {
 export function showArt(item: PlexItem | null): void {
   wanted = item;
   if (timer) clearTimeout(timer);
-  timer = setTimeout(paintArt, HOLD);
+  timer = setTimeout(paintArt, heroHold());
 }
 
 /* The description and the top of the billing, out of the one TMDB request the
