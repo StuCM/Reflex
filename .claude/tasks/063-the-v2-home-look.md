@@ -20,6 +20,8 @@ files:
   - dev/smoke/sections.js
   - dev/smoke/shell.js
   - css/base.css
+  - dev/smoke.js
+  - src/data/art.ts
 ---
 
 # Home looks like v2: smaller posters that grow on focus, and a v2 hero
@@ -67,7 +69,11 @@ After 062.
    `--font-body` (Inter) to `css/base.css :root` and use only those in rules,
    never the family names. Stuart, 2026-11-16: "Not 100% on the fonts … this
    may change in the future" — a change must be one line.
-4. Update every smoke size/position assertion to the new numbers (positive
+4. `dev/smoke.js:401`: the `tilePosters` collector matches `width=209`; make it
+   follow the new tile width, and give the sweep step in `dev/smoke/browse.js`
+   (~323) a non-zero control so it cannot pass on a count of nothing.
+   `src/data/art.ts:11` comment names the old size; update it.
+5. Update every smoke size/position assertion to the new numbers (positive
    values), and add one: the focused tile's rendered box is ~210×315 and the
    next row's top is on screen.
 
