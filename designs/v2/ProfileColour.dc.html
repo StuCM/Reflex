@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile colours, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: {{c.color}}; padding-bottom: 8px; border-bottom: 3px solid {{c.line}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 150px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 84px; line-height: 1; letter-spacing: -1px; text-transform: uppercase">Profile colours</div>
+
+<div style="position: absolute; left: 96px; top: 300px; width: 700px">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}; margin-bottom: 10px">Profile</div>
+<sc-for list="{{profiles}}" as="r" hint-placeholder-count="3">
+<div style="height: 88px; box-sizing: border-box; padding: 0 24px; border-radius: 22px; background: {{r.bg}}; box-shadow: {{r.ring}}; display: flex; align-items: center; gap: 22px; margin-bottom: 8px">
+<div style="width: 36px; height: 36px; border-radius: 50%; background: {{r.dot}}"></div>
+<div style="font-size: 32px; font-weight: 600; flex: 1">{{r.name}}</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.6)">{{r.colour}}</div>
+</div>
+</sc-for>
+<div style="height: 88px; box-sizing: border-box; padding: 0 24px; margin-top: 32px; border-top: 1px solid rgba(255,255,255,0.14); display: flex; align-items: center">
+<div style="flex: 1">
+<div style="font-size: 30px; font-weight: 600">Tint the background</div>
+<div style="font-size: 22px; color: rgba(255,255,255,0.55); margin-top: 2px">Adds a hint of the colour to the glow</div>
+</div>
+<div style="font-size: 28px; font-weight: 600; color: rgba(255,255,255,0.75)">Off</div>
+</div>
+</div>
+
+<div style="position: absolute; left: 900px; top: 300px; width: 924px">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}; margin-bottom: 22px">Colour for Stu</div>
+<div style="display: flex; flex-wrap: wrap; width: 800px">
+<sc-for list="{{swatches}}" as="s" hint-placeholder-count="8">
+<div style="width: 200px; height: 140px; display: flex; flex-direction: column; align-items: center">
+<div style="width: 96px; height: 96px; border-radius: 50%; background: {{s.c}}; box-shadow: {{s.ring}}; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{s.on}}" hint-placeholder-val="{{false}}">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1A1030" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</sc-if>
+</div>
+<div style="font-size: 22px; margin-top: 10px; color: {{s.nameColor}}">{{s.name}}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top: 44px; width: 800px; box-sizing: border-box; padding: 32px 40px; border-radius: 32px; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.7); border: 1px solid rgba(255,255,255,0.2); box-shadow: inset 0 1px 0 rgba(255,255,255,0.3)">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">Preview</div>
+<div style="display: flex; align-items: center; gap: 24px; margin-top: 18px">
+<div style="width: 64px; height: 64px; border-radius: 50%; box-sizing: border-box; border: 4px solid {{accent}}; background: linear-gradient(135deg, #4F7FD0, #26407E); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px">S</div>
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">Resume &middot; 48 min left</div>
+<div style="padding: 4px 16px; border-radius: 999px; border: 1px solid {{accent}}; font-size: 22px; font-weight: 600; color: {{accent}}">Ends 21:43</div>
+</div>
+<div style="position: relative; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.28); margin-top: 28px">
+<div style="position: absolute; left: 0; top: 0; width: 41%; height: 12px; border-radius: 6px; background: {{accent}}"></div>
+<div style="position: absolute; left: 41%; top: -10px; margin-left: -16px; width: 32px; height: 32px; border-radius: 50%; background: #FFFFFF"></div>
+</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
+    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+    const cats = labels.map((label) => ({ label: label, color: 'rgba(255,255,255,0.42)', line: 'transparent' }));
+    const sw = [['Peach', '#F4C8B6'], ['Periwinkle', '#AEBBF0'], ['Mint', '#8FD9C4'], ['Sage', '#B9D69A'], ['Rose', '#F0A6C0'], ['Lilac', '#CDB0F0'], ['Sky', '#8CCBF0'], ['Coral', '#F5A28A']];
+    const accent = '#AEBBF0';
+    const swatches = sw.map((s, i) => {
+      const on = i === 1;
+      return { c: s[1], name: s[0], on: on, ring: on ? '0 0 0 4px rgba(255,255,255,0.95), 0 14px 34px rgba(0,0,0,0.5)' : '0 8px 20px rgba(0,0,0,0.35)', nameColor: on ? '#FFFFFF' : 'rgba(255,255,255,0.6)' };
+    });
+    const profiles = [
+      { name: 'Together', dot: '#F4C8B6', colour: 'Peach', bg: 'transparent', ring: 'none' },
+      { name: 'Stu', dot: '#AEBBF0', colour: 'Periwinkle', bg: 'rgba(255,255,255,0.16)', ring: '0 0 0 3px rgba(255,255,255,0.95)' },
+      { name: 'Naoise', dot: '#8FD9C4', colour: 'Mint', bg: 'transparent', ring: 'none' }
+    ];
+    return { bg: bg, accent: accent, cats: cats, swatches: swatches, profiles: profiles };
+  }
+}
+</script>
+</body>
+</html>

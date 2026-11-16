@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Collections, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: {{c.color}}; padding-bottom: 8px; border-bottom: 3px solid {{c.line}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+
+
+<div style="position: absolute; left: 96px; top: 150px; display: flex; align-items: center; gap: 56px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px; color: {{t.color}}; padding-bottom: 8px; border-bottom: 4px solid {{t.line}}">{{t.label}}</div>
+</sc-for>
+</div>
+<sc-if value="{{isYours}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; right: 96px; top: 162px; display: flex; align-items: center; gap: 14px; font-size: 24px; color: rgba(255,255,255,0.7)"><span style="width: 22px; height: 22px; border-radius: 50%; background: #F5C84C"></span>New list</div>
+</sc-if>
+
+<sc-for list="{{tiles}}" as="k" hint-placeholder-count="10">
+<div style="position: absolute; left: {{k.left}}px; top: {{k.top}}px; width: 320px; height: 380px; box-sizing: border-box; border-radius: 32px; background: {{k.bg}}; border: 1px solid rgba(255,255,255,0.26); box-shadow: {{k.ring}}; overflow: hidden">
+<sc-if value="{{k.isNew}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-size: 30px; font-weight: 600">
+<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14 M5 12h14"></path></svg>
+New list
+</div>
+</sc-if>
+<sc-if value="{{k.hasCover}}" hint-placeholder-val="{{true}}">
+<div>
+<div style="position: absolute; left: 36px; top: 34px; width: 250px; height: 170px">
+<sc-for list="{{k.fan}}" as="f" hint-placeholder-count="3">
+<div style="position: absolute; left: {{f.left}}px; top: {{f.top}}px; width: 113px; height: 170px; border-radius: 10px; overflow: hidden; background: {{f.bg}}; box-shadow: 0 8px 18px rgba(0,0,0,0.45)">
+<div style="position: absolute; left: {{f.sx}}; top: {{f.sy}}; width: {{f.ss}}; height: {{f.ssh}}; border-radius: 50%; background: {{f.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 32px; right: 32px; top: 236px">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; line-height: 1.1">{{k.name}}</div>
+<div style="font-size: 24px; color: {{k.subColor}}; margin-top: 8px">{{k.sub}}</div>
+</div>
+<sc-if value="{{k.hasTag}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; right: 22px; top: 22px; padding: 4px 14px; border-radius: 999px; background: rgba(0,0,0,0.45); font-size: 20px; font-weight: 600; color: {{accent}}">{{k.tag}}</div>
+</sc-if>
+<sc-if value="{{k.hasPct}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 32px; right: 32px; bottom: 26px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.25)"><div style="width: {{k.pct}}; height: 100%; border-radius: 3px; background: {{accent}}"></div></div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</sc-for>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["yours","curated"],"default":"yours"},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = '#F4C8B6';
+    const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
+    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+    const cats = labels.map((label, i) => ({
+      label: label,
+      color: i === 3 ? '#FFFFFF' : 'rgba(255,255,255,0.42)',
+      line: i === 3 ? accent : 'transparent'
+    }));
+    const art = [
+      { bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { bg: 'linear-gradient(170deg, #2A3F8F 0%, #141F52 55%, #080C24 100%)', sc: 'radial-gradient(circle at 35% 35%, #B8D0FF, #5A82E0)', sx: '20%', sy: '22%', ss: '60%', ssh: '40%' },
+      { bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)', sx: '54%', sy: '8%', ss: '30%', ssh: '20%' },
+      { bg: 'linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)', sx: '16%', sy: '16%', ss: '44%', ssh: '29%' },
+      { bg: 'linear-gradient(170deg, #A6D17E 0%, #3F7A3A 50%, #10260F 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF8C8, #F2E58A)', sx: '40%', sy: '14%', ss: '40%', ssh: '27%' },
+      { bg: 'linear-gradient(170deg, #F08A4A 0%, #A8321E 50%, #2A0A06 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE08A, #FFB030)', sx: '22%', sy: '20%', ss: '52%', ssh: '35%' },
+      { bg: 'linear-gradient(170deg, #9ACBEE 0%, #2C5C88 50%, #0A1B2E 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFE6F8)', sx: '50%', sy: '12%', ss: '34%', ssh: '23%' },
+      { bg: 'linear-gradient(170deg, #C9A3E8 0%, #5A3C8C 52%, #1A1030 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #E6D2F8)', sx: '30%', sy: '14%', ss: '42%', ssh: '28%' }
+    ];
+    const fanOf = (a, b, c) => [a, b, c].map((i, n) => Object.assign({}, art[i % art.length], { left: n * 68, top: 0 })).reverse();
+    const tab = this.props.tab === 'curated' ? 'curated' : 'yours';
+    const mk = (name, sub, fan, tag, pct, subColor) => ({ name: name, sub: sub, fan: fan, tag: tag || '', hasTag: !!tag, pct: pct || '0%', hasPct: !!pct, subColor: subColor || 'rgba(255,255,255,0.65)', isNew: false, hasCover: true });
+    const yours = [
+      mk('Watchlist', '23 titles', fanOf(0, 1, 2)),
+      mk('Favourites', '14 titles', fanOf(3, 4, 5)),
+      mk('Film night', '9 titles', fanOf(6, 7, 0)),
+      mk('Slow burns', '312 titles', fanOf(2, 5, 1), 'Smart'),
+      mk('Rainy Sundays', '41 titles', fanOf(7, 3, 4)),
+      mk('With the kids', '58 titles', fanOf(5, 6, 3), 'Smart'),
+      mk('Short films', '17 titles', fanOf(1, 0, 6)),
+      mk('Hidden', '36 titles', fanOf(4, 2, 7))
+    ];
+    const curated = [
+      mk('Thriller', '2,140 titles', fanOf(2, 5, 1), 'Genre'),
+      mk('Drama', '5,312 titles', fanOf(6, 3, 0), 'Genre'),
+      mk('Sci-fi', '1,208 titles', fanOf(1, 7, 4), 'Genre'),
+      mk('Horror', '1,774 titles', fanOf(5, 2, 6), 'Genre'),
+      mk('Comedy', '3,901 titles', fanOf(0, 4, 7), 'Genre'),
+      mk('Saltwater Saga', 'Seen 2 of 5', fanOf(3, 0, 1), 'Franchise', '40%', accent),
+      mk('Lantern Trilogy', 'Seen 0 of 3', fanOf(7, 6, 2), 'Franchise'),
+      mk('Award season', '64 titles', fanOf(4, 1, 5), 'Curated'),
+      mk('Cult classics', '120 titles', fanOf(0, 2, 3), 'Curated')
+    ];
+    const base = tab === 'yours' ? yours.slice() : curated.slice();
+    if (tab === 'yours') base.push({ isNew: true, hasCover: false, name: '', sub: '', fan: [], tag: '', hasTag: false, pct: '0%', hasPct: false, subColor: '' });
+    const out = base.map((t, i) => {
+      const col = i % 5;
+      const row = Math.floor(i / 5);
+      const f = i === 0;
+      return Object.assign({}, t, {
+        left: 96 + col * (320 + 32),
+        top: 250 + row * (380 + 40),
+        bg: f ? 'linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.16)), rgba(44,34,84,0.9)' : 'linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.08)), rgba(22,16,44,0.74)',
+        ring: f ? '0 0 0 3px rgba(255,255,255,0.95), inset 0 1px 0 rgba(255,255,255,0.5), 0 24px 60px rgba(0,0,0,0.5)' : 'inset 0 1px 0 rgba(255,255,255,0.3), 0 12px 30px rgba(0,0,0,0.3)'
+      });
+    });
+    const tabs = [{ label: 'Yours', on: tab === 'yours' }, { label: 'Curated', on: tab === 'curated' }].map((t) => ({
+      label: t.label, color: t.on ? '#FFFFFF' : 'rgba(255,255,255,0.42)', line: t.on ? accent : 'transparent'
+    }));
+    return { bg: bg, accent: accent, cats: cats, tiles: out, tabs: tabs, isYours: tab === 'yours' };
+  }
+}
+</script>
+</body>
+</html>

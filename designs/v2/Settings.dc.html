@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: rgba(255,255,255,0.42); padding-bottom: 8px; border-bottom: 3px solid transparent">{{c}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 150px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 84px; line-height: 1; letter-spacing: -1px; text-transform: uppercase">Settings</div>
+
+<div style="position: absolute; left: 96px; top: 300px; width: 780px">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}; margin-bottom: 10px">General</div>
+<sc-for list="{{general}}" as="r" hint-placeholder-count="5">
+<div style="height: 88px; box-sizing: border-box; padding: 0 20px; border-bottom: 1px solid rgba(255,255,255,0.14); display: flex; align-items: center; border-radius: 16px; background: {{r.bg}}">
+<div style="flex: 1">
+<div style="font-size: 30px; font-weight: 600">{{r.label}}</div>
+<sc-if value="{{r.hasSub}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 22px; color: rgba(255,255,255,0.55); margin-top: 2px">{{r.sub}}</div>
+</sc-if>
+</div>
+<div style="font-size: 28px; font-weight: 600; color: {{r.valColor}}">{{r.value}}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 1000px; top: 300px; width: 824px">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}; margin-bottom: 10px">Recap channels</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.6); margin-bottom: 14px; line-height: 1.4">Searched first when you press Recap. Top of the list wins.</div>
+<sc-for list="{{channels}}" as="r" hint-placeholder-count="2">
+<div style="height: 88px; box-sizing: border-box; padding: 0 20px; border-radius: 16px; background: {{r.bg}}; box-shadow: {{r.ring}}; display: flex; align-items: center; gap: 22px; margin-bottom: 8px">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px; width: 36px; color: {{accent}}">{{r.n}}</div>
+<div style="font-size: 32px; font-weight: 600; flex: 1">{{r.label}}</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.6)">{{r.hint}}</div>
+</div>
+</sc-for>
+<div style="height: 88px; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; font-size: 30px; font-weight: 600; color: {{accent}}">+ Add channel</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = '#F4C8B6';
+    const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
+    const dim = 'rgba(255,255,255,0.75)';
+    const general = [
+      { label: 'Pick a profile on startup', sub: 'Otherwise it opens on Together', value: 'Off', valColor: dim, bg: 'transparent' },
+      { label: 'Default profile', sub: '', value: 'Together', valColor: dim, bg: 'transparent' },
+      { label: 'Back up my data to this TV', sub: 'Saved a few seconds after any change', value: 'On', valColor: '#4CD08A', bg: 'transparent' },
+      { label: 'Profile colours', sub: 'Each profile gets its own accent', value: 'Change', valColor: dim, bg: 'transparent' },
+      { label: 'Last backup', sub: '', value: 'Today 09:12', valColor: dim, bg: 'transparent' },
+      { label: 'Hide titles of unwatched episodes', sub: 'Avoids spoilers on series pages', value: 'On', valColor: '#4CD08A', bg: 'transparent' }
+    ].map((r) => Object.assign({ hasSub: !!r.sub }, r));
+    const channels = [
+      { n: '1', label: 'Man of Recaps', hint: 'Left or Right to reorder', bg: 'rgba(255,255,255,0.16)', ring: '0 0 0 3px rgba(255,255,255,0.95)' },
+      { n: '2', label: 'Add a second choice', hint: '', bg: 'transparent', ring: 'none' }
+    ];
+    return { bg: bg, accent: accent, cats: ['Home', 'Movies', 'TV', 'Collections', 'Discover'], general: general, channels: channels };
+  }
+}
+</script>
+</body>
+</html>

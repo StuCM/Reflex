@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Reflex motion lab</title>
+<!--
+REFLEX MOTION LAB  (single file, ES5, no libraries, no CSS grid, no flex gap, no backdrop-filter)
+Built for webOS 4 / Chrome 53 (LG B8). Open on the TV and watch the numbers top-left.
+
+REMOTE / KEYBOARD
+  Arrows        move focus (Up on the top row opens the menu, Down closes it)
+  OK / Enter    open the glass modal on the focused poster
+  Back / Esc    close modal, then menu
+  1 or Red      focus style:  scale  >  sliding ring  >  both
+  2 or Green    will-change:  off  >  containers  >  containers + posters
+  3 or Yellow   gradient shift on page change:  on / off
+  4 or Blue     posters per row:  14  >  40  >  120   (DOM stress)
+  5             timing preset:  fast  >  default  >  slow
+  6             poster shadows:  on / off
+  7             hero update:  immediate  >  150 ms debounce
+  8             skip animation on key repeat:  on / off
+  0             reset the stats
+
+WHAT TO LOOK FOR
+  fps          should hold 60 while moving; dips mean the main thread or the compositor is busy
+  worst        slowest frame in the last 2 s (16.7 = perfect, >33 = visible stutter)
+  jank         frames over 25 ms since reset
+  key>frame    ms from key press to the next frame starting (the "loads a sec too late" number)
+  handler      ms spent inside the key handler itself
+Test each toggle with a fast held arrow and note which ones change the numbers.
+-->
+<style>
+html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#fff}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;background:#0B0912;-webkit-transform-origin:0 0;transform-origin:0 0;
+  --fd:130ms;--sd:182ms;--rd:260ms;--md:300ms;--hd:200ms}
+.fast *{-webkit-transition-duration:0ms !important;transition-duration:0ms !important}
+.glow{position:absolute;border-radius:50%;-webkit-transition:-webkit-transform 700ms cubic-bezier(.2,.7,.2,1);transition:transform 700ms cubic-bezier(.2,.7,.2,1)}
+#g1{left:900px;top:-700px;width:2200px;height:1700px;background:radial-gradient(ellipse at center,rgba(154,47,69,0.82),rgba(154,47,69,0) 70%)}
+#g2{left:-900px;top:300px;width:2000px;height:1500px;background:radial-gradient(ellipse at center,rgba(47,91,168,0.62),rgba(47,91,168,0) 70%)}
+#g3{left:1300px;top:500px;width:1500px;height:1100px;background:radial-gradient(ellipse at center,rgba(154,47,69,0.3),rgba(154,47,69,0) 70%)}
+#menu{position:absolute;left:0;top:22px;width:1920px;text-align:center;opacity:0;-webkit-transform:translate3d(0,-130px,0);transform:translate3d(0,-130px,0);
+  -webkit-transition:-webkit-transform var(--md) cubic-bezier(.2,.7,.2,1),opacity var(--md) ease;transition:transform var(--md) cubic-bezier(.2,.7,.2,1),opacity var(--md) ease}
+#menu.open{opacity:1;-webkit-transform:translate3d(0,0,0);transform:translate3d(0,0,0)}
+.tab{display:inline-block;margin:0 24px;padding:14px 34px;border-radius:26px;font-size:30px;font-weight:bold;color:rgba(255,255,255,0.5);
+  background:linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04)),rgba(24,16,46,0.7);border:1px solid rgba(255,255,255,0.14)}
+.tab.on{color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,0.95)}
+#content{position:absolute;left:0;top:0;width:1920px;height:1080px;-webkit-transition:-webkit-transform var(--md) cubic-bezier(.2,.7,.2,1);transition:transform var(--md) cubic-bezier(.2,.7,.2,1)}
+#content.down{-webkit-transform:translate3d(0,130px,0);transform:translate3d(0,130px,0)}
+#hero{position:absolute;left:96px;top:150px;width:1300px;-webkit-transition:-webkit-transform var(--rd) cubic-bezier(.2,.7,.2,1),opacity var(--rd) ease;transition:transform var(--rd) cubic-bezier(.2,.7,.2,1),opacity var(--rd) ease}
+#heroInner{opacity:1;-webkit-transition:opacity var(--hd) ease;transition:opacity var(--hd) ease}
+#heroEyebrow{font-size:24px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#AEBBF0}
+#heroTitle{font-size:92px;font-weight:bold;line-height:1;margin-top:8px;text-transform:uppercase;letter-spacing:-1px}
+#heroMeta{font-size:28px;margin-top:14px;color:rgba(255,255,255,0.78)}
+#heroSyn{font-size:26px;line-height:1.4;margin-top:12px;width:860px;color:rgba(255,255,255,0.8)}
+#rowsWrap{position:absolute;left:0;top:0;width:1920px;height:1080px;-webkit-transition:-webkit-transform var(--rd) cubic-bezier(.2,.7,.2,1),opacity 200ms ease;transition:transform var(--rd) cubic-bezier(.2,.7,.2,1),opacity 200ms ease}
+.rowLabel{position:absolute;left:96px;font-size:34px;font-weight:bold}
+.row{position:absolute;left:96px;width:30000px;height:320px;-webkit-transition:-webkit-transform var(--sd) cubic-bezier(.2,.7,.2,1);transition:transform var(--sd) cubic-bezier(.2,.7,.2,1)}
+.poster{position:absolute;top:0;width:176px;height:264px;border-radius:14px;overflow:hidden;
+  -webkit-transition:-webkit-transform var(--fd) cubic-bezier(.2,.7,.2,1);transition:transform var(--fd) cubic-bezier(.2,.7,.2,1)}
+.shadows .poster{box-shadow:0 10px 24px rgba(0,0,0,0.35)}
+.poster .t{position:absolute;left:14px;right:14px;bottom:16px;font-size:20px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;line-height:1.05}
+.poster .sun{position:absolute;border-radius:50%}
+.poster .shade{position:absolute;left:0;right:0;bottom:0;height:40%;background:linear-gradient(0deg,rgba(0,0,0,0.6),rgba(0,0,0,0))}
+.mode-scale .poster.f,.mode-both .poster.f{-webkit-transform:scale(1.15);transform:scale(1.15);z-index:2}
+.nofocus .poster.f{-webkit-transform:none !important;transform:none !important}
+.wc2 .poster{will-change:transform}
+.wc1 #hero,.wc2 #hero,.wc1 .row,.wc1 #ring,.wc1 #content,.wc1 #rowsWrap,.wc1 #menu,.wc1 .glow,.wc2 .row,.wc2 #ring,.wc2 #content,.wc2 #rowsWrap,.wc2 #menu,.wc2 .glow{will-change:transform}
+#ring{position:absolute;left:0;top:0;width:182px;height:270px;border-radius:17px;box-sizing:border-box;border:3px solid rgba(255,255,255,0.95);
+  box-shadow:0 20px 50px rgba(0,0,0,0.55);opacity:0;-webkit-transition:-webkit-transform var(--fd) cubic-bezier(.2,.7,.2,1),opacity 120ms ease;transition:transform var(--fd) cubic-bezier(.2,.7,.2,1),opacity 120ms ease}
+.mode-ring #ring,.mode-both #ring{opacity:1}
+.nofocus #ring,.modalOpen #ring{opacity:0 !important}
+#overlay{position:absolute;left:0;top:0;width:1920px;height:1080px;background:rgba(8,5,18,0.78);opacity:0;pointer-events:none;-webkit-transition:opacity var(--hd) ease;transition:opacity var(--hd) ease}
+#modal{position:absolute;left:560px;top:260px;width:800px;box-sizing:border-box;padding:44px 52px;border-radius:36px;opacity:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04)),rgba(24,16,46,0.96);border:1px solid rgba(255,255,255,0.26);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 40px 100px rgba(0,0,0,0.55);-webkit-transform:scale(0.96);transform:scale(0.96);
+  -webkit-transition:-webkit-transform var(--hd) cubic-bezier(.2,.7,.2,1),opacity var(--hd) ease;transition:transform var(--hd) cubic-bezier(.2,.7,.2,1),opacity var(--hd) ease}
+.modalOpen #overlay{opacity:1}
+.modalOpen #modal{opacity:1;-webkit-transform:scale(1);transform:scale(1)}
+#modal .h{font-size:44px;font-weight:bold}
+#modal .p{font-size:26px;color:rgba(255,255,255,0.7);margin-top:12px}
+#hud{position:absolute;right:24px;top:140px;width:520px;box-sizing:border-box;padding:14px 18px;border-radius:16px;background:rgba(0,0,0,0.55);font-family:Courier New,monospace;font-size:22px;line-height:1.35;z-index:50;white-space:pre}
+#legend{position:absolute;left:24px;bottom:18px;font-size:20px;color:rgba(255,255,255,0.6);z-index:50;white-space:pre;line-height:1.3}
+</style>
+</head>
+<body>
+<div id="stage" class="mode-scale shadows">
+  <div class="glow" id="g1"></div>
+  <div class="glow" id="g2"></div>
+  <div class="glow" id="g3"></div>
+  <div id="content">
+    <div id="hero"><div id="heroInner">
+      <div id="heroEyebrow">Trending</div>
+      <div id="heroTitle">Title</div>
+      <div id="heroMeta">2023 · 15 · 1h 52m</div>
+      <div id="heroSyn">Placeholder synopsis. Two lines of text that change when the focused poster changes, to test the crossfade and the debounce.</div>
+    </div></div>
+    <div id="rowsWrap"></div>
+    <div id="ring"></div>
+  </div>
+  <div id="menu"></div>
+  <div id="overlay"></div>
+  <div id="modal"><div class="h" id="mTitle">Add to list</div><div class="p">Glass modal: translucent gradient, 1px border, inset highlight. No backdrop blur on this TV.</div></div>
+  <div id="hud"></div>
+  <div id="legend"></div>
+</div>
+<script>
+(function () {
+  var PW = 176, PH = 264, STEP = 216, ROWTOP = 540, ROWGAP = 400;
+  var stage = document.getElementById('stage');
+  var content = document.getElementById('content');
+  var rowsWrap = document.getElementById('rowsWrap');
+  var ring = document.getElementById('ring');
+  var menu = document.getElementById('menu');
+  var hudEl = document.getElementById('hud');
+  var legendEl = document.getElementById('legend');
+  var g1 = document.getElementById('g1'), g2 = document.getElementById('g2'), g3 = document.getElementById('g3');
+  var heroOuter = document.getElementById('hero');
+  var heroEl = document.getElementById('heroInner');
+
+  var S = { focus: 0, wc: 0, glow: 1, count: 0, dur: 1, shadow: 1, hero: 1, skip: 1 };
+  var COUNTS = [14, 40, 120];
+  var DURS = [
+    { n: 'fast', fd: 100, rd: 200, md: 240, hd: 150 },
+    { n: 'default', fd: 130, rd: 260, md: 300, hd: 200 },
+    { n: 'slow', fd: 180, rd: 360, md: 420, hd: 280 }
+  ];
+  var FOCUS_NAMES = ['scale', 'sliding ring', 'both'];
+  var WC_NAMES = ['off', 'containers', 'containers + posters'];
+
+  var ART = [
+    ['#F0B070', '#C0553C', '#2A1210', '#FFE8BC'], ['#EBD08F', '#B06C3A', '#2B1608', '#FFF4D6'],
+    ['#2A3F8F', '#141F52', '#080C24', '#B8D0FF'], ['#2B8A93', '#0F3A44', '#04141A', '#F2FFFF'],
+    ['#E2AEB0', '#7A4A64', '#241528', '#FFE8DE'], ['#A6D17E', '#3F7A3A', '#10260F', '#FFF8C8'],
+    ['#F08A4A', '#A8321E', '#2A0A06', '#FFE08A'], ['#9ACBEE', '#2C5C88', '#0A1B2E', '#FFFFFF'],
+    ['#C9A3E8', '#5A3C8C', '#1A1030', '#FFFFFF']
+  ];
+  var WORDS_A = ['Salt', 'Night', 'Harbour', 'Velvet', 'Copper', 'Pale', 'Tin', 'Marrow', 'Lantern', 'Distant', 'Low', 'Last'];
+  var WORDS_B = ['Meridian', 'Ferry', 'Lights', 'Static', 'Sky', 'Orchard', 'Coast', 'Lane', 'Season', 'Weather', 'Water', 'Tide'];
+  var PAGES = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+  var ROWLABELS = ['Trending', 'Top 10', 'Because you watched'];
+
+  var st = { page: 0, row: 0, idx: [0, 0, 0], menuOpen: false, modal: false };
+  var rowEls = [], posterEls = [[], [], []], prevFocused = null;
+
+  function title(page, r, i) {
+    var a = WORDS_A[(i * 7 + r * 3 + page * 5) % WORDS_A.length];
+    var b = WORDS_B[(i * 5 + r * 2 + page * 3) % WORDS_B.length];
+    return a + ' ' + b;
+  }
+  function art(page, r, i) { return ART[(i + r * 2 + page * 3) % ART.length]; }
+
+  function buildMenu() {
+    var h = '';
+    for (var i = 0; i < PAGES.length; i++) h += '<div class="tab" data-i="' + i + '">' + PAGES[i] + '</div>';
+    menu.innerHTML = h;
+  }
+  function paintMenu() {
+    var tabs = menu.childNodes;
+    for (var i = 0; i < tabs.length; i++) tabs[i].className = 'tab' + (st.menuOpen && i === st.page ? ' on' : '');
+  }
+
+  function fillPoster(el, page, r, i) {
+    var a = art(page, r, i);
+    el.style.background = 'linear-gradient(170deg,' + a[0] + ' 0%,' + a[1] + ' 50%,' + a[2] + ' 100%)';
+    el.firstChild.style.background = 'radial-gradient(circle at 40% 40%,' + a[3] + ',' + a[0] + ')';
+    el.lastChild.textContent = title(page, r, i);
+  }
+
+  function buildRows() {
+    var n = COUNTS[S.count], r, i, html = '';
+    rowsWrap.innerHTML = '';
+    rowEls = []; posterEls = [[], [], []];
+    for (r = 0; r < 3; r++) {
+      var label = document.createElement('div');
+      label.className = 'rowLabel';
+      label.style.top = (ROWTOP - 70 + r * ROWGAP) + 'px';
+      label.textContent = ROWLABELS[r];
+      rowsWrap.appendChild(label);
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.style.top = (ROWTOP + r * ROWGAP) + 'px';
+      for (i = 0; i < n; i++) {
+        var p = document.createElement('div');
+        p.className = 'poster';
+        p.style.left = (i * STEP) + 'px';
+        var sun = document.createElement('div');
+        sun.className = 'sun';
+        sun.style.left = '26%'; sun.style.top = '12%'; sun.style.width = '46%'; sun.style.height = '30%';
+        var shade = document.createElement('div');
+        shade.className = 'shade';
+        var t = document.createElement('div');
+        t.className = 't';
+        p.appendChild(sun); p.appendChild(shade); p.appendChild(t);
+        fillPoster(p, st.page, r, i);
+        row.appendChild(p);
+        posterEls[r].push(p);
+      }
+      rowsWrap.appendChild(row);
+      rowEls.push(row);
+      if (st.idx[r] >= n) st.idx[r] = n - 1;
+    }
+    prevFocused = null;
+    layout();
+  }
+
+  function repaintPage() {
+    for (var r = 0; r < 3; r++) for (var i = 0; i < posterEls[r].length; i++) fillPoster(posterEls[r][i], st.page, r, i);
+  }
+
+  function layout() {
+    var r, offset;
+    for (r = 0; r < 3; r++) {
+      offset = Math.max(0, st.idx[r] - 2) * STEP;
+      rowEls[r].style.webkitTransform = rowEls[r].style.transform = 'translate3d(' + (-offset) + 'px,0,0)';
+    }
+    rowsWrap.style.webkitTransform = rowsWrap.style.transform = 'translate3d(0,' + (-st.row * ROWGAP) + 'px,0)';
+    heroOuter.style.webkitTransform = heroOuter.style.transform = 'translate3d(0,' + (-st.row * ROWGAP) + 'px,0)';
+    heroOuter.style.opacity = st.row > 0 ? 0 : 1;
+    var fx = 96 + st.idx[st.row] * STEP - Math.max(0, st.idx[st.row] - 2) * STEP;
+    ring.style.webkitTransform = ring.style.transform = 'translate3d(' + (fx - 3) + 'px,' + (ROWTOP - 3) + 'px,0)';
+    var fe = posterEls[st.row][st.idx[st.row]];
+    if (prevFocused && prevFocused !== fe) prevFocused.className = 'poster';
+    if (fe) fe.className = 'poster f';
+    prevFocused = fe;
+  }
+
+  var heroTimer = null, heroSwapTimer = null;
+  function setHero() {
+    var r = st.row, i = st.idx[r], a = art(st.page, r, i);
+    document.getElementById('heroTitle').textContent = title(st.page, r, i);
+    document.getElementById('heroEyebrow').textContent = ROWLABELS[r] + ' · ' + PAGES[st.page];
+    document.getElementById('heroMeta').textContent = (2015 + ((i * 3 + r) % 11)) + ' · 15 · 1h ' + (20 + ((i * 7) % 40)) + 'm · ★ ' + (6 + ((i * 3) % 30) / 10).toFixed(1);
+    heroEl.style.opacity = 1;
+  }
+  function updateHero() {
+    if (heroTimer) { clearTimeout(heroTimer); heroTimer = null; }
+    if (heroSwapTimer) { clearTimeout(heroSwapTimer); heroSwapTimer = null; }
+    var go = function () {
+      heroEl.style.opacity = 0;
+      heroSwapTimer = setTimeout(setHero, 70);
+    };
+    if (S.hero) heroTimer = setTimeout(go, 150); else go();
+  }
+
+  function applyClasses() {
+    var c = ['mode-' + (S.focus === 0 ? 'scale' : S.focus === 1 ? 'ring' : 'both')];
+    if (S.wc === 1) c.push('wc1');
+    if (S.wc === 2) c.push('wc2');
+    if (S.shadow) c.push('shadows');
+    if (st.menuOpen) c.push('nofocus');
+    if (st.modal) c.push('modalOpen');
+    if (fastOn) c.push('fast');
+    stage.className = c.join(' ');
+    content.className = st.menuOpen ? 'down' : '';
+    menu.className = st.menuOpen ? 'open' : '';
+    var d = DURS[S.dur];
+    stage.style.setProperty('--fd', d.fd + 'ms');
+    stage.style.setProperty('--sd', Math.round(d.fd * 1.4) + 'ms');
+    stage.style.setProperty('--rd', d.rd + 'ms');
+    stage.style.setProperty('--md', d.md + 'ms');
+    stage.style.setProperty('--hd', d.hd + 'ms');
+    paintMenu();
+  }
+
+  function shiftGlow() {
+    var p = st.page;
+    if (S.glow) {
+      g1.style.webkitTransform = g1.style.transform = 'translate3d(' + (-p * 90) + 'px,' + (p * 30) + 'px,0)';
+      g2.style.webkitTransform = g2.style.transform = 'translate3d(' + (p * 70) + 'px,' + (-p * 40) + 'px,0)';
+      g3.style.webkitTransform = g3.style.transform = 'translate3d(' + (-p * 50) + 'px,' + (p * 50) + 'px,0)';
+    } else {
+      g1.style.webkitTransform = g1.style.transform = 'none';
+      g2.style.webkitTransform = g2.style.transform = 'none';
+      g3.style.webkitTransform = g3.style.transform = 'none';
+    }
+  }
+
+  function changePage(dir) {
+    var np = st.page + dir;
+    if (np < 0 || np > PAGES.length - 1) return;
+    st.page = np;
+    paintMenu();
+    shiftGlow();
+    rowsWrap.style.opacity = 0;
+    setTimeout(function () {
+      repaintPage();
+      setHero();
+      rowsWrap.style.opacity = 1;
+    }, 130);
+  }
+
+  function render() { applyClasses(); layout(); updateHero(); }
+
+  /* ---------- stats ---------- */
+  var frames = [], worst = 0, jank = 0, lastT = 0, keyT = 0, kfSum = 0, kfN = 0, hSum = 0, hN = 0, skipped = 0, lastHud = 0;
+  function tick(t) {
+    if (lastT) {
+      var dt = t - lastT;
+      frames.push({ t: t, dt: dt });
+      if (dt > 25) jank++;
+      while (frames.length && t - frames[0].t > 2000) frames.shift();
+    }
+    lastT = t;
+    if (keyT) { kfSum += (performance.now() - keyT); kfN++; keyT = 0; }
+    if (t - lastHud > 500) { lastHud = t; paintHud(); }
+    requestAnimationFrame(tick);
+  }
+  function paintHud() {
+    var n = 0, w = 0, i, cutoff = lastT - 1000;
+    for (i = 0; i < frames.length; i++) {
+      if (frames[i].t > cutoff) n++;
+      if (frames[i].dt > w) w = frames[i].dt;
+    }
+    var d = DURS[S.dur];
+    hudEl.textContent =
+      'fps ' + n + '   worst ' + w.toFixed(1) + ' ms   jank ' + jank + '\n' +
+      'key>frame ' + (kfN ? (kfSum / kfN).toFixed(1) : '-') + ' ms   handler ' + (hN ? (hSum / hN).toFixed(2) : '-') + ' ms\n' +
+      'skipped on repeat ' + skipped + '\n' +
+      '1 focus ' + FOCUS_NAMES[S.focus] + '\n' +
+      '2 will-change ' + WC_NAMES[S.wc] + '\n' +
+      '3 gradient shift ' + (S.glow ? 'on' : 'off') + '\n' +
+      '4 posters/row ' + COUNTS[S.count] + '\n' +
+      '5 timing ' + d.n + ' (' + d.fd + '/' + d.rd + '/' + d.md + ')\n' +
+      '6 shadows ' + (S.shadow ? 'on' : 'off') + '   7 hero ' + (S.hero ? '150ms debounce' : 'immediate') + '\n' +
+      '8 skip on repeat ' + (S.skip ? 'on' : 'off');
+  }
+  legendEl.textContent = 'Arrows move   OK modal   Back close   1-8 toggles (or Red/Green/Yellow/Blue = 1-4)   0 reset stats';
+
+  /* ---------- input ---------- */
+  var fastOn = false, fastTimer = null, lastKeyAt = 0;
+  function markFast() {
+    if (!S.skip) return;
+    skipped++;
+    if (!fastOn) { fastOn = true; stage.className += ' fast'; }
+    if (fastTimer) clearTimeout(fastTimer);
+    fastTimer = setTimeout(function () {
+      fastOn = false;
+      stage.className = stage.className.replace(/ ?fast/g, '');
+    }, 160);
+  }
+
+  function move(dx, dy) {
+    var r = st.row, n = COUNTS[S.count];
+    if (st.menuOpen) {
+      if (dx) changePage(dx);
+      if (dy > 0) { st.menuOpen = false; render(); }
+      return;
+    }
+    if (dx) {
+      var ni = st.idx[r] + dx;
+      if (ni < 0 || ni > n - 1) return;
+      st.idx[r] = ni;
+      layout();
+      updateHero();
+    } else if (dy) {
+      var nr = r + dy;
+      if (nr < 0) { st.menuOpen = true; applyClasses(); return; }
+      if (nr > 2) return;
+      st.row = nr;
+      layout();
+      updateHero();
+    }
+  }
+
+  function cycle(k, max) { S[k] = (S[k] + 1) % max; }
+
+  document.addEventListener('keydown', function (e) {
+    var t0 = performance.now();
+    var k = e.keyCode, now = t0, handled = true;
+    var fast = e.repeat || (now - lastKeyAt) < 110;
+    lastKeyAt = now;
+    if (k >= 37 && k <= 40) {
+      if (fast) markFast();
+      keyT = performance.now();
+      if (st.modal) { handled = true; }
+      else if (k === 37) move(-1, 0);
+      else if (k === 39) move(1, 0);
+      else if (k === 38) move(0, -1);
+      else move(0, 1);
+    } else if (k === 13) {
+      if (!st.menuOpen && !st.modal) { st.modal = true; document.getElementById('mTitle').textContent = title(st.page, st.row, st.idx[st.row]); applyClasses(); }
+    } else if (k === 461 || k === 27 || k === 8) {
+      if (st.modal) { st.modal = false; applyClasses(); }
+      else if (st.menuOpen) { st.menuOpen = false; applyClasses(); }
+    } else if (k === 49 || k === 403) { cycle('focus', 3); render(); }
+    else if (k === 50 || k === 404) { cycle('wc', 3); applyClasses(); }
+    else if (k === 51 || k === 405) { cycle('glow', 2); shiftGlow(); }
+    else if (k === 52 || k === 406) { cycle('count', 3); buildRows(); applyClasses(); }
+    else if (k === 53) { cycle('dur', 3); applyClasses(); }
+    else if (k === 54) { cycle('shadow', 2); applyClasses(); }
+    else if (k === 55) { cycle('hero', 2); }
+    else if (k === 56) { cycle('skip', 2); }
+    else if (k === 48) { frames = []; jank = 0; kfSum = kfN = hSum = hN = skipped = 0; }
+    else handled = false;
+    if (handled) e.preventDefault();
+    hSum += performance.now() - t0; hN++;
+  }, false);
+
+  /* ---------- fit to window ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.webkitTransform = stage.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit, false);
+
+  buildMenu();
+  buildRows();
+  applyClasses();
+  shiftGlow();
+  setHero();
+  fit();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

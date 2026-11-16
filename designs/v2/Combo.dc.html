@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mantis home, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{t.bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+
+<sc-if value="{{showCats}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: {{c.color}}; padding-bottom: 8px; border-bottom: 3px solid {{c.line}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showHero}}" hint-placeholder-val="{{true}}">
+<div>
+
+<div style="position: absolute; left: 96px; top: 390px; width: 1200px">
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{t.accent}}">Continue watching · S2 · E4</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 112px; line-height: 1; letter-spacing: -1px; text-transform: uppercase; margin-top: 10px">Harbour Lights</div>
+<div style="display: flex; align-items: center; gap: 48px; margin-top: 14px">
+<div style="font-size: 28px; color: rgba(255,255,255,0.78)">2024 · 15 · 31 min left</div>
+<sc-if value="{{isChip}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; align-items: center; gap: 32px">
+<div style="display: flex; align-items: center; gap: 12px; font-size: 24px; color: rgba(255,255,255,0.78)"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">OK</span>Resume</div>
+<div style="display: flex; align-items: center; gap: 12px; font-size: 24px; color: rgba(255,255,255,0.78)"><span style="width: 22px; height: 22px; border-radius: 50%; background: #F5C84C"></span>Add to list</div>
+</div>
+</sc-if>
+</div>
+<div style="font-size: 30px; line-height: 1.4; margin-top: 10px; width: 780px">[Episode synopsis from TMDB, two lines at most.]</div>
+</div>
+
+<sc-if value="{{isLegend}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 1400px; top: 420px; display: flex; flex-direction: column; gap: 20px; font-size: 26px; color: rgba(255,255,255,0.62)">
+<div style="display: flex; align-items: center; gap: 16px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600; font-size: 24px">OK</span>Resume</div>
+<div style="display: flex; align-items: center; gap: 16px"><span style="width: 24px; height: 24px; border-radius: 50%; background: #4CD08A; margin: 0 18px 0 8px"></span>Watchlist</div>
+<div style="display: flex; align-items: center; gap: 16px; color: #FFFFFF; font-weight: 600"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F5C84C; margin: 0 18px 0 8px"></span>Add to list</div>
+<div style="display: flex; align-items: center; gap: 16px"><span style="width: 24px; height: 24px; border-radius: 50%; background: #FF5A5A; margin: 0 18px 0 8px"></span>Mark watched</div>
+<div style="display: flex; align-items: center; gap: 16px"><span style="width: 24px; height: 24px; border-radius: 50%; background: #5AA0FF; margin: 0 18px 0 8px"></span>Search</div>
+</div>
+</sc-if>
+
+<div style="position: absolute; left: 96px; top: 724px; height: 315px; display: flex; gap: 26px; align-items: flex-end">
+<sc-for list="{{tray}}" as="p" hint-placeholder-count="8">
+<div style="width: {{p.w}}px; height: {{p.h}}px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{p.bg}}; box-shadow: {{p.ring}}">
+<div style="position: absolute; left: {{p.sx}}; top: {{p.sy}}; width: {{p.ss}}; height: {{p.ssh}}; border-radius: 50%; background: {{p.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 46%; background: rgba(10,8,24,0.5); -webkit-clip-path: polygon(0 60%, 22% 36%, 40% 58%, 62% 28%, 82% 54%, 100% 40%, 100% 100%, 0 100%); clip-path: polygon(0 60%, 22% 36%, 40% 58%, 62% 28%, 82% 54%, 100% 40%, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 38%; background: rgba(5,4,16,0.62); -webkit-clip-path: polygon(0 58%, 20% 40%, 44% 62%, 70% 36%, 100% 58%, 100% 100%, 0 100%); clip-path: polygon(0 58%, 20% 40%, 44% 62%, 70% 36%, 100% 58%, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+<div style="position: absolute; left: 14px; right: 14px; bottom: 16px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: {{p.fs}}px; letter-spacing: 2px; text-transform: uppercase; line-height: 1.05; color: #FFFFFF">{{p.title}}</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: {{p.barH}}; background: rgba(255,255,255,0.3)"><div style="width: {{p.pct}}; height: 100%; background: #FFFFFF"></div></div>
+<sc-if value="{{p.hasBadge}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; right: 12px; top: 12px; width: 48px; height: 48px; border-radius: 50%; background: #F5C84C; box-shadow: 0 6px 16px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2A1A00" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14 M5 12h14"></path></svg>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{isMenu}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 96px; top: 220px; height: 220px; display: flex; gap: 28px; align-items: center">
+<sc-for list="{{tiles}}" as="k" hint-placeholder-count="9">
+<button type="button" style="width: {{k.w}}px; height: {{k.w}}px; flex: none; padding: 0; font: inherit; box-sizing: border-box; border-radius: {{k.r}}px; background: {{k.bg}}; border: {{t.border}}; box-shadow: {{k.ring}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #FFFFFF; font-size: {{k.fs}}px; font-weight: 600">
+<svg width="{{k.icon}}" height="{{k.icon}}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{k.d}}"></path></svg>
+<span>{{k.label}}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 0; top: 486px; width: 1920px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 26px; font-weight: 600; color: rgba(255,255,255,0.55)">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+<span>Continue watching</span>
+</div>
+
+<div style="position: absolute; left: 96px; top: 724px; height: 315px; display: flex; gap: 26px; align-items: flex-end; opacity: 0.4">
+<sc-for list="{{dimTray}}" as="p" hint-placeholder-count="8">
+<div style="width: 176px; height: 264px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{p.bg}}">
+<div style="position: absolute; left: {{p.sx}}; top: {{p.sy}}; width: {{p.ss}}; height: {{p.ssh}}; border-radius: 50%; background: {{p.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isModal}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(8,5,18,0.78)"></div>
+<div style="position: absolute; left: 580px; top: 230px; width: 760px; box-sizing: border-box; padding: 44px 48px; border-radius: 36px; background: {{t.modalGlass}}; border: {{t.border}}; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 40px 100px rgba(0,0,0,0.55)">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px">Add to list</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.7); margin-top: 4px">Harbour Lights</div>
+<div style="margin-top: 28px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{modalRows}}" as="r" hint-placeholder-count="4">
+<div style="height: 76px; box-sizing: border-box; padding: 0 20px; border-radius: 18px; background: {{r.bg}}; display: flex; align-items: center; gap: 20px">
+<div style="width: 36px; height: 36px; border-radius: 50%; box-sizing: border-box; border: {{r.box}}; background: {{r.fill}}; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{r.checked}}" hint-placeholder-val="{{false}}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1030" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</sc-if>
+</div>
+<div style="font-size: 30px; font-weight: 600; flex: 1">{{r.label}}</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.65)">{{r.right}}</div>
+</div>
+</sc-for>
+</div>
+<div style="margin-top: 16px; height: 76px; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; font-size: 30px; font-weight: 600; color: {{t.accent}}; border-top: 1px solid rgba(255,255,255,0.2)">+ New list</div>
+<div style="display: flex; gap: 32px; margin-top: 20px; font-size: 24px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">OK</span>Toggle</div>
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">Back</span>Done</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["wine","navy"],"default":"wine"},"layout":{"editor":"enum","options":["hero","menu","modal"],"default":"hero"},"cue":{"editor":"enum","options":["chip","legend","badge"],"default":"chip"},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const themes = {
+      wine: {
+        accent: '#F4C8B6',
+        bg: 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912'
+      },
+      navy: {
+        accent: '#A9CBFF',
+        bg: 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(47,91,168,0.8), rgba(47,91,168,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(154,47,69,0.58), rgba(154,47,69,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(47,91,168,0.3), rgba(47,91,168,0) 70%), #0B0912'
+      }
+    };
+    const th = themes[this.props.theme] || themes.wine;
+    const layout = ['hero', 'menu', 'modal'].indexOf(this.props.layout) >= 0 ? this.props.layout : 'hero';
+    const cue = ['chip', 'legend', 'badge'].indexOf(this.props.cue) >= 0 ? this.props.cue : 'chip';
+    const t = {
+      bg: th.bg,
+      accent: th.accent,
+      border: '1px solid rgba(255,255,255,0.26)',
+      modalGlass: 'linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96)'
+    };
+    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+    const activeCat = layout === 'menu' ? 3 : 0;
+    const cats = labels.map((label, i) => ({
+      label: label,
+      color: i === activeCat ? '#FFFFFF' : 'rgba(255,255,255,0.42)',
+      line: i === activeCat ? th.accent : 'transparent'
+    }));
+    const art = [
+      { title: 'Harbour Lights', bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { title: 'The Salt Road', bg: 'linear-gradient(170deg, #EBD08F 0%, #B06C3A 50%, #2B1608 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF4D6, #F0D08A)', sx: '48%', sy: '10%', ss: '36%', ssh: '24%' },
+      { title: 'Quiet Orbit', bg: 'linear-gradient(170deg, #2A3F8F 0%, #141F52 55%, #080C24 100%)', sc: 'radial-gradient(circle at 35% 35%, #B8D0FF, #5A82E0)', sx: '20%', sy: '22%', ss: '60%', ssh: '40%' },
+      { title: 'Night Ferry', bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)', sx: '54%', sy: '8%', ss: '30%', ssh: '20%' },
+      { title: 'Low Tide', bg: 'linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)', sx: '16%', sy: '16%', ss: '44%', ssh: '29%' },
+      { title: 'Paper Kingdoms', bg: 'linear-gradient(170deg, #A6D17E 0%, #3F7A3A 50%, #10260F 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF8C8, #F2E58A)', sx: '40%', sy: '14%', ss: '40%', ssh: '27%' },
+      { title: 'Ash and Ember', bg: 'linear-gradient(170deg, #F08A4A 0%, #A8321E 50%, #2A0A06 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE08A, #FFB030)', sx: '22%', sy: '20%', ss: '52%', ssh: '35%' },
+      { title: 'Cold Meridian', bg: 'linear-gradient(170deg, #9ACBEE 0%, #2C5C88 50%, #0A1B2E 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFE6F8)', sx: '50%', sy: '12%', ss: '34%', ssh: '23%' }
+    ];
+    const pcts = ['62%', '35%', '71%', '18%', '24%', '0%', '0%', '0%'];
+    const tray = art.map((a, i) => {
+      const focus = i === 0;
+      return Object.assign({}, a, {
+        w: focus ? 210 : 176,
+        h: focus ? 315 : 264,
+        fs: focus ? 22 : 18,
+        ring: focus ? '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)' : '0 10px 24px rgba(0,0,0,0.35)',
+        pct: pcts[i],
+        barH: i < 5 ? '6px' : '0px',
+        hasBadge: focus && cue === 'badge'
+      });
+    });
+    const dimTray = art;
+    const defs = [
+      ['Movies', 'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z M10 9l5 3-5 3z'],
+      ['TV', 'M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z M8 21h8 M12 17v4'],
+      ['Collections', 'M8 8h11a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z M4 16V6a2 2 0 0 1 2-2h10'],
+      ['Discover', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M16 8l-2.5 5.5L8 16l2.5-5.5z'],
+      ['Streaming', 'M4 9a12 12 0 0 1 16 0 M7 12.5a8 8 0 0 1 10 0 M10 16a4 4 0 0 1 4 0 M12 19.5h.01'],
+      ['Kids', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8.5 14a4.5 4.5 0 0 0 7 0 M9 9.5h.01 M15 9.5h.01'],
+      ['Search', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M20 20l-4-4'],
+      ['Settings', 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M19 5l-2 2 M7 17l-2 2']
+    ];
+    const tiles = defs.map((d, i) => {
+      const focus = i === 2;
+      return {
+        label: d[0],
+        d: d[1],
+        w: focus ? 220 : 160,
+        r: focus ? 38 : 30,
+        icon: focus ? 76 : 52,
+        fs: focus ? 30 : 24,
+        bg: focus
+          ? 'linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.16)), rgba(44,34,84,0.9)'
+          : 'linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.08)), rgba(22,16,44,0.74)',
+        ring: focus
+          ? '0 0 0 3px rgba(255,255,255,0.95), inset 0 1px 0 rgba(255,255,255,0.5), 0 24px 60px rgba(0,0,0,0.5)'
+          : 'inset 0 1px 0 rgba(255,255,255,0.3), 0 12px 30px rgba(0,0,0,0.3)'
+      };
+    });
+    const modalRows = [
+      { label: 'Watchlist', right: '23', checked: true, bg: 'rgba(255,255,255,0.16)', box: '0 solid transparent', fill: '#FFFFFF' },
+      { label: 'Favourites', right: '14', checked: false, bg: 'transparent', box: '2px solid rgba(255,255,255,0.55)', fill: 'transparent' },
+      { label: 'Film night', right: '9', checked: false, bg: 'transparent', box: '2px solid rgba(255,255,255,0.55)', fill: 'transparent' },
+      { label: 'Slow burns', right: '18', checked: true, bg: 'transparent', box: '0 solid transparent', fill: '#FFFFFF' }
+    ];
+    return {
+      t: t,
+      cats: cats,
+      tray: tray,
+      dimTray: dimTray,
+      tiles: tiles,
+      modalRows: modalRows,
+      showCats: layout !== 'menu',
+      showHero: layout === 'hero' || layout === 'modal',
+      isMenu: layout === 'menu',
+      isModal: layout === 'modal',
+      isChip: cue === 'chip',
+      isLegend: cue === 'legend'
+    };
+  }
+}
+</script>
+</body>
+</html>

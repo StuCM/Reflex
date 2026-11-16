@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Movie page, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: {{c.color}}; padding-bottom: 8px; border-bottom: 3px solid {{c.line}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 150px; width: 1200px">
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">Resume · 48 min left</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 92px; line-height: 1; letter-spacing: -1px; text-transform: uppercase; margin-top: 8px">Salt Meridian</div>
+<div style="display: flex; align-items: center; gap: 28px; margin-top: 16px">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 44px; height: 44px; border-radius: 12px; background: #7C5CFF; display: flex; align-items: center; justify-content: center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M12 3l9 16H3z"></path></svg>
+</div>
+<div style="font-size: 26px; font-weight: 600">Prism</div>
+</div>
+<div style="font-size: 28px; color: rgba(255,255,255,0.78)">2023 · 15 · 1h 52m · &#9733; 7.8</div>
+<div style="padding: 4px 16px; border-radius: 999px; border: 1px solid {{accent}}; font-size: 22px; font-weight: 600; color: {{accent}}">Ends 21:43</div>
+</div>
+<div style="font-size: 28px; line-height: 1.4; margin-top: 14px; width: 860px; color: rgba(255,255,255,0.88)">[Synopsis from TMDB, two lines at most. A lighthouse keeper and a stranded surveyor share one long winter.]</div>
+</div>
+
+<div style="position: absolute; right: 96px; top: 190px; display: flex; flex-direction: column; gap: 14px; font-size: 26px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 16px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600; font-size: 24px">OK</span>Resume</div>
+<div style="display: flex; align-items: center; gap: 16px; color: #FFFFFF; font-weight: 600"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F5C84C; margin: 0 18px 0 8px"></span>Add to list</div>
+<div style="display: flex; align-items: center; gap: 16px"><span style="width: 24px; height: 24px; border-radius: 50%; background: #FF5A5A; margin: 0 18px 0 8px"></span>Mark watched</div>
+<div style="display: flex; align-items: center; gap: 16px"><span style="width: 24px; height: 24px; border-radius: 50%; background: #5AA0FF; margin: 0 18px 0 8px"></span>Trailer</div>
+</div>
+
+<sc-if value="{{isBase}}" hint-placeholder-val="{{true}}">
+<div>
+<div style="position: absolute; left: 96px; top: 470px; display: flex; gap: 32px; align-items: center">
+<sc-for list="{{btns}}" as="b" hint-placeholder-count="4">
+<div style="width: {{b.w}}px; height: {{b.h}}px; box-sizing: border-box; padding: 0 {{b.pad}}px; border-radius: {{b.r}}px; background: {{b.bg}}; border: 1px solid {{b.border}}; box-shadow: {{b.ring}}; display: flex; align-items: center; justify-content: center; gap: 14px">
+<svg width="{{b.is}}" height="{{b.is}}" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{b.icon}}"></path></svg>
+<sc-if value="{{b.text}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: baseline; gap: 12px; white-space: nowrap"><span style="font-size: 30px; font-weight: 600">{{b.text}}</span><span style="font-size: 20px; color: rgba(255,255,255,0.6)">{{b.sub}}</span></div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 96px; top: 596px; opacity: 0.6; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">Cast</div>
+<div style="position: absolute; left: 96px; top: 644px; display: flex; gap: 48px; opacity: 0.6">
+<sc-for list="{{castRow}}" as="c" hint-placeholder-count="7">
+<div style="width: 190px; flex: none; display: flex; flex-direction: column; align-items: center">
+<div style="width: 140px; height: 140px; border-radius: 50%; background: {{c.bg}}; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 46px">{{c.ch}}</div>
+<div style="font-size: 24px; font-weight: 600; margin-top: 12px; text-align: center; color: rgba(255,255,255,0.78)">{{c.name}}</div>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 96px; top: 900px; display: flex; align-items: baseline; gap: 14px; opacity: 0.6">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">Part of Saltwater Saga</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.65)">Seen 2 of 5</div>
+</div>
+<div style="position: absolute; left: 96px; top: 946px; display: flex; gap: 40px; opacity: 0.6">
+<sc-for list="{{franchise}}" as="f" hint-placeholder-count="5">
+<div style="width: 176px; height: 264px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{f.bg}}">
+<div style="position: absolute; left: {{f.sx}}; top: {{f.sy}}; width: {{f.ss}}; height: {{f.ssh}}; border-radius: 50%; background: {{f.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showServer}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(8,5,18,0.78)"></div>
+<div style="position: absolute; left: 460px; top: 230px; width: 1000px; box-sizing: border-box; padding: 44px 52px; border-radius: 36px; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96); border: 1px solid rgba(255,255,255,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 40px 100px rgba(0,0,0,0.55)">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px">Play from which server?</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.65); margin-top: 6px">Salt Meridian is on 3 of your servers</div>
+<div style="margin-top: 26px">
+<sc-for list="{{servers}}" as="r" hint-placeholder-count="3">
+<div style="height: 96px; box-sizing: border-box; padding: 0 24px; border-radius: 20px; background: {{r.bg}}; display: flex; align-items: center; gap: 20px; margin-bottom: 8px">
+<div style="width: 34px; height: 34px; border-radius: 50%; box-sizing: border-box; border: {{r.box}}; background: {{r.fill}}; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{r.checked}}" hint-placeholder-val="{{false}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1030" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</sc-if>
+</div>
+<div style="flex: 1">
+<div style="font-size: 30px; font-weight: 600">{{r.name}}</div>
+<div style="font-size: 22px; color: rgba(255,255,255,0.6); margin-top: 2px">{{r.detail}}</div>
+</div>
+<div style="padding: 4px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.35); font-size: 22px; font-weight: 600; color: {{r.tagColor}}">{{r.tag}}</div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 32px; margin-top: 18px; font-size: 24px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">OK</span>Select</div>
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">Back</span>Close</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isCast}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 96px; top: 520px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 36px">Cast</div>
+<div style="position: absolute; left: 96px; top: 596px; display: flex; gap: 48px; align-items: flex-start">
+<sc-for list="{{castRow}}" as="c" hint-placeholder-count="7">
+<div style="width: 230px; flex: none; display: flex; flex-direction: column; align-items: center">
+<div style="width: 190px; height: 190px; border-radius: 50%; background: {{c.bg}}; box-shadow: 0 10px 24px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 58px">{{c.ch}}</div>
+<div style="font-size: 28px; font-weight: 600; margin-top: 16px; text-align: center; color: rgba(255,255,255,0.78)">{{c.name}}</div>
+<div style="font-size: 22px; margin-top: 2px; text-align: center; color: rgba(255,255,255,0.55)">{{c.role}}</div>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 96px; top: 920px; display: flex; align-items: baseline; gap: 14px; opacity: 0.6">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">Part of Saltwater Saga</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.65)">Seen 2 of 5</div>
+</div>
+<div style="position: absolute; left: 96px; top: 966px; display: flex; gap: 40px; opacity: 0.6">
+<sc-for list="{{franchise}}" as="f" hint-placeholder-count="5">
+<div style="width: 176px; height: 264px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{f.bg}}">
+<div style="position: absolute; left: {{f.sx}}; top: {{f.sy}}; width: {{f.ss}}; height: {{f.ssh}}; border-radius: 50%; background: {{f.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+<sc-if value="{{f.seen}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1030" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isFranchise}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 96px; top: 520px; width: 1728px; display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 36px">Saltwater Saga <span style="font-size: 26px; font-weight: 400; color: rgba(255,255,255,0.6)">&nbsp;Seen 2 of 5 · in release order</span></div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.6)"><span style="color: #FFFFFF; font-weight: 600">3</span> of 5</div>
+</div>
+<div style="position: absolute; left: 96px; top: 590px; display: flex; gap: 40px; align-items: flex-start">
+<sc-for list="{{franchise}}" as="f" hint-placeholder-count="5">
+<div style="width: {{f.w}}px; flex: none">
+<div style="height: 36px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; color: {{f.yearColor}}">{{f.year}}</div>
+<div style="width: {{f.w}}px; height: {{f.h}}px; position: relative; border-radius: 14px; overflow: hidden; background: {{f.bg}}; box-shadow: {{f.ring}}; opacity: {{f.op}}">
+<div style="position: absolute; left: {{f.sx}}; top: {{f.sy}}; width: {{f.ss}}; height: {{f.ssh}}; border-radius: 50%; background: {{f.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+<div style="position: absolute; left: 14px; right: 14px; bottom: 16px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: {{f.fs}}px; letter-spacing: 2px; text-transform: uppercase; line-height: 1.05">{{f.title}}</div>
+<sc-if value="{{f.seen}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1030" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</div>
+</sc-if>
+<sc-if value="{{f.off}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 10px; top: 10px; padding: 3px 10px; border-radius: 8px; background: rgba(0,0,0,0.6); font-size: 18px; font-weight: 600">{{f.offLabel}}</div>
+</sc-if>
+</div>
+<div style="font-size: 24px; margin-top: 12px; color: {{f.capColor}}">{{f.cap}}</div>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 96px; top: 940px; opacity: 0.6; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">Trailers and extras</div>
+<div style="position: absolute; left: 96px; top: 986px; display: flex; gap: 32px; opacity: 0.6">
+<sc-for list="{{extras}}" as="t" hint-placeholder-count="4">
+<div style="width: 320px; height: 180px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{t.bg}}">
+<div style="position: absolute; left: 62%; top: 14%; width: 22%; height: 38%; border-radius: 50%; background: {{t.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: linear-gradient(0deg, rgba(0,0,0,0.65), rgba(0,0,0,0))"></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["buttons","cast","franchise","server"],"default":"buttons"},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = ['buttons', 'cast', 'franchise', 'server'].indexOf(this.props.state) >= 0 ? this.props.state : 'buttons';
+    const accent = '#AEBBF0';
+    const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
+    const cats = ['Home', 'Movies', 'TV', 'Collections', 'Discover'].map((label, i) => ({ label: label, color: i === 1 ? '#FFFFFF' : 'rgba(255,255,255,0.42)', line: i === 1 ? accent : 'transparent' }));
+    const gl = 'linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.7)';
+    const glOn = 'linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.16)), rgba(44,34,84,0.9)';
+    const ringOn = '0 0 0 3px rgba(255,255,255,0.95), inset 0 1px 0 rgba(255,255,255,0.5), 0 24px 60px rgba(0,0,0,0.5)';
+    const ringOff = 'inset 0 1px 0 rgba(255,255,255,0.25)';
+    const focusOnButtons = st === 'buttons';
+    const btnDefs = [
+      { text: 'Resume', sub: '1:04', w: 248, h: 76, r: 26, pad: 28, is: 32, icon: 'M8 5l11 7-11 7z' },
+      { text: '', sub: '', w: 60, h: 60, r: 20, pad: 0, is: 28, icon: 'M4 12a8 8 0 1 0 2.5-5.8M4 4v5h5' },
+      { text: '', sub: '', w: 60, h: 60, r: 20, pad: 0, is: 28, icon: 'M4 5h16v6H4z M4 13h16v6H4z M8 8h.01 M8 16h.01' },
+      { text: '', sub: '', w: 60, h: 60, r: 20, pad: 0, is: 28, icon: 'M4 10v4h4l5 4V6L8 10z M16 9a4 4 0 0 1 0 6' }
+    ];
+    const btns = btnDefs.map((b, i) => Object.assign({}, b, { bg: (i === 0 && focusOnButtons) ? glOn : gl, border: (i === 0 && focusOnButtons) ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.14)', ring: (i === 0 && focusOnButtons) ? ringOn : ringOff }));
+    const srv = (name, detail, tag, tagColor, on) => ({ name: name, detail: detail, tag: tag, tagColor: tagColor, checked: on, bg: on ? 'rgba(255,255,255,0.16)' : 'transparent', box: on ? '0 solid transparent' : '2px solid rgba(255,255,255,0.55)', fill: on ? '#FFFFFF' : 'transparent' });
+    const servers = [
+      srv('Home', '2160p HEVC HDR \u00b7 38 Mbps \u00b7 62 GB', 'Direct play', accent, true),
+      srv('Home 1080p', '1080p H.264 \u00b7 12 Mbps \u00b7 9 GB', 'Direct play', accent, false),
+      srv('Seedbox', '1080p HEVC \u00b7 6 Mbps \u00b7 4 GB', 'Remote', 'rgba(255,255,255,0.7)', false)
+    ];
+    const grads = ['linear-gradient(135deg, #C8506A, #7A2238)', 'linear-gradient(135deg, #4F7FD0, #26407E)', 'linear-gradient(135deg, #8A6AD8, #4A2E8C)', 'linear-gradient(135deg, #E0A060, #9A5A2A)', 'linear-gradient(135deg, #3AA6A0, #1A5A5C)', 'linear-gradient(135deg, #D880A8, #7A3A62)', 'linear-gradient(135deg, #7AAFD8, #2C5C88)'];
+    const people = [['MQ', 'Mara Quinn', 'Dr. Mira Hale'], ['TA', 'Tomas Aldred', 'Surveyor Rue'], ['IO', 'Ife Okoro', 'Nell Parry'], ['JB', 'Joss Bell', 'Harbourmaster'], ['RC', 'Rhea Calder', 'Ada Voss'], ['KH', 'Kit Haldane', 'Pilot Sloan'], ['SD', 'Sana Dube', 'Marta']];
+    const castRow = people.map((p, i) => ({ ch: p[0], name: p[1], role: p[2], bg: grads[i % grads.length] }));
+    const art = [
+      { title: 'Salt Meridian', bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { title: 'Tidewrack', bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)', sx: '54%', sy: '8%', ss: '30%', ssh: '20%' },
+      { title: 'Brine and Bone', bg: 'linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)', sx: '16%', sy: '16%', ss: '44%', ssh: '29%' },
+      { title: 'Salt Meridian', bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { title: 'Low Water', bg: 'linear-gradient(170deg, #2A3F8F 0%, #141F52 55%, #080C24 100%)', sc: 'radial-gradient(circle at 35% 35%, #B8D0FF, #5A82E0)', sx: '20%', sy: '22%', ss: '60%', ssh: '40%' },
+      { title: 'Last Tide', bg: 'linear-gradient(170deg, #9ACBEE 0%, #2C5C88 50%, #0A1B2E 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFE6F8)', sx: '50%', sy: '12%', ss: '34%', ssh: '23%' }
+    ];
+    const defs = [
+      { a: 1, y: '2016', seen: true, off: false },
+      { a: 2, y: '2018', seen: true, off: false },
+      { a: 0, y: '2023', seen: false, off: false, here: true },
+      { a: 4, y: '2025', seen: false, off: true, offLabel: 'Not on server' },
+      { a: 5, y: '2027', seen: false, off: true, offLabel: 'Coming soon' }
+    ];
+    const franchise = defs.map((d, i) => {
+      const f = !!d.here;
+      return Object.assign({}, art[d.a], {
+        title: d.here ? 'Salt Meridian' : art[d.a].title,
+        year: d.y, yearColor: f ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
+        w: f ? 210 : 176, h: f ? 315 : 264, fs: f ? 22 : 18,
+        ring: f ? '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)' : '0 10px 24px rgba(0,0,0,0.35)',
+        op: d.off ? 0.45 : 1, seen: d.seen, off: d.off, offLabel: d.offLabel || '',
+        cap: d.here ? 'You are here' : (d.seen ? 'Watched' : (d.off ? '' : '')),
+        capColor: d.here ? accent : 'rgba(255,255,255,0.6)'
+      });
+    });
+    const extras = [art[1], art[2], art[4], art[5]].map((a) => ({ bg: a.bg, sc: a.sc }));
+    return { bg: bg, accent: accent, cats: cats, castRow: castRow, franchise: franchise, extras: extras, isBase: st === 'buttons' || st === 'server', showServer: st === 'server', btns: btns, servers: servers, isCast: st === 'cast', isFranchise: st === 'franchise' };
+  }
+}
+</script>
+</body>
+</html>

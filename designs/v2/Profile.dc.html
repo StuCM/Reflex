@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile page, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+<div style="position: absolute; right: 230px; top: 36px; display: flex; align-items: center; gap: 12px">
+<div style="width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, #C8506A, #7A2238); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px">S</div>
+<div style="font-size: 26px; font-weight: 600; color: rgba(255,255,255,0.8)">Stu</div>
+</div>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: rgba(255,255,255,0.42); padding-bottom: 8px; border-bottom: 3px solid transparent">{{c}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 150px; display: flex; align-items: center; gap: 36px">
+<div style="width: 140px; height: 140px; border-radius: 50%; background: linear-gradient(135deg, #C8506A, #7A2238); box-shadow: 0 20px 50px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 72px">S</div>
+<div>
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">Profile · just your shows</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 84px; line-height: 1; letter-spacing: -1px; text-transform: uppercase; margin-top: 6px">Stu</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.65); margin-top: 10px">Things you watch on your own. Shared shows stay on Home.</div>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 440px; display: flex; align-items: baseline; gap: 14px">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">Your shows</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.55)">Continue and tracked, only you</div>
+</div>
+<div style="position: absolute; left: 96px; top: 490px; height: 315px; display: flex; gap: 40px; align-items: flex-end">
+<sc-for list="{{row1}}" as="p" hint-placeholder-count="7">
+<div style="width: {{p.w}}px; height: {{p.h}}px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{p.bg}}; box-shadow: {{p.ring}}">
+<div style="position: absolute; left: {{p.sx}}; top: {{p.sy}}; width: {{p.ss}}; height: {{p.ssh}}; border-radius: 50%; background: {{p.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+<div style="position: absolute; left: 14px; right: 14px; bottom: 16px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: {{p.fs}}px; letter-spacing: 2px; text-transform: uppercase; line-height: 1.05">{{p.title}}</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: {{p.barH}}; background: rgba(255,255,255,0.3)"><div style="width: {{p.pct}}; height: 100%; background: #FFFFFF"></div></div>
+</div>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 96px; top: 850px; display: flex; align-items: baseline; gap: 14px; opacity: 0.6">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">Picked for Stu</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.55)">From what you watch alone</div>
+</div>
+<div style="position: absolute; left: 96px; top: 900px; display: flex; gap: 40px; opacity: 0.6">
+<sc-for list="{{row2}}" as="p" hint-placeholder-count="8">
+<div style="width: 176px; height: 264px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{p.bg}}">
+<div style="position: absolute; left: {{p.sx}}; top: {{p.sy}}; width: {{p.ss}}; height: {{p.ssh}}; border-radius: 50%; background: {{p.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{isSwitch}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(8,5,18,0.78)"></div>
+<div style="position: absolute; left: 580px; top: 240px; width: 760px; box-sizing: border-box; padding: 44px 48px; border-radius: 36px; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96); border: 1px solid rgba(255,255,255,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 40px 100px rgba(0,0,0,0.55)">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px">Who's watching?</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.7); margin-top: 4px">Your choice only affects what is tracked</div>
+<div style="margin-top: 28px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{people}}" as="r" hint-placeholder-count="3">
+<div style="height: 96px; box-sizing: border-box; padding: 0 20px; border-radius: 18px; background: {{r.bg}}; display: flex; align-items: center; gap: 22px">
+<div style="width: 140px; height: 60px; flex: none; position: relative">
+<sc-for list="{{r.faces}}" as="f" hint-placeholder-count="2">
+<div style="position: absolute; left: {{f.left}}px; top: 0; width: 60px; height: 60px; border-radius: 50%; background: {{f.bg}}; box-shadow: 0 0 0 3px rgba(24,16,46,0.96); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">{{f.ch}}</div>
+</sc-for>
+</div>
+<div style="flex: 1">
+<div style="font-size: 32px; font-weight: 600">{{r.label}}</div>
+<div style="font-size: 22px; color: rgba(255,255,255,0.62)">{{r.sub}}</div>
+</div>
+<sc-if value="{{r.checked}}" hint-placeholder-val="{{false}}">
+<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.6); margin-top: 20px">Returns to Together after 4 hours idle.</div>
+<div style="display: flex; gap: 32px; margin-top: 20px; font-size: 24px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">OK</span>Switch</div>
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">Back</span>Close</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["page","switch"],"default":"page"},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = '#F4C8B6';
+    const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
+    const art = [
+      { title: 'Salt Meridian', bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { title: 'Velvet Static', bg: 'linear-gradient(170deg, #2A3F8F 0%, #141F52 55%, #080C24 100%)', sc: 'radial-gradient(circle at 35% 35%, #B8D0FF, #5A82E0)', sx: '20%', sy: '22%', ss: '60%', ssh: '40%' },
+      { title: 'Night Ferry', bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)', sx: '54%', sy: '8%', ss: '30%', ssh: '20%' },
+      { title: 'Marrow Lane', bg: 'linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)', sx: '16%', sy: '16%', ss: '44%', ssh: '29%' },
+      { title: 'Copper Sky', bg: 'linear-gradient(170deg, #A6D17E 0%, #3F7A3A 50%, #10260F 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF8C8, #F2E58A)', sx: '40%', sy: '14%', ss: '40%', ssh: '27%' },
+      { title: 'Pale Orchard', bg: 'linear-gradient(170deg, #F08A4A 0%, #A8321E 50%, #2A0A06 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE08A, #FFB030)', sx: '22%', sy: '20%', ss: '52%', ssh: '35%' },
+      { title: 'Tin Coast', bg: 'linear-gradient(170deg, #9ACBEE 0%, #2C5C88 50%, #0A1B2E 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFE6F8)', sx: '50%', sy: '12%', ss: '34%', ssh: '23%' },
+      { title: 'Distant Weather', bg: 'linear-gradient(170deg, #C9A3E8 0%, #5A3C8C 52%, #1A1030 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #E6D2F8)', sx: '30%', sy: '14%', ss: '42%', ssh: '28%' }
+    ];
+    const pcts = ['48%', '20%', '0%', '0%', '0%', '0%', '0%'];
+    const row1 = [3, 6, 1, 4, 0, 7, 5].map((ai, i) => Object.assign({}, art[ai], {
+      w: i === 0 ? 210 : 176, h: i === 0 ? 315 : 264, fs: i === 0 ? 22 : 18,
+      ring: i === 0 ? '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)' : '0 10px 24px rgba(0,0,0,0.35)',
+      pct: pcts[i], barH: i < 2 ? '6px' : '0px'
+    }));
+    const row2 = [2, 5, 7, 0, 4, 1, 6, 3].map((i) => art[i]);
+    const S = 'linear-gradient(135deg, #C8506A, #7A2238)';
+    const N = 'linear-gradient(135deg, #4F7FD0, #26407E)';
+    const T = 'linear-gradient(135deg, #8A6AD8, #4A2E8C)';
+    const people = [
+      { label: 'Together', sub: 'Shared feed and tracked shows', checked: false, bg: 'transparent', faces: [{ left: 0, bg: S, ch: 'S' }, { left: 38, bg: N, ch: 'N' }] },
+      { label: 'Stu', sub: 'Your own shows and picks', checked: true, bg: 'rgba(255,255,255,0.16)', faces: [{ left: 0, bg: S, ch: 'S' }] },
+      { label: 'Naoise', sub: 'Their own shows and picks', checked: false, bg: 'transparent', faces: [{ left: 0, bg: N, ch: 'N' }] }
+    ];
+    return {
+      bg: bg, accent: accent, cats: ['Home', 'Movies', 'TV', 'Collections', 'Discover'],
+      row1: row1, row2: row2, people: people, isSwitch: this.props.state === 'switch'
+    };
+  }
+}
+</script>
+</body>
+</html>

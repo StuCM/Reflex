@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Player, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: linear-gradient(180deg, #12303F 0%, #2A6670 42%, #D89A72 78%, #B8503A 100%); font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; left: 1010px; top: 330px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #FFF4D6, #F5C27A)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 560px; background: rgba(12,24,34,0.55); -webkit-clip-path: polygon(0 50%, 12% 30%, 26% 48%, 40% 20%, 58% 46%, 74% 24%, 90% 44%, 100% 30%, 100% 100%, 0 100%); clip-path: polygon(0 50%, 12% 30%, 26% 48%, 40% 20%, 58% 46%, 74% 24%, 90% 44%, 100% 30%, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 380px; background: rgba(6,10,20,0.78); -webkit-clip-path: polygon(0 56%, 18% 36%, 36% 60%, 56% 30%, 78% 56%, 100% 38%, 100% 100%, 0 100%); clip-path: polygon(0 56%, 18% 36%, 36% 60%, 56% 30%, 78% 56%, 100% 38%, 100% 100%, 0 100%)"></div>
+
+<sc-if value="{{showControls}}" hint-placeholder-val="{{true}}">
+<div>
+<div style="position: absolute; left: 0; right: 0; top: 0; height: 280px; background: linear-gradient(180deg, rgba(8,5,18,0.8), rgba(8,5,18,0))"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 520px; background: linear-gradient(0deg, rgba(8,5,18,0.92), rgba(8,5,18,0))"></div>
+
+<div style="position: absolute; left: 96px; top: 64px">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 48px; letter-spacing: 1px; text-transform: uppercase">Harbour Lights</div>
+<div style="font-size: 28px; color: rgba(255,255,255,0.8); margin-top: 6px">S2 · E4 · The Tide Table</div>
+</div>
+<div style="position: absolute; right: 96px; top: 64px; text-align: right">
+<div style="font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.85)">19:05</div>
+<div style="font-size: 24px; color: {{accent}}; margin-top: 6px">Ends 19:47</div>
+</div>
+
+<div style="position: absolute; left: 645px; top: 560px; width: 320px">
+<div style="width: 320px; height: 180px; border-radius: 14px; overflow: hidden; background: linear-gradient(170deg, #2B6F7A, #12303F); box-shadow: 0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.6); position: relative">
+<div style="position: absolute; left: 60%; top: 18%; width: 22%; height: 38%; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #FFF4D6, #F5C27A)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: rgba(6,10,20,0.7); -webkit-clip-path: polygon(0 50%, 20% 24%, 44% 52%, 70% 20%, 100% 46%, 100% 100%, 0 100%); clip-path: polygon(0 50%, 20% 24%, 44% 52%, 70% 20%, 100% 46%, 100% 100%, 0 100%)"></div>
+</div>
+<div style="text-align: center; font-size: 28px; font-weight: 600; margin-top: 12px">{{scrubTime}}</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 790px; width: 1728px; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.28)">
+<div style="position: absolute; left: 0; top: 0; width: 52%; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.28)"></div>
+<div style="position: absolute; left: 0; top: 0; width: 41%; height: 12px; border-radius: 6px; background: {{accent}}"></div>
+<sc-for list="{{chapters}}" as="c" hint-placeholder-count="4">
+<div style="position: absolute; left: {{c}}; top: 0; width: 4px; height: 12px; background: rgba(8,5,18,0.9)"></div>
+</sc-for>
+<div style="position: absolute; left: 41%; top: -10px; margin-left: -16px; width: 32px; height: 32px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 4px 14px rgba(0,0,0,0.5)"></div>
+</div>
+<div style="position: absolute; left: 96px; top: 830px; width: 1728px; display: flex; justify-content: space-between; font-size: 28px; color: rgba(255,255,255,0.85)">
+<div>18:42</div>
+<div>-25:31</div>
+</div>
+
+<div style="position: absolute; left: 0; top: 896px; width: 1920px; display: flex; justify-content: center; align-items: center; gap: 40px">
+<div style="width: 64px; height: 64px; border-radius: 50%; box-sizing: border-box; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.7); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center"><svg width="30" height="30" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M5 5h2.6v14H5z M20 5v14L9 12z"></path></svg></div>
+<div style="width: 92px; height: 92px; border-radius: 50%; box-sizing: border-box; background: linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.16)), rgba(44,34,84,0.9); border: 1px solid rgba(255,255,255,0.26); box-shadow: 0 0 0 3px rgba(255,255,255,0.95), inset 0 1px 0 rgba(255,255,255,0.5), 0 20px 50px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center"><svg width="44" height="44" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M6 4h4.2v16H6z M13.8 4H18v16h-4.2z"></path></svg></div>
+<div style="width: 64px; height: 64px; border-radius: 50%; box-sizing: border-box; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.7); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center"><svg width="30" height="30" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M17 5h2.6v14H17z M4 5v14l11-7z"></path></svg></div>
+</div>
+<div style="position: absolute; left: 0; top: 1008px; width: 1920px; display: flex; justify-content: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showIntro}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 300px; background: linear-gradient(0deg, rgba(8,5,18,0.55), rgba(8,5,18,0))"></div>
+<div style="position: absolute; right: 96px; bottom: 120px; height: 96px; box-sizing: border-box; padding: 0 40px; border-radius: 32px; background: linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.16)), rgba(44,34,84,0.9); border: 1px solid rgba(255,255,255,0.26); box-shadow: 0 0 0 3px rgba(255,255,255,0.95), inset 0 1px 0 rgba(255,255,255,0.5), 0 24px 60px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 24px">
+<svg width="36" height="36" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M5 5l9 7-9 7z M15 5h3v14h-3z"></path></svg>
+<div style="font-size: 34px; font-weight: 600">Skip intro</div>
+<span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; font-size: 24px; font-weight: 600">OK</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showTracks}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(8,5,18,0.78)"></div>
+<div style="position: absolute; left: 260px; top: 240px; width: 1400px; box-sizing: border-box; padding: 44px 52px; border-radius: 36px; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96); border: 1px solid rgba(255,255,255,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 40px 100px rgba(0,0,0,0.55)">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px">Audio, subtitles and quality</div>
+<div style="display: flex; gap: 24px; margin-top: 30px; align-items: flex-start">
+<sc-for list="{{cols}}" as="col" hint-placeholder-count="3">
+<div style="width: {{col.w}}px; flex: none; box-sizing: border-box; height: 360px; border-radius: 26px; padding: {{col.pad}}; background: {{col.bg}}; border: 1px solid {{col.border}}">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{col.labelColor}}">{{col.title}}</div>
+<sc-if value="{{col.open}}" hint-placeholder-val="{{false}}">
+<div style="margin-top: 12px">
+<sc-for list="{{col.rows}}" as="r" hint-placeholder-count="4">
+<div style="height: 70px; box-sizing: border-box; padding: 0 18px; border-radius: 18px; background: {{r.bg}}; display: flex; align-items: center; gap: 16px; margin-bottom: 6px; box-shadow: {{r.ring}}">
+<div style="width: 32px; height: 32px; border-radius: 50%; box-sizing: border-box; border: {{r.box}}; background: {{r.fill}}; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{r.checked}}" hint-placeholder-val="{{false}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1030" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</sc-if>
+</div>
+<div style="font-size: 28px; font-weight: 600; flex: 1">{{r.label}}</div>
+<div style="font-size: 22px; color: rgba(255,255,255,0.6)">{{r.sub}}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{col.closed}}" hint-placeholder-val="{{true}}">
+<div style="margin-top: 22px; font-size: 30px; font-weight: 600; line-height: 1.2">{{col.value}}</div>
+<div style="margin-top: 6px; font-size: 22px; color: rgba(255,255,255,0.55)">{{col.valueSub}}</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showNext}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(8,5,18,0.45)"></div>
+<div style="position: absolute; right: 96px; bottom: 96px; width: 520px; box-sizing: border-box; padding: 28px; border-radius: 32px; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96); border: 1px solid rgba(255,255,255,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 40px 100px rgba(0,0,0,0.55)">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">Next episode · in 8</div>
+<div style="width: 464px; height: 261px; margin-top: 14px; border-radius: 14px; overflow: hidden; position: relative; background: linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)">
+<div style="position: absolute; left: 62%; top: 14%; width: 22%; height: 38%; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 52%; background: rgba(10,8,24,0.5); -webkit-clip-path: polygon(0 62%, 18% 34%, 36% 58%, 58% 26%, 80% 56%, 100% 38%, 100% 100%, 0 100%); clip-path: polygon(0 62%, 18% 34%, 36% 58%, 58% 26%, 80% 56%, 100% 38%, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(255,255,255,0.3)"><div style="width: 70%; height: 100%; background: {{accent}}"></div></div>
+</div>
+<div style="font-size: 32px; font-weight: 600; margin-top: 16px">S2 · E5 · Salt and Iron</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.65); margin-top: 2px">44 min</div>
+<div style="display: flex; gap: 32px; margin-top: 18px; font-size: 24px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">OK</span>Play now</div>
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">Back</span>Stay</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["controls","intro","tracks","next"],"default":"controls"},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = ['controls', 'intro', 'tracks', 'next'].indexOf(this.props.state) >= 0 ? this.props.state : 'controls';
+    const mk = (label, sub, on) => ({ label: label, sub: sub, checked: on, bg: on ? 'rgba(255,255,255,0.16)' : 'transparent', box: on ? '0 solid transparent' : '2px solid rgba(255,255,255,0.55)', fill: on ? '#FFFFFF' : 'transparent' });
+    const audio = [mk('English', 'Dolby Digital 5.1', true), mk('English', 'Stereo commentary', false), mk('Irish', 'Stereo', false)];
+    const subs = [mk('Off', '', false), mk('English', 'Full', true), mk('English', 'Hearing impaired', false), mk('Irish', '', false)];
+    const quality = [mk('Original', 'Direct play \u00b7 1080p', true), mk('High', '1080p \u00b7 8 Mbps', false), mk('Medium', '720p \u00b7 4 Mbps', false), mk('Low', '480p \u00b7 2 Mbps', false)];
+    audio[0].ring = '0 0 0 3px rgba(255,255,255,0.95)'; audio.forEach((r) => { if (!r.ring) r.ring = 'none'; });
+    const mkCol = (title, rows, value, valueSub, open) => ({ title: title, rows: rows, value: value, valueSub: valueSub, open: open, closed: !open, w: open ? 600 : 250, pad: '24px 26px', bg: open ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)', border: open ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.1)', labelColor: open ? '#AEBBF0' : 'rgba(255,255,255,0.6)' });
+    const cols = [mkCol('Audio', audio, 'English', 'Dolby Digital 5.1', true), mkCol('Subtitles', subs, 'English', 'Full', false), mkCol('Quality', quality, 'Original', 'Direct play', false)];
+    return {
+      accent: '#AEBBF0',
+      showControls: st === 'controls' || st === 'tracks',
+      showIntro: st === 'intro',
+      showTracks: st === 'tracks',
+      showNext: st === 'next',
+      scrubTime: '18:42',
+      chapters: ['11%', '27%', '55%', '78%'],
+      hints: [
+        { key: '◀ ▶', label: 'Seek' },
+        { key: 'OK', label: 'Pause' },
+        { key: '▲', label: 'Episode buttons' },
+        { key: '▼', label: 'Audio, subtitles, quality' },
+        { key: 'Back', label: 'Stop' }
+      ],
+      cols: cols
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Series page, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: {{c.color}}; padding-bottom: 8px; border-bottom: 3px solid {{c.line}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 150px; width: 1200px">
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">{{hero.eyebrow}}</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 92px; line-height: 1; letter-spacing: -1px; text-transform: uppercase; margin-top: 8px">{{hero.title}}</div>
+<div style="display: flex; align-items: center; gap: 28px; margin-top: 16px">
+<sc-if value="{{hero.showSvc}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 44px; height: 44px; border-radius: 12px; background: #7C5CFF; display: flex; align-items: center; justify-content: center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M12 3l9 16H3z"></path></svg>
+</div>
+<div style="font-size: 26px; font-weight: 600">Prism</div>
+</div>
+</sc-if>
+<div style="font-size: 28px; color: rgba(255,255,255,0.78)">{{hero.line}}</div>
+<sc-if value="{{hero.showSvc}}" hint-placeholder-val="{{true}}">
+<div style="padding: 4px 16px; border-radius: 999px; border: 1px solid {{accent}}; font-size: 22px; font-weight: 600; color: {{accent}}">{{hero.tag}}</div>
+</sc-if>
+</div>
+<div style="font-size: 28px; line-height: 1.4; margin-top: 14px; width: 860px; color: rgba(255,255,255,0.88)">{{hero.synopsis}}</div>
+</div>
+
+<div style="position: absolute; right: 96px; top: 190px; display: flex; flex-direction: column; gap: 14px; font-size: 26px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 16px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600; font-size: 24px">OK</span>{{hero.okLabel}}</div>
+<div style="display: flex; align-items: center; gap: 16px; color: #FFFFFF; font-weight: 600"><span style="width: 24px; height: 24px; border-radius: 50%; background: #F5C84C; margin: 0 18px 0 8px"></span>Add to list</div>
+<div style="display: flex; align-items: center; gap: 16px"><span style="width: 24px; height: 24px; border-radius: 50%; background: #FF5A5A; margin: 0 18px 0 8px"></span>Mark watched</div>
+<div style="display: flex; align-items: center; gap: 16px"><span style="width: 24px; height: 24px; border-radius: 50%; background: #5AA0FF; margin: 0 18px 0 8px"></span>Recap</div>
+</div>
+
+<sc-if value="{{notCast}}" hint-placeholder-val="{{true}}">
+<div>
+<div style="position: absolute; left: 96px; top: 520px; width: 1728px; display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 36px">
+<sc-if value="{{isMany}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 26px; color: rgba(255,255,255,0.6)">Season</div>
+</sc-if>
+<sc-if value="{{seasonFocus}}" hint-placeholder-val="{{false}}">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</sc-if>
+<sc-for list="{{seasons}}" as="s" hint-placeholder-count="3">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: {{s.fs}}px; color: {{s.color}}; padding-bottom: 6px; border-bottom: {{s.lineW}}px solid {{s.line}}">{{s.label}}</div>
+</sc-for>
+<sc-if value="{{seasonFocus}}" hint-placeholder-val="{{false}}">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</sc-if>
+</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.6)"><span style="color: #FFFFFF; font-weight: 600">{{counterA}}</span> of {{counterB}}</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 590px; display: flex; gap: 32px; align-items: flex-start; opacity: {{epsOpacity}}">
+<sc-for list="{{eps}}" as="e" hint-placeholder-count="5">
+<div style="width: {{e.w}}px; flex: none">
+<div style="width: {{e.w}}px; height: {{e.h}}px; position: relative; border-radius: 14px; overflow: hidden; background: {{e.bg}}; box-shadow: {{e.ring}}">
+<div style="position: absolute; left: 62%; top: 14%; width: 22%; height: 38%; border-radius: 50%; background: {{e.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 52%; background: rgba(10,8,24,0.5); -webkit-clip-path: polygon(0 62%, 18% 34%, 36% 58%, 58% 26%, 80% 56%, 100% 38%, 100% 100%, 0 100%); clip-path: polygon(0 62%, 18% 34%, 36% 58%, 58% 26%, 80% 56%, 100% 38%, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: linear-gradient(0deg, rgba(0,0,0,0.65), rgba(0,0,0,0))"></div>
+<sc-if value="{{e.hidden}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(11,9,18,0.62)"></div>
+</sc-if>
+<div style="position: absolute; left: 18px; bottom: 10px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 46px; line-height: 1">{{e.num}}</div>
+<sc-if value="{{e.tick}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; right: 12px; top: 12px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1030" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</div>
+</sc-if>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: {{e.barH}}; background: rgba(255,255,255,0.3)"><div style="width: {{e.pct}}; height: 100%; background: #FFFFFF"></div></div>
+</div>
+<div style="font-size: 28px; font-weight: 600; margin-top: 14px; color: {{e.titleColor}}">{{e.title}}</div>
+<div style="font-size: 22px; margin-top: 2px; color: {{e.subColor}}">{{e.sub}}</div>
+</div>
+</sc-for>
+</div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{notCast}}" hint-placeholder-val="{{true}}">
+<div>
+<div style="position: absolute; left: 96px; top: 920px; opacity: 0.6; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">Cast</div>
+<div style="position: absolute; left: 96px; top: 966px; display: flex; gap: 40px; opacity: 0.6">
+<sc-for list="{{castPeek}}" as="c" hint-placeholder-count="9">
+<div style="width: 150px; height: 150px; flex: none; border-radius: 50%; background: {{c.bg}}; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 52px">{{c.ch}}</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isCast}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 96px; top: 520px; width: 1728px; display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 36px">Cast</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.6)"><span style="color: #FFFFFF; font-weight: 600">1</span> of 12</div>
+</div>
+<div style="position: absolute; left: 96px; top: 596px; display: flex; gap: 48px; align-items: flex-start">
+<sc-for list="{{castRow}}" as="c" hint-placeholder-count="6">
+<div style="width: 230px; flex: none; display: flex; flex-direction: column; align-items: center">
+<div style="width: {{c.d}}px; height: {{c.d}}px; border-radius: 50%; background: {{c.bg}}; box-shadow: {{c.ring}}; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: {{c.fs}}px">{{c.ch}}</div>
+<div style="font-size: 28px; font-weight: 600; margin-top: 16px; text-align: center; color: {{c.nameColor}}">{{c.name}}</div>
+<div style="font-size: 22px; margin-top: 2px; text-align: center; color: rgba(255,255,255,0.55)">{{c.role}}</div>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 96px; top: 920px; opacity: 0.6; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px">More like this</div>
+<div style="position: absolute; left: 96px; top: 966px; display: flex; gap: 40px; opacity: 0.6">
+<sc-for list="{{more}}" as="p" hint-placeholder-count="8">
+<div style="width: 176px; height: 264px; flex: none; position: relative; border-radius: 14px; overflow: hidden; background: {{p.bg}}">
+<div style="position: absolute; left: {{p.sx}}; top: {{p.sy}}; width: {{p.ss}}; height: {{p.ssh}}; border-radius: 50%; background: {{p.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isActor}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 96px; top: 520px; width: 1728px; display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 36px">Mara Quinn <span style="font-size: 26px; font-weight: 400; color: rgba(255,255,255,0.6)">&nbsp;Newest first</span></div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.6)"><span style="color: #FFFFFF; font-weight: 600">1</span> of 38</div>
+</div>
+<div style="position: absolute; left: 96px; top: 596px; width: 200px; display: flex; flex-direction: column; align-items: center">
+<div style="width: 190px; height: 190px; border-radius: 50%; background: linear-gradient(135deg, #C8506A, #7A2238); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 62px; box-shadow: 0 10px 24px rgba(0,0,0,0.35)">MQ</div>
+<div style="font-size: 26px; font-weight: 600; margin-top: 14px">Mara Quinn</div>
+</div>
+<div style="position: absolute; left: 350px; top: 590px; display: flex; gap: 36px; align-items: flex-start">
+<sc-for list="{{actorRow}}" as="t" hint-placeholder-count="6">
+<div style="width: {{t.w}}px; flex: none">
+<div style="height: 36px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; color: {{t.yearColor}}">{{t.year}}</div>
+<div style="width: {{t.w}}px; height: {{t.h}}px; position: relative; border-radius: 14px; overflow: hidden; background: {{t.bg}}; box-shadow: {{t.ring}}; opacity: {{t.op}}">
+<div style="position: absolute; left: {{t.sx}}; top: {{t.sy}}; width: {{t.ss}}; height: {{t.ssh}}; border-radius: 50%; background: {{t.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+<div style="position: absolute; left: 14px; right: 14px; bottom: 16px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: {{t.fs}}px; letter-spacing: 2px; text-transform: uppercase; line-height: 1.05">{{t.title}}</div>
+<sc-if value="{{t.isTv}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; right: 10px; top: 10px; padding: 2px 10px; border-radius: 8px; background: rgba(0,0,0,0.6); font-size: 18px; font-weight: 600">TV</div>
+</sc-if>
+<sc-if value="{{t.off}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 10px; top: 10px; padding: 3px 10px; border-radius: 8px; background: rgba(0,0,0,0.6); font-size: 18px; font-weight: 600">Not on server</div>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isRecap}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(8,5,18,0.78)"></div>
+<div style="position: absolute; left: 580px; top: 230px; width: 760px; box-sizing: border-box; padding: 44px 48px; border-radius: 36px; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96); border: 1px solid rgba(255,255,255,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 40px 100px rgba(0,0,0,0.55)">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px">Recap</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.7); margin-top: 4px">Harbour Lights</div>
+<div style="margin-top: 28px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{recap}}" as="r" hint-placeholder-count="3">
+<div style="height: 84px; box-sizing: border-box; padding: 0 24px; border-radius: 18px; background: {{r.bg}}; display: flex; align-items: center; gap: 20px">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M8 5l12 7-12 7z"></path></svg>
+<div style="font-size: 32px; font-weight: 600; flex: 1">{{r.label}}</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.65)">{{r.sub}}</div>
+</div>
+</sc-for>
+</div>
+<div style="font-size: 22px; line-height: 1.4; color: rgba(255,255,255,0.55); margin-top: 20px">Opens YouTube and searches &ldquo;Harbour Lights season 2 recap Man of Recaps&rdquo;. Change channels in Settings.</div>
+<div style="display: flex; gap: 32px; margin-top: 20px; font-size: 24px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">OK</span>Open</div>
+<div style="display: flex; align-items: center; gap: 12px"><span style="border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; padding: 3px 14px; color: #FFFFFF; font-weight: 600">Back</span>Close</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["resume","season","cast","actor","recap"],"default":"resume"},"seasons":{"editor":"enum","options":["few","many"],"default":"few"},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const state = ['resume','season','cast','actor','recap'].indexOf(this.props.state) >= 0 ? this.props.state : 'resume';
+    const many = this.props.seasons === 'many';
+    const accent = '#F4C8B6';
+    const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
+    const catLabels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+    const cats = catLabels.map((label, i) => ({ label: label, color: i === 2 ? '#FFFFFF' : 'rgba(255,255,255,0.42)', line: i === 2 ? accent : 'transparent' }));
+    const art = [
+      { bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)' },
+      { bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)' },
+      { bg: 'linear-gradient(170deg, #2A3F8F 0%, #141F52 55%, #080C24 100%)', sc: 'radial-gradient(circle at 35% 35%, #B8D0FF, #5A82E0)' },
+      { bg: 'linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)' },
+      { bg: 'linear-gradient(170deg, #EBD08F 0%, #B06C3A 50%, #2B1608 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF4D6, #F0D08A)' },
+      { bg: 'linear-gradient(170deg, #9ACBEE 0%, #2C5C88 50%, #0A1B2E 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFE6F8)' }
+    ];
+    const poster = [
+      { bg: 'linear-gradient(170deg, #F08A4A 0%, #A8321E 50%, #2A0A06 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE08A, #FFB030)', sx: '22%', sy: '20%', ss: '52%', ssh: '35%' },
+      { bg: 'linear-gradient(170deg, #A6D17E 0%, #3F7A3A 50%, #10260F 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF8C8, #F2E58A)', sx: '40%', sy: '14%', ss: '40%', ssh: '27%' },
+      { bg: 'linear-gradient(170deg, #C9A3E8 0%, #5A3C8C 52%, #1A1030 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #E6D2F8)', sx: '30%', sy: '14%', ss: '42%', ssh: '28%' },
+      { bg: 'linear-gradient(170deg, #2A3F8F 0%, #141F52 55%, #080C24 100%)', sc: 'radial-gradient(circle at 35% 35%, #B8D0FF, #5A82E0)', sx: '20%', sy: '22%', ss: '60%', ssh: '40%' },
+      { bg: 'linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)', sx: '16%', sy: '16%', ss: '44%', ssh: '29%' },
+      { bg: 'linear-gradient(170deg, #9ACBEE 0%, #2C5C88 50%, #0A1B2E 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFE6F8)', sx: '50%', sy: '12%', ss: '34%', ssh: '23%' },
+      { bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)', sx: '54%', sy: '8%', ss: '30%', ssh: '20%' }
+    ];
+    const names = ['Slack Water', 'Low Light', 'Fair Wind', 'The Tide Table', 'Salt and Iron', 'Dead Reckoning', 'Harbour Bell', 'Undertow', 'Spring Tide', 'Last Light'];
+    const grads = [
+      'linear-gradient(135deg, #C8506A, #7A2238)', 'linear-gradient(135deg, #4F7FD0, #26407E)', 'linear-gradient(135deg, #8A6AD8, #4A2E8C)',
+      'linear-gradient(135deg, #E0A060, #9A5A2A)', 'linear-gradient(135deg, #3AA6A0, #1A5A5C)', 'linear-gradient(135deg, #D880A8, #7A3A62)', 'linear-gradient(135deg, #7AAFD8, #2C5C88)'
+    ];
+    const people = [['MQ', 'Mara Quinn', 'Dr. Elin Voss'], ['TA', 'Tomas Aldred', 'Captain Rue'], ['IO', 'Ife Okoro', 'Nell Parry'], ['JB', 'Joss Bell', 'Harbourmaster'], ['RC', 'Rhea Calder', 'Ada Voss'], ['KH', 'Kit Haldane', 'Pilot Sloan'], ['SD', 'Sana Dube', 'Marta']];
+    const castPeek = people.concat(people.slice(0, 2)).map((p, i) => ({ ch: p[0], bg: grads[i % grads.length] }));
+    const castRow = people.map((p, i) => ({
+      ch: p[0], name: p[1], role: p[2], bg: grads[i % grads.length],
+      d: i === 0 ? 220 : 190, fs: i === 0 ? 68 : 58,
+      ring: i === 0 ? '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)' : '0 10px 24px rgba(0,0,0,0.35)',
+      nameColor: i === 0 ? '#FFFFFF' : 'rgba(255,255,255,0.72)'
+    }));
+    const credits = [
+      { t: 'Salt Meridian', y: '2025', a: 1, tv: false, off: false },
+      { t: 'The Quiet Tide', y: '', a: 0, tv: true, off: false },
+      { t: 'Low Tide', y: '2024', a: 3, tv: false, off: true },
+      { t: 'Velvet Static', y: '2023', a: 2, tv: false, off: false },
+      { t: 'The Salt Road', y: '2021', a: 4, tv: false, off: false },
+      { t: 'Night Ferry', y: '2019', a: 5, tv: false, off: true },
+      { t: 'Copper Sky', y: '2017', a: 1, tv: false, off: false }
+    ];
+    const actorRow = credits.map((c, i) => {
+      const f = i === 0;
+      const p = poster[(c.a + 2) % poster.length];
+      return Object.assign({}, p, {
+        title: c.t, year: c.y, yearColor: f ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
+        w: f ? 210 : 176, h: f ? 315 : 264, fs: f ? 22 : 18,
+        ring: f ? '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)' : '0 10px 24px rgba(0,0,0,0.35)',
+        op: c.off ? 0.45 : 1, isTv: c.tv, off: c.off
+      });
+    });
+    // seasons row
+    let seasons;
+    if (many) {
+      seasons = [];
+      for (let n = 1; n <= 14; n++) {
+        const on = n === 9;
+        seasons.push({ label: String(n), fs: on ? 40 : 30, color: on ? '#FFFFFF' : 'rgba(255,255,255,0.42)', line: on ? accent : 'transparent', lineW: 3 });
+      }
+    } else {
+      seasons = ['Season 1', 'Season 2', 'Season 3'].map((label, i) => {
+        const active = (state === 'season') ? i === 2 : i === 1;
+        return { label: label, fs: active ? 40 : 32, color: active ? '#FFFFFF' : 'rgba(255,255,255,0.42)', line: active ? accent : 'transparent', lineW: active ? 4 : 3 };
+      });
+    }
+    // episodes
+    const inSeason3 = state === 'season' && !many;
+    const resumeLike = state === 'resume' || state === 'recap';
+    const eps = [];
+    for (let i = 0; i < 6; i++) {
+      const n = i + 1;
+      const focus = resumeLike && i === 3;
+      const w = focus ? 440 : 380;
+      const h = focus ? 248 : 214;
+      const watched = !inSeason3 && n <= 3;
+      const progress = !inSeason3 && n === 4;
+      const hidden = inSeason3 ? true : n >= 6;
+      eps.push({
+        w: w, h: h,
+        bg: art[(i + (inSeason3 ? 2 : 0)) % art.length].bg,
+        sc: art[(i + (inSeason3 ? 2 : 0)) % art.length].sc,
+        ring: focus ? '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)' : '0 10px 24px rgba(0,0,0,0.35)',
+        num: String(n),
+        tick: watched,
+        hidden: hidden,
+        barH: progress ? '6px' : '0px',
+        pct: progress ? '68%' : '0%',
+        title: hidden ? 'Episode ' + n : names[i],
+        sub: progress ? '31 min left' : (hidden ? 'Hidden until watched' : '44 min'),
+        titleColor: focus ? '#FFFFFF' : 'rgba(255,255,255,0.72)',
+        subColor: progress ? accent : 'rgba(255,255,255,0.55)'
+      });
+    }
+    let hero;
+    if (state === 'actor') {
+      hero = { showSvc: true, title: 'Salt Meridian', eyebrow: 'Mara Quinn \u00b7 Dr. Mira Hale \u00b7 2025', line: '2025 \u00b7 15 \u00b7 1h 52m', tag: 'On your server', okLabel: 'Open', synopsis: '[Synopsis from TMDB, two lines at most. A lighthouse keeper and a stranded surveyor share one long winter.]' };
+    } else if (state === 'cast') {
+      hero = { showSvc: false, title: 'Mara Quinn', eyebrow: 'Cast \u00b7 1 of 12', line: 'Dr. Elin Voss', tag: '', okLabel: 'See their titles', synopsis: '[From TMDB: also in The Salt Road, Low Tide and Velvet Static.]' };
+    } else if (resumeLike) {
+      hero = {
+        showSvc: true, title: 'Harbour Lights', eyebrow: 'Season 2 · Episode 4 · Resume',
+        line: 'The Tide Table · 44 min',
+        tag: 'New season',
+        synopsis: '[Episode synopsis from TMDB, two lines at most. A storm closes the harbour and the town starts counting who is missing.]',
+        okLabel: 'Resume'
+      };
+    } else if (many) {
+      hero = {
+        showSvc: true, title: 'Harbour Lights', eyebrow: 'Season 9 · 22 episodes',
+        line: '2017 · 12 · 14 seasons',
+        tag: 'Ended',
+        synopsis: '[Season synopsis from TMDB, two lines at most.]',
+        okLabel: 'Open season'
+      };
+    } else {
+      hero = {
+        showSvc: true, title: 'Harbour Lights', eyebrow: 'Season 3 · 8 episodes',
+        line: '2026 · 15 · Returning',
+        tag: 'New season',
+        synopsis: '[Season synopsis from TMDB, two lines at most. The harbour reopens, but the same boats do not come back.]',
+        okLabel: 'Open season'
+      };
+    }
+    return {
+      bg: bg, accent: accent, cats: cats, seasons: seasons, eps: eps, hero: hero,
+      more: poster,
+      notCast: state !== 'cast' && state !== 'actor',
+      isActor: state === 'actor',
+      isCast: state === 'cast',
+      isRecap: state === 'recap',
+      castPeek: castPeek,
+      castRow: castRow,
+      actorRow: actorRow,
+      recap: [
+        { label: 'Season 1', sub: 'Man of Recaps', bg: 'transparent' },
+        { label: 'Season 2', sub: 'Man of Recaps', bg: 'rgba(255,255,255,0.16)' }
+      ],
+      isMany: many,
+      seasonFocus: state === 'season',
+      epsOpacity: state === 'season' ? 0.5 : 1,
+      counterA: state === 'resume' ? '4' : (many ? '9' : '3'),
+      counterB: state === 'resume' ? '10' : (many ? '14' : '3')
+    };
+  }
+}
+</script>
+</body>
+</html>

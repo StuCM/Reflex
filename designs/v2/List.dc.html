@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>List page, wine and navy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: {{c.color}}; padding-bottom: 8px; border-bottom: 3px solid {{c.line}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 150px; width: 1300px">
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">Smart list</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 84px; line-height: 1; letter-spacing: -1px; text-transform: uppercase; margin-top: 8px">Slow burns</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.68); margin-top: 14px">312 titles · Thriller · 2010s · Rated 15 or under</div>
+</div>
+
+<div style="position: absolute; right: 96px; top: 190px; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; font-size: 26px; color: rgba(255,255,255,0.7)">
+<div style="display: flex; align-items: center; gap: 14px">Sort <span style="color: #FFFFFF; font-weight: 600">Rating</span>
+<span style="width: 24px; height: 24px; border-radius: 50%; background: #5AA0FF"></span></div>
+<div style="display: flex; align-items: center; gap: 14px">Edit rules <span style="width: 24px; height: 24px; border-radius: 50%; background: #F5C84C"></span></div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 340px; width: 1728px; display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-size: 26px; color: rgba(255,255,255,0.78)">Night Ferry · 2017 · &#9733; 7.6 · <span style="color: #4CD08A; font-weight: 600">On your server</span></div>
+<div style="display: flex; align-items: center; gap: 14px; font-size: 24px; color: rgba(255,255,255,0.6)"><span style="width: 22px; height: 22px; border-radius: 50%; background: #F5C84C"></span>Add to another list</div>
+</div>
+
+<sc-for list="{{grid}}" as="p" hint-placeholder-count="14">
+<div style="position: absolute; left: {{p.left}}px; top: {{p.top}}px; width: 206px; height: 309px; border-radius: 14px; overflow: hidden; background: {{p.bg}}; box-shadow: {{p.ring}}; opacity: {{p.op}}">
+<div style="position: absolute; left: {{p.sx}}; top: {{p.sy}}; width: {{p.ss}}; height: {{p.ssh}}; border-radius: 50%; background: {{p.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 46%; background: rgba(10,8,24,0.5); -webkit-clip-path: polygon(0 60%, 22% 36%, 40% 58%, 62% 28%, 82% 54%, 100% 40%, 100% 100%, 0 100%); clip-path: polygon(0 60%, 22% 36%, 40% 58%, 62% 28%, 82% 54%, 100% 40%, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 38%; background: rgba(5,4,16,0.62); -webkit-clip-path: polygon(0 58%, 20% 40%, 44% 62%, 70% 36%, 100% 58%, 100% 100%, 0 100%); clip-path: polygon(0 58%, 20% 40%, 44% 62%, 70% 36%, 100% 58%, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0))"></div>
+<div style="position: absolute; left: 14px; right: 14px; bottom: 16px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; line-height: 1.05">{{p.title}}</div>
+<sc-if value="{{p.off}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 10px; top: 10px; padding: 3px 10px; border-radius: 8px; background: rgba(0,0,0,0.6); font-size: 18px; font-weight: 600">Not on server</div>
+</sc-if>
+</div>
+</sc-for>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = '#F4C8B6';
+    const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
+    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+    const cats = labels.map((label, i) => ({
+      label: label,
+      color: i === 3 ? '#FFFFFF' : 'rgba(255,255,255,0.42)',
+      line: i === 3 ? accent : 'transparent'
+    }));
+    const art = [
+      { title: 'Night Ferry', bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)', sx: '54%', sy: '8%', ss: '30%', ssh: '20%' },
+      { title: 'Salt Meridian', bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { title: 'Pale Orchard', bg: 'linear-gradient(170deg, #F08A4A 0%, #A8321E 50%, #2A0A06 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE08A, #FFB030)', sx: '22%', sy: '20%', ss: '52%', ssh: '35%' },
+      { title: 'Velvet Static', bg: 'linear-gradient(170deg, #2A3F8F 0%, #141F52 55%, #080C24 100%)', sc: 'radial-gradient(circle at 35% 35%, #B8D0FF, #5A82E0)', sx: '20%', sy: '22%', ss: '60%', ssh: '40%' },
+      { title: 'Distant Weather', bg: 'linear-gradient(170deg, #C9A3E8 0%, #5A3C8C 52%, #1A1030 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #E6D2F8)', sx: '30%', sy: '14%', ss: '42%', ssh: '28%' },
+      { title: 'Copper Sky', bg: 'linear-gradient(170deg, #A6D17E 0%, #3F7A3A 50%, #10260F 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF8C8, #F2E58A)', sx: '40%', sy: '14%', ss: '40%', ssh: '27%' },
+      { title: 'Marrow Lane', bg: 'linear-gradient(170deg, #E2AEB0 0%, #7A4A64 52%, #241528 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8DE, #F5C0B0)', sx: '16%', sy: '16%', ss: '44%', ssh: '29%' },
+      { title: 'Tin Coast', bg: 'linear-gradient(170deg, #9ACBEE 0%, #2C5C88 50%, #0A1B2E 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFE6F8)', sx: '50%', sy: '12%', ss: '34%', ssh: '23%' },
+      { title: 'Lantern Season', bg: 'linear-gradient(170deg, #EBD08F 0%, #B06C3A 50%, #2B1608 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFF4D6, #F0D08A)', sx: '48%', sy: '10%', ss: '36%', ssh: '24%' }
+    ];
+    const order = [0, 1, 2, 3, 4, 5, 6, 7, 8, 3, 0, 6, 2, 5];
+    const offSet = { 4: true, 9: true, 12: true };
+    const grid = order.map((ai, i) => {
+      const col = i % 7;
+      const row = Math.floor(i / 7);
+      return Object.assign({}, art[ai], {
+        left: 96 + col * (206 + 40),
+        top: 400 + row * (309 + 40),
+        ring: i === 0 ? '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)' : '0 10px 24px rgba(0,0,0,0.35)',
+        off: !!offSet[i],
+        op: offSet[i] ? 0.4 : 1
+      });
+    });
+    return { bg: bg, accent: accent, cats: cats, grid: grid };
+  }
+}
+</script>
+</body>
+</html>

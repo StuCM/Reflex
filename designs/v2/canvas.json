@@ -1,0 +1,565 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-15T19:00:00Z"
+  },
+  "title": "TV app home screen options",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "title": "Top bar A \u00b7 Resume first"
+    },
+    "Backdrop.dc.html": {
+      "x": 2000,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "title": "Top bar B \u00b7 Backdrop"
+    },
+    "MenuLists.dc.html": {
+      "x": 4000,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "title": "Top bar C \u00b7 Lists menu open"
+    },
+    "TilesRest.dc.html": {
+      "x": 0,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Tiles A \u00b7 Resting on Continue"
+    },
+    "TilesFocus.dc.html": {
+      "x": 2000,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Tiles B \u00b7 Up on a tile"
+    },
+    "TilesRow.dc.html": {
+      "x": 4000,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Tiles C \u00b7 One PS5-style row"
+    },
+    "Home.dc.html": {
+      "x": 0,
+      "y": 3000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Glass \u00b7 Midnight, resting"
+    },
+    "HomeMenu.dc.html": {
+      "x": 2000,
+      "y": 3000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Glass \u00b7 Midnight, Up pressed"
+    },
+    "HomePine.dc.html": {
+      "x": 4000,
+      "y": 3000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Glass \u00b7 Pine, resting"
+    },
+    "HomeOxblood.dc.html": {
+      "x": 6000,
+      "y": 3000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Glass \u00b7 Oxblood, resting"
+    },
+    "Gradient.dc.html": {
+      "x": 0,
+      "y": 4500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Gradient 1 \u00b7 Crimson to ocean"
+    },
+    "GradEmber.dc.html": {
+      "x": 2000,
+      "y": 4500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Gradient 2 \u00b7 Ember to indigo"
+    },
+    "GradRose.dc.html": {
+      "x": 4000,
+      "y": 4500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Gradient 3 \u00b7 Rose to teal"
+    },
+    "GradMenu.dc.html": {
+      "x": 0,
+      "y": 6000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Gradient 1 \u00b7 Up pressed, tiles lower"
+    },
+    "GradPoster.dc.html": {
+      "x": 2000,
+      "y": 6000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Big cover left \u00b7 Crimson"
+    },
+    "GradPosterRose.dc.html": {
+      "x": 4000,
+      "y": 6000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Big cover left \u00b7 Rose"
+    },
+    "Combo.dc.html": {
+      "x": 0,
+      "y": 7500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Wine+navy \u00b7 Cue A: chips"
+    },
+    "ComboLegend.dc.html": {
+      "x": 2000,
+      "y": 7500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Wine+navy \u00b7 Cue B: colour-key legend"
+    },
+    "ComboBadge.dc.html": {
+      "x": 4000,
+      "y": 7500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Wine+navy \u00b7 Cue C: poster badge"
+    },
+    "ComboMenu.dc.html": {
+      "x": 0,
+      "y": 9000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Wine+navy \u00b7 Up pressed"
+    },
+    "ComboModal.dc.html": {
+      "x": 2000,
+      "y": 9000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Wine+navy \u00b7 Add to list modal"
+    },
+    "ComboNavy.dc.html": {
+      "x": 4000,
+      "y": 9000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Navy+wine \u00b7 flipped"
+    },
+    "Movies.dc.html": {
+      "x": 0,
+      "y": 10500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Movies \u00b7 Trending first, Top 10 peeking"
+    },
+    "MoviesHot.dc.html": {
+      "x": 2000,
+      "y": 10500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Movies \u00b7 Top 10 ranked, one down"
+    },
+    "Discover.dc.html": {
+      "x": 4000,
+      "y": 10500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Discover \u00b7 Trailers and cinema, search on top"
+    },
+    "DiscoverFilter.dc.html": {
+      "x": 8000,
+      "y": 10500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Discover \u00b7 Add a filter"
+    },
+    "DiscoverResults.dc.html": {
+      "x": 6000,
+      "y": 10500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Discover \u00b7 Sentence search read as chips"
+    },
+    "TvTrending.dc.html": {
+      "x": 0,
+      "y": 12000,
+      "w": 1920,
+      "h": 1080,
+      "title": "TV \u00b7 Trending first, Top 10 peeking"
+    },
+    "TvNext.dc.html": {
+      "x": 2000,
+      "y": 12000,
+      "w": 1920,
+      "h": 1080,
+      "title": "TV \u00b7 Top 10 ranked, one down"
+    },
+    "List.dc.html": {
+      "x": 4000,
+      "y": 12000,
+      "w": 1920,
+      "h": 1080,
+      "title": "List page \u00b7 One template for any list"
+    },
+    "Collections.dc.html": {
+      "x": 0,
+      "y": 13500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Collections \u00b7 Yours"
+    },
+    "CollectionsCurated.dc.html": {
+      "x": 2000,
+      "y": 13500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Collections \u00b7 Curated (genres, franchises)"
+    },
+    "Profile.dc.html": {
+      "x": 4000,
+      "y": 13500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Profile \u00b7 Stu, only your shows"
+    },
+    "ProfileSwitch.dc.html": {
+      "x": 6000,
+      "y": 13500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Profile \u00b7 Who's watching"
+    },
+    "Series.dc.html": {
+      "x": 0,
+      "y": 15000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Series \u00b7 Resume, season 2"
+    },
+    "SeriesSeason.dc.html": {
+      "x": 2000,
+      "y": 15000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Series \u00b7 Season picker focused"
+    },
+    "SeriesMany.dc.html": {
+      "x": 4000,
+      "y": 15000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Series \u00b7 14 seasons, number picker"
+    },
+    "SeriesCast.dc.html": {
+      "x": 6000,
+      "y": 15000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Series \u00b7 Cast row, actor in header"
+    },
+    "SeriesRecap.dc.html": {
+      "x": 8000,
+      "y": 15000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Series \u00b7 Recap by season (preferred channel)"
+    },
+    "SeriesActor.dc.html": {
+      "x": 10000,
+      "y": 15000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Series \u00b7 Actor picked, their titles newest first"
+    },
+    "Settings.dc.html": {
+      "x": 0,
+      "y": 16500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Settings \u00b7 Profile, backup, recap channels"
+    },
+    "MovieDetail.dc.html": {
+      "x": 0,
+      "y": 18000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Movie page \u00b7 Play, start, server, audio"
+    },
+    "MovieFranchise.dc.html": {
+      "x": 2000,
+      "y": 18000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Movie page \u00b7 Franchise row in release order"
+    },
+    "Player.dc.html": {
+      "x": 0,
+      "y": 19500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Player \u00b7 Centred controls, episode skip"
+    },
+    "PlayerIntro.dc.html": {
+      "x": 2000,
+      "y": 19500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Player \u00b7 Skip intro"
+    },
+    "PlayerTracks.dc.html": {
+      "x": 4000,
+      "y": 19500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Player \u00b7 Down: audio, subtitles, quality"
+    },
+    "PlayerNext.dc.html": {
+      "x": 6000,
+      "y": 19500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Player \u00b7 Next episode"
+    },
+    "MovieServer.dc.html": {
+      "x": 4000,
+      "y": 18000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Movie page \u00b7 Server picker"
+    },
+    "ProfileColour.dc.html": {
+      "x": 0,
+      "y": 21000,
+      "w": 1920,
+      "h": 1080,
+      "title": "Profile colours \u00b7 Pick an accent per profile"
+    },
+    "DiscoverSearch.dc.html": {
+      "x": 10000,
+      "y": 10500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Discover \u00b7 Name search with type tabs"
+    },
+    "DiscoverPeople.dc.html": {
+      "x": 12000,
+      "y": 10500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Discover \u00b7 People tab"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Backdrop.dc.html",
+    "MenuLists.dc.html",
+    "TilesRest.dc.html",
+    "TilesFocus.dc.html",
+    "TilesRow.dc.html",
+    "Home.dc.html",
+    "HomeMenu.dc.html",
+    "HomePine.dc.html",
+    "HomeOxblood.dc.html",
+    "Gradient.dc.html",
+    "GradEmber.dc.html",
+    "GradRose.dc.html",
+    "GradMenu.dc.html",
+    "GradPoster.dc.html",
+    "GradPosterRose.dc.html",
+    "Combo.dc.html",
+    "ComboLegend.dc.html",
+    "ComboBadge.dc.html",
+    "ComboMenu.dc.html",
+    "ComboModal.dc.html",
+    "ComboNavy.dc.html",
+    "Movies.dc.html",
+    "MoviesHot.dc.html",
+    "Discover.dc.html",
+    "DiscoverFilter.dc.html",
+    "DiscoverResults.dc.html",
+    "TvTrending.dc.html",
+    "TvNext.dc.html",
+    "List.dc.html",
+    "Collections.dc.html",
+    "CollectionsCurated.dc.html",
+    "Profile.dc.html",
+    "ProfileSwitch.dc.html",
+    "Series.dc.html",
+    "SeriesSeason.dc.html",
+    "SeriesMany.dc.html",
+    "SeriesCast.dc.html",
+    "SeriesRecap.dc.html",
+    "SeriesActor.dc.html",
+    "Settings.dc.html",
+    "MovieDetail.dc.html",
+    "MovieFranchise.dc.html",
+    "Player.dc.html",
+    "PlayerIntro.dc.html",
+    "PlayerTracks.dc.html",
+    "PlayerNext.dc.html",
+    "MovieServer.dc.html",
+    "ProfileColour.dc.html",
+    "DiscoverSearch.dc.html",
+    "DiscoverPeople.dc.html"
+  ],
+  "notes": {
+    "t1": {
+      "x": 0,
+      "y": -300,
+      "text": "TV home screen directions",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t2": {
+      "x": 0,
+      "y": 1200,
+      "text": "Tile menu directions",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t3": {
+      "x": 0,
+      "y": 2700,
+      "text": "Poster-first glass: palettes and menu reveal",
+      "kind": "title1",
+      "maxW": 7920,
+      "w": 240
+    },
+    "t4": {
+      "x": 0,
+      "y": 4200,
+      "text": "Gradient hero: three palettes",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t5": {
+      "x": 0,
+      "y": 5700,
+      "text": "Menu reveal and big-cover layout",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t6": {
+      "x": 0,
+      "y": 7200,
+      "text": "Latest: wine and navy, three add-to-list cues",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t7": {
+      "x": 0,
+      "y": 8700,
+      "text": "Latest: menu, modal and flipped palette",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t8": {
+      "x": 0,
+      "y": 10200,
+      "text": "Latest: Movies page and merged Discover and search",
+      "kind": "title1",
+      "maxW": 14000,
+      "w": 240
+    },
+    "t9": {
+      "x": 0,
+      "y": 11700,
+      "text": "Latest: TV page, list page and Lists index",
+      "kind": "title1",
+      "maxW": 7920,
+      "w": 240
+    },
+    "t10": {
+      "x": 0,
+      "y": 13200,
+      "text": "Latest: Collections (Yours and Curated) and personal profiles",
+      "kind": "title1",
+      "maxW": 7920,
+      "w": 240
+    },
+    "t11": {
+      "x": 0,
+      "y": 14700,
+      "text": "Latest: Series page",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t12": {
+      "x": 0,
+      "y": 16200,
+      "text": "Latest: Settings",
+      "kind": "title1",
+      "maxW": 5920,
+      "w": 240
+    },
+    "t13": {
+      "x": 0,
+      "y": 17700,
+      "text": "Latest: Movie page",
+      "kind": "title1",
+      "maxW": 3920,
+      "w": 240
+    },
+    "t14": {
+      "x": 0,
+      "y": 19200,
+      "text": "Latest: Player",
+      "kind": "title1",
+      "maxW": 7920,
+      "w": 240
+    },
+    "t15": {
+      "x": 0,
+      "y": 20700,
+      "text": "Latest: Profile colours",
+      "kind": "title1",
+      "maxW": 3920,
+      "w": 240
+    }
+  },
+  "designSystems": [],
+  "attachments": {},
+  "noteOrder": [
+    "t1",
+    "t2",
+    "t3",
+    "t4",
+    "t5",
+    "t6",
+    "t7",
+    "t8",
+    "t9",
+    "t10",
+    "t11",
+    "t12",
+    "t13",
+    "t14",
+    "t15"
+  ]
+}
