@@ -1,0 +1,85 @@
+{
+  "title": "The v2 shell",
+  "summary": "v2's background, fonts and motion settings with a tuning panel over real posters; the top menu replacing the sidebar; Home in v2's look. Re-skins the existing browse screen.",
+  "stage": "build",
+  "questions": [],
+  "gaps": [],
+  "findings": [],
+  "brief": {
+    "shape": "extend",
+    "target": [
+      {
+        "path": "src/screen/browse.ts",
+        "name": "browse screen"
+      },
+      {
+        "path": "src/view/rail.ts"
+      },
+      {
+        "path": "src/view/masthead.ts"
+      }
+    ],
+    "direction": "Re-skin the existing browse screen into v2 — tokens, background, fonts, top menu, poster sizes, hero — keeping its data, row model, art cache, deck and Kids; put the motion lab's toggles in a hidden panel so tuning happens on real art.",
+    "rejected": [
+      {
+        "option": "A new v2 home screen beside the old one",
+        "why": "a second rail pool, masthead and key routing — throwaway, since v2 ends as one app"
+      },
+      {
+        "option": "A v1/v2 switch",
+        "why": "rail geometry is constants; a switch means making them runtime values for a look nobody will go back to"
+      }
+    ],
+    "decided": [
+      "it needs built in to the app as I need posters to come up and hero images to show",
+      "focus scale",
+      "gradient shift I like but the gradient is very liney on the tv",
+      "timing slow",
+      "shadows on",
+      "Kids as a category",
+      "an option to go into the servers ... access the categories they have there",
+      "build this on a separate feature branch",
+      "agree with quick fix and investigate later",
+      "it has colour buttons"
+    ],
+    "exploring": [
+      "hero debounce (default 280, tunable)",
+      "will-change containers vs off"
+    ],
+    "approved": "2026-11-16"
+  },
+  "order": [
+    "061",
+    "062",
+    "063"
+  ],
+  "challenge": {
+    "verdict": "QUESTION",
+    "points": [
+      {
+        "q": "Timing presets should retune the existing --t-quick/--t-move/--t-fade and reuse .no-anim, not add parallel tokens nothing reads.",
+        "evidence": "css/base.css:35-37; css/browse.css transitions; css/browse.css:235 .no-anim; rail.ts:102",
+        "if": "061 steps 1,3 and the smoke step change",
+        "answer": "Spec bug, fixed in 061 by the orchestrator."
+      },
+      {
+        "q": "Servers should be the per-server browser in v2-decisions, not the old sidebar renamed (which also holds Search, Devices, Autoplay, Theme music).",
+        "evidence": "docs/v2-decisions.md; src/view/sidebar.ts:94-108",
+        "if": "062 labels the sidebar 'More'; a separate task builds Servers",
+        "answer": "Stuart, 2026-11-16: 'agree with quick fix and investigate later' — 062 labels the sidebar 'More'; the Servers browser is task 064."
+      },
+      {
+        "q": "Does Stuart's B8 remote have colour buttons? The Magic Remote has none (browse.ts:234, graph), so Blue may not open the panel.",
+        "evidence": "src/screen/browse.ts:117-118,234",
+        "if": "move the panel toggle to a key the remote has",
+        "answer": "Stuart, 2026-11-16: 'it has colour buttons' — Blue opens the panel."
+      },
+      {
+        "q": "Skip-on-repeat on by default when Stuart was unsure what it was.",
+        "evidence": "his quote",
+        "if": "ship off, or on with an explanation",
+        "answer": "Explained to Stuart before the spec (held arrows jump instead of animating); on by default, toggle in the panel."
+      }
+    ]
+  }
+}
