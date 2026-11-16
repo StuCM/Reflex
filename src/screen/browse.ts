@@ -38,7 +38,18 @@ import type { RailTileElement } from '../view/rail';
 import * as rowModel from '../rules/rows';
 import * as servers from '../data/servers';
 import * as sidebar from '../view/sidebar';
-import { KEY, clamp, debug, isBack, message, show as showView, toast } from '../core/ui';
+import * as menubar from '../view/menubar';
+import {
+  KEY,
+  clamp,
+  debug,
+  isBack,
+  message,
+  setDrift,
+  setPage,
+  show as showView,
+  toast,
+} from '../core/ui';
 
 function must(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -174,6 +185,7 @@ export function render() {
      the rows have somewhere to go the moment you step into them. */
   browseView.classList.toggle('dense', rowIndex !== 0);
   rail.render(rows, rowIndex);
+  setDrift(focusedRow()?.focus ?? 0, rowIndex);
   masthead.render(focusedRow() ?? null, focusedItem(), rows.length > 0);
   /* The backdrop keeps its own debounce — Meta's skips a cached item and
      would leave the last film's art under the new one's title. */
@@ -261,6 +273,52 @@ function openSidebar() {
       current: mode === 'collection' && entry.title === collectionTitle,
     })),
   );
+}
+
+/* ---------- the top menu ---------- */
+
+const PAGE_HOME = 0;
+const PAGE_KIDS = 3;
+const PAGE_COLLECTIONS = 4;
+const PAGE_DISCOVER = 5;
+let lastPage = PAGE_HOME;
+
+function currentPage(): number {
+  if (mode === 'kids') return PAGE_KIDS;
+  if (mode === 'discover') return PAGE_DISCOVER;
+  if (mode === 'collection') return PAGE_COLLECTIONS;
+  if (sectionIndex === 1) return 2;
+  return lastPage === 1 ? 1 : PAGE_HOME;
+}
+
+function showSection(i: number): void {
+  if (!sections[i]) toast('Nothing there on these servers');
+  else if (mode !== 'library' || sectionIndex !== i) loadSection(i, true);
+}
+
+function goToPage(page: number): void {
+  lastPage = page;
+  if (page <= 1) showSection(0);
+  else if (page === 2) showSection(1);
+  else if (page === PAGE_COLLECTIONS) {
+    const first = collectionEntries[0];
+    if (mode === 'collection') return;
+    if (first) loadCollection(first);
+    else toast('No collections on these servers');
+  } else if (page === PAGE_DISCOVER && mode !== 'discover') loadDiscover();
+  else if (page === PAGE_KIDS && mode !== 'kids') loadKids();
+}
+
+function menuKey(code: number): boolean {
+  if (menubar.key(code, goToPage)) return true;
+  if (code === KEY.OK && menubar.focused() === menubar.MORE) {
+    menubar.close();
+    openSidebar();
+  } else if (code === KEY.OK || code === KEY.DOWN || isBack(code)) {
+    menubar.flush(goToPage);
+    menubar.close();
+  }
+  return true;
 }
 
 /* Select mode renames the row, so while it is on the row is known by where it
@@ -1080,6 +1138,10 @@ function kidsWatching(set: Set<string> | null): PlexItem[] {
 export function openKids(): void {
   sidebar.close();
   menu.close();
+  menubar.close();
+  menubar.abandon();
+  lastPage = PAGE_KIDS;
+  setPage(PAGE_KIDS);
   if (mode === 'kids') return;
   loadKids();
 }
@@ -1425,19 +1487,17 @@ export function key(code: number): boolean {
   if (code !== KEY.OK) okHold.cancel();
   if (menu.isOpen()) return menu.key(code);
   if (sidebar.isOpen()) return sidebar.key(code);
+  if (menubar.isOpen()) return menuKey(code);
 
   let row = focusedRow();
   const K = KEY;
 
   switch (code) {
     case K.LEFT:
-      /* Left off the front of a row is the way to the sections — there is
-         nowhere else for it to go, and the rail has no header any more.
-         Not while picking: the way out of the mode is BACK, not wandering. */
       if (row && row.focus > 0) {
         row.focus--;
         render();
-      } else if (!picking) openSidebar();
+      }
       break;
     case K.RIGHT:
       if (row && row.focus < row.total - 1) {
@@ -1446,10 +1506,11 @@ export function key(code: number): boolean {
       }
       break;
     case K.UP:
-      if (!picking && rowIndex > 0) {
+      if (picking) break;
+      if (rowIndex > 0) {
         rowIndex--;
         render();
-      }
+      } else menubar.open(currentPage());
       break;
     case K.DOWN:
       if (!picking && rowIndex < rows.length - 1) {

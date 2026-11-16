@@ -36,7 +36,7 @@
   --t-move:  360ms;   /* a row change, the hero collapsing */
   --t-fade:  620ms;   /* one backdrop crossfading into the next */
   --t-menu:  420ms;
-  --t-glow:  700ms;
+  --t-glow:  800ms;
   --ease:    cubic-bezier(.2, .7, .2, 1);
 
   /* Corners, largest first. A card is a poster, a still or a chapter card; a

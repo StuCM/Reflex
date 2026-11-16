@@ -4,7 +4,7 @@ import { setPage } from '../core/ui';
 const OPTIONS = {
   hero: [0, 150, 280, 420],
   wc: ['off', 'containers'],
-  glow: ['on', 'off'],
+  glow: ['static', 'page', 'drift'],
   shadows: ['on', 'off'],
   timing: ['fast', 'default', 'slow'],
   skip: ['on', 'off'],
@@ -24,7 +24,7 @@ const ORDER: Name[] = ['hero', 'wc', 'glow', 'shadows', 'timing', 'skip', 'noise
 const DEFAULTS: Record<Name, number> = {
   hero: 2,
   wc: 1,
-  glow: 0,
+  glow: 1,
   shadows: 0,
   timing: 2,
   skip: 0,
@@ -74,7 +74,8 @@ function value(name: Name): number | string {
 
 function apply(): void {
   document.body.classList.toggle('nowc', value('wc') === 'off');
-  document.body.classList.toggle('noshift', value('glow') === 'off');
+  document.body.classList.toggle('noshift', value('glow') === 'static');
+  document.body.classList.toggle('drift', value('glow') === 'drift');
   browse?.classList.toggle('shadows', value('shadows') === 'on');
   const [quick, move, menu] = TIMINGS[state.timing]!;
   root.style.setProperty('--t-quick', `${quick}ms`);

@@ -55,9 +55,9 @@ export function show(name: string): void {
 }
 
 const GLOW_SHIFTS = [
-  ['g1', -90, 30],
-  ['g2', 70, -40],
-  ['g3', -50, 50],
+  ['g1', -260, 70],
+  ['g2', 220, -90],
+  ['g3', -160, 110],
 ] as const;
 
 /* Moves the background glows to page `index`; the CSS transition does the glide. */
@@ -67,6 +67,13 @@ export function setPage(index: number): void {
     style.setProperty('--gx', `${across * index}px`);
     style.setProperty('--gy', `${down * index}px`);
   });
+}
+
+/* Feeds the glows' drift: the focused column and row. Skipped while a held key is skipping animation. */
+export function setDrift(column: number, row: number): void {
+  if (must('browse').classList.contains('no-anim')) return;
+  document.documentElement.style.setProperty('--f', String(column));
+  document.documentElement.style.setProperty('--r', String(row));
 }
 
 export function view(): string {

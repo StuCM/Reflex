@@ -11,6 +11,7 @@ module.exports = function (h) {
     waitFor,
     step,
     sidebarPick,
+    topRow,
     backToLibrary,
     searchFor,
     actionRow,
@@ -205,7 +206,7 @@ module.exports = function (h) {
           return (
             backToLibrary()
               .then(function () {
-                return press('ArrowUp', 8);
+                return topRow();
               })
               .then(function () {
                 return page.waitForTimeout(1200);
@@ -266,7 +267,7 @@ module.exports = function (h) {
           return (
             backToLibrary()
               .then(function () {
-                return press('ArrowUp', 8);
+                return topRow();
               })
               .then(function () {
                 return page.waitForTimeout(1500);
@@ -353,7 +354,7 @@ module.exports = function (h) {
            wind never hands a tile anything new. */
         return backToLibrary()
           .then(function () {
-            return press('ArrowUp', 8);
+            return topRow();
           })
           .then(function () {
             return press('ArrowDown', 2);
@@ -417,7 +418,7 @@ module.exports = function (h) {
            strip never winds, and a strip that does not wind never recycles. */
         return backToLibrary()
           .then(function () {
-            return press('ArrowUp', 8);
+            return topRow();
           })
           .then(function () {
             return press('ArrowDown', 2);
@@ -481,7 +482,7 @@ module.exports = function (h) {
            strip that does not wind never recycles anything. */
         return backToLibrary()
           .then(function () {
-            return press('ArrowUp', 8);
+            return topRow();
           })
           .then(function () {
             return press('ArrowDown', 2);
@@ -1344,7 +1345,7 @@ module.exports = function (h) {
         }, hostId || 'hold-menu');
       }
       function rowsOf(rowNumber) {
-        return press('ArrowUp', 12)
+        return topRow()
           .then(function () {
             return press('ArrowDown', rowNumber);
           })
@@ -1449,7 +1450,7 @@ module.exports = function (h) {
       )
         .then(function () {
           return step('a key during the 500ms window cancels the hold', async function () {
-            await press('ArrowUp', 12);
+            await topRow();
             await page.waitForTimeout(300);
             await page.keyboard.down('Enter');
             await page.keyboard.press('ArrowRight');

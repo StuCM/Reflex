@@ -11,6 +11,8 @@ module.exports = function (h) {
     openSidebar,
     sidebarRows,
     sidebarPick,
+    topRow,
+    sidebarWalkTo,
     watchingPick,
     focusedRowTypes,
     backToLibrary,
@@ -42,6 +44,14 @@ module.exports = function (h) {
         return (
           backToLibrary()
             .then(openSidebar)
+            /* The menu goes through the first row, so the sidebar opens on
+               Continue watching; expand the section to see its categories. */
+            .then(function () {
+              return sidebarWalkTo('TV Shows');
+            })
+            .then(function () {
+              return press('Enter');
+            })
             .then(sidebarRows)
             .then(function (rows) {
               const text = rows.join(' | ');
@@ -552,7 +562,7 @@ module.exports = function (h) {
         return (
           backToLibrary()
             .then(function () {
-              return press('ArrowUp', 8);
+              return topRow();
             }) // to the first row
             .then(settle)
             .then(function () {
@@ -633,7 +643,7 @@ module.exports = function (h) {
         return (
           backToLibrary()
             .then(function () {
-              return press('ArrowUp', 8);
+              return topRow();
             })
             .then(function () {
               return page.waitForTimeout(500);

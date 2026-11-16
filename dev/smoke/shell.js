@@ -86,7 +86,7 @@ module.exports = function (h) {
         return press('9')
           .then(glowX)
           .then(function (x) {
-            assertEqual(x, '-90px', 'g1 --gx after one page');
+            assertEqual(x, '-260px', 'g1 --gx after one page');
             return press('9', 3);
           })
           .then(glowX)
@@ -112,6 +112,51 @@ module.exports = function (h) {
           .then(function (ms) {
             assertEqual(ms, '0.36s', 'slow again');
           });
+      });
+    })
+
+    .then(function () {
+      const offsets = () =>
+        page.evaluate(
+          '["g1","g2","g3"].map(function (id) { var st = document.getElementById(id).style;' +
+            ' return st.getPropertyValue("--gx") + "," + st.getPropertyValue("--gy"); }).join(" ")',
+        );
+      return step('one page moves each glow by its own offset', async function () {
+        await press('9');
+        assertEqual(
+          await offsets(),
+          '-260px,70px 220px,-90px -160px,110px',
+          'offsets after one page',
+        );
+        await press('9', 3);
+        assertEqual(await offsets(), '0px,0px 0px,0px 0px,0px', 'offsets after four');
+      });
+    })
+
+    .then(function () {
+      const g1x = () =>
+        page.evaluate(
+          'new DOMMatrix(getComputedStyle(document.getElementById("g1")).transform).m41',
+        );
+      return step('with drift on, moving along a row moves the first glow', async function () {
+        await press('3');
+        assertEqual(
+          await page.evaluate('document.body.classList.contains("drift")'),
+          true,
+          'drift class',
+        );
+        await page.waitForTimeout(1200);
+        const before = await g1x();
+        await press('ArrowRight');
+        await page.waitForTimeout(1200);
+        assertEqual(before - (await g1x()), 22, 'g1 x moved by 22px for one tile');
+        await press('ArrowLeft');
+        await press('3', 2);
+        assertEqual(
+          await page.evaluate('document.body.classList.contains("drift")'),
+          false,
+          'drift class cleared',
+        );
       });
     })
 
@@ -165,6 +210,84 @@ module.exports = function (h) {
             assertEqual(n, '0.05', '--noise restored');
             return press('F6');
           });
+      });
+    })
+
+    .then(function () {
+      const menuOpen = () =>
+        page.evaluate('document.getElementById("browse").classList.contains("menu")');
+      const LABELS =
+        'Array.prototype.map.call(document.querySelectorAll("#rows .row-label"), function (t) {' +
+        ' return t.textContent.trim(); }).join("|")';
+      return step(
+        'Up opens the top menu; arrows change page and Down closes it',
+        async function () {
+          await press('ArrowUp');
+          assertEqual(await menuOpen(), true, 'menu open after Up from row 0');
+          const tiles = await page.evaluate(
+            'Array.prototype.map.call(document.querySelectorAll("#menubar .mb-tile"), function (t) {' +
+              ' return t.textContent; }).join("|")',
+          );
+          assertEqual(tiles, 'Home|Movies|TV|Kids|Collections|Discover|More', 'menu tiles');
+          const movies = await page.evaluate(LABELS);
+          assertEqual(movies.length > 0, true, 'Movies row labels are drawn');
+
+          await press('ArrowRight', 2);
+          await waitFor(
+            '(' + LABELS + ') !== ' + JSON.stringify(movies),
+            'the TV rows to replace the Movies rows',
+            10000,
+          );
+          assertEqual(await glowX(), '-520px', 'g1 --gx on the third page');
+
+          await press('ArrowDown');
+          await page.waitForTimeout(500);
+          assertEqual(await menuOpen(), false, 'menu closed after Down');
+          assertEqual(
+            await page.evaluate('document.getElementById("browse").classList.contains("dense")'),
+            false,
+            'focus is back on row 0',
+          );
+        },
+      );
+    })
+
+    .then(function () {
+      const menuOpen = () =>
+        page.evaluate('document.getElementById("browse").classList.contains("menu")');
+      const sidebarText = () =>
+        page.evaluate(
+          'Array.prototype.map.call(document.querySelectorAll("#sidebar .sb-row"), function (r) {' +
+            ' return (r.classList.contains("cur") ? "* " : "") + r.textContent.trim(); }).join("|")',
+        );
+      return step('Kids loads from the menu, and More opens the sidebar', async function () {
+        await press('ArrowUp');
+        await press('ArrowRight');
+        await press('Escape');
+        assertEqual(await menuOpen(), false, 'Back closes the menu');
+        await waitFor(
+          'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0',
+          'Kids tiles',
+          15000,
+        );
+        assertEqual(await glowX(), '-780px', 'g1 --gx on the Kids page');
+        await h.openSidebar();
+        const rows = await sidebarText();
+        assertEqual(/(^|\|)\* Kids(\||$)/.test(rows), true, 'Kids is current in ' + rows);
+        await h.sidebarPick('Movies');
+        await waitFor(
+          'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0',
+          'Movies back from the sidebar',
+          10000,
+        );
+        await h.openSidebar();
+        const after = await sidebarText();
+        assertEqual(
+          /\* Movies/.test(after) && !/\* Kids/.test(after),
+          true,
+          'Movies is current in ' + after,
+        );
+        await press('ArrowLeft');
       });
     });
 };
