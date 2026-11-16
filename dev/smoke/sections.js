@@ -512,15 +512,15 @@ module.exports = function (h) {
             if (st.bg !== '#0B0912')
               throw new Error('--bg is ' + st.bg + ', not the Mantis ground');
             /* A custom property is handed back as authored, and the build
-               minifies `340ms` to `.34s` — the same duration, spelled shorter.
+               minifies `360ms` to `.36s` — the same duration, spelled shorter.
                Assert the duration, not the spelling, or this passes in dev and
                fails against the artifact that ships. */
-            if (ms(st.move) !== 340) throw new Error('--t-move is ' + st.move);
+            if (ms(st.move) !== 360) throw new Error('--t-move is ' + st.move);
             if (ms(st.fade) !== 620) throw new Error('--t-fade is ' + st.fade);
             /* The backdrop crossfades gently; the UI's own motion must not be
              slowed with it. */
             if (st.heroFor !== '0.62s') throw new Error('a hero layer fades over ' + st.heroFor);
-            if (st.stripFor !== '0.34s') throw new Error('a strip slides over ' + st.stripFor);
+            if (st.stripFor !== '0.36s') throw new Error('a strip slides over ' + st.stripFor);
           });
       });
     })
