@@ -70,6 +70,7 @@ class Component extends DCLogic {
       { label: 'Default profile', sub: '', value: 'Together', valColor: dim, bg: 'transparent' },
       { label: 'Back up my data to this TV', sub: 'Saved a few seconds after any change', value: 'On', valColor: '#4CD08A', bg: 'transparent' },
       { label: 'Profile colours', sub: 'Each profile gets its own accent', value: 'Change', valColor: dim, bg: 'transparent' },
+      { label: 'Kids', sub: 'Ages, ratings, lists and PIN', value: 'Manage', valColor: dim, bg: 'transparent' },
       { label: 'Last backup', sub: '', value: 'Today 09:12', valColor: dim, bg: 'transparent' },
       { label: 'Hide titles of unwatched episodes', sub: 'Avoids spoilers on series pages', value: 'On', valColor: '#4CD08A', bg: 'transparent' }
     ].map((r) => Object.assign({ hasSub: !!r.sub }, r));
@@ -77,7 +78,7 @@ class Component extends DCLogic {
       { n: '1', label: 'Man of Recaps', hint: 'Left or Right to reorder', bg: 'rgba(255,255,255,0.16)', ring: '0 0 0 3px rgba(255,255,255,0.95)' },
       { n: '2', label: 'Add a second choice', hint: '', bg: 'transparent', ring: 'none' }
     ];
-    return { bg: bg, accent: accent, cats: ['Home', 'Movies', 'TV', 'Collections', 'Discover'], general: general, channels: channels };
+    return { bg: bg, accent: accent, cats: ['Home', 'Movies', 'TV', 'Kids', 'Collections', 'Discover'], general: general, channels: channels };
   }
 }
 </script>

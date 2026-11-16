@@ -157,8 +157,8 @@ class Component extends DCLogic {
       border: '1px solid rgba(255,255,255,0.26)',
       modalGlass: 'linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96)'
     };
-    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
-    const activeCat = layout === 'menu' ? 3 : 0;
+    const labels = ['Home', 'Movies', 'TV', 'Kids', 'Collections', 'Discover'];
+    const activeCat = layout === 'menu' ? 4 : 0;
     const cats = labels.map((label, i) => ({
       label: label,
       color: i === activeCat ? '#FFFFFF' : 'rgba(255,255,255,0.42)',

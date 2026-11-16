@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home, resume first</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; background: #0B1210; position: relative; overflow: hidden; box-sizing: border-box; font-family: Inter, sans-serif; color: #EDEFE8">
+
+<div style="height: 120px; padding: 0 96px; display: flex; align-items: center; box-sizing: border-box">
+<div style="width: 360px; display: flex; align-items: center; gap: 20px">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: {{accent}}"></div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px">[App name]</div>
+</div>
+<div style="display: flex; gap: 12px">
+<sc-for list="{{menu}}" as="m" hint-placeholder-count="6">
+<button type="button" style="width: 190px; height: 64px; background: none; border: 0; border-bottom: 4px solid {{m.line}}; color: {{m.color}}; font-size: 28px; font-weight: 600">{{m.label}}</button>
+</sc-for>
+</div>
+<div style="margin-left: auto; display: flex; gap: 16px">
+<button type="button" aria-label="Search" style="width: 56px; height: 56px; border-radius: 28px; border: 0; background: #16211D; display: flex; align-items: center; justify-content: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EDEFE8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+</button>
+<button type="button" aria-label="Settings" style="width: 56px; height: 56px; border-radius: 28px; border: 0; background: #16211D; display: flex; align-items: center; justify-content: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EDEFE8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path></svg>
+</button>
+</div>
+</div>
+
+<div style="padding: 8px 0 0 96px">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; height: 44px; margin-bottom: 24px">Continue watching</div>
+<div style="display: flex; gap: 32px; align-items: flex-start">
+
+<div style="width: 640px; flex: none; position: relative; height: 360px; border-radius: 20px; background: linear-gradient(135deg, #3C7A74, #10302F); box-shadow: 0 0 0 4px {{accent}}, 0 24px 60px rgba(0,0,0,0.55); overflow: hidden">
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 72px 28px 32px; background: linear-gradient(0deg, rgba(5,10,9,0.9), rgba(5,10,9,0))">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px">Harbour Lights</div>
+<div style="font-size: 26px; color: #D5DCD6; margin-top: 4px">S2 · E4 · 31 min left</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(255,255,255,0.22)">
+<div style="width: 62%; height: 8px; background: {{accent}}"></div>
+</div>
+</div>
+
+<sc-for list="{{continueRow}}" as="c" hint-placeholder-count="3">
+<div style="width: 420px; flex: none">
+<div style="position: relative; width: 420px; height: 236px; border-radius: 16px; background: {{c.bg}}; overflow: hidden">
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(255,255,255,0.22)">
+<div style="width: {{c.pct}}; height: 6px; background: #EDEFE8"></div>
+</div>
+</div>
+<div style="font-size: 28px; font-weight: 600; margin-top: 14px">{{c.title}}</div>
+<div style="font-size: 24px; color: #9AA8A0; margin-top: 2px">{{c.meta}}</div>
+</div>
+</sc-for>
+
+</div>
+</div>
+
+<div style="padding: 56px 0 0 96px">
+<div style="display: flex; align-items: center; gap: 20px; height: 44px; margin-bottom: 24px">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px">Fresh and good</div>
+<div style="font-size: 24px; color: #9AA8A0; border: 2px solid #2B3A34; border-radius: 999px; padding: 4px 16px">Smart list</div>
+</div>
+<div style="display: flex; gap: 28px">
+<sc-for list="{{posters}}" as="p" hint-placeholder-count="8">
+<div style="width: 240px; height: 440px; flex: none; border-radius: 16px; background: {{p.bg}}; position: relative">
+<div style="position: absolute; left: 20px; right: 20px; top: 232px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; line-height: 1.15">{{p.title}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#6FE3B0","options":["#6FE3B0","#7CC4FF","#FF8A73","#C9A7FF"]},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#6FE3B0';
+    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover', 'Lists'];
+    const menu = labels.map((label, i) => ({
+      label: label,
+      color: i === 0 ? '#EDEFE8' : '#9AA8A0',
+      line: i === 0 ? accent : 'transparent'
+    }));
+    const continueRow = [
+      { title: 'The Salt Road', meta: 'Movie · 48 min left', pct: '35%', bg: 'linear-gradient(135deg, #6B4E7A, #241730)' },
+      { title: 'Quiet Orbit', meta: 'S1 · E7 · 22 min left', pct: '71%', bg: 'linear-gradient(135deg, #8A5A3C, #2B1A10)' },
+      { title: 'Night Ferry', meta: 'S3 · E2 · 40 min left', pct: '18%', bg: 'linear-gradient(135deg, #3C5F8A, #101C2E)' },
+      { title: 'Low Tide', meta: 'Movie · 1 h 12 min left', pct: '24%', bg: 'linear-gradient(135deg, #7A3C4E, #2A1018)' }
+    ];
+    const posters = [
+      { title: 'Paper Kingdoms', bg: 'linear-gradient(160deg, #5B7A3C, #16240E)' },
+      { title: 'Ash and Ember', bg: 'linear-gradient(160deg, #8A4B3C, #2B120E)' },
+      { title: 'Cold Meridian', bg: 'linear-gradient(160deg, #3C6C8A, #0E202B)' },
+      { title: 'Long Weekend', bg: 'linear-gradient(160deg, #8A7A3C, #2B260E)' },
+      { title: 'Glass Orchard', bg: 'linear-gradient(160deg, #5E3C8A, #1A0E2B)' },
+      { title: 'Field Notes', bg: 'linear-gradient(160deg, #3C8A6C, #0E2B20)' },
+      { title: 'Winter Ledger', bg: 'linear-gradient(160deg, #8A3C6C, #2B0E20)' },
+      { title: 'Open Water', bg: 'linear-gradient(160deg, #3C4E8A, #0E1429)' }
+    ];
+    return { accent: accent, menu: menu, continueRow: continueRow, posters: posters };
+  }
+}
+</script>
+</body>
+</html>

@@ -79,7 +79,7 @@ Previous builds felt jittery or late. Principles:
 - Skip animation entirely on key repeat (held arrow). Jump straight to the final state.
 - Placeholder first: gradient or tiny blurred poster, never an empty hole.
 - Starting timings (to be tuned): focus about 130ms, row scroll about 260ms, menu about 300ms, hero crossfade about 200ms, all with `cubic-bezier(.2,.7,.2,1)`.
-- Page change: crossfade rows about 130ms, and shift the oversized glow layers by a few tens of px (opposing directions, about 700ms). Not continuous.
+- Background: three smaller glow blobs that physically travel, not grow. On page change each blob moves a long way (hundreds of px) in a different direction for parallax, about 800ms. Optionally they also drift a little as focus scrolls along a row (motion lab option 3, third setting). Transform only, no continuous idle animation. Rows crossfade about 130ms on page change.
 - `will-change: transform` on containers only; do not blanket-apply it to hundreds of posters (memory).
 - Use `motion-lab.html` on the TV. Number keys toggle each technique and a HUD shows fps, worst frame, jank count and key-to-frame latency. Decide the winning settings from measured numbers, then bake them into the app.
 
@@ -109,3 +109,12 @@ First run and Plex sign-in, server management, loading/empty/error states (serve
 - `designs/`: current `.dc.html` boards (Home = `Combo*`), plus `canvas.json` (board positions and titles, in the order they were designed).
 - `motion-lab.html`: single-file motion test page for the B8.
 - Superseded early explorations (Main, Backdrop, MenuLists, Tiles*, Home*, Grad*, ComboBadge/ComboLegend/ComboNavy variants) are not required and can be ignored.
+
+## Kids (top-level page, 4th item: Home, Movies, TV, Kids, Collections, Discover)
+Designs: Kids (Watch tab), KidsLists (Collections tab), KidsLock, KidsSettings, KidsLook.
+- Own look: warmer, brighter background than the rest of the app (default "Sunny"; also Dusk, Mint, Berry), faint star/circle shapes, yellow accent #FFD66B, rounded font Fredoka for greeting, tabs, section labels and tile names. Fredoka must be bundled with the app (woff2), not fetched.
+- Greeting at the top: "Hello <names>!" with names and wording set in Settings > Kids > Greeting and look. Kids' real names are entered by the user, never hard-coded.
+- Two tabs under the greeting (Left/Right between them, Down enters content): Watch = Keep watching (16:9 cards with progress) + rows built from TMDB queries (e.g. New this week = discover sorted by release date with certification limit; add more rows later). Collections = grid of tiles, one per curated TMDB list, each opening the standard List template.
+- Curation comes from TMDB (lists and discover queries), not Plex metadata. A tile/row is shown only if some titles exist on the server.
+- Settings > Kids: ages to show (0-5, 6-9, 10-12, 13+), highest rating (UK certificates, read from TMDB), search inside Kids, which lists appear as tiles (on/off, order, add by list ID), PIN to leave Kids (typed with remote number buttons; Back stays in Kids), Greeting and look.
+- UNVERIFIED: TMDB list items carry no certification so the rating limit needs a cached per-title lookup; ages vs rating overlap and may merge; Kids profile vs page undecided; new-content rows depend on release dates matching what the server holds.

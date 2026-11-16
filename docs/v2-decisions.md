@@ -32,10 +32,21 @@ the spec disagree, this file wins. Decided by Stuart, 2026-11-16.
 
 ## Pages
 
-- **Kids is a category in the top menu**, beside Home, Movies, TV,
-  Collections and Discover. It keeps v1's page (`src/screen/browse.ts`
-  `loadKids`: kids Continue watching, TMDB kids rows filtered to held titles,
-  New and coming) until it is designed.
+- **Kids is the fourth page in the top menu**: Home, Movies, TV, Kids,
+  Collections, Discover (spec §Kids). Its design (`designs/v2/Kids*.dc.html`)
+  is approved by Stuart, 2026-11-16: "I'm happy with the kids page". Until it
+  is built, the tile opens v1's Kids page (`loadKids`).
+- **More** sits after Discover and opens today's sidebar (Search, Devices,
+  Autoplay and the rest) until those find v2 homes. The per-server browser
+  is its own later task.
+
+## Type
+
+- Space Grotesk and Inter are the starting point, not final. Stuart,
+  2026-11-16: "Not 100% on the fonts across the rest of the app so this may
+  change in the future." Every font is set through a token (`--font-title`,
+  `--font-body`), never named in a rule, so a change is one line. Kids'
+  Fredoka is separate and settled.
 
 ## Accounts and storage
 

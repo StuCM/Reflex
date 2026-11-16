@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kids look</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+<div style="position: absolute; left: 96px; top: 60px; font-size: 26px; font-weight: 600; color: rgba(255,255,255,0.55)">Settings \u203a Kids</div>
+<div style="position: absolute; left: 96px; top: 110px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 84px; line-height: 1; letter-spacing: -1px; text-transform: uppercase">Greeting and look</div>
+
+<div style="position: absolute; left: 96px; top: 270px; width: 820px">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}; margin-bottom: 14px">Greeting</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+<div style="height: 88px; box-sizing: border-box; padding: 0 20px; border-bottom: 1px solid rgba(255,255,255,0.14); display: flex; align-items: center; border-radius: 16px; background: {{r.bg}}; box-shadow: {{r.ring}}">
+<div style="flex: 1"><div style="font-size: 30px; font-weight: 600">{{r.label}}</div><div style="font-size: 22px; color: rgba(255,255,255,0.55); margin-top: 2px">{{r.sub}}</div></div>
+<div style="font-size: 28px; font-weight: 600; color: {{r.vc}}">{{r.value}}</div>
+</div>
+</sc-for>
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}; margin: 44px 0 14px">Preview</div>
+<div style="font-family: Fredoka, 'Space Grotesk', sans-serif; font-weight: 600; font-size: 64px; line-height: 1; color: {{accent}}">Hello Ava and Finn!</div>
+</div>
+
+<div style="position: absolute; left: 1000px; top: 270px; width: 824px">
+<div style="font-size: 22px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}; margin-bottom: 14px">Background</div>
+<div style="display: flex; flex-wrap: wrap; width: 824px">
+<sc-for list="{{swatches}}" as="s" hint-placeholder-count="4">
+<div style="width: 388px; margin: 0 24px 28px 0">
+<div style="width: 388px; height: 218px; border-radius: 24px; background: {{s.bg}}; box-shadow: {{s.ring}}; position: relative; overflow: hidden">
+<div style="position: absolute; left: 24px; top: 24px; width: 120px; height: 14px; border-radius: 7px; background: rgba(255,255,255,0.8)"></div>
+<div style="position: absolute; left: 24px; top: 120px; width: 70px; height: 80px; border-radius: 10px; background: rgba(255,255,255,0.22)"></div>
+<div style="position: absolute; left: 106px; top: 120px; width: 70px; height: 80px; border-radius: 10px; background: rgba(255,255,255,0.22)"></div>
+<div style="position: absolute; left: 188px; top: 120px; width: 70px; height: 80px; border-radius: 10px; background: rgba(255,255,255,0.22)"></div>
+</div>
+<div style="font-size: 28px; font-weight: 600; margin-top: 12px; color: {{s.nameColor}}">{{s.name}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = '#FFD66B';
+    const bg = 'radial-gradient(ellipse 900px 700px at 85% 12%, rgba(255,140,90,0.72), rgba(255,140,90,0) 70%), radial-gradient(ellipse 900px 640px at 6% 100%, rgba(60,170,200,0.58), rgba(60,170,200,0) 70%), radial-gradient(ellipse 600px 460px at 55% 55%, rgba(255,214,107,0.14), rgba(255,214,107,0) 70%), #1D1646';
+    const dim = 'rgba(255,255,255,0.75)';
+    const rows = [
+      { label: 'Names', sub: 'Shown at the top of the Kids page', value: 'Ava and Finn', vc: dim, bg: 'rgba(255,255,255,0.16)', ring: '0 0 0 3px rgba(255,255,255,0.95)' },
+      { label: 'Greeting', sub: 'Names are put in where you see the dots', value: 'Hello ...!', vc: dim, bg: 'transparent', ring: 'none' },
+      { label: 'Fun font', sub: 'Only on the Kids page', value: 'On', vc: '#4CD08A', bg: 'transparent', ring: 'none' }
+    ];
+    const defs = [["Sunny", "radial-gradient(ellipse 900px 700px at 85% 12%, rgba(255,140,90,0.72), rgba(255,140,90,0) 70%), radial-gradient(ellipse 900px 640px at 6% 100%, rgba(60,170,200,0.58), rgba(60,170,200,0) 70%), radial-gradient(ellipse 600px 460px at 55% 55%, rgba(255,214,107,0.14), rgba(255,214,107,0) 70%), #1D1646"], ["Dusk", "radial-gradient(ellipse 900px 700px at 85% 12%, rgba(190,90,200,0.7), rgba(190,90,200,0) 70%), radial-gradient(ellipse 900px 640px at 6% 100%, rgba(70,110,230,0.6), rgba(70,110,230,0) 70%), #1A1244"], ["Mint", "radial-gradient(ellipse 900px 700px at 85% 12%, rgba(60,200,160,0.6), rgba(60,200,160,0) 70%), radial-gradient(ellipse 900px 640px at 6% 100%, rgba(80,130,230,0.55), rgba(80,130,230,0) 70%), #0F1F3D"], ["Berry", "radial-gradient(ellipse 900px 700px at 85% 12%, rgba(230,80,130,0.7), rgba(230,80,130,0) 70%), radial-gradient(ellipse 900px 640px at 6% 100%, rgba(255,170,70,0.42), rgba(255,170,70,0) 70%), #2A1240"]];
+    const swatches = defs.map((d, i) => ({ name: d[0], bg: d[1], nameColor: i === 0 ? '#FFFFFF' : 'rgba(255,255,255,0.7)', ring: i === 0 ? '0 0 0 4px rgba(255,255,255,0.95), 0 14px 34px rgba(0,0,0,0.5)' : '0 8px 20px rgba(0,0,0,0.35)' }));
+    return { bg: bg, accent: accent, rows: rows, swatches: swatches };
+  }
+}
+</script>
+</body>
+</html>

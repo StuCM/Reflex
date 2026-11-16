@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lists menu open</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; background: #0B1210; position: relative; overflow: hidden; box-sizing: border-box; font-family: Inter, sans-serif; color: #EDEFE8">
+
+<div style="position: absolute; left: 96px; top: 168px; opacity: 0.28">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; margin-bottom: 24px">Continue watching</div>
+<div style="display: flex; gap: 32px">
+<div style="width: 640px; height: 360px; flex: none; border-radius: 20px; background: linear-gradient(135deg, #3C7A74, #10302F)"></div>
+<sc-for list="{{continueRow}}" as="c" hint-placeholder-count="3">
+<div style="width: 420px; height: 236px; flex: none; border-radius: 16px; background: {{c.bg}}"></div>
+</sc-for>
+</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; margin: 56px 0 24px">Fresh and good</div>
+<div style="display: flex; gap: 28px">
+<sc-for list="{{posters}}" as="p" hint-placeholder-count="8">
+<div style="width: 240px; height: 360px; flex: none; border-radius: 16px; background: {{p.bg}}"></div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 120px; padding: 0 96px; display: flex; align-items: center; box-sizing: border-box">
+<div style="width: 360px; display: flex; align-items: center; gap: 20px">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: {{accent}}"></div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px">[App name]</div>
+</div>
+<div style="display: flex; gap: 12px">
+<sc-for list="{{menu}}" as="m" hint-placeholder-count="6">
+<button type="button" style="width: 190px; height: 64px; box-sizing: border-box; background: {{m.bg}}; border: 0; border-bottom: 4px solid {{m.line}}; border-radius: {{m.radius}}; box-shadow: {{m.ring}}; color: {{m.color}}; font-size: 28px; font-weight: 600">{{m.label}}</button>
+</sc-for>
+</div>
+<div style="margin-left: auto; display: flex; gap: 16px">
+<button type="button" aria-label="Search" style="width: 56px; height: 56px; border-radius: 28px; border: 0; background: #16211D; display: flex; align-items: center; justify-content: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EDEFE8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+</button>
+<button type="button" aria-label="Settings" style="width: 56px; height: 56px; border-radius: 28px; border: 0; background: #16211D; display: flex; align-items: center; justify-content: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EDEFE8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path></svg>
+</button>
+</div>
+</div>
+
+<div style="position: absolute; left: 1096px; top: 136px; width: 560px; box-sizing: border-box; padding: 20px; border-radius: 24px; background: #16211D; border: 2px solid #2B3A34; box-shadow: 0 30px 80px rgba(0,0,0,0.6)">
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: #9AA8A0; padding: 4px 24px 12px">Your lists</div>
+<sc-for list="{{manual}}" as="r" hint-placeholder-count="3">
+<div style="height: 72px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-radius: 14px; background: {{r.bg}}; box-shadow: {{r.ring}}">
+<div style="font-size: 30px; font-weight: 600">{{r.label}}</div>
+<div style="font-size: 26px; color: #9AA8A0">{{r.right}}</div>
+</div>
+</sc-for>
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: #9AA8A0; padding: 24px 24px 12px">Smart lists</div>
+<sc-for list="{{smart}}" as="s" hint-placeholder-count="3">
+<div style="height: 72px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-radius: 14px">
+<div style="font-size: 30px; font-weight: 600">{{s.label}}</div>
+<div style="font-size: 26px; color: #9AA8A0">{{s.right}}</div>
+</div>
+</sc-for>
+<div style="margin-top: 12px; border-top: 2px solid #2B3A34; height: 72px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; font-size: 30px; font-weight: 600; color: {{accent}}">+ New list</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#6FE3B0","options":["#6FE3B0","#7CC4FF","#FF8A73","#C9A7FF"]},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#6FE3B0';
+    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover', 'Lists'];
+    const menu = labels.map((label, i) => {
+      const focused = i === 5;
+      return {
+        label: label,
+        color: focused || i === 0 ? '#EDEFE8' : '#9AA8A0',
+        line: i === 0 ? '#3A4A43' : 'transparent',
+        bg: focused ? '#16211D' : 'none',
+        radius: focused ? '16px' : '0',
+        ring: focused ? '0 0 0 4px ' + accent : 'none'
+      };
+    });
+    const manual = [
+      { label: 'Watchlist', right: '23', bg: 'rgba(111,227,176,0.16)', ring: 'inset 0 0 0 3px ' + accent },
+      { label: 'Favourites', right: '14', bg: 'none', ring: 'none' },
+      { label: 'Film night', right: '9', bg: 'none', ring: 'none' }
+    ];
+    const smart = [
+      { label: 'Weeknight shorts', right: 'auto' },
+      { label: 'Hidden gems', right: 'auto' },
+      { label: 'Fresh and good', right: 'auto' }
+    ];
+    const continueRow = [
+      { bg: 'linear-gradient(135deg, #6B4E7A, #241730)' },
+      { bg: 'linear-gradient(135deg, #8A5A3C, #2B1A10)' },
+      { bg: 'linear-gradient(135deg, #3C5F8A, #101C2E)' }
+    ];
+    const posters = [
+      { bg: 'linear-gradient(160deg, #5B7A3C, #16240E)' },
+      { bg: 'linear-gradient(160deg, #8A4B3C, #2B120E)' },
+      { bg: 'linear-gradient(160deg, #3C6C8A, #0E202B)' },
+      { bg: 'linear-gradient(160deg, #8A7A3C, #2B260E)' },
+      { bg: 'linear-gradient(160deg, #5E3C8A, #1A0E2B)' },
+      { bg: 'linear-gradient(160deg, #3C8A6C, #0E2B20)' },
+      { bg: 'linear-gradient(160deg, #8A3C6C, #2B0E20)' },
+      { bg: 'linear-gradient(160deg, #3C4E8A, #0E1429)' }
+    ];
+    return { accent: accent, menu: menu, manual: manual, smart: smart, continueRow: continueRow, posters: posters };
+  }
+}
+</script>
+</body>
+</html>

@@ -366,6 +366,41 @@
       "w": 1920,
       "h": 1080,
       "title": "Discover \u00b7 People tab"
+    },
+    "Kids.dc.html": {
+      "x": 0,
+      "y": 22500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Kids \u00b7 Watch tab: greeting, keep watching, new this week"
+    },
+    "KidsLock.dc.html": {
+      "x": 4000,
+      "y": 22500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Kids \u00b7 PIN to leave Kids"
+    },
+    "KidsSettings.dc.html": {
+      "x": 6000,
+      "y": 22500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Kids settings \u00b7 Ages, rating, lists, PIN"
+    },
+    "KidsLists.dc.html": {
+      "x": 2000,
+      "y": 22500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Kids \u00b7 Collections tab"
+    },
+    "KidsLook.dc.html": {
+      "x": 8000,
+      "y": 22500,
+      "w": 1920,
+      "h": 1080,
+      "title": "Kids settings \u00b7 Greeting and look"
     }
   },
   "order": [
@@ -419,7 +454,12 @@
     "MovieServer.dc.html",
     "ProfileColour.dc.html",
     "DiscoverSearch.dc.html",
-    "DiscoverPeople.dc.html"
+    "DiscoverPeople.dc.html",
+    "Kids.dc.html",
+    "KidsLock.dc.html",
+    "KidsSettings.dc.html",
+    "KidsLists.dc.html",
+    "KidsLook.dc.html"
   ],
   "notes": {
     "t1": {
@@ -541,6 +581,14 @@
       "kind": "title1",
       "maxW": 3920,
       "w": 240
+    },
+    "t16": {
+      "x": 0,
+      "y": 22200,
+      "text": "Latest: Kids page",
+      "kind": "title1",
+      "maxW": 9920,
+      "w": 240
     }
   },
   "designSystems": [],
@@ -560,6 +608,7 @@
     "t12",
     "t13",
     "t14",
-    "t15"
+    "t15",
+    "t16"
   ]
 }

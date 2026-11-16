@@ -13,7 +13,7 @@ REMOTE / KEYBOARD
   Back / Esc    close modal, then menu
   1 or Red      focus style:  scale  >  sliding ring  >  both
   2 or Green    will-change:  off  >  containers  >  containers + posters
-  3 or Yellow   gradient shift on page change:  on / off
+  3 or Yellow   background:  static  >  moves on page change  >  also drifts as you scroll a row
   4 or Blue     posters per row:  14  >  40  >  120   (DOM stress)
   5             timing preset:  fast  >  default  >  slow
   6             poster shadows:  on / off
@@ -34,10 +34,10 @@ html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Ar
 #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;background:#0B0912;-webkit-transform-origin:0 0;transform-origin:0 0;
   --fd:130ms;--sd:182ms;--rd:260ms;--md:300ms;--hd:200ms}
 .fast *{-webkit-transition-duration:0ms !important;transition-duration:0ms !important}
-.glow{position:absolute;border-radius:50%;-webkit-transition:-webkit-transform 700ms cubic-bezier(.2,.7,.2,1);transition:transform 700ms cubic-bezier(.2,.7,.2,1)}
-#g1{left:900px;top:-700px;width:2200px;height:1700px;background:radial-gradient(ellipse at center,rgba(154,47,69,0.82),rgba(154,47,69,0) 70%)}
-#g2{left:-900px;top:300px;width:2000px;height:1500px;background:radial-gradient(ellipse at center,rgba(47,91,168,0.62),rgba(47,91,168,0) 70%)}
-#g3{left:1300px;top:500px;width:1500px;height:1100px;background:radial-gradient(ellipse at center,rgba(154,47,69,0.3),rgba(154,47,69,0) 70%)}
+.glow{position:absolute;border-radius:50%;-webkit-transition:-webkit-transform 800ms cubic-bezier(.2,.7,.2,1);transition:transform 800ms cubic-bezier(.2,.7,.2,1)}
+#g1{left:1000px;top:-500px;width:1500px;height:1200px;background:radial-gradient(ellipse at center,rgba(154,47,69,0.85),rgba(154,47,69,0) 68%)}
+#g2{left:-500px;top:500px;width:1400px;height:1100px;background:radial-gradient(ellipse at center,rgba(47,91,168,0.7),rgba(47,91,168,0) 68%)}
+#g3{left:1300px;top:600px;width:1000px;height:800px;background:radial-gradient(ellipse at center,rgba(154,47,69,0.35),rgba(154,47,69,0) 68%)}
 #menu{position:absolute;left:0;top:22px;width:1920px;text-align:center;opacity:0;-webkit-transform:translate3d(0,-130px,0);transform:translate3d(0,-130px,0);
   -webkit-transition:-webkit-transform var(--md) cubic-bezier(.2,.7,.2,1),opacity var(--md) ease;transition:transform var(--md) cubic-bezier(.2,.7,.2,1),opacity var(--md) ease}
 #menu.open{opacity:1;-webkit-transform:translate3d(0,0,0);transform:translate3d(0,0,0)}
@@ -117,7 +117,7 @@ html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Ar
   var heroOuter = document.getElementById('hero');
   var heroEl = document.getElementById('heroInner');
 
-  var S = { focus: 0, wc: 0, glow: 1, count: 0, dur: 1, shadow: 1, hero: 1, skip: 1 };
+  var S = { focus: 0, wc: 0, glow: 2, count: 0, dur: 1, shadow: 1, hero: 1, skip: 1 };
   var COUNTS = [14, 40, 120];
   var DURS = [
     { n: 'fast', fd: 100, rd: 200, md: 240, hd: 150 },
@@ -263,16 +263,20 @@ html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Ar
   }
 
   function shiftGlow() {
-    var p = st.page;
-    if (S.glow) {
-      g1.style.webkitTransform = g1.style.transform = 'translate3d(' + (-p * 90) + 'px,' + (p * 30) + 'px,0)';
-      g2.style.webkitTransform = g2.style.transform = 'translate3d(' + (p * 70) + 'px,' + (-p * 40) + 'px,0)';
-      g3.style.webkitTransform = g3.style.transform = 'translate3d(' + (-p * 50) + 'px,' + (p * 50) + 'px,0)';
-    } else {
+    var p = st.page, f = st.idx[st.row];
+    if (S.glow === 0) {
       g1.style.webkitTransform = g1.style.transform = 'none';
       g2.style.webkitTransform = g2.style.transform = 'none';
       g3.style.webkitTransform = g3.style.transform = 'none';
+      return;
     }
+    /* page change: each blob travels a long way, in opposing directions (parallax) */
+    var x1 = -p * 260, y1 = p * 70, x2 = p * 220, y2 = -p * 90, x3 = -p * 160, y3 = p * 110;
+    /* mode 2: blobs also drift as you scroll along a row */
+    if (S.glow === 2) { x1 -= f * 22; x2 += f * 16; x3 -= f * 12; y1 += st.row * 60; y2 -= st.row * 50; }
+    g1.style.webkitTransform = g1.style.transform = 'translate3d(' + x1 + 'px,' + y1 + 'px,0)';
+    g2.style.webkitTransform = g2.style.transform = 'translate3d(' + x2 + 'px,' + y2 + 'px,0)';
+    g3.style.webkitTransform = g3.style.transform = 'translate3d(' + x3 + 'px,' + y3 + 'px,0)';
   }
 
   function changePage(dir) {
@@ -318,7 +322,7 @@ html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Ar
       'skipped on repeat ' + skipped + '\n' +
       '1 focus ' + FOCUS_NAMES[S.focus] + '\n' +
       '2 will-change ' + WC_NAMES[S.wc] + '\n' +
-      '3 gradient shift ' + (S.glow ? 'on' : 'off') + '\n' +
+      '3 background ' + ['static', 'moves on page change', 'moves on page + scroll'][S.glow] + '\n' +
       '4 posters/row ' + COUNTS[S.count] + '\n' +
       '5 timing ' + d.n + ' (' + d.fd + '/' + d.rd + '/' + d.md + ')\n' +
       '6 shadows ' + (S.shadow ? 'on' : 'off') + '   7 hero ' + (S.hero ? '150ms debounce' : 'immediate') + '\n' +
@@ -351,6 +355,7 @@ html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Ar
       if (ni < 0 || ni > n - 1) return;
       st.idx[r] = ni;
       layout();
+      if (S.glow === 2) shiftGlow();
       updateHero();
     } else if (dy) {
       var nr = r + dy;
@@ -358,6 +363,7 @@ html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Ar
       if (nr > 2) return;
       st.row = nr;
       layout();
+      if (S.glow === 2) shiftGlow();
       updateHero();
     }
   }
@@ -384,7 +390,7 @@ html,body{margin:0;height:100%;background:#0B0912;overflow:hidden;font-family:Ar
       else if (st.menuOpen) { st.menuOpen = false; applyClasses(); }
     } else if (k === 49 || k === 403) { cycle('focus', 3); render(); }
     else if (k === 50 || k === 404) { cycle('wc', 3); applyClasses(); }
-    else if (k === 51 || k === 405) { cycle('glow', 2); shiftGlow(); }
+    else if (k === 51 || k === 405) { cycle('glow', 3); shiftGlow(); }
     else if (k === 52 || k === 406) { cycle('count', 3); buildRows(); applyClasses(); }
     else if (k === 53) { cycle('dur', 3); applyClasses(); }
     else if (k === 54) { cycle('shadow', 2); applyClasses(); }

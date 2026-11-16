@@ -203,7 +203,7 @@ class Component extends DCLogic {
     const many = this.props.seasons === 'many';
     const accent = '#F4C8B6';
     const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
-    const catLabels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+    const catLabels = ['Home', 'Movies', 'TV', 'Kids', 'Collections', 'Discover'];
     const cats = catLabels.map((label, i) => ({ label: label, color: i === 2 ? '#FFFFFF' : 'rgba(255,255,255,0.42)', line: i === 2 ? accent : 'transparent' }));
     const art = [
       { bg: 'linear-gradient(170deg, #2B8A93 0%, #0F3A44 55%, #04141A 100%)', sc: 'radial-gradient(circle at 40% 40%, #F2FFFF, #BDE8EA)' },

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home, backdrop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; background: #0B1210; position: relative; overflow: hidden; box-sizing: border-box; font-family: Inter, sans-serif; color: #EDEFE8">
+
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: radial-gradient(ellipse at 72% 28%, #4A8F86 0%, #1B3B38 42%, #0B1210 80%)"></div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: linear-gradient(90deg, rgba(11,18,16,0.96) 0%, rgba(11,18,16,0.65) 42%, rgba(11,18,16,0) 75%)"></div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: linear-gradient(0deg, rgba(11,18,16,0.97) 0%, rgba(11,18,16,0.75) 34%, rgba(11,18,16,0) 62%)"></div>
+
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 120px; padding: 0 96px; display: flex; align-items: center; box-sizing: border-box">
+<div style="width: 360px; display: flex; align-items: center; gap: 20px">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: {{accent}}"></div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px">[App name]</div>
+</div>
+<div style="display: flex; gap: 12px">
+<sc-for list="{{menu}}" as="m" hint-placeholder-count="6">
+<button type="button" style="width: 190px; height: 64px; background: none; border: 0; border-bottom: 4px solid {{m.line}}; color: {{m.color}}; font-size: 28px; font-weight: 600">{{m.label}}</button>
+</sc-for>
+</div>
+<div style="margin-left: auto; display: flex; gap: 16px">
+<button type="button" aria-label="Search" style="width: 56px; height: 56px; border-radius: 28px; border: 0; background: rgba(22,33,29,0.85); display: flex; align-items: center; justify-content: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EDEFE8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+</button>
+<button type="button" aria-label="Settings" style="width: 56px; height: 56px; border-radius: 28px; border: 0; background: rgba(22,33,29,0.85); display: flex; align-items: center; justify-content: center">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EDEFE8" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path></svg>
+</button>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 190px; width: 860px">
+<div style="font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: {{accent}}">Continue watching</div>
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 88px; line-height: 1.1; margin-top: 12px">Harbour Lights</div>
+<div style="font-size: 28px; color: #D5DCD6; margin-top: 8px">S2 · E4 · 31 min left · 2024 · 15</div>
+<div style="font-size: 30px; line-height: 1.5; color: #C3CCC6; margin-top: 16px; width: 760px">[Episode synopsis, two lines at most, pulled from TMDB.]</div>
+<div style="display: flex; gap: 20px; margin-top: 28px">
+<div style="display: flex; align-items: center; gap: 12px; font-size: 24px; color: #9AA8A0"><span style="border: 2px solid #3A4A43; border-radius: 10px; padding: 4px 14px; color: #EDEFE8; font-weight: 600">OK</span>Resume</div>
+<div style="display: flex; align-items: center; gap: 12px; font-size: 24px; color: #9AA8A0"><span style="border: 2px solid #3A4A43; border-radius: 10px; padding: 4px 14px; color: #EDEFE8; font-weight: 600">Hold OK</span>Add to list</div>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 612px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px">Continue watching</div>
+
+<div style="position: absolute; left: 96px; top: 668px; height: 248px; display: flex; gap: 28px; align-items: flex-end">
+<div style="width: 440px; height: 248px; flex: none; position: relative; border-radius: 18px; background: linear-gradient(135deg, #3C7A74, #10302F); box-shadow: 0 0 0 4px {{accent}}, 0 20px 50px rgba(0,0,0,0.6); overflow: hidden">
+<div style="position: absolute; left: 22px; bottom: 26px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px">Harbour Lights</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(255,255,255,0.22)"><div style="width: 62%; height: 8px; background: {{accent}}"></div></div>
+</div>
+<sc-for list="{{continueRow}}" as="c" hint-placeholder-count="4">
+<div style="width: 340px; height: 192px; flex: none; position: relative; border-radius: 14px; background: {{c.bg}}; overflow: hidden">
+<div style="position: absolute; left: 20px; bottom: 22px; font-weight: 600; font-size: 26px">{{c.title}}</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(255,255,255,0.22)"><div style="width: {{c.pct}}; height: 6px; background: #EDEFE8"></div></div>
+</div>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 96px; top: 960px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px">Fresh and good</div>
+<div style="position: absolute; left: 96px; top: 1016px; display: flex; gap: 24px">
+<sc-for list="{{posters}}" as="p" hint-placeholder-count="8">
+<div style="width: 180px; height: 270px; flex: none; border-radius: 14px; background: {{p.bg}}"></div>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#6FE3B0","options":["#6FE3B0","#7CC4FF","#FF8A73","#C9A7FF"]},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#6FE3B0';
+    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover', 'Lists'];
+    const menu = labels.map((label, i) => ({
+      label: label,
+      color: i === 0 ? '#EDEFE8' : '#B4C0B8',
+      line: i === 0 ? accent : 'transparent'
+    }));
+    const continueRow = [
+      { title: 'The Salt Road', pct: '35%', bg: 'linear-gradient(135deg, #6B4E7A, #241730)' },
+      { title: 'Quiet Orbit', pct: '71%', bg: 'linear-gradient(135deg, #8A5A3C, #2B1A10)' },
+      { title: 'Night Ferry', pct: '18%', bg: 'linear-gradient(135deg, #3C5F8A, #101C2E)' },
+      { title: 'Low Tide', pct: '24%', bg: 'linear-gradient(135deg, #7A3C4E, #2A1018)' }
+    ];
+    const posters = [
+      { bg: 'linear-gradient(160deg, #5B7A3C, #16240E)' },
+      { bg: 'linear-gradient(160deg, #8A4B3C, #2B120E)' },
+      { bg: 'linear-gradient(160deg, #3C6C8A, #0E202B)' },
+      { bg: 'linear-gradient(160deg, #8A7A3C, #2B260E)' },
+      { bg: 'linear-gradient(160deg, #5E3C8A, #1A0E2B)' },
+      { bg: 'linear-gradient(160deg, #3C8A6C, #0E2B20)' },
+      { bg: 'linear-gradient(160deg, #8A3C6C, #2B0E20)' },
+      { bg: 'linear-gradient(160deg, #3C4E8A, #0E1429)' },
+      { bg: 'linear-gradient(160deg, #5B7A3C, #16240E)' },
+      { bg: 'linear-gradient(160deg, #8A4B3C, #2B120E)' }
+    ];
+    return { accent: accent, menu: menu, continueRow: continueRow, posters: posters };
+  }
+}
+</script>
+</body>
+</html>

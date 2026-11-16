@@ -77,11 +77,11 @@ class Component extends DCLogic {
   renderVals() {
     const accent = '#F4C8B6';
     const bg = 'radial-gradient(ellipse 1000px 760px at 80% 16%, rgba(154,47,69,0.82), rgba(154,47,69,0) 70%), radial-gradient(ellipse 900px 640px at 8% 96%, rgba(47,91,168,0.62), rgba(47,91,168,0) 70%), radial-gradient(ellipse 700px 500px at 100% 90%, rgba(154,47,69,0.3), rgba(154,47,69,0) 70%), #0B0912';
-    const labels = ['Home', 'Movies', 'TV', 'Collections', 'Discover'];
+    const labels = ['Home', 'Movies', 'TV', 'Kids', 'Collections', 'Discover'];
     const cats = labels.map((label, i) => ({
       label: label,
-      color: i === 3 ? '#FFFFFF' : 'rgba(255,255,255,0.42)',
-      line: i === 3 ? accent : 'transparent'
+      color: i === 4 ? '#FFFFFF' : 'rgba(255,255,255,0.42)',
+      line: i === 4 ? accent : 'transparent'
     }));
     const art = [
       { bg: 'linear-gradient(170deg, #F0B070 0%, #C0553C 48%, #2A1210 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFE8BC, #F2A85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },

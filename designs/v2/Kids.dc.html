@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kids, sunny</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; position: relative; overflow: hidden; background: {{bg}}; font-family: Inter, sans-serif; color: #FFFFFF">
+<div style="position: absolute; right: 150px; top: 520px; width: 220px; height: 220px; border-radius: 50%; background: rgba(255,214,107,0.10)"></div>
+<div style="position: absolute; right: 420px; top: 830px; width: 120px; height: 120px; border-radius: 50%; border: 14px solid rgba(255,255,255,0.07); box-sizing: border-box"></div>
+<div style="position: absolute; right: 60px; top: 860px; width: 150px; height: 150px; background: rgba(255,255,255,0.07); -webkit-clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"></div>
+<div style="position: absolute; left: 1180px; top: 150px; width: 90px; height: 90px; background: rgba(255,255,255,0.08); -webkit-clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"></div>
+
+<div style="position: absolute; right: 96px; top: 44px; font-size: 32px; font-weight: 600; color: rgba(255,255,255,0.7)">19:05</div>
+<svg style="position: absolute; right: 208px; top: 44px" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg>
+
+<div style="position: absolute; left: 0; top: 22px; width: 1920px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+<div style="display: flex; gap: 48px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 30px; color: {{c.color}}; padding-bottom: 8px; border-bottom: 3px solid {{c.line}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; left: 96px; top: 112px; font-family: Fredoka, 'Space Grotesk', sans-serif; font-weight: 600; font-size: 64px; line-height: 1; color: {{accent}}">{{greeting}}</div>
+
+<div style="position: absolute; left: 96px; top: 204px; display: flex; gap: 16px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+<div style="height: 58px; box-sizing: border-box; padding: 0 32px; border-radius: 29px; display: flex; align-items: center; font-family: Fredoka, 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 600; background: {{t.bg}}; border: 1px solid {{t.border}}; color: {{t.color}}; box-shadow: {{t.ring}}">{{t.label}}</div>
+</sc-for>
+</div>
+
+<sc-if value="{{isWatch}}" hint-placeholder-val="{{true}}">
+<div>
+<div style="position: absolute; left: 96px; top: 302px; font-family: Fredoka, 'Space Grotesk', sans-serif; font-weight: 600; font-size: 32px">Keep watching</div>
+<div style="position: absolute; left: 96px; top: 352px; display: flex; gap: 36px">
+<sc-for list="{{cards}}" as="t" hint-placeholder-count="4">
+<div style="width: 380px; flex: none">
+<div style="width: 380px; height: 214px; position: relative; border-radius: 22px; overflow: hidden; background: {{t.bg}}; box-shadow: {{t.ring}}">
+<div style="position: absolute; left: 62%; top: 14%; width: 22%; height: 38%; border-radius: 50%; background: {{t.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.55), rgba(0,0,0,0))"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(255,255,255,0.3)"><div style="width: {{t.pct}}; height: 100%; background: {{accent}}"></div></div>
+</div>
+<div style="font-size: 28px; font-weight: 600; margin-top: 12px">{{t.title}}</div>
+<div style="font-size: 22px; margin-top: 2px; color: rgba(255,255,255,0.65)">{{t.sub}}</div>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 96px; top: 690px; font-family: Fredoka, 'Space Grotesk', sans-serif; font-weight: 600; font-size: 32px; opacity: 0.7">New this week</div>
+<div style="position: absolute; left: 96px; top: 742px; display: flex; gap: 36px; opacity: 0.7">
+<sc-for list="{{posters}}" as="p" hint-placeholder-count="8">
+<div style="width: 176px; height: 264px; flex: none; position: relative; border-radius: 22px; overflow: hidden; background: {{p.bg}}">
+<div style="position: absolute; left: {{p.sx}}; top: {{p.sy}}; width: {{p.ss}}; height: {{p.ssh}}; border-radius: 50%; background: {{p.sc}}"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(0deg, rgba(0,0,0,0.55), rgba(0,0,0,0))"></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isLists}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 96px; top: 312px; display: flex; flex-wrap: wrap; width: 1760px">
+<sc-for list="{{tiles}}" as="t" hint-placeholder-count="8">
+<div style="width: 320px; height: 190px; margin: 0 32px 40px 0; position: relative; border-radius: 28px; overflow: hidden; background: {{t.bg}}; box-shadow: {{t.ring}}">
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 60%; background: linear-gradient(0deg, rgba(0,0,0,0.5), rgba(0,0,0,0))"></div>
+<div style="position: absolute; left: 24px; bottom: 20px; font-family: Fredoka, 'Space Grotesk', sans-serif; font-weight: 600; font-size: 32px">{{t.name}}</div>
+<div style="position: absolute; left: 24px; top: 20px; height: 34px; padding: 0 16px; border-radius: 17px; background: rgba(10,8,24,0.45); display: flex; align-items: center; font-size: 20px; font-weight: 600; color: rgba(255,255,255,0.85)">{{t.count}}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isLock}}" hint-placeholder-val="{{false}}">
+<div>
+<div style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(8,5,18,0.78)"></div>
+<div style="position: absolute; left: 600px; top: 270px; width: 720px; box-sizing: border-box; padding: 48px 56px; border-radius: 36px; text-align: center; background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)), rgba(24,16,46,0.96); border: 1px solid rgba(255,255,255,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 40px 100px rgba(0,0,0,0.55)">
+<div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px">Leave Kids?</div>
+<div style="font-size: 26px; color: rgba(255,255,255,0.7); margin-top: 8px">Enter the PIN with the number buttons</div>
+<div style="display: flex; justify-content: center; gap: 28px; margin-top: 40px">
+<sc-for list="{{pin}}" as="d" hint-placeholder-count="4">
+<div style="width: 36px; height: 36px; border-radius: 50%; box-sizing: border-box; border: 3px solid rgba(255,255,255,0.7); background: {{d.fill}}"></div>
+</sc-for>
+</div>
+<div style="font-size: 24px; color: rgba(255,255,255,0.55); margin-top: 36px">Back to stay in Kids</div>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["watch","lists","lock"],"default":"watch"},"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = ['watch', 'lists', 'lock'].indexOf(this.props.state) >= 0 ? this.props.state : 'watch';
+    const accent = '#FFD66B';
+    const bg = 'radial-gradient(ellipse 900px 700px at 85% 12%, rgba(255,140,90,0.72), rgba(255,140,90,0) 70%), radial-gradient(ellipse 900px 640px at 6% 100%, rgba(60,170,200,0.58), rgba(60,170,200,0) 70%), radial-gradient(ellipse 600px 460px at 55% 55%, rgba(255,214,107,0.14), rgba(255,214,107,0) 70%), #1D1646';
+    const labels = ['Home', 'Movies', 'TV', 'Kids', 'Collections', 'Discover'];
+    const cats = labels.map((label, i) => ({ label: label, color: i === 3 ? '#FFFFFF' : 'rgba(255,255,255,0.42)', line: i === 3 ? accent : 'transparent' }));
+    const ringOn = '0 0 0 3px rgba(255,255,255,0.95), 0 20px 50px rgba(0,0,0,0.55)';
+    const ringOff = '0 10px 24px rgba(0,0,0,0.35)';
+    const lists = st === 'lists';
+    const tabs = [['Watch', !lists], ['Collections', lists]].map((t) => ({ label: t[0], bg: t[1] ? 'rgba(255,255,255,0.2)' : 'transparent', border: t[1] ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.26)', color: t[1] ? '#FFFFFF' : 'rgba(255,255,255,0.65)', ring: 'none' }));
+    const art = [
+      { bg: 'linear-gradient(170deg, #F6C46A 0%, #E0743C 50%, #4A1E16 100%)', sc: 'radial-gradient(circle at 35% 35%, #FFF1C8, #FFC85C)', sx: '26%', sy: '12%', ss: '50%', ssh: '33%' },
+      { bg: 'linear-gradient(170deg, #7FD8C8 0%, #2B8A93 52%, #0F3A44 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #CFF5EE)', sx: '48%', sy: '10%', ss: '36%', ssh: '24%' },
+      { bg: 'linear-gradient(170deg, #F4A6C0 0%, #B24C7A 52%, #3A1632 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFE8F0, #FFC0D8)', sx: '16%', sy: '16%', ss: '44%', ssh: '29%' },
+      { bg: 'linear-gradient(170deg, #9FC6F4 0%, #3F6FC0 50%, #14264F 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #D6E8FF)', sx: '50%', sy: '12%', ss: '34%', ssh: '23%' },
+      { bg: 'linear-gradient(170deg, #B8E08A 0%, #4F9A3C 50%, #16360F 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFBD0, #F2EC8A)', sx: '40%', sy: '14%', ss: '40%', ssh: '27%' },
+      { bg: 'linear-gradient(170deg, #D2B0F2 0%, #7A4CC0 52%, #26124A 100%)', sc: 'radial-gradient(circle at 40% 40%, #FFFFFF, #EBDCFF)', sx: '30%', sy: '14%', ss: '42%', ssh: '28%' }
+    ];
+    const cardDefs = [
+      ['Pip and the Lighthouse', 'Episode 4 \u00b7 12 min left', '62%', 0],
+      ['Mossy Hill', 'Episode 9 \u00b7 4 min left', '85%', 4],
+      ['Little Comet', 'Movie \u00b7 38 min left', '48%', 3],
+      ['Biscuit Bear', 'Episode 2', '12%', 2]
+    ];
+    const cards = cardDefs.map((c, i) => Object.assign({}, art[c[3]], { title: c[0], sub: c[1], pct: c[2], ring: i === 0 ? ringOn : ringOff }));
+    const posters = [1, 5, 2, 0, 4, 3, 1, 5].map((a) => art[a]);
+    const tileDefs = [['Top family', '48 films'], ['Little ones', '62 titles'], ['Animation', '120 films'], ['Songs and singalongs', '31 titles'], ['Based on a book', '54 films'], ['New this month', '9 titles'], ['Animals', '40 titles'], ['Space and robots', '27 titles'], ['Superheroes', '33 titles'], ['Bedtime', '18 titles']];
+    const tiles = tileDefs.map((t, i) => ({ name: t[0], count: t[1], bg: art[i % 6].bg, ring: (i === 0 && lists) ? ringOn : ringOff }));
+    return { bg: bg, accent: accent, cats: cats, tabs: tabs, greeting: 'Hello Ava and Finn!', isWatch: !lists && st !== 'lock' || st === 'lock', isLists: lists, isLock: st === 'lock', cards: cards, posters: posters, tiles: tiles, pin: [{ fill: '#FFFFFF' }, { fill: '#FFFFFF' }, { fill: 'transparent' }, { fill: 'transparent' }] };
+  }
+}
+</script>
+</body>
+</html>
