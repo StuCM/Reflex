@@ -35,8 +35,8 @@ module.exports = function (h) {
       return step('Space Grotesk 700 is loaded', function () {
         return page
           .evaluate(
-            'document.fonts.load("700 20px \\"Space Grotesk\\"").then(function () {' +
-              ' return document.fonts.check("700 20px \\"Space Grotesk\\""); })',
+            'document.fonts.load("700 20px \\"Space Grotesk\\"").then(function (faces) {' +
+              ' return faces.length > 0 && document.fonts.check("700 20px \\"Space Grotesk\\""); })',
           )
           .then(function (loaded) {
             assertEqual(loaded, true, 'document.fonts.check');
