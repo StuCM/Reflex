@@ -509,7 +509,7 @@ module.exports = function (h) {
           })
           .then(function (st) {
             if (st.ac !== '#9d93d6') throw new Error('--ac is ' + st.ac + ', not the violet');
-            if (st.bg !== '#161826')
+            if (st.bg !== '#0B0912')
               throw new Error('--bg is ' + st.bg + ', not the Mantis ground');
             /* A custom property is handed back as authored, and the build
                minifies `340ms` to `.34s` — the same duration, spelled shorter.
