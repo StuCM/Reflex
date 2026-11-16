@@ -576,6 +576,15 @@ function drive(page, titles, port) {
     });
   }
 
+  /* Up to the first row. Up on the first row opens the top menu, so shut it. */
+  function topRow() {
+    return press('ArrowUp', 12)
+      .then(menuIsOpen)
+      .then(function (open) {
+        if (open) return press('ArrowDown');
+      });
+  }
+
   function openSidebar() {
     function climb(n) {
       return menuIsOpen().then(function (isOpen) {
@@ -1405,6 +1414,8 @@ function drive(page, titles, port) {
     controlRow,
     openSidebar,
     sidebarRows,
+    topRow,
+    sidebarWalkTo,
     sidebarPick,
     watchingPick,
     deckRow,
