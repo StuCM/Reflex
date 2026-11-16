@@ -19,6 +19,7 @@ files:
   - dev/smoke/discovery.js
   - dev/smoke/sections.js
   - dev/smoke/shell.js
+  - css/base.css
 ---
 
 # Home looks like v2: smaller posters that grow on focus, and a v2 hero
@@ -62,7 +63,11 @@ After 062.
    accent), title (Space Grotesk 700 uppercase, ~92 px, −1 px tracking), meta,
    two-line synopsis; crossfade over `--t-hero`; reads 061's debounce setting.
    Layout numbers from `Combo.dc.html`.
-3. Update every smoke size/position assertion to the new numbers (positive
+3. **Fonts through tokens**: add `--font-title` (Space Grotesk) and
+   `--font-body` (Inter) to `css/base.css :root` and use only those in rules,
+   never the family names. Stuart, 2026-11-16: "Not 100% on the fonts … this
+   may change in the future" — a change must be one line.
+4. Update every smoke size/position assertion to the new numbers (positive
    values), and add one: the focused tile's rendered box is ~210×315 and the
    next row's top is on screen.
 
