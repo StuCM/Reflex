@@ -12,8 +12,17 @@
 <link rel="stylesheet" href="css/show.css">
 <link rel="stylesheet" href="css/player.css">
 <link rel="stylesheet" href="css/screens.css">
+<link rel="stylesheet" href="css/v2.css">
 </head>
 <body>
+
+<!-- v2's ground: three oversized glows and a noise layer that hides banding.
+     Behind every view; hidden on the pages whose scrims are still v1. -->
+<div id="bg">
+  <div class="glow" id="g1"></div>
+  <div class="glow" id="g2"></div>
+  <div class="glow" id="g3"></div>
+</div>
 
 <div id="browse" class="view">
   <!-- The backdrop of whatever is focused, and two flat scrims over it so the
@@ -233,6 +242,7 @@
 
 <div id="toast" class="hidden"></div>
 <div id="debug"></div>
+<div id="hud" class="hidden"></div>
 
 <!-- One entry. The import graph is the dependency order now, and Vite rewrites
      this tag to a classic deferred script — Chromium 53 has no module scripts. -->
