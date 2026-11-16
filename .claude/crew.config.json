@@ -3,7 +3,7 @@
   "project": "Reflex",
   "graphProject": "Reflex",
 
-  "baseBranch": "main",
+  "baseBranch": "feat/v2",
   "branchPrefix": "crew/",
   "worktreeDir": "..",
   "decisionsFile": "docs/decisions.md",
