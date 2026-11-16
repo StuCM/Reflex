@@ -2,7 +2,7 @@
 import { KEY, setPage } from '../core/ui';
 import { fill } from './dom';
 
-export const PAGES = ['Home', 'Movies', 'TV', 'Collections', 'Discover', 'Kids', 'More'];
+export const PAGES = ['Home', 'Movies', 'TV', 'Kids', 'Collections', 'Discover', 'More'];
 
 function must(id: string): HTMLElement {
   const element = document.getElementById(id);

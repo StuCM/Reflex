@@ -39,7 +39,17 @@ import * as rowModel from '../rules/rows';
 import * as servers from '../data/servers';
 import * as sidebar from '../view/sidebar';
 import * as menubar from '../view/menubar';
-import { KEY, clamp, debug, isBack, message, setPage, show as showView, toast } from '../core/ui';
+import {
+  KEY,
+  clamp,
+  debug,
+  isBack,
+  message,
+  setDrift,
+  setPage,
+  show as showView,
+  toast,
+} from '../core/ui';
 
 function must(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -175,6 +185,7 @@ export function render() {
      the rows have somewhere to go the moment you step into them. */
   browseView.classList.toggle('dense', rowIndex !== 0);
   rail.render(rows, rowIndex);
+  setDrift(focusedRow()?.focus ?? 0, rowIndex);
   masthead.render(focusedRow() ?? null, focusedItem(), rows.length > 0);
   /* The backdrop keeps its own debounce — Meta's skips a cached item and
      would leave the last film's art under the new one's title. */
@@ -267,9 +278,9 @@ function openSidebar() {
 /* ---------- the top menu ---------- */
 
 const PAGE_HOME = 0;
-const PAGE_COLLECTIONS = 3;
-const PAGE_DISCOVER = 4;
-const PAGE_KIDS = 5;
+const PAGE_KIDS = 3;
+const PAGE_COLLECTIONS = 4;
+const PAGE_DISCOVER = 5;
 let lastPage = PAGE_HOME;
 
 function currentPage(): number {
