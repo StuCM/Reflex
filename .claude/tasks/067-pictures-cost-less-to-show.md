@@ -19,6 +19,7 @@ files:
   - dev/smoke/shell.js
   - dev/smoke/browse.js
   - dev/smoke.js
+  - dev/smoke/sections.js
 ---
 
 # Browse pages drop the backdrop photo, and the panel tunes poster size
