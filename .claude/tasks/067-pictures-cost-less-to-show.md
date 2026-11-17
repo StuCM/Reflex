@@ -10,6 +10,8 @@ work: v2-shell
 files:
   - src/data/art.ts
   - src/view/masthead.ts
+  - src/screen/browse.ts
+  - index.html
   - src/view/rail.ts
   - src/view/hud.ts
   - css/browse.css
@@ -19,82 +21,74 @@ files:
   - dev/smoke.js
 ---
 
-# Posters and the hero cost less to show, and the panel can tune their sizes
+# Browse pages drop the backdrop photo, and the panel tunes poster size
 
 ## Goal
-The TV spends less time decoding and drawing pictures while panning: posters
-and backdrops are asked for at sizes that suit the screen, the next hero is
-ready before it is needed, and the tuning panel can switch both sizes so
-Stuart can trade sharpness for speed on the TV. The hero waits 150 ms.
+On the browse pages (Home, Movies, TV, Kids, Collections, Discover) the hero
+is text over v2's glows — no full-screen backdrop photo is fetched, decoded or
+faded. The tuning panel's key 9 switches the poster size between w185 and
+w342 so Stuart can trade sharpness for speed on the TV. The hero text waits
+150 ms.
 
 ## Why now
-Stuart, 2026-11-17, after 066 on the B8: "I think hero needs to go to 150ms but
-changing settings I think you are right we have hit the optimisation of the
-animations its the poster and hero image loading that I think is slowing
-things."
+Stuart, 2026-11-17, after 066 on the B8: "its the poster and hero image
+loading that I think is slowing things", "hero needs to go to 150ms", and
+then: "the hero is replacing the background blur image so we probably don't
+need it on most pages". The v2 boards (`designs/v2/*.dc.html`) carry no
+backdrop image on any page.
 
 ## Existing work
-None in flight. Base `feat/v2`.
+None in flight. Base `feat/v2`. Replaces this spec's first version (poster
+and hero sizes on two keys, hero prefetch), which blocked because the panel
+has no free key.
 
 ## Background
-- `src/data/art.ts:13-14`: posters `w342` for a 176 px tile (210 focused);
-  hero `w1280`. Plex fallbacks via `photoUrl/posterUrl(item, width, height)`
-  ask the server's transcoder at the tile size.
-- `src/view/masthead.ts:28-60`: the hero preloads with `new Image()` and swaps
-  on `onload`. On Chrome 53 `onload` means fetched, not decoded: the decode
-  happens on the raster threads when the layer first paints, which is the
-  ~17 ms `ImageDecodeTaskImpl` the TV profile shows, landing mid-pan.
-- TV profile (CDP, 2026-11-17): raster ~1.5 s per 6 s pan in both v1 and v2;
-  GPU thread ~70% busy; 28 image decodes of ~17 ms.
-- TMDB sizes: posters w92 / w154 / w185 / w342 / w500 / w780; backdrops
-  w300 / w780 / w1280 / original.
+- `src/view/masthead.ts:28-60` `paintArt()` fetches `art.hero(wanted)` (TMDB
+  `w1280`, `src/data/art.ts:14`) into two crossfading layers `#hero-art-a/-b`
+  (`index.html`) after the debounce; Chrome 53 decodes it on first paint,
+  which is the ~17 ms decode the TV profile showed mid-pan.
+- The detail page and series page draw their own backdrops (`detail.ts`,
+  `showpage.ts`) — **not touched** here; they are v1 until redesigned.
+- `src/view/hud.ts`: keys 1-8 are settings, 9 is the fake "next page" glow
+  test from 061 (now redundant: 062's top menu changes pages for real), 0
+  resets stats. `dev/smoke/shell.js` has the step "key 9 shifts the glows and
+  cycles back".
+- `src/data/art.ts:13` posters `w342` for a 176 px tile (210 focused).
 
 ## Graph context
-- Decision "The tile and the hero take two different TMDB backdrops, Plex only
-  as fallback" — keep that split.
-- "Defer the lookup, not the paint": the rail's 160 ms settle gates *fetches*;
-  a picture already in hand paints at once (task 027) — keep that.
-- Pattern "root custom properties kill B8 panning": settings apply as classes
-  or custom properties on the smallest element, never `:root` per key.
+- Pattern "root custom properties kill B8 panning": settings apply on the
+  smallest element.
+- "Defer the lookup, not the paint" — keep the rail's 160 ms fetch settle.
 
 ## Approach
-1. **Sizes as settings** (`src/data/art.ts`, `src/view/hud.ts`): poster size
-   `w185` / `w342` (panel key 9, default **w342** until Stuart judges), hero
-   size `w780` / `w1280` (panel key 0 is reset; use the next free key the
-   panel has — document it in the panel), default **w1280**. `art.tile` /
-   `art.hero` read them; a change takes effect for pictures fetched after it.
+1. **No backdrop on browse** (`masthead.ts`, `browse.ts`, `index.html`,
+   `css/browse.css`, `css/v2.css`): the browse view no longer calls
+   `masthead.showArt` / `paintArt`; remove the `#hero-art-a/-b` layers and
+   their scrims from the browse view (keep any shared code the detail/series
+   pages use). The masthead text keeps its debounce and fade.
 2. **Hero default 150 ms** (`hud.ts`), keeping saved settings.
-3. **Hero ready before it is shown** (`masthead.ts`): once the debounce fires
-   and the picture loads, put it on the hidden layer *and let it paint once
-   at opacity 0* (one frame) before fading it in, so the decode happens before
-   the crossfade, not during it. Also, after the focus has rested on a tile
-   for the debounce, prefetch (`new Image`, no paint) the hero of the tiles
-   either side, so moving one step shows an already-fetched picture.
-4. **Posters**: the 160 ms settle and the drawn-set stay. No other change
-   unless the panel setting needs one.
-5. **Smoke** (`dev/smoke/shell.js`, `browse.js`, `dev/smoke.js` collectors if
-   they match `w342` or `w1280` in URLs — grep first):
-   - with poster size w185, a newly drawn tile's request URL contains `/w185/`;
-     with w342, `/w342/` (assert the URL, positively);
-   - with hero w780, the hero's `--art` URL contains `/w780/`;
-   - after resting on a tile, the neighbours' hero URLs have been requested
-     (count requests to the mock's image path: ≥ 2, and the control: 0 while
-     sweeping without resting);
-   - hero default is 150 ms on a fresh profile.
+3. **Key 9 = poster size** w185 / w342 (default w342 until Stuart judges);
+   `art.tile` reads it; it applies to tiles fetched after the change. Remove
+   the fake-page key and its smoke step; the glow-shift step uses the real
+   menu instead (▲, →).
+4. **Smoke**: on Home, after focus moves and the debounce passes, **no**
+   request is made for a TMDB `w1280` backdrop and there is no
+   `#hero-art-a` in `#browse` (positive control: the detail page still
+   requests its backdrop); with key 9 → w185 a newly drawn tile requests
+   `/w185/`, with w342 `/w342/`; `dev/smoke.js` `tilePosters` (~400) follows
+   the setting; hero default 150 ms on a fresh profile.
 
 ## Out of scope
-- Server-side poster generation, Plex art sizes beyond the fallback path.
-- Changing the debounce of tile fetches (160 ms settle).
+- Detail and series page backdrops. Plex art sizes. The tile fetch settle.
 
 ## Definition of done
-- [ ] Poster and hero sizes switch from the panel and change the URLs fetched (smoke).
-- [ ] The hero crossfade starts only after the new picture has painted once hidden.
-- [ ] Neighbour heroes are prefetched after a rest, never during a sweep (smoke, with control).
-- [ ] Hero default 150 ms.
+- [ ] Browse pages fetch and show no backdrop photo (smoke, with the detail-page control).
+- [ ] Key 9 switches poster size and changes the URLs fetched (smoke).
+- [ ] Hero default 150 ms; the glow step goes through the real menu.
 - [ ] the gate passes (`crew gate .claude/tasks/067-pictures-cost-less-to-show.md`)
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
-- [ ] (orchestrator, after merge) the CDP pan on the TV with w185 and w780: raster time and decodes per pan lower than with w342 / w1280.
+- [ ] (orchestrator, after merge) the CDP pan on the TV: image decodes and raster time per pan lower than after 066.
 
 ## Review rounds
 
