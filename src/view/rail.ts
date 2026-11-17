@@ -77,6 +77,8 @@ if (!rowsElement) throw new Error('index.html has no #rows');
 const container: HTMLElement = rowsElement;
 
 const pool: RailRowElement[] = [];
+const ring = div('');
+ring.id = 'ring';
 let settleTimer: ReturnType<typeof setTimeout> | null = null;
 
 /* Every picture the rail has fetched. The settle exists to stop a sweep asking
@@ -104,6 +106,19 @@ function place(element: HTMLElement, across: number, animate: boolean): void {
   translate(element, across, 0);
   void element.offsetWidth;
   element.classList.remove('no-anim');
+}
+
+/* One ring, slid along the focused row's strip; a jump to another row is not animated. */
+function moveRing(strip: HTMLElement, index: number): void {
+  if (ring.parentNode !== strip) {
+    ring.classList.add('no-anim');
+    strip.appendChild(ring);
+    translate(ring, index * STRIDE, 0);
+    void ring.offsetWidth;
+    ring.classList.remove('no-anim');
+    return;
+  }
+  translate(ring, index * STRIDE, 0);
 }
 
 export function build(): void {
@@ -266,6 +281,7 @@ function drawRow(
     translate(tile, index * STRIDE, 0);
     const focused = at === rowIndex && index === row.focus;
     tile.classList.toggle('on', focused);
+    if (focused) moveRing(rowElement._strip, index);
 
     /* A tile whose poster was skipped has to be redrawn when its row comes into
        view, so the short circuit has to know about that. */
