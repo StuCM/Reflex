@@ -1,7 +1,7 @@
 'use strict';
 /* the v2 background and the tuning panel */
 module.exports = function (h) {
-  const { press, waitFor, step, page } = h;
+  const { press, waitFor, step, page, tilePosters } = h;
 
   const hudText = () => page.evaluate('document.getElementById("hud").textContent');
   const glowX = () => page.evaluate('document.getElementById("g1").style.getPropertyValue("--gx")');
@@ -76,22 +76,7 @@ module.exports = function (h) {
           })
           .then(hudText)
           .then(function (text) {
-            assertEqual(/1 hero 420/.test(text), true, 'toggle readout in ' + text);
-          });
-      });
-    })
-
-    .then(function () {
-      return step('key 9 shifts the glows and cycles back', function () {
-        return press('9')
-          .then(glowX)
-          .then(function (x) {
-            assertEqual(x, '-260px', 'g1 --gx after one page');
-            return press('9', 3);
-          })
-          .then(glowX)
-          .then(function (x) {
-            assertEqual(x, '0px', 'g1 --gx after four');
+            assertEqual(/1 hero 150/.test(text), true, 'hero default 150 ms in in ' + text);
           });
       });
     })
@@ -122,14 +107,54 @@ module.exports = function (h) {
             ' return st.getPropertyValue("--gx") + "," + st.getPropertyValue("--gy"); }).join(" ")',
         );
       return step('one page moves each glow by its own offset', async function () {
-        await press('9');
+        await press('ArrowUp');
+        await press('ArrowRight');
         assertEqual(
           await offsets(),
           '-260px,70px 220px,-90px -160px,110px',
           'offsets after one page',
         );
-        await press('9', 3);
-        assertEqual(await offsets(), '0px,0px 0px,0px 0px,0px', 'offsets after four');
+        await press('ArrowLeft');
+        assertEqual(await offsets(), '0px,0px 0px,0px 0px,0px', 'offsets back on Home');
+        await press('Escape');
+        await page.waitForTimeout(500);
+      });
+    })
+
+    .then(function () {
+      const menuLabels = 'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0';
+      const visit = async (steps) => {
+        const before = tilePosters.length;
+        await press('ArrowUp');
+        await press('ArrowRight', steps);
+        await waitFor(menuLabels, 'tiles on the new page', 10000);
+        await page.waitForTimeout(1500);
+        await press('ArrowDown');
+        await page.waitForTimeout(500);
+        return tilePosters.slice(before).filter((u) => u.indexOf('/__tmdbimg/') >= 0);
+      };
+      return step('key 9 switches the poster size of tiles drawn after it', async function () {
+        await press('9');
+        assertEqual(/9 poster w185/.test(await hudText()), true, 'readout ' + (await hudText()));
+        const small = await visit(2);
+        assertEqual(small.length > 0, true, 'TMDB posters asked for at w185');
+        assertEqual(
+          small.every((u) => u.indexOf('/w185/') >= 0),
+          true,
+          'every new poster is w185: ' + small[0],
+        );
+        await press('9');
+        const large = await visit(1);
+        assertEqual(large.length > 0, true, 'posters asked for at w342');
+        assertEqual(
+          large.every((u) => u.indexOf('/w342/') >= 0),
+          true,
+          'every new poster is w342: ' + large[0],
+        );
+        await press('ArrowUp');
+        await press('ArrowLeft', 3);
+        await press('Escape');
+        await page.waitForTimeout(600);
       });
     })
 

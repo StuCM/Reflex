@@ -1,4 +1,4 @@
-/* The backdrop, the title, and one line under it. */
+/* The title, one line under it, and the facts. */
 import { tmdbId } from '../api/plex/library';
 import * as art from '../data/art';
 import { railSub, railTitle } from '../rules/labels';
@@ -16,47 +16,18 @@ const metaElement = must('mh-meta');
 const descriptionElement = must('mh-desc');
 const castElement = must('mh-cast');
 
-/* Two stacked layers; the one carrying .on is the one you see, and a new
-   picture is written into the other and faded up over it. */
-const layers = [must('hero-art-a'), must('hero-art-b')];
-let shown = 0;
-
 let timer: ReturnType<typeof setTimeout> | null = null;
 let wanted: PlexItem | null = null;
-let lastUrl = '';
 
-function paintArt(): void {
+function lookUp(): void {
   art.warm(wanted);
-  const url = art.hero(wanted);
-  if (!url || url === lastUrl) return;
-  lastUrl = url;
-
-  /* Swap only once the picture is decoded, or the fade reveals an empty box. A
-     broken URL swaps anyway, so it cannot leave the old one up for ever; a swap
-     the next backdrop has already overtaken is dropped. */
-  const next = layers[shown ? 0 : 1];
-  const current = layers[shown];
-  if (!next || !current) return;
-
-  const preload = new Image();
-  const swap = () => {
-    if (lastUrl !== url) return;
-    next.style.setProperty('--art', `url("${url}")`);
-    current.classList.remove('on');
-    next.classList.add('on');
-    shown = shown ? 0 : 1;
-  };
-  preload.onload = swap;
-  preload.onerror = swap;
-  preload.src = url;
 }
 
-/* The backdrop, debounced: only the last item asked for is drawn, so sweeping a
-   row costs one full-screen image rather than one per key. */
-export function showArt(item: PlexItem | null): void {
+/* Asks for the facts of the item rested on, debounced so a sweep costs one lookup. */
+export function showFacts(item: PlexItem | null): void {
   wanted = item;
   if (timer) clearTimeout(timer);
-  timer = setTimeout(paintArt, heroHold());
+  timer = setTimeout(lookUp, heroHold());
 }
 
 /* The description and the top of the billing, out of the one TMDB request the
@@ -68,11 +39,10 @@ function paintFacts(item: PlexItem): void {
   castElement.textContent = facts?.cast.length ? facts.cast.join('  ·  ') : '';
 }
 
-/* A backdrop that lands after the debounce fired belongs on screen only if the
-   item it belongs to is still the one being rested on. */
+/* Facts that land after the debounce fired belong on screen only if the item
+   they belong to is still the one being rested on. */
 art.onReady((id) => {
   if (!wanted || tmdbId(wanted) !== id) return;
-  paintArt();
   paintFacts(wanted);
 });
 

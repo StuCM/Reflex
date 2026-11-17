@@ -1,5 +1,5 @@
 /* The tuning panel: motion toggles and live frame numbers, hidden until Blue. */
-import { setPage } from '../core/ui';
+import { setPosterSize } from '../data/art';
 
 const OPTIONS = {
   hero: [0, 150, 280, 420],
@@ -10,6 +10,7 @@ const OPTIONS = {
   skip: ['on', 'off'],
   noise: [0, 0.03, 0.05, 0.08],
   focus: ['scale', 'ring', 'both'],
+  poster: ['w342', 'w185'],
 };
 type Name = keyof typeof OPTIONS;
 
@@ -20,10 +21,10 @@ const TIMINGS = [
   [180, 360, 420],
 ];
 
-/* Number key to setting: 1 to 8, in the order the panel lists them. */
+/* Number key to setting: 1 to 8, in the order the panel lists them; 9 is poster. */
 const ORDER: Name[] = ['hero', 'wc', 'glow', 'shadows', 'timing', 'skip', 'noise', 'focus'];
 const DEFAULTS: Record<Name, number> = {
-  hero: 3,
+  hero: 1,
   wc: 1,
   glow: 1,
   shadows: 0,
@@ -31,9 +32,9 @@ const DEFAULTS: Record<Name, number> = {
   skip: 0,
   noise: 2,
   focus: 0,
+  poster: 0,
 };
 const STORE_KEY = 'reflex.tuning';
-const PAGES = 4;
 
 const state: Record<Name, number> = { ...DEFAULTS };
 const panel = document.getElementById('hud');
@@ -41,7 +42,6 @@ const browse = document.getElementById('browse');
 const rows = document.getElementById('rows');
 const root = document.documentElement;
 
-let page = 0;
 let running = false;
 let frames: number[] = [];
 let worst = 0;
@@ -54,7 +54,7 @@ let keyCount = 0;
 function load(): void {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
-    ORDER.forEach((name) => {
+    [...ORDER, 'poster' as Name].forEach((name) => {
       const index = saved[name];
       if (index >= 0 && index < OPTIONS[name].length) state[name] = index;
     });
@@ -87,6 +87,7 @@ function apply(): void {
   root.style.setProperty('--t-move', `${move}ms`);
   root.style.setProperty('--t-menu', `${menu}ms`);
   root.style.setProperty('--noise', String(value('noise')));
+  setPosterSize(value('poster') as string);
 }
 
 export function heroHold(): number {
@@ -113,7 +114,7 @@ function paint(): void {
   const lines = [
     `fps ${fps}   worst ${worst.toFixed(1)} ms   jank ${jank}   key>frame ${keyMs} ms`,
     ...ORDER.map((name, i) => `${i + 1} ${name} ${value(name)}`),
-    '9 next page   0 reset stats',
+    `9 poster ${value('poster')}   0 reset stats`,
   ];
   panel.textContent = lines.join('\n');
 }
@@ -167,11 +168,8 @@ export function key(code: number): boolean {
   const digit = code - 48;
   if (digit < 0 || digit > 9) return false;
   if (digit === 0) resetStats();
-  else if (digit === 9) {
-    page = (page + 1) % PAGES;
-    setPage(page);
-  } else if (ORDER[digit - 1]) {
-    const name = ORDER[digit - 1]!;
+  else if (digit >= 1) {
+    const name = digit === 9 ? 'poster' : ORDER[digit - 1]!;
     state[name] = (state[name] + 1) % OPTIONS[name].length;
     save();
     apply();
