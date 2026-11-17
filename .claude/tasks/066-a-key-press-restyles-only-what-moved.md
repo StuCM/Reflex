@@ -1,11 +1,11 @@
 ---
 id: 066
 slug: a-key-press-restyles-only-what-moved
-status: approved
+status: review
 branch: crew/066-a-key-press-restyles-only-what-moved
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-shell
 files:
   - src/view/rail.ts
@@ -14,6 +14,9 @@ files:
   - dev/smoke/shell.js
   - dev/smoke/browse.js
   - dev/smoke/sections.js
+gate: pass
+gateSha: 3a09be53810f683045c1a7796b6f23670152df38
+gateAt: 2026-11-17T16:03:31.021Z
 ---
 
 # A key press restyles only what moved
@@ -88,5 +91,10 @@ still ~700 ms per pan with a median of 68 elements per recalc (v1: 2).
 - [ ] (orchestrator, after merge) the CDP pan on the TV: style recalc median elements ≤ 5, and total style time under v1's 412 ms.
 
 ## Review rounds
+
+Round 1: PASS.
+
+Changed: rail.ts translate() caches last position per element (WeakMap) and place() skips the no-anim commit when unchanged; masthead.ts restarts the fade only when title/sub text changes; shell.js step counts --tx/--ty writes (116 on feat/v2 for one press, 6 now) and fade restarts.
+Spec note: a MutationObserver on style cannot see identical-value writes (feat/v2 showed 4), so the smoke counts setProperty calls instead; limit 8 writes = 4 elements.
 
 ## Graph writes proposed
