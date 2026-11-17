@@ -78,6 +78,7 @@ art.onReady((id) => {
 
 const masthead = must('masthead');
 let fadeB = false;
+let shownText = '';
 
 export function render(
   row: { title?: string } | null,
@@ -86,9 +87,15 @@ export function render(
 ): void {
   rowElement.textContent = row?.title ?? '';
   masthead.style.setProperty('--hold', `${heroHold()}ms`);
-  fadeB = !fadeB;
-  masthead.classList.remove(fadeB ? 'fa' : 'fb');
-  masthead.classList.add(fadeB ? 'fb' : 'fa');
+  const text = item
+    ? `${railTitle(item)}|${(item as DiscoveryEntry)._availability ?? railSub(item)}`
+    : `|${hasRows}`;
+  if (text !== shownText) {
+    shownText = text;
+    fadeB = !fadeB;
+    masthead.classList.remove(fadeB ? 'fb' : 'fa');
+    masthead.classList.add(fadeB ? 'fa' : 'fb');
+  }
 
   if (!item) {
     titleElement.textContent = hasRows ? '…' : 'Loading…';

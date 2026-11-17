@@ -86,9 +86,17 @@ let settleTimer: ReturnType<typeof setTimeout> | null = null;
    the browser already has, which is what made a second pass grey. */
 const drawn = new Set<string>();
 
-function translate(element: HTMLElement, across: number, down: number): void {
+/* What each element was last given, so an unchanged position writes nothing and
+   invalidates no style. Returns whether it wrote. */
+const placed = new WeakMap<HTMLElement, string>();
+
+function translate(element: HTMLElement, across: number, down: number): boolean {
+  const value = `${across}px ${down}px`;
+  if (placed.get(element) === value) return false;
+  placed.set(element, value);
   element.style.setProperty('--tx', `${across}px`);
   element.style.setProperty('--ty', `${down}px`);
+  return true;
 }
 
 /* Moving within a row animates; being recycled to a different row must not. A
@@ -102,6 +110,7 @@ function place(element: HTMLElement, across: number, animate: boolean): void {
     translate(element, across, 0);
     return;
   }
+  if (placed.get(element) === `${across}px 0px`) return;
   element.classList.add('no-anim');
   translate(element, across, 0);
   void element.offsetWidth;
