@@ -368,10 +368,10 @@ function skipOnRepeat(event: KeyboardEvent) {
   const fast = event.repeat || now - lastArrowAt < 110;
   lastArrowAt = now;
   if (!fast) return;
-  const browseElement = must('browse');
-  browseElement.classList.add('no-anim');
+  const rowsElement = must('rows');
+  if (!rowsElement.classList.contains('no-anim')) rowsElement.classList.add('no-anim');
   if (settleTimer) clearTimeout(settleTimer);
-  settleTimer = setTimeout(() => browseElement.classList.remove('no-anim'), 160);
+  settleTimer = setTimeout(() => rowsElement.classList.remove('no-anim'), 160);
 }
 
 function onKey(event: KeyboardEvent) {

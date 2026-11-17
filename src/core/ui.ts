@@ -69,11 +69,12 @@ export function setPage(index: number): void {
   });
 }
 
-/* Feeds the glows' drift: the focused column and row. Skipped while a held key is skipping animation. */
+/* Feeds the glows' drift: the focused column and row. Written on #bg, never the root, which would restyle the whole document per key. */
 export function setDrift(column: number, row: number): void {
-  if (must('browse').classList.contains('no-anim')) return;
-  document.documentElement.style.setProperty('--f', String(column));
-  document.documentElement.style.setProperty('--r', String(row));
+  if (!document.body.classList.contains('drift')) return;
+  const background = must('bg');
+  background.style.setProperty('--f', String(column));
+  background.style.setProperty('--r', String(row));
 }
 
 export function view(): string {

@@ -9,6 +9,7 @@ const OPTIONS = {
   timing: ['fast', 'default', 'slow'],
   skip: ['on', 'off'],
   noise: [0, 0.03, 0.05, 0.08],
+  focus: ['scale', 'ring', 'both'],
 };
 type Name = keyof typeof OPTIONS;
 
@@ -19,16 +20,17 @@ const TIMINGS = [
   [180, 360, 420],
 ];
 
-/* Number key to setting: 1 to 7, in the order the panel lists them. */
-const ORDER: Name[] = ['hero', 'wc', 'glow', 'shadows', 'timing', 'skip', 'noise'];
+/* Number key to setting: 1 to 8, in the order the panel lists them. */
+const ORDER: Name[] = ['hero', 'wc', 'glow', 'shadows', 'timing', 'skip', 'noise', 'focus'];
 const DEFAULTS: Record<Name, number> = {
-  hero: 2,
+  hero: 3,
   wc: 1,
   glow: 1,
   shadows: 0,
   timing: 2,
   skip: 0,
   noise: 2,
+  focus: 0,
 };
 const STORE_KEY = 'reflex.tuning';
 const PAGES = 4;
@@ -36,6 +38,7 @@ const PAGES = 4;
 const state: Record<Name, number> = { ...DEFAULTS };
 const panel = document.getElementById('hud');
 const browse = document.getElementById('browse');
+const rows = document.getElementById('rows');
 const root = document.documentElement;
 
 let page = 0;
@@ -77,6 +80,8 @@ function apply(): void {
   document.body.classList.toggle('noshift', value('glow') === 'static');
   document.body.classList.toggle('drift', value('glow') === 'drift');
   browse?.classList.toggle('shadows', value('shadows') === 'on');
+  rows?.classList.toggle('f-ring', value('focus') === 'ring');
+  rows?.classList.toggle('f-both', value('focus') === 'both');
   const [quick, move, menu] = TIMINGS[state.timing]!;
   root.style.setProperty('--t-quick', `${quick}ms`);
   root.style.setProperty('--t-move', `${move}ms`);

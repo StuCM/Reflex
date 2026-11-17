@@ -76,7 +76,7 @@ module.exports = function (h) {
           })
           .then(hudText)
           .then(function (text) {
-            assertEqual(/1 hero 280/.test(text), true, 'toggle readout in ' + text);
+            assertEqual(/1 hero 420/.test(text), true, 'toggle readout in ' + text);
           });
       });
     })
@@ -161,7 +161,7 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      const settling = 'document.getElementById("browse").classList.contains("no-anim")';
+      const settling = 'document.getElementById("rows").classList.contains("no-anim")';
       return step('a held arrow skips animation and a single press does not', function () {
         return press('ArrowRight')
           .then(function () {
@@ -288,6 +288,89 @@ module.exports = function (h) {
           'Movies is current in ' + after,
         );
         await press('ArrowLeft');
+      });
+    })
+
+    .then(function () {
+      const OBSERVE =
+        'window.__w = { root: 0, bg: 0 };' +
+        'var watch = function (el, key) { new MutationObserver(function (m) { window.__w[key] += m.length; })' +
+        '.observe(el, { attributes: true, attributeFilter: ["style"] }); };' +
+        'watch(document.documentElement, "root"); watch(document.getElementById("bg"), "bg");';
+      const writes = () => page.evaluate('window.__w');
+      const cls = (id) => 'document.getElementById("' + id + '").classList.contains("no-anim")';
+      const drifting = () => page.evaluate('document.body.classList.contains("drift")');
+      const driftTo = async (want) => {
+        if ((await drifting()) !== want) await press('3');
+        if ((await drifting()) !== want) await press('3');
+      };
+      return step('a pan writes no style on the root; drift writes go to #bg', async function () {
+        await press('F6');
+        await driftTo(true);
+        await page.evaluate(OBSERVE);
+        await press('ArrowRight', 10);
+        await page.waitForTimeout(300);
+        let w = await writes();
+        assertEqual(w.root, 0, 'root style writes during a pan');
+        assertEqual(w.bg > 0, true, 'bg style writes with drift on (control)');
+
+        await driftTo(false);
+        await page.evaluate(OBSERVE);
+        await press('ArrowLeft', 10);
+        await page.waitForTimeout(300);
+        w = await writes();
+        assertEqual(w.bg, 0, 'bg style writes with drift off');
+        await press('F6');
+
+        await page.keyboard.down('ArrowRight');
+        await page.keyboard.down('ArrowRight');
+        assertEqual(await page.evaluate(cls('rows')), true, 'no-anim on #rows while held');
+        assertEqual(await page.evaluate(cls('browse')), false, 'no-anim never on #browse');
+        await page.keyboard.up('ArrowRight');
+        await waitFor(cls('rows') + ' === false', 'no-anim to clear', 2000);
+      });
+    })
+
+    .then(function () {
+      const rects = () =>
+        page.evaluate(
+          '(function () { var t = document.querySelector("#rows .tile.on");' +
+            ' var p = t.querySelector(".tile-inner").getBoundingClientRect();' +
+            ' var l = t.querySelector(".tile-title").getBoundingClientRect();' +
+            ' var r = document.getElementById("ring");' +
+            ' var rr = r.getBoundingClientRect(), tt = t.getBoundingClientRect();' +
+            ' return { poster: p.bottom, label: l.top, ringOpacity: getComputedStyle(r).opacity,' +
+            ' ringLeft: rr.left, tileLeft: tt.left }; })()',
+        );
+      const focusClass = () =>
+        page.evaluate('document.getElementById("rows").className.replace(/\\s+/g, " ")');
+      return step('key 8 cycles the focus style; the label clears the poster', async function () {
+        await press('F6');
+        await page.waitForTimeout(500);
+        let r = await rects();
+        assertEqual(r.label >= r.poster, true, 'label below poster in scale mode');
+        assertEqual(r.ringOpacity, '0', 'ring hidden in scale mode');
+
+        await press('8');
+        await page.waitForTimeout(500);
+        assertEqual(/f-ring/.test(await focusClass()), true, 'f-ring after one press');
+        r = await rects();
+        assertEqual(r.ringOpacity, '1', 'ring shown in ring mode');
+        assertEqual(Math.abs(r.ringLeft - r.tileLeft) < 6, true, 'ring over the focused tile');
+        await press('ArrowRight');
+        await page.waitForTimeout(500);
+        r = await rects();
+        assertEqual(Math.abs(r.ringLeft - r.tileLeft) < 6, true, 'ring follows the focus');
+        assertEqual(r.label >= r.poster, true, 'label below poster in ring mode');
+
+        await press('8');
+        await page.waitForTimeout(500);
+        assertEqual(/f-both/.test(await focusClass()), true, 'f-both after two presses');
+        r = await rects();
+        assertEqual(r.label >= r.poster, true, 'label below poster in both mode');
+        await press('8');
+        assertEqual(/f-ring|f-both/.test(await focusClass()), false, 'back to scale');
+        await press('F6');
       });
     });
 };

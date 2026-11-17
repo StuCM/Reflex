@@ -265,9 +265,29 @@
   transition: transform var(--t-quick) var(--ease);
 }
 /* Focus is the lift alone: 176 to 210 wide. */
-.tile.on .tile-inner {
+#rows:not(.f-ring) .tile.on .tile-inner {
   -webkit-transform: scale(1.19); transform: scale(1.19);
 }
+
+/* The lift grows the poster 25px past its box at the bottom: the labels step down by that. */
+.tile-title, .tile-sub {
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+#rows:not(.f-ring) .tile.on .tile-title, #rows:not(.f-ring) .tile.on .tile-sub {
+  -webkit-transform: translateY(25px); transform: translateY(25px);
+}
+
+/* The sliding ring: one element, moved by transform over the focused tile. */
+#ring {
+  position: absolute; top: -3px; left: -3px; width: 182px; height: 270px;
+  box-sizing: border-box; border: 3px solid rgba(255, 255, 255, .95); border-radius: 17px;
+  opacity: 0; pointer-events: none;
+  -webkit-transform: translate(var(--tx, 0px), 0); transform: translate(var(--tx, 0px), 0);
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+#rows.f-ring #ring, #rows.f-both #ring { opacity: 1; }
 
 /* A poster in a 2:3 box, so cover barely crops. It still crops rather than
    stretches, because a library always holds something of the wrong shape. */
