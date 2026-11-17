@@ -1,11 +1,11 @@
 ---
 id: 065
 slug: v2-pans-as-cheaply-as-v1
-status: approved
+status: review
 branch: crew/065-v2-pans-as-cheaply-as-v1
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-shell
 files:
   - src/core/ui.ts
@@ -17,6 +17,9 @@ files:
   - css/browse.css
   - dev/smoke/shell.js
   - dev/smoke/browse.js
+gate: pass
+gateSha: 3af98ab8b99a13a51d88190cf67ea0c08f7bd938
+gateAt: 2026-11-17T13:53:41.251Z
 ---
 
 # v2 pans no worse than v1, the label clears the zoom, and focus style is tunable
@@ -118,5 +121,20 @@ composited layers, and timer work v1 does not have. Causes found in the code:
 - [ ] (orchestrator, after merge) the same CDP pan on the TV: style recalc median elements ≤ 5 and layers per commit within 3 of v1.
 
 ## Review rounds
+
+Round 1: PASS. Gate 147/147. Root-writes step verified to fail on feat/v2 (root writes 10, want 0).
+
+## Changes
+- src/core/ui.ts: setDrift writes --f/--r on #bg, only when body.drift.
+- src/app.ts: no-anim toggled on #rows, only on change.
+- src/view/hud.ts: hero default 420, new focus option (key 8) as f-ring/f-both on #rows.
+- src/view/rail.ts: single #ring moved into the focused strip.
+- css/browse.css: scale only unless f-ring; labels step down 25px (spec said 50px: a centre scale grows the poster 25px at the bottom); ring styles.
+- dev/smoke/shell.js: new steps; no-anim check moved to #rows; hero 420.
+
+Spec note: ring in both mode (182x270) sits inside the scaled poster; cosmetic, tune on the TV.
+
+## Graph writes proposed
+Pattern: crew gate runs over 120s; the commit-msg hook rejects scope v2 (use rail).
 
 ## Graph writes proposed
