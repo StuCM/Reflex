@@ -372,5 +372,51 @@ module.exports = function (h) {
         assertEqual(/f-ring|f-both/.test(await focusClass()), false, 'back to scale');
         await press('F6');
       });
+    })
+
+    .then(function () {
+      return step(
+        'a press writes position only where it changed; the hero fades once per change',
+        async function () {
+          await page.waitForTimeout(800);
+          await page.evaluate(
+            'window.__writes = 0; window.__fades = 0;' +
+              ' var set = CSSStyleDeclaration.prototype.setProperty;' +
+              ' CSSStyleDeclaration.prototype.setProperty = function (name) {' +
+              '   if (name === "--tx" || name === "--ty") window.__writes++;' +
+              '   return set.apply(this, arguments); };' +
+              ' new MutationObserver(function (m) { window.__fades += m.length; })' +
+              '.observe(document.getElementById("masthead"), { attributes: true, attributeFilter: ["class"] });',
+          );
+          const writes = () => page.evaluate('window.__writes');
+          const fades = () => page.evaluate('window.__fades');
+
+          await press('ArrowRight');
+          await page.waitForTimeout(400);
+          const one = await writes();
+          assertEqual(one > 0, true, 'a press writes some position (control), got ' + one);
+          assertEqual(one <= 8, true, 'one press wrote ' + one + ' positions, wanted at most 8');
+
+          const before = await writes();
+          await press('ArrowRight', 10);
+          await page.waitForTimeout(400);
+          const perPress = ((await writes()) - before) / 10;
+          assertEqual(perPress <= 8, true, 'held arrow wrote ' + perPress + ' positions per press');
+
+          await press('ArrowLeft', 60);
+          await page.waitForTimeout(600);
+          await page.evaluate('window.__fades = 0');
+          await press('ArrowRight');
+          await page.waitForTimeout(300);
+          assertEqual(await fades(), 2, 'a new title restarts the fade once (remove + add)');
+
+          await press('ArrowLeft', 60);
+          await page.waitForTimeout(600);
+          await page.evaluate('window.__fades = 0');
+          await press('ArrowLeft', 5);
+          await page.waitForTimeout(300);
+          assertEqual(await fades(), 0, 'five presses on the same title restart no fade');
+        },
+      );
     });
 };
