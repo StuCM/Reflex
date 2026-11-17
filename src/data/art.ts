@@ -10,7 +10,7 @@ import settings from '../core/config';
 
 /* The tile is 176 wide, so w342 is the next size up — w500 was for a tile
    nearly twice as wide and is a third of a megabyte per poster wasted. */
-const POSTER_SIZE = 'w342';
+let posterSize = 'w342';
 const HERO_SIZE = 'w1280';
 const MAX_IN_FLIGHT = 4;
 
@@ -89,6 +89,11 @@ export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
   };
 }
 
+/** Which TMDB poster size tiles ask for; applies to tiles drawn after the change. */
+export function setPosterSize(size: string): void {
+  posterSize = size;
+}
+
 export function url(path: string, size: string): string {
   return settings.tmdbImageBase + size + path;
 }
@@ -111,7 +116,7 @@ function picked(item: PlexItem | null | undefined): ArtEntry | null {
 export function tile(item: PlexItem | null | undefined, width: number, height: number): string {
   if (!item) return '';
   const got = picked(item);
-  if (got?.poster) return url(got.poster, POSTER_SIZE);
+  if (got?.poster) return url(got.poster, posterSize);
   if (item.type === 'episode') {
     const show = (item as { grandparentThumb?: string }).grandparentThumb;
     return photoUrl(servers.of(item), show, width, height) || posterUrl(item, width, height);

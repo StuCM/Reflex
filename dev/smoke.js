@@ -376,8 +376,12 @@ function drive(page, titles, port) {
      cache, and the difference between this and crawling the library. */
   const artLookups = [];
   /* Tile posters only, by the size the rail asks for: the hero's backdrop is a
-     w1280 or a 1920-wide Plex crop and is not what a sweep must stop fetching. */
+     w1280 or a 1920-wide Plex crop and is not what a sweep must stop fetching.
+     Either poster size the panel offers counts. */
   const tilePosters = [];
+  /* Anything shaped like a full-screen backdrop: TMDB's w1280, or Plex's art
+     cropped to the detail page's 960 or the old hero's 1920. */
+  const backdrops = [];
   /* Progress reports, in the order they were sent — which is how a step can
      tell that the finished episode was closed out before the next one opened
      anything on the server. */
@@ -397,10 +401,15 @@ function drive(page, titles, port) {
     if (u.indexOf('/__yt/search?') >= 0) ytSearches.push(u);
     if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
     if (
-      u.indexOf('/__tmdbimg/w342/') >= 0 ||
+      /\/__tmdbimg\/w(185|342)\//.test(u) ||
       (u.indexOf('/photo/:/transcode') >= 0 && u.indexOf('width=176') >= 0)
     )
       tilePosters.push(u);
+    if (
+      u.indexOf('/__tmdbimg/w1280/') >= 0 ||
+      (u.indexOf('/photo/:/transcode') >= 0 && /[?&]width=(960|1920)\b/.test(u))
+    )
+      backdrops.push(u);
     if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
@@ -977,7 +986,7 @@ function drive(page, titles, port) {
       });
   }
 
-  /* What the focused tile and the backdrop are showing. A picture from the TMDB
+  /* What the focused tile is showing. A picture from the TMDB
      mock names its kind, its title and which of that title's it is; one from
      Plex does not, which is how the fallback is told apart. */
   function pictures() {
@@ -987,17 +996,12 @@ function drive(page, titles, port) {
         return m ? { kind: m[1], title: m[2], n: m[3] } : null;
       }
       var img = document.querySelector('#rows .row.on .tile.on img');
-      var lit = document.querySelector('#hero-art .hero-layer.on');
-      /* The backdrop is set as --art and CSS reads it, so the computed
-         value is the only place the painted picture shows up. */
-      var hero = lit ? getComputedStyle(lit).backgroundImage : '';
       return {
         tile: {
           url: (img && img.src) || '',
           shot: shotOf(img && img.src),
           painted: !!(img && img.naturalWidth > 0),
         },
-        hero: { url: hero, shot: shotOf(hero) },
       };
     });
   }
@@ -1405,6 +1409,7 @@ function drive(page, titles, port) {
     tracedThat,
     artLookups,
     tilePosters,
+    backdrops,
     timelines,
     ytCalls,
     ytSearches,

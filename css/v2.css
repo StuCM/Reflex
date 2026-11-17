@@ -52,8 +52,7 @@
   opacity: var(--noise, .05);
 }
 
-.nowc #rows, .nowc .strip, .nowc .glow, .nowc .hero-layer { will-change: auto; }
-.hero-layer { will-change: opacity; }
+.nowc #rows, .nowc .strip, .nowc .glow { will-change: auto; }
 
 #browse.shadows .tile-inner { box-shadow: 0 14px 30px rgba(0, 0, 0, .55); }
 

@@ -187,9 +187,7 @@ export function render() {
   rail.render(rows, rowIndex);
   setDrift(focusedRow()?.focus ?? 0, rowIndex);
   masthead.render(focusedRow() ?? null, focusedItem(), rows.length > 0);
-  /* The backdrop keeps its own debounce — Meta's skips a cached item and
-     would leave the last film's art under the new one's title. */
-  masthead.showArt(focusedItem());
+  masthead.showFacts(focusedItem());
   const focused = focusedItem();
   if (focused) scheduleResolve(focused);
   markPicks();
