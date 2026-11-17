@@ -1,11 +1,11 @@
 ---
 id: 067
 slug: pictures-cost-less-to-show
-status: approved
+status: review
 branch: crew/067-pictures-cost-less-to-show
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-shell
 files:
   - src/data/art.ts
@@ -20,6 +20,9 @@ files:
   - dev/smoke/browse.js
   - dev/smoke.js
   - dev/smoke/sections.js
+gate: pass
+gateSha: ce6299f17039d01b75f9b6c571839efd475044ee
+gateAt: 2026-11-17T16:55:25.124Z
 ---
 
 # Browse pages drop the backdrop photo, and the panel tunes poster size
@@ -93,4 +96,10 @@ has no free key.
 
 ## Review rounds
 
+Round 1: PASS. Nits left: shell.js hero assertion message reads "in in"; showFacts only warms the lookup.
+
+Changes: masthead.ts drops backdrop layers (showArt -> showFacts); browse.ts calls it; index.html, browse.css, v2.css lose #hero-art and scrims; art.ts setPosterSize; hud.ts hero default 150 and key 9 = poster; smoke: shell.js (menu glow step, poster step, 150 ms), browse.js (no-backdrop step with detail control, hero asserts removed), sections.js (hero-art steps dropped/rewritten), smoke.js (poster and backdrops collectors).
+
 ## Graph writes proposed
+
+Decision: browse pages carry no backdrop photo (v2 boards have none); detail/series keep theirs.
