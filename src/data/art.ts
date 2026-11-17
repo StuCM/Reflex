@@ -8,7 +8,7 @@ import * as cached from './cached';
 import * as servers from './servers';
 import settings from '../core/config';
 
-/* The tile is 209 wide, so w342 is the next size up — w500 was for a tile
+/* The tile is 176 wide, so w342 is the next size up — w500 was for a tile
    nearly twice as wide and is a third of a megabyte per poster wasted. */
 const POSTER_SIZE = 'w342';
 const HERO_SIZE = 'w1280';

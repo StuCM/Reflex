@@ -35,21 +35,21 @@ export interface RailRowElement extends HTMLDivElement {
   _onScreen: boolean;
 }
 
-/** 2:3, so seven fit across at 1920: 96 margin + 7×209 + 6×44 = 1823. */
-const TILE_W = 209;
-const TILE_H = 314;
-const GAP = 44;
+/** v2's poster, 2:3; focus scales it to 210×315 in CSS. */
+const TILE_W = 176;
+const TILE_H = 264;
+const GAP = 26;
 const STRIDE = TILE_W + GAP;
 
-/** 44 header + 314 art + 74 two lines + 34 below. */
-const ROW_H = 466;
+/** 44 header + 264 art + 74 two lines + 36 below. */
+const ROW_H = 418;
 
 /** css #viewport, well below the 264px header. */
 const VIEWPORT_H = 580;
 
 const TILE_POOL = 12;
 const ROW_POOL = 4;
-const TILES_VISIBLE = 7;
+const TILES_VISIBLE = 9;
 
 /** Tiles kept to the left of the focused one. */
 const LEAD = 1;
@@ -64,7 +64,8 @@ const ROWS_VISIBLE = ROWS_FIT + 1;
 
 /* The tall hero and the header differ by this much, and the rows carry the
    whole move on one transform rather than anything animating a height. */
-const BIG_DROP = VIEWPORT_H - ROW_H;
+/* Where row 0 sits under the tall hero: low enough to clear the text, high enough that row 1's label peeks. */
+const BIG_DROP = 80;
 
 /* Sweeping a row used to cost a poster and a TMDB lookup per tile passed, all
    for tiles already gone by. A tile's cheap parts still draw at once; its

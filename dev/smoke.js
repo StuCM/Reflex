@@ -398,7 +398,7 @@ function drive(page, titles, port) {
     if (/\/__tmdb\/movie\/\d+\?/.test(u)) artLookups.push(u);
     if (
       u.indexOf('/__tmdbimg/w342/') >= 0 ||
-      (u.indexOf('/photo/:/transcode') >= 0 && u.indexOf('width=209') >= 0)
+      (u.indexOf('/photo/:/transcode') >= 0 && u.indexOf('width=176') >= 0)
     )
       tilePosters.push(u);
     if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
