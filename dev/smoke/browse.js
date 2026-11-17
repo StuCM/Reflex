@@ -351,6 +351,37 @@ module.exports = function (h) {
     })
 
     .then(function () {
+      return step('the hero shows the focused title in v2 type after the focus moves', function () {
+        return press('ArrowRight', 2)
+          .then(function () {
+            return page.waitForTimeout(800);
+          })
+          .then(function () {
+            return page.evaluate(function () {
+              var t = document.getElementById('mh-title');
+              var s = getComputedStyle(t);
+              var on = document.querySelector('.tile.on .tile-title');
+              return {
+                text: t.textContent.trim(),
+                tile: on ? on.textContent.trim() : '',
+                font: s.fontFamily,
+                transform: s.textTransform,
+                opacity: Number(s.opacity),
+              };
+            });
+          })
+          .then(function (st) {
+            if (!st.text || st.text !== st.tile) {
+              throw new Error('hero title "' + st.text + '" is not the focused "' + st.tile + '"');
+            }
+            if (st.font.indexOf('Space Grotesk') < 0 || st.transform !== 'uppercase') {
+              throw new Error('hero title is not v2 type: ' + st.font + ' ' + st.transform);
+            }
+          });
+      });
+    })
+
+    .then(function () {
       return step('the focused poster is 210x315 and the next row peeks', function () {
         return backToLibrary()
           .then(function () {
@@ -376,9 +407,9 @@ module.exports = function (h) {
               throw new Error('the focused poster is ' + st.w + '×' + st.h + ', not 210×315');
             }
             const next = st.tops.filter(function (t) {
-              return t > 500 && t < 1080;
+              return t > 900 && t < 1040;
             });
-            if (next.length < 2) {
+            if (next.length < 1) {
               throw new Error('no next row top on screen: ' + JSON.stringify(st.tops));
             }
           });

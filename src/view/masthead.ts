@@ -85,6 +85,7 @@ export function render(
   hasRows: boolean,
 ): void {
   rowElement.textContent = row?.title ?? '';
+  masthead.style.setProperty('--hold', `${heroHold()}ms`);
   fadeB = !fadeB;
   masthead.classList.remove(fadeB ? 'fa' : 'fb');
   masthead.classList.add(fadeB ? 'fb' : 'fa');

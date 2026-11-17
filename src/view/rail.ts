@@ -64,6 +64,7 @@ const ROWS_VISIBLE = ROWS_FIT + 1;
 
 /* The tall hero and the header differ by this much, and the rows carry the
    whole move on one transform rather than anything animating a height. */
+/* Where row 0 sits under the tall hero: low enough to clear the text, high enough that row 1's label peeks. */
 const BIG_DROP = 80;
 
 /* Sweeping a row used to cost a poster and a TMDB lookup per tile passed, all

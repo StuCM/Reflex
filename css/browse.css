@@ -85,7 +85,8 @@
 @-webkit-keyframes mh-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes mh-in { from { opacity: 0; } to { opacity: 1; } }
 #masthead.fa > *, #masthead.fb > * {
-  -webkit-animation: mh-in var(--t-hero) var(--ease); animation: mh-in var(--t-hero) var(--ease);
+  -webkit-animation: mh-in var(--t-hero) var(--ease) var(--hold, 0ms) backwards;
+  animation: mh-in var(--t-hero) var(--ease) var(--hold, 0ms) backwards;
 }
 #masthead.fb > * { -webkit-animation-name: mh-in-b; animation-name: mh-in-b; }
 @-webkit-keyframes mh-in-b { from { opacity: 0; } to { opacity: 1; } }
@@ -297,7 +298,10 @@
 /* Picked, while green has the Continue watching row in select mode. Amber
    rather than the focus violet, so a picked tile still reads as picked once the
    focus has moved along the row. */
-.tile.picked .tile-inner { outline: 4px solid var(--ac2); outline-offset: -4px; }
+.tile.picked .tile-inner::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  border: 4px solid var(--ac2); border-radius: 14px;
+}
 
 /* Resume position, for the Continue Watching row. */
 .tile-progress {
