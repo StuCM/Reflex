@@ -54,8 +54,12 @@ let keyCount = 0;
 function load(): void {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    /* Before v2 the hero list had no 'off' and every save wrote every setting, so a
+       legacy hero index is one short and a legacy poster 0 was never a choice. */
+    const legacy = saved.v !== 2;
     [...ORDER, 'poster' as Name].forEach((name) => {
-      const index = saved[name];
+      if (legacy && name === 'poster' && saved[name] === 0) return;
+      const index = legacy && name === 'hero' ? saved[name] + 1 : saved[name];
       if (index >= 0 && index < OPTIONS[name].length) state[name] = index;
     });
   } catch {
@@ -65,7 +69,11 @@ function load(): void {
 
 function save(): void {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    const changed: Record<string, number> = { v: 2 };
+    (Object.keys(DEFAULTS) as Name[]).forEach((name) => {
+      if (state[name] !== DEFAULTS[name]) changed[name] = state[name];
+    });
+    localStorage.setItem(STORE_KEY, JSON.stringify(changed));
   } catch {
     /* a private window: the setting lasts until the next launch */
   }
