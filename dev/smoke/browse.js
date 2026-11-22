@@ -1356,29 +1356,32 @@ module.exports = function (h) {
           return step(
             'the kids index reads two servers side by side and one server a request at a time',
             function () {
-              const spans = [];
-              const open = {};
-              const prefixOf = function (r) {
-                const m =
-                  /^https?:\/\/[^/]+(\/__plex\d*)\/library\/sections\/\d+\/(genre|all\?.*excludeElements=)/.exec(
-                    r.url(),
-                  );
-                return m && m[1];
+              /* The browser's own clock: Playwright's request events arrive late enough to make serial reads look together. */
+              const reads = function () {
+                return page.evaluate(function () {
+                  const index =
+                    /(\/__plex\d*)\/library\/sections\/\d+\/(genre|all\?.*excludeElements=)/;
+                  return performance
+                    .getEntriesByType('resource')
+                    .filter(function (e) {
+                      return index.test(e.name);
+                    })
+                    .map(function (e) {
+                      return {
+                        prefix: index.exec(e.name)[1],
+                        from: e.startTime,
+                        to: e.responseEnd,
+                      };
+                    });
+                });
               };
-              const onStart = function (r) {
-                const prefix = prefixOf(r);
-                if (prefix) open[r.url()] = { prefix: prefix, from: Date.now() };
-              };
-              const onEnd = function (r) {
-                const span = open[r.url()];
-                if (!span) return;
-                delete open[r.url()];
-                span.to = Date.now();
-                spans.push(span);
-              };
-              page.on('request', onStart);
-              page.on('requestfinished', onEnd);
               return forgetIndex()
+                .then(function () {
+                  return page.evaluate(function () {
+                    performance.clearResourceTimings();
+                    performance.setResourceTimingBufferSize(5000);
+                  });
+                })
                 .then(function () {
                   return kidsIndex(250, 0);
                 })
@@ -1388,9 +1391,8 @@ module.exports = function (h) {
                 .then(function () {
                   return waitFor(popular, 'the held rows from a slow index', 90000);
                 })
-                .then(function () {
-                  page.removeListener('request', onStart);
-                  page.removeListener('requestfinished', onEnd);
+                .then(reads)
+                .then(function (spans) {
                   const prefixes = [];
                   spans.forEach(function (x) {
                     if (prefixes.indexOf(x.prefix) < 0) prefixes.push(x.prefix);
@@ -1398,13 +1400,10 @@ module.exports = function (h) {
                   if (prefixes.length < 2) {
                     throw new Error('the index read ' + prefixes.join(',') + ', not two servers');
                   }
-                  const overlap = function (a, b) {
-                    return a !== b && a.from < b.to && b.from < a.to;
-                  };
                   let across = 0;
                   spans.forEach(function (a) {
                     spans.forEach(function (b) {
-                      if (!overlap(a, b)) return;
+                      if (a === b || a.from >= b.to || b.from >= a.to) return;
                       if (a.prefix === b.prefix) {
                         throw new Error('two index requests to ' + a.prefix + ' ran together');
                       }
