@@ -1,0 +1,65 @@
+{
+  "title": "v2 loads data with fewer, faster requests",
+  "summary": "Rows from one promoted-hubs request per server, pages restored instantly and refreshed quietly with placeholders, TMDB and the kids index in parallel.",
+  "stage": "build",
+  "questions": [],
+  "gaps": [],
+  "findings": [
+    {
+      "title": "Measured 2026-11-22",
+      "rows": [
+        {
+          "src": "server",
+          "text": "Apollo /hubs/sections/1 17.99 s vs /hubs/promoted for both film libraries 2.10 s; Maverick 2.56 s vs 1.15 s for three libraries."
+        }
+      ]
+    }
+  ],
+  "brief": {
+    "shape": "replace",
+    "target": [
+      {
+        "path": "src/screen/browse.ts",
+        "line": 679,
+        "name": "reset / loadSection"
+      },
+      {
+        "path": "src/data/discovery.ts",
+        "line": 190,
+        "name": "step"
+      }
+    ],
+    "direction": "Replace per-library hub requests with one promoted-hubs request per server; replace blank-and-rebuild page switches with per-page snapshots and in-place refresh; run TMDB and per-server index work in parallel.",
+    "rejected": [
+      {
+        "option": "Use /hubs (home) for everything",
+        "why": "mixes music and other libraries; promoted with contentDirectoryID is scoped to the page's libraries"
+      },
+      {
+        "option": "Take Continue watching from the promoted hubs",
+        "why": "the deck has its own rules (devices.mine, one tile per show); left as is"
+      },
+      {
+        "option": "Parallel requests to one Plex server",
+        "why": "servers we do not own: one at a time per server"
+      }
+    ],
+    "decided": [
+      "sometimes it loads and then refreshes which is not ideal",
+      "lets make one call for several rows that makes more sense",
+      "optimise all calls to minimise requests but at the fastest speed"
+    ],
+    "exploring": [
+      "freshness window 2 minutes"
+    ],
+    "approved": "2026-11-22"
+  },
+  "order": [
+    "069",
+    "070",
+    "071"
+  ],
+  "challenge": {
+    "skipped": "Stuart named the direction; the measured endpoint settles the main choice"
+  }
+}
