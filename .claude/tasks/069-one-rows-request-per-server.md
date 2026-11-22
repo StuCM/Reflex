@@ -1,11 +1,11 @@
 ---
 id: 069
 slug: one-rows-request-per-server
-status: approved
+status: done
 branch: crew/069-one-rows-request-per-server
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-data
 files:
   - src/api/plex/library.ts
@@ -17,6 +17,9 @@ files:
   - dev/smoke/sections.js
   - dev/smoke/deck.js
   - dev/smoke/discovery.js
+gate: pass
+gateSha: d993d746eca991410a9c1e43490aa79764be489a
+gateAt: 2026-11-22T09:41:17.259Z
 ---
 
 # A page's rows come from one request per server, not one per library
@@ -93,5 +96,13 @@ deck keeps its own path, `onDeck` + `devices.mine` + 046's fold).
 - [ ] commits follow the convention (the hook enforces it)
 
 ## Review rounds
+Round 1: PASS. Nit: Continue Watching/On Deck filter matches English titles.
+
+## What changed
+- library.ts: promotedHubs, sectionHubs (one /hubs/promoted per server, per-library fallback when empty)
+- browse.ts: loadSection uses sectionHubs
+- mock-plex.js: /hubs/promoted, hubsOf helper, /__plextv/hub-calls counter and failure switch
+- smoke.js: allow the deliberate promoted 500
+- smoke/deck.js: one-request and fallback steps
 
 ## Graph writes proposed
