@@ -110,7 +110,7 @@ export function render(
   }
 
   if (!item) {
-    titleElement.textContent = hasRows ? '…' : 'Loading…';
+    titleElement.textContent = hasRows ? '…' : (row?.title ?? '');
     metaElement.textContent = '';
     descriptionElement.textContent = '';
     castElement.textContent = '';

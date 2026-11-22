@@ -264,6 +264,9 @@
   -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
   transition: transform var(--t-quick) var(--ease);
 }
+/* A tile with nothing in it yet is a poster-shaped place to look. */
+.tile.placeholder .tile-inner { opacity: 0.5; }
+
 /* Focus is the lift alone: 176 to 210 wide. */
 #rows:not(.f-ring) .tile.on .tile-inner {
   -webkit-transform: scale(1.19); transform: scale(1.19);

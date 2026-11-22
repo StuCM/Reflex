@@ -878,12 +878,21 @@ function drive(page, titles, port) {
     }, 'rows:' + section);
   }
 
+  /* A page held for under two minutes is shown again without asking, so a
+     reload that must reach the servers first lets three minutes pass. */
+  const AGE_PAGES =
+    'window.__realNow = window.__realNow || Date.now;' +
+    'window.__skew = (window.__skew || 0) + 180000;' +
+    'Date.now = function () { return window.__realNow.call(Date) + window.__skew; };';
+
   /* Land on Continue watching with the deck as the servers now have it. Out
      through the other section and back: picking the section you are already on
      repaints the rows it holds rather than asking the servers again, so a
      reload that stays on Movies would prove nothing about what they now say. */
   function reloadDeck() {
-    return backToLibrary()
+    return page
+      .evaluate(AGE_PAGES)
+      .then(backToLibrary)
       .then(function () {
         return sidebarPick('TV Shows');
       })
@@ -1437,6 +1446,7 @@ function drive(page, titles, port) {
     takeConfirm,
     cachedRows,
     reloadDeck,
+    AGE_PAGES,
     focusedRowTypes,
     shown,
     backToLibrary,
