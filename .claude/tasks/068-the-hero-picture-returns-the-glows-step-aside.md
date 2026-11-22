@@ -1,11 +1,11 @@
 ---
 id: 068
 slug: the-hero-picture-returns-the-glows-step-aside
-status: approved
+status: done
 branch: crew/068-the-hero-picture-returns-the-glows-step-aside
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 2
 work: v2-shell
 files:
   - index.html
@@ -21,6 +21,9 @@ files:
   - dev/smoke/sections.js
   - dev/smoke/shell.js
   - dev/mock-tmdb.js
+gate: pass
+gateSha: a5d1f358bb723fbce3968edb01e89c6cfce12ff1
+gateAt: 2026-11-22T09:15:52.005Z
 ---
 
 # The hero picture comes back, cheaper, and the glows step aside where it shows
@@ -118,3 +121,10 @@ first paint — mid-crossfade if the layer fades straight in.
 ## Review rounds
 
 ## Graph writes proposed
+
+Round 1: CHANGES (saved hero indices shifted by off; poster default hit profiles that never chose). Fixed in bc3d451 with a versioned, changed-only save and a legacy migration. Round 2: PASS.
+Spec notes: HERO_SIZE is shared with the detail page, so detail backdrops are w780 too. Smoke poster step needed fresh pages after each switch (ArrowRight in the top menu changes pages, which cycle).
+
+## Graph writes proposed
+Decision: the browse hero returns at w780, decoded for two animation frames before the fade; glows hidden by `#bg.hero-on` gated on body `on-browse`. Supersedes "browse pages show no backdrop photo".
+Pattern: inserting an option into a persisted index list shifts saved profiles; version the save.

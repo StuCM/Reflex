@@ -1,11 +1,11 @@
 ---
 id: 070
 slug: a-page-comes-back-instantly-and-refreshes-quietly
-status: approved
+status: done
 branch: crew/070-a-page-comes-back-instantly-and-refreshes-quietly
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-data
 files:
   - src/screen/browse.ts
@@ -19,6 +19,9 @@ files:
   - dev/smoke/browse.js
   - dev/smoke/sections.js
   - dev/smoke/deck.js
+gate: pass
+gateSha: d45afb13acbae62fb58c5f1127def95913ba3682
+gateAt: 2026-11-22T10:36:31.097Z
 ---
 
 # A page comes back instantly, refreshes without a visible swap, and shows shapes while it waits
@@ -93,5 +96,9 @@ After 069 (same `browse.ts`).
 - [ ] commits follow the convention (the hook enforces it)
 
 ## Review rounds
+
+Round 1: PASS (verify 156/156). Non-blocking: onDeck swallows errors into [], so a failed deck is reused up to 2 minutes; a failed first load with no cache leaves placeholders beside the toast.
+
+Changed: src/screen/pages.ts (new: snapshots, refreshed(), deck fetch moved from browse.ts); browse.ts (loadSection restores/stays/placeholders, quiet listRows, landDeck skips unchanged); rail.ts (.placeholder class); masthead.ts (page name not Loading); css/browse.css; dev/smoke.js (AGE_PAGES used by reloadDeck); dev/smoke/shell.js (3 steps).
 
 ## Graph writes proposed
