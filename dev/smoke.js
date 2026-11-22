@@ -362,6 +362,8 @@ function drive(page, titles, port) {
          is the whole reason the app has a fallback. Only Backup's: a 404 from
          Main would be a real failure. */
       if (where.indexOf('/__plex2/actions/removeFromContinueWatching') >= 0) return;
+      /* The fallback step makes Backup's promoted hubs fail on purpose. */
+      if (where.indexOf('/__plex2/hubs/promoted') >= 0) return;
       errors.push('console: ' + text + ' ' + where);
     }
   });

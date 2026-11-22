@@ -6,7 +6,7 @@ import {
   collectionItems as plexCollectionItems,
   collections as plexCollections,
   hideFromDeck as plexHideFromDeck,
-  hubs as plexHubs,
+  sectionHubs,
   items as plexItems,
   onDeck as plexOnDeck,
   scrobble as plexScrobble,
@@ -908,10 +908,7 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
         .catch((error: Error) => {
           debug(`deck: ${error.message}`);
         });
-      return Promise.all([
-        deckLists,
-        Promise.all(section.parts.map((part) => plexHubs(part.server, part.key))),
-      ]).then((results) => {
+      return Promise.all([deckLists, sectionHubs(section.parts)]).then((results) => {
         if (!isCurrent()) return;
         const built: { title: string; items: PlexItem[] }[] = [];
 

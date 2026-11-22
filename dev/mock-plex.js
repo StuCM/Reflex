@@ -64,6 +64,8 @@ function create(opts) {
   const log = opts.log || function () {};
   const lib = buildLibrary({ films: opts.films });
   lib.slowHubs = opts.slowHubs || 0;
+  lib.hubCalls = [];
+  lib.promotedFail = [];
   /* The kids library joins the section list only when asked, so areas that count film libraries are unchanged. */
   lib.kids = opts.kids || 0;
   /* The kids index is the app's one big read: a smoke step can slow it or fail it, and read what it asked. */
@@ -562,11 +564,52 @@ function create(opts) {
 
   /* ---------- plex.tv ---------- */
 
+  /* The hubs one library offers, as /hubs/sections and /hubs/promoted both answer. */
+  function hubsOf(srv, key) {
+    const list = srv.items[key] || [];
+    const kind = list.length ? list[0].type : 'movie';
+    const byAdded = list.slice().sort(function (a, b) {
+      return b.addedAt - a.addedAt;
+    });
+    const byYear = list.slice().sort(function (a, b) {
+      return b.year - a.year;
+    });
+    return [
+      {
+        title: 'Recently Added',
+        hubIdentifier: 'recentlyAdded',
+        type: kind,
+        Metadata: byAdded.slice(0, 20).map(stripStreams),
+      },
+      {
+        title: kind === 'show' ? 'Recently Aired' : 'Recently Released',
+        hubIdentifier: 'newest',
+        type: kind,
+        Metadata: byYear.slice(0, 20).map(stripStreams),
+      },
+      {
+        title: 'Top Rated',
+        hubIdentifier: 'topRated',
+        type: kind,
+        Metadata: list.slice(10, 30).map(stripStreams),
+      },
+      /* A hub of a type the app cannot show, to prove it skips it. */
+      { title: 'Directors', hubIdentifier: 'director', type: 'director', Metadata: [] },
+    ];
+  }
+
   function plexTv(req, res, pathname, q, origin) {
     /* Lets a running suite set the hub delay without a restart. */
     if (pathname === '/slow-hubs') {
       lib.slowHubs = Number(q.ms || 0);
       json(res, 200, { slowHubs: lib.slowHubs });
+      return true;
+    }
+    /* Hub requests seen so far, and which servers' promoted hubs answer 500. */
+    if (pathname === '/hub-calls') {
+      if (q.reset) lib.hubCalls = [];
+      lib.promotedFail = q.fail ? String(q.fail).split(',') : [];
+      json(res, 200, lib.hubCalls);
       return true;
     }
     if (pathname === '/kids-index') {
@@ -758,7 +801,11 @@ function create(opts) {
     }
 
     m = pathname.match(/^\/hubs\/sections\/(\w+)$/);
-    if (m && lib.slowHubs && !q.__held) {
+    const promoted = pathname === '/hubs/promoted';
+    if ((m || promoted) && !q.__held) {
+      lib.hubCalls.push(srv.prefix + pathname);
+    }
+    if ((m || promoted) && lib.slowHubs && !q.__held) {
       /* Only the hubs wait; everything else answers at once, which is what
          lets a test see the order the app asks and paints in. */
       setTimeout(function () {
@@ -766,44 +813,20 @@ function create(opts) {
       }, lib.slowHubs);
       return true;
     }
-    if (m) {
-      const list = srv.items[m[1]] || [];
-      const kind = list.length ? list[0].type : 'movie';
-      const byAdded = list.slice().sort(function (a, b) {
-        return b.addedAt - a.addedAt;
+    if (promoted && lib.promotedFail.indexOf(srv.prefix) >= 0) {
+      res.writeHead(500, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+      res.end('promoted hubs are down');
+      return true;
+    }
+    if (m || promoted) {
+      const keys = promoted ? String(q.contentDirectoryID || '').split(',') : [m[1]];
+      const hubs = [];
+      keys.forEach(function (key) {
+        hubsOf(srv, key).forEach(function (hub) {
+          hubs.push(hub);
+        });
       });
-      const byYear = list.slice().sort(function (a, b) {
-        return b.year - a.year;
-      });
-      json(
-        res,
-        200,
-        container({
-          size: 4,
-          Hub: [
-            {
-              title: 'Recently Added',
-              hubIdentifier: 'recentlyAdded',
-              type: kind,
-              Metadata: byAdded.slice(0, 20).map(stripStreams),
-            },
-            {
-              title: kind === 'show' ? 'Recently Aired' : 'Recently Released',
-              hubIdentifier: 'newest',
-              type: kind,
-              Metadata: byYear.slice(0, 20).map(stripStreams),
-            },
-            {
-              title: 'Top Rated',
-              hubIdentifier: 'topRated',
-              type: kind,
-              Metadata: list.slice(10, 30).map(stripStreams),
-            },
-            /* A hub of a type the app cannot show, to prove it skips it. */
-            { title: 'Directors', hubIdentifier: 'director', type: 'director', Metadata: [] },
-          ],
-        }),
-      );
+      json(res, 200, container({ size: hubs.length, Hub: hubs }));
       return true;
     }
 

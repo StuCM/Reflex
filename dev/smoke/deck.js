@@ -59,6 +59,56 @@ module.exports = function (h) {
     );
   }
 
+  let currentFailing = '';
+
+  function hubCalls(query) {
+    return page.evaluate(function (q) {
+      return fetch('/__plextv/hub-calls?' + q).then(function (r) {
+        return r.json();
+      });
+    }, query);
+  }
+
+  function hubLabels() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(
+        document.querySelectorAll('#rows .row .row-label'),
+        function (l) {
+          return l.textContent.trim();
+        },
+      );
+    });
+  }
+
+  /* Reload onto Movies with the counter reset and the named server's promoted hubs
+     failing, wait for the hub rows, and return what the servers were asked. */
+  function reloadForHubs(failing) {
+    currentFailing = failing;
+    return hubCalls('reset=1&fail=' + failing)
+      .then(function () {
+        return page.reload();
+      })
+      .then(function () {
+        /* The cache paints a Recently Added row at once, so wait on the requests. */
+        return waitForCalls();
+      })
+      .then(function () {
+        return hubCalls('fail=');
+      });
+  }
+
+  function waitForCalls() {
+    const started = Date.now();
+    const poll = function () {
+      return hubCalls('fail=' + currentFailing).then(function (calls) {
+        if (calls.length >= 2) return new Promise((r) => setTimeout(r, 1000));
+        if (Date.now() - started > 12000) throw new Error('hubs never asked');
+        return new Promise((r) => setTimeout(r, 200)).then(poll);
+      });
+    };
+    return poll();
+  }
+
   function slowHubs(ms) {
     return page.evaluate(function (n) {
       return fetch('/__plextv/slow-hubs?ms=' + n).then(function (r) {
@@ -172,6 +222,45 @@ module.exports = function (h) {
                 });
               },
             );
+        });
+      })
+
+      /* ---- a section's rows are one request per server ---- */
+
+      .then(function () {
+        return step('opening Movies asks each server once for its rows', function () {
+          return reloadForHubs('').then(function (calls) {
+            const promoted = calls.filter(function (c) {
+              return c.indexOf('/hubs/promoted') >= 0;
+            });
+            if (promoted.length !== 2) throw new Error('promoted asked: ' + calls.join(', '));
+            if (calls.length !== 2) throw new Error('other hub requests: ' + calls.join(', '));
+            return hubLabels().then(function (labels) {
+              const want = ['Recently Added', 'Recently Released', 'Top Rated'];
+              const got = labels.filter(function (l) {
+                return want.indexOf(l) >= 0;
+              });
+              if (got.join('|') !== want.join('|')) throw new Error('rows: ' + labels.join(', '));
+            });
+          });
+        });
+      })
+
+      .then(function () {
+        return step('a server whose promoted hubs fail is asked library by library', function () {
+          return reloadForHubs('/__plex2').then(function (calls) {
+            const sections = calls.filter(function (c) {
+              return c.indexOf('/hubs/sections/') >= 0;
+            });
+            if (!sections.length) throw new Error('no fallback: ' + calls.join(', '));
+            sections.forEach(function (c) {
+              if (c.indexOf('/__plex2/') !== 0) throw new Error('wrong server fell back: ' + c);
+            });
+            return hubLabels().then(function (labels) {
+              if (labels.indexOf('Recently Added') < 0)
+                throw new Error('rows: ' + labels.join(', '));
+            });
+          });
         });
       })
 
