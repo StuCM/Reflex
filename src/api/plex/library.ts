@@ -211,7 +211,15 @@ export function collectionItems(
   });
 }
 
-/* The section's own categories. One request returns every hub with its items,
+const HUBS_NOT_ROWS = ['Continue Watching', 'On Deck'];
+
+function showableHubs(response: unknown, server: PlexServer): PlexHub[] {
+  return ((response as Container).MediaContainer?.Hub ?? [])
+    .filter((hub) => hub.Metadata?.length && (hub.type === 'movie' || hub.type === 'show'))
+    .map((hub) => ({ title: hub.title, items: servers.stamp(hub.Metadata ?? [], server) }));
+}
+
+/* One library's own categories. One request returns every hub with its items,
    which is how the stock app shows a huge library without listing it. */
 export function hubs(server: PlexServer, sectionKey: string): Promise<PlexHub[]> {
   return ask(
@@ -219,12 +227,46 @@ export function hubs(server: PlexServer, sectionKey: string): Promise<PlexHub[]>
     `/hubs/sections/${sectionKey}?${queryString({ count: HUB_COUNT, includeGuids: 1 })}`,
     { timeout: 20000 },
   )
+    .then((response) => showableHubs(response, server))
+    .catch(() => []);
+}
+
+/* The categories of several libraries in one request; Continue Watching and On Deck are the deck's. */
+export function promotedHubs(server: PlexServer, sectionKeys: string[]): Promise<PlexHub[]> {
+  const keys = sectionKeys.join(',');
+  return ask(
+    server,
+    `/hubs/promoted?${queryString({
+      contentDirectoryID: keys,
+      pinnedContentDirectoryID: keys,
+      count: HUB_COUNT,
+      includeGuids: 1,
+    })}`,
+    { timeout: 20000 },
+  )
     .then((response) =>
-      ((response as Container).MediaContainer?.Hub ?? [])
-        .filter((hub) => hub.Metadata?.length && (hub.type === 'movie' || hub.type === 'show'))
-        .map((hub) => ({ title: hub.title, items: servers.stamp(hub.Metadata ?? [], server) })),
+      showableHubs(response, server).filter((hub) => HUBS_NOT_ROWS.indexOf(hub.title) < 0),
     )
     .catch(() => []);
+}
+
+/* One hub list per server, asked once for all that server's libraries; a server whose
+   promoted hubs come back empty is asked library by library instead. */
+export function sectionHubs(parts: { server: PlexServer; key: string }[]): Promise<PlexHub[][]> {
+  const byServer: { server: PlexServer; keys: string[] }[] = [];
+  parts.forEach((part) => {
+    const held = byServer.find((entry) => entry.server.id === part.server.id);
+    if (held) held.keys.push(part.key);
+    else byServer.push({ server: part.server, keys: [part.key] });
+  });
+  return Promise.all(
+    byServer.map(async (entry) => {
+      const promoted = await promotedHubs(entry.server, entry.keys);
+      if (promoted.length) return promoted;
+      const perKey = await Promise.all(entry.keys.map((key) => hubs(entry.server, key)));
+      return ([] as PlexHub[]).concat(...perKey);
+    }),
+  );
 }
 
 export function search(server: PlexServer, query: string): Promise<PlexItem[]> {
