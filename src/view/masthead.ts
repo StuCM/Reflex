@@ -1,8 +1,8 @@
-/* The title, one line under it, and the facts. */
+/* The backdrop, the title, one line under it, and the facts. */
 import { tmdbId } from '../api/plex/library';
 import * as art from '../data/art';
 import { railSub, railTitle } from '../rules/labels';
-import { heroHold } from './hud';
+import { heroHold, heroOn } from './hud';
 
 function must(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -16,18 +16,59 @@ const metaElement = must('mh-meta');
 const descriptionElement = must('mh-desc');
 const castElement = must('mh-cast');
 
+const layers = [must('hero-art-a'), must('hero-art-b')];
+const background = must('bg');
+let shown = 0;
+let lastUrl = '';
+
 let timer: ReturnType<typeof setTimeout> | null = null;
 let wanted: PlexItem | null = null;
 
-function lookUp(): void {
+function clearArt(): void {
+  lastUrl = '';
+  layers.forEach((layer) => layer.classList.remove('on'));
+  background.classList.remove('hero-on');
+}
+
+/* The new picture is written into the hidden layer and given two frames to paint
+   and decode before the fade starts: Chrome 53's onload means fetched, not decoded. */
+function paintArt(): void {
   art.warm(wanted);
+  const url = heroOn() ? art.hero(wanted) : '';
+  if (!url) {
+    clearArt();
+    return;
+  }
+  if (url === lastUrl) return;
+  lastUrl = url;
+
+  const next = layers[shown ? 0 : 1];
+  const current = layers[shown];
+  if (!next || !current) return;
+
+  const fade = () => {
+    if (lastUrl !== url) return;
+    current.classList.remove('on');
+    next.classList.add('on');
+    shown = shown ? 0 : 1;
+    background.classList.add('hero-on');
+  };
+  const swap = () => {
+    if (lastUrl !== url) return;
+    next.style.setProperty('--art', `url("${url}")`);
+    requestAnimationFrame(() => requestAnimationFrame(fade));
+  };
+  const preload = new Image();
+  preload.onload = swap;
+  preload.onerror = swap;
+  preload.src = url;
 }
 
 /* Asks for the facts of the item rested on, debounced so a sweep costs one lookup. */
 export function showFacts(item: PlexItem | null): void {
   wanted = item;
   if (timer) clearTimeout(timer);
-  timer = setTimeout(lookUp, heroHold());
+  timer = setTimeout(paintArt, heroHold());
 }
 
 /* The description and the top of the billing, out of the one TMDB request the
@@ -43,6 +84,7 @@ function paintFacts(item: PlexItem): void {
    they belong to is still the one being rested on. */
 art.onReady((id) => {
   if (!wanted || tmdbId(wanted) !== id) return;
+  paintArt();
   paintFacts(wanted);
 });
 

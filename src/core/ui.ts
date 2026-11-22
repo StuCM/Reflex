@@ -48,6 +48,7 @@ const BARE = ['detail', 'show', 'player'];
 
 export function show(name: string): void {
   current = name;
+  document.body.classList.toggle('on-browse', name === 'browse');
   document.body.classList.toggle('no-bg', BARE.indexOf(name) >= 0);
   VIEWS.forEach((each) => {
     views[each]?.classList.toggle('hidden', each !== name);

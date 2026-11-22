@@ -10,10 +10,11 @@
   position: absolute; border-radius: 50%;
   -webkit-transform: translate(var(--gx, 0px), var(--gy, 0px));
   transform: translate(var(--gx, 0px), var(--gy, 0px));
-  -webkit-transition: -webkit-transform var(--t-glow) var(--ease);
-  transition: transform var(--t-glow) var(--ease);
+  -webkit-transition: -webkit-transform var(--t-glow) var(--ease), opacity var(--t-fade) var(--ease);
+  transition: transform var(--t-glow) var(--ease), opacity var(--t-fade) var(--ease);
   will-change: transform;
 }
+body.on-browse #bg.hero-on .glow { opacity: 0; }
 .noshift .glow { -webkit-transform: none; transform: none; }
 #g1 {
   left: 1000px; top: -500px; width: 1500px; height: 1200px;
@@ -52,7 +53,8 @@
   opacity: var(--noise, .05);
 }
 
-.nowc #rows, .nowc .strip, .nowc .glow { will-change: auto; }
+.nowc #rows, .nowc .strip, .nowc .glow, .nowc .hero-layer { will-change: auto; }
+.hero-layer { will-change: opacity; }
 
 #browse.shadows .tile-inner { box-shadow: 0 14px 30px rgba(0, 0, 0, .55); }
 

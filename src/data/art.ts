@@ -10,8 +10,8 @@ import settings from '../core/config';
 
 /* The tile is 176 wide, so w342 is the next size up — w500 was for a tile
    nearly twice as wide and is a third of a megabyte per poster wasted. */
-let posterSize = 'w342';
-const HERO_SIZE = 'w1280';
+let posterSize = 'w185';
+const HERO_SIZE = 'w780';
 const MAX_IN_FLIGHT = 4;
 
 /** Names in the header's key-actors line. */
@@ -128,7 +128,7 @@ export function tile(item: PlexItem | null | undefined, width: number, height: n
 export function hero(item: PlexItem | null | undefined): string {
   const got = picked(item);
   if (got?.hero) return url(got.hero, HERO_SIZE);
-  return artUrl(item, 1920, 1080) || posterUrl(item, 1920, 1080);
+  return artUrl(item, 960, 540) || posterUrl(item, 960, 540);
 }
 
 /* The description, run time and key actors, or null if TMDB has not answered

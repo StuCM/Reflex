@@ -1,7 +1,7 @@
 'use strict';
 /* the v2 background and the tuning panel */
 module.exports = function (h) {
-  const { press, waitFor, step, page, tilePosters } = h;
+  const { press, waitFor, step, page, tilePosters, backdrops } = h;
 
   const hudText = () => page.evaluate('document.getElementById("hud").textContent');
   const glowX = () => page.evaluate('document.getElementById("g1").style.getPropertyValue("--gx")');
@@ -51,7 +51,7 @@ module.exports = function (h) {
             return press('7').then(function () {
               return noise().then(function (after) {
                 assertEqual(after, before, '--noise');
-                assertEqual(before, '0.05', 'default --noise');
+                assertEqual(before, '0.03', 'default --noise');
               });
             });
           })
@@ -134,7 +134,6 @@ module.exports = function (h) {
         return tilePosters.slice(before).filter((u) => u.indexOf('/__tmdbimg/') >= 0);
       };
       return step('key 9 switches the poster size of tiles drawn after it', async function () {
-        await press('9');
         assertEqual(/9 poster w185/.test(await hudText()), true, 'readout ' + (await hudText()));
         const small = await visit(2);
         assertEqual(small.length > 0, true, 'TMDB posters asked for at w185');
@@ -144,6 +143,7 @@ module.exports = function (h) {
           'every new poster is w185: ' + small[0],
         );
         await press('9');
+        assertEqual(/9 poster w342/.test(await hudText()), true, 'readout ' + (await hudText()));
         const large = await visit(1);
         assertEqual(large.length > 0, true, 'posters asked for at w342');
         assertEqual(
@@ -151,6 +151,7 @@ module.exports = function (h) {
           true,
           'every new poster is w342: ' + large[0],
         );
+        await press('9');
         await press('ArrowUp');
         await press('ArrowLeft', 3);
         await press('Escape');
@@ -216,6 +217,49 @@ module.exports = function (h) {
     })
 
     .then(function () {
+      const hasHero = () =>
+        page.evaluate('document.getElementById("bg").classList.contains("hero-on")');
+      return step(
+        'hero shows glows away; key 1 off brings them back with no backdrop',
+        async function () {
+          await press('ArrowRight');
+          await waitFor(
+            'document.getElementById("bg").classList.contains("hero-on")',
+            'the hero to show',
+            5000,
+          );
+          await waitFor(
+            'getComputedStyle(document.getElementById("g1")).opacity === "0"',
+            'the glows to hide',
+            5000,
+          );
+          await press('1', 3);
+          assertEqual(/1 hero off/.test(await hudText()), true, 'readout ' + (await hudText()));
+          await press('ArrowRight');
+          await waitFor(
+            'getComputedStyle(document.getElementById("g1")).opacity === "1"',
+            'the glows to return',
+            5000,
+          );
+          assertEqual(await hasHero(), false, 'hero-on with the hero off');
+          const before = backdrops.length;
+          await press('ArrowRight', 2);
+          await page.waitForTimeout(1000);
+          assertEqual(backdrops.length, before, 'backdrops asked for with the hero off');
+          await press('1', 2);
+          assertEqual(/1 hero 150/.test(await hudText()), true, 'readout ' + (await hudText()));
+          await press('ArrowRight');
+          await waitFor(
+            'document.getElementById("bg").classList.contains("hero-on")',
+            'the hero to come back',
+            5000,
+          );
+          assertEqual(backdrops.length > before, true, 'backdrop asked for again with the hero on');
+        },
+      );
+    })
+
+    .then(function () {
       return step('a setting survives a reload', function () {
         return press('7')
           .then(function () {
@@ -224,7 +268,7 @@ module.exports = function (h) {
           .then(h.ready)
           .then(noise)
           .then(function (n) {
-            assertEqual(n, '0.08', '--noise after reload');
+            assertEqual(n, '0.05', '--noise after reload');
             return press('F6');
           })
           .then(function () {
@@ -232,7 +276,7 @@ module.exports = function (h) {
           })
           .then(noise)
           .then(function (n) {
-            assertEqual(n, '0.05', '--noise restored');
+            assertEqual(n, '0.03', '--noise restored');
             return press('F6');
           });
       });
