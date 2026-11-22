@@ -9,6 +9,7 @@ rounds: 0
 work: v2-data
 files:
   - src/screen/browse.ts
+  - src/screen/pages.ts
   - src/view/rail.ts
   - src/view/masthead.ts
   - src/data/cached.ts
@@ -55,7 +56,7 @@ After 069 (same `browse.ts`).
 - Read transient states page-side; counting steps need a non-zero control.
 
 ## Approach
-1. **Snapshots**: keep each page's last `{rows, rowIndex, focus per row,
+1. **Snapshots** (new `src/screen/pages.ts`, since `browse.ts` is at its max-lines ratchet; add it to the `screen` layer if `eslint.config.mjs` needs no edit, else stop and say so): keep each page's last `{rows, rowIndex, focus per row,
    sectionIndex, mode}` in memory. Switching to a page with a snapshot
    younger than **2 minutes** restores it synchronously — no `reset()` blank,
    no request. Older or missing: restore it if present (stale), then refresh.
