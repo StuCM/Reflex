@@ -857,10 +857,14 @@ export function refreshDeck(forgetHistory?: boolean) {
    section. */
 export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
   keepPage();
-  const page = mode === 'library' && sectionIndex === i ? undefined : saved.recall(i);
+  const here = mode === 'library' && sectionIndex === i;
+  /* Asking again for the page on screen leaves it there until the answer lands. */
+  const stay = here && rows.length > 0 && !loadingRow && !picking && searchQuery === null;
+  const page = here ? undefined : saved.recall(i);
   sectionIndex = i;
   wantRow = focusRow || 0;
-  reset('library');
+  if (stay) generation++;
+  else reset('library');
   const isCurrent = generationGuard();
   const section = sections[i];
   if (!section) return;
@@ -872,13 +876,13 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
     noteCategories(section);
     render();
     if (saved.isFresh(page) || !allowFetch) return;
-  } else {
+  } else if (!stay) {
     loadingRow = rowModel.list(section.title, []);
     loadingRow.total = 9;
     rows = [loadingRow];
     render();
   }
-  void (page ? Promise.resolve(undefined) : cached.rows.get(section.title))
+  void (page || stay ? Promise.resolve(undefined) : cached.rows.get(section.title))
     .then((hit) => {
       if (!isCurrent()) return;
       if (hit?.rows?.length) {
@@ -920,7 +924,7 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
         void cached.rows.put(section.title, { rows: built });
         const heldTitle = focusedRow() === loadingRow ? undefined : focusedRow()?.title;
         const walked = rows[rows.length - 1];
-        const last = walked?.kind === 'merge' ? walked : allRow(section);
+        const last = page && walked?.kind === 'merge' ? walked : allRow(section);
         loadingRow = null;
         rows = listRows(built);
         rows.push(last);
