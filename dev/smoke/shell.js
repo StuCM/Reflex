@@ -512,5 +512,176 @@ module.exports = function (h) {
           await press('F6');
         },
       );
+    })
+
+    .then(function () {
+      const calls = (query) =>
+        page.evaluate(function (q) {
+          return fetch('/__plextv/hub-calls?' + q).then((r) => r.json());
+        }, query);
+      const LABELS =
+        'Array.prototype.map.call(document.querySelectorAll("#rows .row:not(.hidden) .row-label"), function (t) {' +
+        ' return t.textContent.trim(); }).join("|")';
+      const KEY = (code) =>
+        'document.dispatchEvent(new KeyboardEvent("keydown", { keyCode: ' + code + ' }));';
+      /* Left or Right on the menu, then Enter: the page loads in the same task. */
+      const GO = (code) =>
+        '(function(){' +
+        KEY(code) +
+        KEY(13) +
+        'return { labels: ' +
+        LABELS +
+        ', tiles: document.querySelectorAll("#rows .tile:not(.hidden):not(.placeholder)").length,' +
+        ' title: document.getElementById("mh-title").textContent };})()';
+      const HUBS = /\/hubs\/(sections\/\w+|promoted)/;
+      const settle = async (what) => {
+        await waitFor('(' + LABELS + ').split("|").length > 2', what, 15000);
+        await page.waitForTimeout(1500);
+      };
+
+      return step(
+        'a page seen two minutes ago returns at once with no request; a stale one refreshes only what changed',
+        async function () {
+          await calls('reset=1');
+          await page.reload();
+          await h.ready();
+          await settle('Movies rows');
+          const first = (await calls('')).length;
+          assertEqual(first > 0, true, 'the first visit asks the servers (' + first + ')');
+
+          await press('ArrowUp');
+          await press('ArrowRight', 2);
+          await waitFor(
+            '(' + LABELS + ') !== ' + JSON.stringify(await page.evaluate(LABELS)),
+            'TV',
+            10000,
+          );
+          await settle('TV rows');
+          const tv = await page.evaluate(LABELS);
+          await press('ArrowLeft');
+          await settle('Movies back');
+          await press('ArrowRight');
+          await settle('TV again');
+          await calls('reset=1');
+
+          const back = await page.evaluate(GO(37));
+          assertEqual(
+            back.labels !== tv && back.labels.split('|').length > 2,
+            true,
+            'rows in the first frame: ' + back.labels,
+          );
+          assertEqual(back.tiles > 0, true, 'posters drawn in the first frame');
+          assertEqual(/Loading/.test(back.title), false, 'no Loading in the first frame');
+          await page.waitForTimeout(1500);
+          assertEqual(
+            (await calls('')).length,
+            0,
+            'a page returned to within two minutes asks nothing',
+          );
+        },
+      )
+        .then(function () {
+          return step(
+            'past the window the old rows show at once and only a changed row redraws',
+            async function () {
+              await page.evaluate(h.AGE_PAGES);
+              let drop = false;
+              await page.route(HUBS, async (route) => {
+                const response = await route.fetch();
+                const body = await response.json();
+                if (drop) {
+                  ((body.MediaContainer || {}).Hub || []).forEach((hub) => {
+                    if (hub.title === 'Top Rated') hub.Metadata = hub.Metadata.slice(1);
+                  });
+                }
+                await route.fulfill({ response, json: body });
+              });
+              await page.evaluate(
+                'window.__writes = {};' +
+                  'new MutationObserver(function (list) { list.forEach(function (m) {' +
+                  ' if (m.type === "attributes" && m.oldValue === m.target.getAttribute(m.attributeName)) return;' +
+                  ' var row = (m.target.closest ? m.target : m.target.parentNode).closest(".row"); if (!row) return;' +
+                  ' var label = row.querySelector(".row-label").textContent.trim();' +
+                  ' window.__writes[label] = (window.__writes[label] || 0) + 1; }); })' +
+                  '.observe(document.getElementById("rows"), { attributes: true, attributeOldValue: true, childList: true, characterData: true, subtree: true });',
+              );
+              await calls('reset=1');
+              await page.evaluate('fetch("/__plextv/slow-hubs?ms=1500")');
+              drop = true;
+              await press('ArrowUp');
+              const old = await page.evaluate(GO(39));
+              assertEqual(
+                old.labels.split('|').length > 2 && old.tiles > 0,
+                true,
+                'the old rows at once: ' + old.labels,
+              );
+              await page.waitForTimeout(600);
+              await page.evaluate('window.__writes = {}');
+              await page.waitForTimeout(3000);
+              await page.evaluate('fetch("/__plextv/slow-hubs?ms=0")');
+              assertEqual(
+                (await calls('')).length > 0,
+                true,
+                'a stale page asks the servers again',
+              );
+              const writes = await page.evaluate('window.__writes');
+              assertEqual(
+                (writes['Top Rated'] || 0) > 0,
+                true,
+                'the changed row redraws: ' + JSON.stringify(writes),
+              );
+              const quiet = Object.keys(writes).filter(
+                (label) =>
+                  label !== 'Top Rated' &&
+                  label !== 'Continue watching' &&
+                  label.indexOf('All') !== 0,
+              );
+              assertEqual(quiet.length, 0, 'unchanged rows redraw: ' + JSON.stringify(writes));
+              await page.unroute(HUBS);
+              await page.evaluate('Date.now = window.__realNow; window.__skew = 0');
+            },
+          );
+        })
+        .then(function () {
+          return step(
+            'a cold page draws placeholder tiles with its name, then its rows',
+            async function () {
+              await page.evaluate(function () {
+                return new Promise(function (done) {
+                  const request = indexedDB.deleteDatabase('reflex');
+                  request.onsuccess = request.onerror = request.onblocked = done;
+                });
+              });
+              await page.evaluate('fetch("/__plextv/slow-hubs?ms=2500")');
+              await page.reload();
+              await waitFor(
+                'document.querySelectorAll("#rows .tile.placeholder:not(.hidden)").length > 0',
+                'placeholder tiles',
+                10000,
+              );
+              const title = await page.evaluate('document.getElementById("mh-title").textContent');
+              assertEqual(
+                title.length > 0 && !/Loading/.test(title),
+                true,
+                'the page name in the hero: ' + title,
+              );
+              await waitFor(
+                'document.querySelectorAll("#rows .tile:not(.hidden):not(.placeholder)").length > 0 && (' +
+                  LABELS +
+                  ').split("|").length > 2',
+                'rows after the placeholders',
+                15000,
+              );
+              assertEqual(
+                await page.evaluate(
+                  'document.querySelectorAll("#rows .tile.placeholder:not(.hidden)").length',
+                ),
+                0,
+                'placeholders gone',
+              );
+              await page.evaluate('fetch("/__plextv/slow-hubs?ms=0")');
+            },
+          );
+        });
     });
 };

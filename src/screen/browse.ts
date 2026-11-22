@@ -8,7 +8,6 @@ import {
   hideFromDeck as plexHideFromDeck,
   sectionHubs,
   items as plexItems,
-  onDeck as plexOnDeck,
   scrobble as plexScrobble,
   unscrobble as plexUnscrobble,
   search as plexSearch,
@@ -28,6 +27,7 @@ import { report as panelReport } from '../core/panel';
 import * as discovery from '../data/discovery';
 import * as kids from '../data/kids';
 import settings from '../core/config';
+import * as saved from './pages';
 import * as masthead from '../view/masthead';
 import * as glyphs from '../view/glyphs';
 import { createHold } from '../view/hold';
@@ -96,6 +96,8 @@ let rowIndex = 0;
 const cats: Record<string, string[]> = {};
 /** Continue watching, before any type filter. */
 let deckItems: PlexItem[] = [];
+let loadedAt = 0;
+let loadingRow: Row | null = null;
 /** The cut applied to it: null, movie or episode. */
 let watchingType: string | null = null;
 /** Row to land on once the next section is built. */
@@ -186,7 +188,7 @@ export function render() {
   browseView.classList.toggle('dense', rowIndex !== 0);
   rail.render(rows, rowIndex);
   setDrift(focusedRow()?.focus ?? 0, rowIndex);
-  masthead.render(focusedRow() ?? null, focusedItem(), rows.length > 0);
+  masthead.render(focusedRow() ?? null, focusedItem(), rows.length > 0 && !loadingRow);
   masthead.showFacts(focusedItem());
   const focused = focusedItem();
   if (focused) scheduleResolve(focused);
@@ -467,7 +469,7 @@ function watchedKey(copy: PlexItem): string {
    they are refetched on the next visit anyway. */
 function dropFromDeck(entry: PlexItem) {
   const gone = identity(entry);
-  prefetched = null;
+  saved.clear();
   deckItems = deckItems.filter((held) => identity(held) !== gone);
   sections.forEach((section) => void cached.rows.drop(section.title));
   const at = watchingRowIndex();
@@ -627,6 +629,7 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
     debug(`preferring ${now ? now.name : '?'} where both servers have a film`);
     /* Rebuild the rows: which copy of a shared film is shown changes with
        the preference. */
+    saved.clear();
     loadSection(sectionIndex, true);
     return;
   }
@@ -649,8 +652,10 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
   if (choice.kind === 'devices') {
     devices.open((changed) => {
       showView('browse');
-      if (changed) loadSection(sectionIndex, true);
-      else render();
+      if (changed) {
+        saved.clear();
+        loadSection(sectionIndex, true);
+      } else render();
     });
     return;
   }
@@ -680,8 +685,10 @@ function reset(newMode: Mode) {
   generation++;
   mode = newMode;
   keepHeld = undefined;
+  if (newMode !== 'library') keepPage();
   rows = [];
   rowIndex = 0;
+  loadingRow = null;
   watchingType = null;
   /* The rows the mode was over are gone, so it goes with them rather than
      counting picks nobody can see. */
@@ -691,11 +698,17 @@ function reset(newMode: Mode) {
   render();
 }
 
+/* The page on screen, put by for when it is come back to. */
+function keepPage() {
+  if (mode !== 'library' || searchQuery !== null || !rows.length || loadingRow) return;
+  saved.keep(sectionIndex, { rows, rowIndex, deckItems, loadedAt });
+}
+
 /* Rows from titled item lists, remembering the part-watched ones so the
    Continue watching cut has something to filter. */
 function listRows(built: { title: string; items: PlexItem[] }[]): Row[] {
   deckItems = built.find((row) => row.title === WATCHING)?.items ?? [];
-  return built.map((row) => rowModel.list(row.title, row.items));
+  return built.map((fresh) => saved.refreshed(rows, fresh));
 }
 
 /* One page of one server's section, for the merge walk. */
@@ -775,40 +788,6 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
   });
 }
 
-/* onDeck is per server, not per section, and hands back films and episodes
-   together — which is what you want to carry on with, so it is kept whole
-   rather than cut to the section's own type. Most recently watched first. */
-function buildDeck(perServer: PlexItem[][]): PlexItem[] {
-  const deck = merge.newestPerShow(devices.mine(merge.lists(perServer)));
-  deck.sort((one, two) => (two.lastViewedAt ?? 0) - (one.lastViewedAt ?? 0));
-  return deck;
-}
-
-interface DeckFetch {
-  ids: string;
-  at: number;
-  lists: Promise<PlexItem[][]>;
-}
-/** The last refreshDeck, for loadSection to take once instead of asking again. */
-let prefetched: DeckFetch | null = null;
-const PREFETCH_FOR = 30000;
-
-/* One onDeck per server, and the history `mine` needs. A launch asks twice —
-   once from the cached servers, once after discovery — so loadSection takes
-   the answer refreshDeck already has rather than asking again. */
-function fetchDeck(reachable: PlexServer[], fresh: boolean): Promise<PlexItem[][]> {
-  const ids = reachable.map((server) => server.id).join(',');
-  const held = prefetched;
-  prefetched = null;
-  if (!fresh && held && held.ids === ids && Date.now() - held.at < PREFETCH_FOR) return held.lists;
-  const lists = Promise.all([
-    Promise.all(reachable.map((server) => plexOnDeck(server))),
-    devices.ensureHistory(),
-  ]).then((results) => results[0]);
-  if (fresh) prefetched = { ids, at: Date.now(), lists };
-  return lists;
-}
-
 /* Replace Continue watching in the rows, keeping focus where it is. Select
    mode owns the row while it lasts, so it is left alone; a results page has
    parked the rows, and those are the ones that get the new deck. */
@@ -826,13 +805,13 @@ function landDeck(deck: PlexItem[]) {
         rowIndex = clamp(rowIndex > at ? rowIndex - 1 : rowIndex, 0, Math.max(0, rows.length - 1));
       }
     } else {
-      const row = rowModel.list(WATCHING, deckCut());
-      row.focus = clamp(current.focus, 0, Math.max(0, row.total - 1));
+      const row = saved.refreshed(target, { title: WATCHING, items: deckCut() });
+      if (row === current) return;
       target[at] = row;
     }
   } else if (deck.length) {
     target.unshift(rowModel.list(WATCHING, deckCut()));
-    if (!parked && target.length > 1) rowIndex++;
+    if (!parked && target.length > 1 && !loadingRow) rowIndex++;
   }
   const section = sections[sectionIndex];
   if (section) {
@@ -849,7 +828,7 @@ function landDeck(deck: PlexItem[]) {
 function cacheLists(section: BrowseSection, held: Row[]) {
   const lists: { title: string; items: PlexItem[] }[] = [];
   held.forEach((row) => {
-    if (row.kind !== 'list') return;
+    if (row.kind !== 'list' || row === loadingRow) return;
     lists.push({ title: row.title, items: row.title === WATCHING ? deckItems : row.items });
   });
   void cached.rows.put(section.title, { rows: lists });
@@ -861,10 +840,12 @@ export function refreshDeck(forgetHistory?: boolean) {
   const section = sections[sectionIndex];
   if (!section || mode !== 'library') return;
   if (forgetHistory) devices.forgetHistory();
+  saved.clear();
   const isCurrent = generationGuard();
-  fetchDeck(serversOf(section), true)
+  saved
+    .fetchDeck(serversOf(section), true)
     .then((lists) => {
-      if (isCurrent()) landDeck(buildDeck(lists));
+      if (isCurrent()) landDeck(saved.buildDeck(lists));
     })
     .catch((error: Error) => {
       debug(`deck: ${error.message}`);
@@ -875,19 +856,36 @@ export function refreshDeck(forgetHistory?: boolean) {
    picking one out of the sidebar has to do when it belongs to another
    section. */
 export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
+  keepPage();
+  const page = mode === 'library' && sectionIndex === i ? undefined : saved.recall(i);
   sectionIndex = i;
   wantRow = focusRow || 0;
   reset('library');
   const isCurrent = generationGuard();
   const section = sections[i];
   if (!section) return;
-  void cached.rows
-    .get(section.title)
+  if (page) {
+    rows = page.rows;
+    rowIndex = focusRow === undefined ? page.rowIndex : clamp(focusRow, 0, rows.length - 1);
+    deckItems = page.deckItems;
+    loadedAt = page.loadedAt;
+    noteCategories(section);
+    render();
+    if (saved.isFresh(page) || !allowFetch) return;
+  } else {
+    loadingRow = rowModel.list(section.title, []);
+    loadingRow.total = 9;
+    rows = [loadingRow];
+    render();
+  }
+  void (page ? Promise.resolve(undefined) : cached.rows.get(section.title))
     .then((hit) => {
       if (!isCurrent()) return;
       if (hit?.rows?.length) {
+        loadingRow = null;
         rows = listRows(hit.rows as { title: string; items: PlexItem[] }[]);
         rows.push(allRow(section));
+        loadedAt = 0;
         noteCategories(section);
         rowIndex = clamp(wantRow, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
@@ -900,10 +898,10 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
        deck is one request per server and is painted the moment it lands, rather
        than waiting behind the hubs, which are one per section part. */
       const reachable = serversOf(section);
-      const deckLists = fetchDeck(reachable, false);
+      const deckLists = saved.fetchDeck(reachable, false);
       deckLists
         .then((lists) => {
-          if (isCurrent()) landDeck(buildDeck(lists));
+          if (isCurrent()) landDeck(saved.buildDeck(lists));
         })
         .catch((error: Error) => {
           debug(`deck: ${error.message}`);
@@ -912,7 +910,7 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
         if (!isCurrent()) return;
         const built: { title: string; items: PlexItem[] }[] = [];
 
-        const deck = buildDeck(results[0]);
+        const deck = saved.buildDeck(results[0]);
         if (deck.length) built.push({ title: WATCHING, items: deck });
 
         mergeHubs(results[1]).forEach((hub) => {
@@ -920,10 +918,16 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
         });
 
         void cached.rows.put(section.title, { rows: built });
+        const heldTitle = focusedRow() === loadingRow ? undefined : focusedRow()?.title;
+        const walked = rows[rows.length - 1];
+        const last = walked?.kind === 'merge' ? walked : allRow(section);
+        loadingRow = null;
         rows = listRows(built);
-        rows.push(allRow(section));
+        rows.push(last);
+        loadedAt = Date.now();
         noteCategories(section);
-        rowIndex = clamp(rowIndex || wantRow, 0, rows.length - 1);
+        const heldAt = rows.findIndex((row) => row.title === heldTitle);
+        rowIndex = heldAt >= 0 ? heldAt : clamp(rowIndex || wantRow, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
         render();
         debug(
@@ -935,7 +939,7 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
     .catch((error: Error) => {
       if (!isCurrent()) return;
       debug(`rows: ${error.message}`);
-      if (!rows.length) toast('Could not reach the servers');
+      if (!rows.length || loadingRow) toast('Could not reach the servers');
     });
 }
 

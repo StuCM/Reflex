@@ -304,7 +304,7 @@ function drawRow(
     const item = itemAt(row, index);
     tile._filled = !!item;
     tile._item = item;
-
+    tile.classList.toggle('placeholder', !item);
     if (!item) {
       tile._name.textContent = '';
       tile._sub.textContent = '';
