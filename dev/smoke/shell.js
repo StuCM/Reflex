@@ -135,16 +135,9 @@ module.exports = function (h) {
       };
       return step('key 9 switches the poster size of tiles drawn after it', async function () {
         assertEqual(/9 poster w185/.test(await hudText()), true, 'readout ' + (await hudText()));
-        const small = await visit(2);
-        assertEqual(small.length > 0, true, 'TMDB posters asked for at w185');
-        assertEqual(
-          small.every((u) => u.indexOf('/w185/') >= 0),
-          true,
-          'every new poster is w185: ' + small[0],
-        );
         await press('9');
         assertEqual(/9 poster w342/.test(await hudText()), true, 'readout ' + (await hudText()));
-        const large = await visit(1);
+        const large = await visit(2);
         assertEqual(large.length > 0, true, 'posters asked for at w342');
         assertEqual(
           large.every((u) => u.indexOf('/w342/') >= 0),
@@ -152,6 +145,14 @@ module.exports = function (h) {
           'every new poster is w342: ' + large[0],
         );
         await press('9');
+        assertEqual(/9 poster w185/.test(await hudText()), true, 'readout ' + (await hudText()));
+        const small = await visit(1);
+        assertEqual(small.length > 0, true, 'TMDB posters asked for at w185');
+        assertEqual(
+          small.every((u) => u.indexOf('/w185/') >= 0),
+          true,
+          'every new poster is w185: ' + small[0],
+        );
         await press('ArrowUp');
         await press('ArrowLeft', 3);
         await press('Escape');
