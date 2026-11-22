@@ -5,7 +5,6 @@ module.exports = function (h) {
     FILMS,
     artLookups,
     tilePosters,
-    backdrops,
     shot,
     debugLine,
     press,
@@ -383,37 +382,6 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      return step('browse pages fetch no backdrop; the detail page still does', function () {
-        let before;
-        return page
-          .evaluate('!!document.querySelector("#browse #hero-art, #browse .hero-layer")')
-          .then(function (has) {
-            if (has) throw new Error('the browse view still carries a backdrop layer');
-            before = backdrops.length;
-            return press('ArrowRight', 2);
-          })
-          .then(function () {
-            return page.waitForTimeout(800);
-          })
-          .then(function () {
-            if (backdrops.length !== before) {
-              throw new Error('browsing asked for a backdrop: ' + backdrops.slice(before)[0]);
-            }
-            return openTitle(titles.manyShots.title);
-          })
-          .then(function () {
-            return page.waitForTimeout(500);
-          })
-          .then(function () {
-            if (backdrops.length === before) {
-              throw new Error('the detail page asked for no backdrop, so this collector sees none');
-            }
-            return press('Backspace');
-          });
-      });
-    })
-
-    .then(function () {
       return step('the focused poster is 210x315 and the next row peeks', function () {
         return backToLibrary()
           .then(function () {
@@ -621,8 +589,10 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      return step('the tile is a poster', function () {
-        /* From TMDB, and portrait: a backdrop in the 2:3 box is a smear. */
+      return step('the tile is a poster and the hero behind it is a backdrop', function () {
+        /* The whole point of the feature: the tile asks for a different kind of
+           picture from the hero, so the two can never be the same image. Same
+           title, both from TMDB, one portrait and one wide. */
         return searchFor(titles.manyShots.title)
           .then(function () {
             return page.waitForTimeout(900);
@@ -630,8 +600,20 @@ module.exports = function (h) {
           .then(pictures)
           .then(function (st) {
             if (!st.tile.shot) throw new Error('the tile is not a TMDB picture: ' + st.tile.url);
+            if (!st.hero.shot) throw new Error('the hero is not a TMDB picture: ' + st.hero.url);
+            if (st.tile.shot.title !== st.hero.shot.title) {
+              throw new Error(
+                'the hero is title ' +
+                  st.hero.shot.title +
+                  ' while the tile is ' +
+                  st.tile.shot.title,
+              );
+            }
             if (st.tile.shot.kind !== 'poster') {
               throw new Error('the tile drew a ' + st.tile.shot.kind + ': ' + st.tile.url);
+            }
+            if (st.hero.shot.kind !== 'backdrop') {
+              throw new Error('the hero drew a ' + st.hero.shot.kind + ': ' + st.hero.url);
             }
             if (!st.tile.painted) throw new Error('the tile drew nothing');
           })
@@ -656,6 +638,7 @@ module.exports = function (h) {
           })
           .then(pictures)
           .then(function (st) {
+            if (!st.hero.shot) throw new Error('the hero is not a TMDB picture: ' + st.hero.url);
             if (st.tile.shot) {
               throw new Error('the tile took TMDB art there was none of: ' + st.tile.url);
             }

@@ -2,7 +2,7 @@
 import { setPosterSize } from '../data/art';
 
 const OPTIONS = {
-  hero: [0, 150, 280, 420],
+  hero: ['off', 0, 150, 280, 420],
   wc: ['off', 'containers'],
   glow: ['static', 'page', 'drift'],
   shadows: ['on', 'off'],
@@ -24,15 +24,15 @@ const TIMINGS = [
 /* Number key to setting: 1 to 8, in the order the panel lists them; 9 is poster. */
 const ORDER: Name[] = ['hero', 'wc', 'glow', 'shadows', 'timing', 'skip', 'noise', 'focus'];
 const DEFAULTS: Record<Name, number> = {
-  hero: 1,
+  hero: 2,
   wc: 1,
   glow: 1,
   shadows: 0,
   timing: 2,
   skip: 0,
-  noise: 2,
+  noise: 1,
   focus: 0,
-  poster: 0,
+  poster: 1,
 };
 const STORE_KEY = 'reflex.tuning';
 
@@ -54,8 +54,12 @@ let keyCount = 0;
 function load(): void {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    /* Before v2 the hero list had no 'off' and every save wrote every setting, so a
+       legacy hero index is one short and a legacy poster 0 was never a choice. */
+    const legacy = saved.v !== 2;
     [...ORDER, 'poster' as Name].forEach((name) => {
-      const index = saved[name];
+      if (legacy && name === 'poster' && saved[name] === 0) return;
+      const index = legacy && name === 'hero' ? saved[name] + 1 : saved[name];
       if (index >= 0 && index < OPTIONS[name].length) state[name] = index;
     });
   } catch {
@@ -65,7 +69,11 @@ function load(): void {
 
 function save(): void {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    const changed: Record<string, number> = { v: 2 };
+    (Object.keys(DEFAULTS) as Name[]).forEach((name) => {
+      if (state[name] !== DEFAULTS[name]) changed[name] = state[name];
+    });
+    localStorage.setItem(STORE_KEY, JSON.stringify(changed));
   } catch {
     /* a private window: the setting lasts until the next launch */
   }
@@ -91,7 +99,12 @@ function apply(): void {
 }
 
 export function heroHold(): number {
-  return value('hero') as number;
+  const hold = value('hero');
+  return hold === 'off' ? 0 : (hold as number);
+}
+
+export function heroOn(): boolean {
+  return value('hero') !== 'off';
 }
 
 export function skipOnRepeat(): boolean {

@@ -406,7 +406,7 @@ function drive(page, titles, port) {
     )
       tilePosters.push(u);
     if (
-      u.indexOf('/__tmdbimg/w1280/') >= 0 ||
+      /\/__tmdbimg\/w(780|1280)\//.test(u) ||
       (u.indexOf('/photo/:/transcode') >= 0 && /[?&]width=(960|1920)\b/.test(u))
     )
       backdrops.push(u);
@@ -996,12 +996,15 @@ function drive(page, titles, port) {
         return m ? { kind: m[1], title: m[2], n: m[3] } : null;
       }
       var img = document.querySelector('#rows .row.on .tile.on img');
+      var lit = document.querySelector('#hero-art .hero-layer.on');
+      var hero = lit ? getComputedStyle(lit).backgroundImage : '';
       return {
         tile: {
           url: (img && img.src) || '',
           shot: shotOf(img && img.src),
           painted: !!(img && img.naturalWidth > 0),
         },
+        hero: { url: hero, shot: shotOf(hero) },
       };
     });
   }

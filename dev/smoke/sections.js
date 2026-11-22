@@ -23,6 +23,7 @@ module.exports = function (h) {
     openTitle,
     openChooser,
     sourceRows,
+    backdrops,
   } = h;
 
   /* Inside a section and off its Continue watching row, which is where the
@@ -506,12 +507,14 @@ module.exports = function (h) {
         return page
           .evaluate(function () {
             var css = getComputedStyle(document.documentElement);
+            var layer = getComputedStyle(document.querySelector('#hero-art .hero-layer'));
             var strip = getComputedStyle(document.querySelector('#rows .strip'));
             return {
               ac: css.getPropertyValue('--ac').trim(),
               bg: css.getPropertyValue('--bg').trim(),
               move: css.getPropertyValue('--t-move').trim(),
               fade: css.getPropertyValue('--t-fade').trim(),
+              heroFor: layer.transitionDuration,
               stripFor: strip.transitionDuration,
             };
           })
@@ -525,9 +528,183 @@ module.exports = function (h) {
                fails against the artifact that ships. */
             if (ms(st.move) !== 360) throw new Error('--t-move is ' + st.move);
             if (ms(st.fade) !== 620) throw new Error('--t-fade is ' + st.fade);
+            /* The backdrop crossfades gently; the UI's own motion must not be
+             slowed with it. */
+            if (st.heroFor !== '0.62s') throw new Error('a hero layer fades over ' + st.heroFor);
             if (st.stripFor !== '0.36s') throw new Error('a strip slides over ' + st.stripFor);
           });
       });
+    })
+
+    .then(function () {
+      return step('the hero art follows focus, and comes back', function () {
+        /* Resting on a title, moving on, and coming back used to leave the
+           previous backdrop on screen: the art was painted from Meta's
+           callback, and Meta skips an item whose payload it already holds.
+
+           The hero and the focused tile are deliberately different pictures now
+           — the two steps above are what check that — so what is checked here is
+           that the backdrop belongs to whatever is under focus: it moves when
+           focus moves, and comes back unchanged when focus comes back. */
+        function state() {
+          return page.evaluate(function () {
+            var lit = document.querySelector('#hero-art .hero-layer.on');
+            return {
+              hero: lit ? getComputedStyle(lit).backgroundImage : '',
+              layers: document.querySelectorAll('#hero-art .hero-layer').length,
+              title: document.getElementById('mh-title').textContent.trim(),
+            };
+          });
+        }
+        function settle() {
+          return page.waitForTimeout(900);
+        }
+        var atA;
+        return (
+          backToLibrary()
+            .then(function () {
+              return topRow();
+            }) // to the first row
+            .then(settle)
+            .then(function () {
+              return press('ArrowRight');
+            }) // rest on A
+            .then(settle)
+            .then(state)
+            .then(function (st) {
+              /* Two layers, one lit: a crossfade needs both, and a stack of them
+               would mean every backdrop stayed in memory. */
+              if (st.layers !== 2) {
+                throw new Error(st.layers + ' hero layers, not 2');
+              }
+              if (!st.hero) throw new Error('no backdrop on "' + st.title + '"');
+              atA = st;
+            })
+            .then(function () {
+              return press('ArrowRight');
+            }) // rest on B
+            .then(settle)
+            .then(state)
+            .then(function (st) {
+              if (st.hero === atA.hero) {
+                throw new Error(
+                  'the backdrop did not move from "' + atA.title + '" to "' + st.title + '"',
+                );
+              }
+            })
+            .then(function () {
+              return press('ArrowLeft');
+            }) // back to A, now cached
+            .then(settle)
+            .then(state)
+            .then(function (st) {
+              if (st.hero !== atA.hero) {
+                throw new Error('back on "' + st.title + '" the backdrop is not the one it had');
+              }
+            })
+            /* And it must survive a fast sweep, where every item but the last is
+             passed over before its request could have finished. */
+            .then(function () {
+              return press('ArrowRight', 12);
+            })
+            .then(settle)
+            .then(state)
+            .then(function (swept) {
+              if (swept.hero === atA.hero) {
+                throw new Error(
+                  'after a fast sweep the backdrop is still the one from "' + atA.title + '"',
+                );
+              }
+              /* Stepping off and back on has to land on the same picture, which is
+               what says the backdrop belongs to the item and not to the sweep. */
+              return press('ArrowLeft')
+                .then(settle)
+                .then(function () {
+                  return press('ArrowRight');
+                })
+                .then(settle)
+                .then(state)
+                .then(function (st) {
+                  if (st.hero !== swept.hero) {
+                    throw new Error('"' + st.title + '" has a different backdrop the second time');
+                  }
+                });
+            })
+        );
+      });
+    })
+
+    .then(function () {
+      return step(
+        'the hero is a w780 picture, painted hidden for two frames before it fades in',
+        async function () {
+          await page.evaluate(function () {
+            var log = (window.__heroLog = { frame: 0, set: [], on: [] });
+            (function tick() {
+              log.frame++;
+              requestAnimationFrame(tick);
+            })();
+            document.querySelectorAll('#hero-art .hero-layer').forEach(function (layer) {
+              new MutationObserver(function () {
+                var art = layer.style.getPropertyValue('--art');
+                if (art && art !== layer.__art) {
+                  layer.__art = art;
+                  log.set.push({ id: layer.id, frame: log.frame, art: art });
+                }
+                if (layer.classList.contains('on') && !layer.__wasOn) {
+                  log.on.push({
+                    id: layer.id,
+                    frame: log.frame,
+                    opacity: Number(getComputedStyle(layer).opacity),
+                    art: layer.style.getPropertyValue('--art'),
+                  });
+                }
+                layer.__wasOn = layer.classList.contains('on');
+              }).observe(layer, { attributes: true, attributeFilter: ['class', 'style'] });
+            });
+          });
+          await backToLibrary();
+          await topRow();
+          await page.waitForTimeout(900);
+          const before = backdrops.length;
+          await press('ArrowRight', 3);
+          await page.waitForTimeout(1200);
+          const fresh = backdrops.slice(before);
+          if (fresh.length === 0)
+            throw new Error('moving focus fetched no backdrop, so this collector sees none');
+          if (
+            !fresh.every(function (u) {
+              return u.indexOf('/w780/') >= 0 || u.indexOf('width=960') >= 0;
+            })
+          ) {
+            throw new Error('a browse backdrop is not w780: ' + fresh.join(' '));
+          }
+          if (
+            fresh.some(function (u) {
+              return u.indexOf('/w1280/') >= 0;
+            })
+          ) {
+            throw new Error('browse asked for a w1280 backdrop');
+          }
+          const log = await page.evaluate('window.__heroLog');
+          if (log.on.length === 0) throw new Error('no hero layer was ever lit');
+          log.on.forEach(function (on) {
+            const set = log.set.find(function (s) {
+              return s.id === on.id && s.art === on.art;
+            });
+            if (!set) throw new Error('layer ' + on.id + ' lit without a picture being set first');
+            if (on.frame - set.frame < 2) {
+              throw new Error(
+                'layer ' + on.id + ' lit ' + (on.frame - set.frame) + ' frames after its picture',
+              );
+            }
+            if (on.opacity !== 0)
+              throw new Error(
+                'layer ' + on.id + ' was at opacity ' + on.opacity + ' when it started to fade',
+              );
+          });
+        },
+      );
     })
 
     .then(function () {
@@ -604,8 +781,9 @@ module.exports = function (h) {
                   vpTop: Math.round(vp.top),
                   vpBottom: Math.round(vp.bottom),
                   rows: rows,
-                  title: document.getElementById('mh-title').textContent.trim(),
-                  focused: tile ? tile.querySelector('.tile-title').textContent.trim() : '',
+                  heroOpacity: Number(
+                    getComputedStyle(document.getElementById('hero-art')).opacity,
+                  ),
                   desc: document.getElementById('mh-desc').textContent.trim(),
                   cast: document.getElementById('mh-cast').textContent.trim(),
                 };
@@ -636,12 +814,10 @@ module.exports = function (h) {
                     st.vpBottom,
                 );
               }
-              /* The header still carries the film: its title, what it is about,
-               and who is in it. */
-              if (!st.title || st.title !== st.focused) {
-                throw new Error(
-                  'hero title "' + st.title + '" is not the focused "' + st.focused + '"',
-                );
+              /* The header still carries the film: the picture behind it, what it
+               is about, and who is in it. */
+              if (!(st.heroOpacity > 0)) {
+                throw new Error('the backdrop was thrown away off the first row');
               }
               if (!st.desc) throw new Error('the description vanished off the first row');
               if (!st.cast) throw new Error('the key actors vanished off the first row');
