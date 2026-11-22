@@ -29,7 +29,7 @@ files:
 The browse pages show the focused title's backdrop behind the hero again, as
 before 067 — but at 780 px wide, decoded before it fades in, and only after the
 focus rests. Where the hero picture shows, the background glows are hidden.
-Small posters (w185) are the default.
+Small posters (w185) are the default, and the noise layer defaults to 0.03.
 
 ## Why now
 Stuart, 2026-11-17, correcting the orchestrator's reading of "the hero is
@@ -105,12 +105,11 @@ first paint — mid-crossfade if the layer fades straight in.
 
 ## Out of scope
 - Detail and series page backdrops. Page-load placeholders (next task).
-- The noise default (awaiting Stuart).
 
 ## Definition of done
 - [ ] Browse shows the hero backdrop at w780 after the rest, faded in only after it has painted hidden (smoke).
 - [ ] The glows are hidden while a hero picture shows, and visible with the hero off (smoke).
-- [ ] Panel key 1 has off; default 150; posters default w185 (smoke on a fresh profile).
+- [ ] Panel key 1 has off; default 150; posters default w185; noise default 0.03 (smoke on a fresh profile).
 - [ ] the gate passes (`crew gate .claude/tasks/068-the-hero-picture-returns-the-glows-step-aside.md`)
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
