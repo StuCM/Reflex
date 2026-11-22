@@ -291,15 +291,18 @@ function currentPage(): number {
   return lastPage === 1 ? 1 : PAGE_HOME;
 }
 
-function showSection(i: number): void {
+function showSection(i: number, settled: boolean): void {
+  const here = mode === 'library' && sectionIndex === i;
   if (!sections[i]) toast('Nothing there on these servers');
-  else if (mode !== 'library' || sectionIndex !== i) loadSection(i, true);
+  else if (settled ? !here || Date.now() - loadedAt >= saved.FRESH_FOR : !here && saved.recall(i)) {
+    loadSection(i, settled);
+  }
 }
 
-function goToPage(page: number): void {
+function goToPage(page: number, settled: boolean): void {
   lastPage = page;
-  if (page <= 1) showSection(0);
-  else if (page === 2) showSection(1);
+  if (page <= 2) showSection(Math.max(page - 1, 0), settled);
+  else if (!settled) return;
   else if (page === PAGE_COLLECTIONS) {
     const first = collectionEntries[0];
     if (mode === 'collection') return;
@@ -339,10 +342,7 @@ function deckCut() {
    crash. */
 function showWatching(type: string | null) {
   const at = watchingRowIndex();
-  if (at < 0) {
-    toast('Nothing part-watched there');
-    return;
-  }
+  if (at < 0) return toast('Nothing part-watched there');
   watchingType = type || null;
   const items = deckCut();
   rows[at] = rowModel.list(WATCHING, items);
@@ -668,8 +668,7 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
     }
     return;
   }
-  mode = 'library';
-  if (choice.index !== sectionIndex) loadSection(choice.index ?? 0, true);
+  if (mode !== 'library' || choice.index !== sectionIndex) loadSection(choice.index ?? 0, true);
   else render();
 }
 
@@ -683,9 +682,9 @@ function noteCategories(section: BrowseSection) {
 
 function reset(newMode: Mode) {
   generation++;
+  if (newMode !== 'library') keepPage();
   mode = newMode;
   keepHeld = undefined;
-  if (newMode !== 'library') keepPage();
   rows = [];
   rowIndex = 0;
   loadingRow = null;

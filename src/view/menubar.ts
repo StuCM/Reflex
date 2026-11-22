@@ -50,8 +50,8 @@ export function focused(): number {
   return focus;
 }
 
-/** Sweeping past pages loads nothing; only the one the focus rests on does. */
-const SETTLE_MS = 300;
+/** Each arrow offers the page to `load` unsettled, so a page seen before can show at once; the one the focus rests on is offered settled. */
+const SETTLE_MS = 150;
 let settleTimer: ReturnType<typeof setTimeout> | null = null;
 
 function cancelSettle(): void {
@@ -60,14 +60,14 @@ function cancelSettle(): void {
 }
 
 /** Loads the focused page now if it is still waiting to settle. */
-export function flush(load: (page: number) => void): void {
+export function flush(load: (page: number, settled: boolean) => void): void {
   if (!settleTimer) return;
   cancelSettle();
-  load(focus);
+  load(focus, true);
 }
 
 /** Left and right move the focus, wrapping, and load the page once it settles; true if the key was one of them. */
-export function key(code: number, load: (page: number) => void): boolean {
+export function key(code: number, load: (page: number, settled: boolean) => void): boolean {
   if (code !== KEY.LEFT && code !== KEY.RIGHT) return false;
   focus = (focus + (code === KEY.RIGHT ? 1 : PAGES.length - 1)) % PAGES.length;
   paint();
@@ -75,9 +75,10 @@ export function key(code: number, load: (page: number) => void): boolean {
   if (focus === MORE) return true;
   setPage(focus);
   const landed = focus;
+  load(landed, false);
   settleTimer = setTimeout(() => {
     settleTimer = null;
-    load(landed);
+    load(landed, true);
   }, SETTLE_MS);
   return true;
 }

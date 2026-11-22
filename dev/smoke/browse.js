@@ -1352,6 +1352,75 @@ module.exports = function (h) {
             .then(function () {
               return waitFor('!' + popular, 'the library back');
             });
+        }).then(function () {
+          return step(
+            'the kids index reads two servers side by side and one server a request at a time',
+            function () {
+              /* The browser's own clock: Playwright's request events arrive late enough to make serial reads look together. */
+              const reads = function () {
+                return page.evaluate(function () {
+                  const index =
+                    /(\/__plex\d*)\/library\/sections\/\d+\/(genre|all\?.*excludeElements=)/;
+                  return performance
+                    .getEntriesByType('resource')
+                    .filter(function (e) {
+                      return index.test(e.name);
+                    })
+                    .map(function (e) {
+                      return {
+                        prefix: index.exec(e.name)[1],
+                        from: e.startTime,
+                        to: e.responseEnd,
+                      };
+                    });
+                });
+              };
+              return forgetIndex()
+                .then(function () {
+                  return page.evaluate(function () {
+                    performance.clearResourceTimings();
+                    performance.setResourceTimingBufferSize(5000);
+                  });
+                })
+                .then(function () {
+                  return kidsIndex(250, 0);
+                })
+                .then(function () {
+                  return press('F4');
+                })
+                .then(function () {
+                  return waitFor(popular, 'the held rows from a slow index', 90000);
+                })
+                .then(reads)
+                .then(function (spans) {
+                  const prefixes = [];
+                  spans.forEach(function (x) {
+                    if (prefixes.indexOf(x.prefix) < 0) prefixes.push(x.prefix);
+                  });
+                  if (prefixes.length < 2) {
+                    throw new Error('the index read ' + prefixes.join(',') + ', not two servers');
+                  }
+                  let across = 0;
+                  spans.forEach(function (a) {
+                    spans.forEach(function (b) {
+                      if (a === b || a.from >= b.to || b.from >= a.to) return;
+                      if (a.prefix === b.prefix) {
+                        throw new Error('two index requests to ' + a.prefix + ' ran together');
+                      }
+                      across++;
+                    });
+                  });
+                  if (!across) throw new Error('the servers were read one after the other');
+                  return kidsIndex(0, 0);
+                })
+                .then(function () {
+                  return press('Backspace');
+                })
+                .then(function () {
+                  return waitFor('!' + popular, 'the library back');
+                });
+            },
+          );
         });
       });
     })

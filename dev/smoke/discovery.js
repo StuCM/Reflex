@@ -533,5 +533,113 @@ module.exports = function (h) {
           })
           .then(backToLibrary);
       });
+    })
+
+    .then(function () {
+      const DELAY = 300;
+      return step(
+        'a cold Discover asks TMDB four rows at once and still draws them in order',
+        function () {
+          let live = 0;
+          let most = 0;
+          let began = 0;
+          let last = 0;
+          let first = 0;
+          const isCatalogue = function (r) {
+            return /\/__tmdb\//.test(r.url()) && /[?&]page=1(&|$)/.test(r.url());
+          };
+          const onStart = function (r) {
+            if (!isCatalogue(r)) return;
+            live++;
+            if (!first) first = Date.now();
+            most = Math.max(most, live);
+          };
+          const onEnd = function (r) {
+            if (!isCatalogue(r)) return;
+            live--;
+            last = Date.now();
+          };
+          const slow = function (route) {
+            if (!isCatalogue(route.request())) return route.continue();
+            began++;
+            /* The first is slowest, so a row published as it lands would be out of order. */
+            return setTimeout(
+              function () {
+                route.continue();
+              },
+              began === 1 ? DELAY + 200 : DELAY,
+            );
+          };
+          let listed = 0;
+          const quiet = function () {
+            if (live === 0 && Date.now() - last > 500) return Promise.resolve();
+            return page.waitForTimeout(100).then(quiet);
+          };
+          return backToLibrary()
+            .then(function () {
+              return page.evaluate(function () {
+                return new Promise(function (resolve) {
+                  const req = indexedDB.open('reflex', 1);
+                  req.onsuccess = function () {
+                    const store = req.result.transaction('kv', 'readwrite').objectStore('kv');
+                    const cursor = store.openCursor();
+                    cursor.onsuccess = function () {
+                      const at = cursor.result;
+                      if (!at) return resolve(true);
+                      if (String(at.key).startsWith('disc:')) at.delete();
+                      at.continue();
+                    };
+                  };
+                });
+              });
+            })
+            .then(function () {
+              return page.route(/\/__tmdb\//, slow);
+            })
+            .then(function () {
+              page.on('request', onStart);
+              page.on('requestfinished', onEnd);
+              return sidebarPick('Discovery');
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var n=0,i,r=document.querySelectorAll("#rows .row");' +
+                  'for(i=0;i<r.length;i++) if(!r[i].classList.contains("hidden")) n++;' +
+                  'return n >= 4;})()',
+                'four category rows',
+                20000,
+              );
+            })
+            .then(function () {
+              return quiet();
+            })
+            .then(function () {
+              page.removeListener('request', onStart);
+              page.removeListener('requestfinished', onEnd);
+              listed = began;
+              return page.unroute(/\/__tmdb\//, slow);
+            })
+            .then(railRows)
+            .then(function (rows) {
+              const got = rows.map(function (r) {
+                return r.label;
+              });
+              if (got.slice(0, 4).join('|') !== WANT.join('|')) {
+                throw new Error('rows drew as ' + got.join('|') + ', wanted ' + WANT.join('|'));
+              }
+              if (listed < 4) throw new Error('only ' + listed + ' TMDB list requests were seen');
+              if (most < 2 || most > 4) {
+                throw new Error(most + ' TMDB requests were in flight at once, wanted 2 to 4');
+              }
+              const serial = (listed - 1) * DELAY + DELAY + 200;
+              if (last - first > serial * 0.4) {
+                throw new Error(
+                  'Discover took ' + (last - first) + 'ms of a serial ' + serial + 'ms',
+                );
+              }
+            })
+            .then(backToLibrary);
+        },
+      );
     });
 };

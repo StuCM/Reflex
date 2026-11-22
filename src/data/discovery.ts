@@ -159,18 +159,24 @@ export async function more(
   return { entries: kept(category, got.films.map(entry), keep), pages: got.pages };
 }
 
-async function one(context: LoadContext, category: DiscoveryCategory): Promise<void> {
-  const seeds = context.seeds ?? [];
-  let found: tmdb.TmdbPage;
+async function fetchRow(
+  category: DiscoveryCategory,
+  seeds: string[],
+): Promise<tmdb.TmdbPage | undefined> {
   try {
-    found = await fetchPage(category, seeds, 1);
+    return await fetchPage(category, seeds, 1);
   } catch (error) {
     debug(`${category.title} failed: ${(error as Error).message}`);
-    return;
+    return undefined;
   }
-  /* Outside the try: a throw from the rail's own drawing is not a failed
-     TMDB fetch and must not be reported as one. */
-  if (!context.isCurrent()) return;
+}
+
+function publish(
+  context: LoadContext,
+  category: DiscoveryCategory,
+  found: tmdb.TmdbPage | undefined,
+): void {
+  if (!found || !context.isCurrent()) return;
   const entries = kept(category, found.films.map(entry), context.keep);
   if (!entries.length) {
     debug(`${category.title}: nothing to show`);
@@ -180,20 +186,30 @@ async function one(context: LoadContext, category: DiscoveryCategory): Promise<v
   debug(`${category.title}: ${entries.length} from TMDB`);
 }
 
-/* One row per category in core/config, each a TMDB request cached for the day
-   and published the moment it lands. isCurrent() guards against a section
+/* The same cap art.ts puts on image fetches. */
+const IN_FLIGHT = 4;
+
+/* One row per category in core/config, each a TMDB request cached for the day.
+   Up to IN_FLIGHT are asked at once, but a row is published only after the ones
+   before it, so the page never reorders. isCurrent() guards against a section
    switch mid-flight; seeds are the TMDB ids of what has been watched, which the
    caller already holds. */
-export function load(context: LoadContext): Promise<void> {
+export async function load(context: LoadContext): Promise<void> {
   const categories = context.categories ?? settings.categories ?? [];
-  /* One at a time, and recursive rather than a loop: the rows go to a server we
-     do not own, so they are asked for in order, which `no-await-in-loop` reads
-     as the mistake it usually is. */
-  async function step(at: number): Promise<void> {
+  const seeds = context.seeds ?? [];
+  const published: Promise<void>[] = [];
+  let next = 0;
+  async function worker(): Promise<void> {
+    const at = next++;
     const category = categories[at];
-    if (!context.isCurrent() || !category) return;
-    await one(context, category);
-    return step(at + 1);
+    if (!category || !context.isCurrent()) return;
+    const found = fetchRow(category, seeds);
+    published[at] = Promise.all([found, published[at - 1]]).then(([row]) =>
+      publish(context, category, row),
+    );
+    await found;
+    return worker();
   }
-  return step(0);
+  await Promise.all(Array.from({ length: IN_FLIGHT }, () => worker()));
+  await Promise.all(published);
 }
