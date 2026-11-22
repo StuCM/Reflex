@@ -488,5 +488,29 @@ module.exports = function (h) {
           assertEqual(await fades(), 0, 'five presses on the same title restart no fade');
         },
       );
+    })
+
+    .then(function () {
+      return step(
+        'a profile saved before off existed keeps its hero delay and poster default',
+        async function () {
+          await page.evaluate(
+            'localStorage.setItem("reflex.tuning", JSON.stringify({ hero: 2, poster: 0, noise: 2 }))',
+          );
+          await page.reload();
+          await h.ready();
+          await press('F6');
+          const text = await hudText();
+          assertEqual(/1 hero 280/.test(text), true, 'legacy hero 2 (280) in ' + text);
+          assertEqual(
+            /9 poster w185/.test(text),
+            true,
+            'legacy poster 0 is not a choice in ' + text,
+          );
+          assertEqual(/7 noise 0.05/.test(text), true, 'legacy noise kept in ' + text);
+          await page.evaluate('localStorage.removeItem("reflex.tuning")');
+          await press('F6');
+        },
+      );
     });
 };
