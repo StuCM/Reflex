@@ -7,6 +7,9 @@ const active = [server];
 const calls: string[] = [];
 const extras: Record<string, string | number>[] = [];
 let flakyReads = 0;
+let slow = false;
+const running: Record<string, number> = {};
+const peak = { perServer: 0, overall: 0 };
 
 function film(id: string, type = 'movie'): PlexItem {
   return { type, Guid: [{ id: `tmdb://${id}` }] } as PlexItem;
@@ -42,6 +45,16 @@ vi.mock('../src/api/plex/library', async () => {
       extra: { genre?: string; excludeElements?: string },
     ) => {
       extras.push(extra);
+      if (slow) {
+        running[s.id] = (running[s.id] ?? 0) + 1;
+        peak.perServer = Math.max(peak.perServer, running[s.id]!);
+        peak.overall = Math.max(
+          peak.overall,
+          Object.values(running).reduce((a, b) => a + b, 0),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        running[s.id]! -= 1;
+      }
       if (s.id === 'b') {
         flakyReads++;
         if (key === '2') throw new Error('down');
@@ -107,6 +120,17 @@ test('a failing library keeps what the rest held and is asked again, not cached 
   active.pop();
 });
 
+test('the index reads one request at a time per server, and the servers side by side', async () => {
+  active.push({ id: 'c' } as PlexServer, { id: 'd' } as PlexServer);
+  slow = true;
+  const set = await held();
+  slow = false;
+  active.length = 1;
+  expect(set.has('10')).toBe(true);
+  expect(peak.perServer).toBe(1);
+  expect(peak.overall).toBe(2);
+});
+
 test('keep drops unheld entries from every row but upcoming', async () => {
   const rows: string[][] = [];
   const page = (id: string) => ({
@@ -134,4 +158,33 @@ test('keep drops unheld entries from every row but upcoming', async () => {
     ['A', '10'],
     ['U', '10', 'x'],
   ]);
+});
+
+test('discovery asks TMDB four rows at once and publishes them in config order', async () => {
+  const categories = Array.from({ length: 7 }, (_, i) => ({
+    title: `R${i}`,
+    kind: 'trending',
+    id: `order${i}`,
+  })) as DiscoveryCategory[];
+  let live = 0;
+  let most = 0;
+  const tmdb = await import('../src/api/tmdb');
+  vi.spyOn(tmdb, 'catalogue').mockImplementation(async (category) => {
+    live++;
+    most = Math.max(most, live);
+    const at = Number(String(category.id).replace('order', ''));
+    await new Promise((resolve) => setTimeout(resolve, 70 - at * 10));
+    live--;
+    return { films: [{ id: String(at), title: `t${at}`, media: 'movie' }], pages: 1 } as never;
+  });
+  const titles: string[] = [];
+  await discovery.load({
+    isCurrent: () => true,
+    categories,
+    add: (title) => {
+      titles.push(title);
+    },
+  });
+  assert.deepStrictEqual(titles, ['R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6']);
+  expect(most).toBe(4);
 });

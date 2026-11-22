@@ -606,25 +606,35 @@ function drive(page, titles, port) {
         });
       });
     }
-    function toMore(n) {
+    /* No pause between presses, and the way round that passes no library
+       page of another section: a page seen before shows at once on an arrow,
+       so Home and Movies go left (wrapping to More) and TV goes right. */
+    function toMore() {
       return page
         .evaluate(function () {
           const tiles = document.querySelectorAll('#menubar .mb-tile');
-          return tiles[tiles.length - 1].classList.contains('on');
-        })
-        .then(function (atMore) {
-          if (atMore) return true;
-          if (n <= 0) throw new Error('could not reach More');
-          return press('ArrowLeft').then(function () {
-            return toMore(n - 1);
+          const at = Array.prototype.findIndex.call(tiles, function (t) {
+            return t.classList.contains('on');
           });
+          return at <= 1
+            ? { key: 'ArrowLeft', times: at + 1 }
+            : { key: 'ArrowRight', times: tiles.length - 1 - at };
+        })
+        .then(function (way) {
+          let p = Promise.resolve();
+          for (let i = 0; i < way.times; i++) {
+            p = p.then(function () {
+              return page.keyboard.press(way.key);
+            });
+          }
+          return p;
         });
     }
     return sidebarIsOpen().then(function (isOpen) {
       if (isOpen) return true;
       return climb(60)
         .then(function () {
-          return toMore(8);
+          return toMore();
         })
         .then(function () {
           return press('Enter');

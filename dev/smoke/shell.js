@@ -323,6 +323,47 @@ module.exports = function (h) {
     })
 
     .then(function () {
+      const LABELS =
+        'Array.prototype.map.call(document.querySelectorAll("#rows .row-label"), function (t) {' +
+        ' return t.textContent.trim(); }).join("|")';
+      /* Page-side, since a round trip is slower than the 150ms being measured. */
+      const arm = () =>
+        page.evaluate(
+          '(function(){var t=window.__menuT={key:0,changed:0,base:' +
+            LABELS +
+            '};document.addEventListener("keydown",function(){t.key=performance.now();},true);' +
+            'new MutationObserver(function(){if(!t.changed&&' +
+            LABELS +
+            '!==t.base)t.changed=performance.now();})' +
+            '.observe(document.getElementById("rows"),{childList:true,subtree:true,characterData:true});})()',
+        );
+      const rearm = () => page.evaluate('window.__menuT.changed=0;window.__menuT.base=' + LABELS);
+      const took = async () => {
+        await waitFor('window.__menuT.changed > 0', 'the rows to change', 10000);
+        return page.evaluate('window.__menuT.changed - window.__menuT.key');
+      };
+      return step(
+        'the menu loads a new page 150ms after the last arrow and a seen one at once',
+        async function () {
+          await press('ArrowUp');
+          await arm();
+          await press('ArrowRight');
+          const first = await took();
+          assertEqual(
+            first >= 140 && first < 290,
+            true,
+            'Kids loaded ' + first + 'ms after the arrow',
+          );
+          await rearm();
+          await press('ArrowLeft');
+          const seen = await took();
+          assertEqual(seen < 100, true, 'a page seen before took ' + seen + 'ms');
+          await press('Escape');
+        },
+      );
+    })
+
+    .then(function () {
       const menuOpen = () =>
         page.evaluate('document.getElementById("browse").classList.contains("menu")');
       const sidebarText = () =>
