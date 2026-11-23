@@ -98,3 +98,77 @@ body.on-browse #bg.hero-on .glow { opacity: 0; }
   -webkit-transform: rotate(45deg); transform: rotate(45deg);
 }
 #browse.dense #menu-hint, #browse.menu #menu-hint { display: none; }
+
+/* ---- glass: the skin every menu-shell host wears (src/view/menu.ts) ---- */
+#glass-scrim {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 5;
+  background: rgba(8, 5, 18, .78);
+}
+.glass, #dt-menu.glass, #menu.glass, #confirm.glass {
+  z-index: 6;
+  background-color: rgba(24, 16, 46, .96);
+  background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  border: 1px solid rgba(255, 255, 255, .26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 40px 90px rgba(0, 0, 0, .7);
+  font-family: var(--font-body);
+}
+.glass .menu-head-title, .glass .menu-tab { font-family: var(--font-title); }
+.glass .menu-row.sel { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 3px #fff; }
+
+/* ---- the remote-key legend ---- */
+.lg-item { display: inline-block; margin-right: 40px; font-size: 24px; color: rgba(255, 255, 255, .78); }
+.lg-dot {
+  display: inline-block; vertical-align: middle; width: 22px; height: 22px;
+  margin-right: 12px; border-radius: 50%;
+}
+.lg-label { vertical-align: middle; }
+.lg-ok { background: #fff; }
+.lg-red { background: #e5484d; }
+.lg-yellow { background: #f5c84c; }
+.lg-blue { background: #4d8ef0; }
+
+/* ---- inner tabs ---- */
+.v2-tab {
+  display: inline-block; margin-right: 48px; padding-bottom: 8px;
+  font-family: var(--font-title); font-size: 28px; color: rgba(255, 255, 255, .5);
+  border-bottom: 4px solid transparent;
+}
+.v2-tab.on { color: #fff; border-bottom-color: var(--ac); }
+
+/* ---- the poster grid ----
+   --grid-y is the pan's scroll, on the grid's own element and never :root. */
+.gd { position: relative; overflow: hidden; height: var(--gd-height); }
+.gd-pan {
+  position: absolute; top: 0; left: 0; width: 100%;
+  -webkit-transform: translateY(var(--grid-y, 0px)); transform: translateY(var(--grid-y, 0px));
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+.gd-row {
+  position: absolute; top: 0; left: 0; width: 100%; white-space: nowrap;
+  -webkit-transform: translateY(var(--ry, 0px)); transform: translateY(var(--ry, 0px));
+}
+.gd-tile {
+  position: relative; display: inline-block; vertical-align: top;
+  width: var(--gd-w); height: var(--gd-h); margin-right: var(--gd-gap);
+  border-radius: 14px; overflow: hidden; background: var(--surface);
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+.gd-tile.on {
+  z-index: 1; box-shadow: 0 0 0 3px #fff;
+  -webkit-transform: scale(1.08); transform: scale(1.08);
+}
+.gd-tile.absent { opacity: .45; }
+.gd-img { display: block; width: 100%; height: 100%; -o-object-fit: cover; object-fit: cover; }
+.gd-title {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 14px 16px;
+  font-size: 22px; line-height: 1.25; color: #fff; white-space: normal;
+  background: rgba(10, 8, 24, .5);
+}
+.gd-tag {
+  display: none; position: absolute; top: 12px; left: 12px; padding: 4px 10px;
+  border-radius: var(--r-tag); font-size: 18px; color: #fff; background: rgba(10, 8, 24, .8);
+}
+.gd-tile.absent .gd-tag { display: block; }

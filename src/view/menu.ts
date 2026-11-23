@@ -120,6 +120,10 @@ function paint(): void {
   noteElement.textContent = tabs[tab]?.note ?? '';
 }
 
+function scrim(): HTMLElement | null {
+  return document.getElementById('glass-scrim');
+}
+
 function shell(): HTMLElement[] {
   const headRow = document.createElement('div');
   headRow.className = 'menu-head';
@@ -163,7 +167,10 @@ export function open(options: {
   noteElement = host.querySelector('.menu-note');
   build();
   land();
+  host.classList.add('glass');
   host.classList.remove('hidden');
+  /* The held tile is the point of a hold menu, and the scrim would dim it. */
+  if (!host.classList.contains('hold-menu')) scrim()?.classList.remove('hidden');
   paint();
 }
 
@@ -171,6 +178,7 @@ export function close(): void {
   if (!host) return;
   const done = onClose;
   host.classList.add('hidden');
+  scrim()?.classList.add('hidden');
   host = null;
   tabs = [];
   head = null;
