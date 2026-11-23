@@ -80,7 +80,7 @@ module.exports = function (h) {
     });
   }
 
-  /* Reload onto Movies with the counter reset and the named server's promoted hubs
+  /* Reload onto the launch page with the counter reset and the named server's promoted hubs
      failing, wait for the hub rows, and return what the servers were asked. */
   function reloadForHubs(failing) {
     currentFailing = failing;
@@ -163,7 +163,25 @@ module.exports = function (h) {
       .then(function () {
         return step('the deck lands before the hubs do', function () {
           let expected;
-          return cachedRows('Movies')
+          /* Home is only cached when it is the page shown, so land on it fresh
+             first: the hubs arriving means the cache now holds the servers' deck. */
+          return page
+            .reload()
+            .then(function () {
+              return h.ready();
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var l=document.querySelectorAll("#rows .row .row-label"),i;' +
+                  'for(i=0;i<l.length;i++) if(l[i].textContent.trim()==="Recently Added") return true;' +
+                  'return false;})()',
+                'the hub row on a fresh Home',
+                15000,
+              );
+            })
+            .then(function () {
+              return cachedRows('Home');
+            })
             .then(function (hit) {
               const row = hit.rows.find(function (r) {
                 return r.title === 'Continue watching';
@@ -175,7 +193,7 @@ module.exports = function (h) {
                  network. */
               const stale = row.items.slice(1).concat(row.items.slice(0, 1));
               if (titleOf(stale[0]) === expected) throw new Error('could not make a stale deck');
-              return writeRows('Movies', {
+              return writeRows('Home', {
                 rows: [{ title: 'Continue watching', items: stale }],
               });
             })
@@ -228,7 +246,7 @@ module.exports = function (h) {
       /* ---- a section's rows are one request per server ---- */
 
       .then(function () {
-        return step('opening Movies asks each server once for its rows', function () {
+        return step('opening Home asks each server once for its rows', function () {
           return reloadForHubs('').then(function (calls) {
             const promoted = calls.filter(function (c) {
               return c.indexOf('/hubs/promoted') >= 0;
@@ -316,7 +334,7 @@ module.exports = function (h) {
         if (!hasFixture()) return;
         return step('the refreshed deck is what the cache holds', function () {
           const watched = titles.directPlays.title;
-          return cachedDeckFirst('Movies')
+          return cachedDeckFirst('Home')
             .then(function (first) {
               if (first !== watched) {
                 throw new Error('cache opens Continue watching on "' + first + '"');
@@ -729,7 +747,11 @@ module.exports = function (h) {
               /* The cached rows carry Continue watching too, in every section, so
              they have to go or a reload paints it straight back. */
               .then(function () {
-                return Promise.all([cachedRows('Movies'), cachedRows('TV Shows')]);
+                return Promise.all([
+                  cachedRows('Home'),
+                  cachedRows('Movies'),
+                  cachedRows('TV Shows'),
+                ]);
               })
               .then(function (cached) {
                 const kept = cached.filter(Boolean);

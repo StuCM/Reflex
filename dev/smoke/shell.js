@@ -519,10 +519,11 @@ module.exports = function (h) {
         );
         await h.openSidebar();
         const after = await sidebarText();
+        /* The way to More from a library passes Home, which shows at once. */
         assertEqual(
-          /\* Movies/.test(after) && !/\* Kids/.test(after),
+          /\* Continue watching/.test(after) && !/\* Kids/.test(after),
           true,
-          'Movies is current in ' + after,
+          'Kids is no longer current in ' + after,
         );
         await press('ArrowLeft');
       });
@@ -847,6 +848,147 @@ module.exports = function (h) {
                 'placeholders gone',
               );
               await page.evaluate('fetch("/__plextv/slow-hubs?ms=0")');
+            },
+          );
+        });
+    })
+
+    .then(function () {
+      const calls = (query) =>
+        page.evaluate(function (q) {
+          return fetch('/__plextv/hub-calls?' + q).then((r) => r.json());
+        }, query);
+      const LABELS =
+        'Array.prototype.map.call(document.querySelectorAll("#rows .row:not(.hidden) .row-label"), function (t) {' +
+        ' return t.textContent.trim(); }).join("|")';
+      const KEY = (code) =>
+        'document.dispatchEvent(new KeyboardEvent("keydown", { keyCode: ' + code + ' }));';
+      const GO = (code) =>
+        '(function(){' +
+        KEY(code) +
+        KEY(13) +
+        'return { labels: ' +
+        LABELS +
+        ', tiles: document.querySelectorAll("#rows .tile:not(.hidden):not(.placeholder)").length };})()';
+      const settle = async (what) => {
+        await waitFor('(' + LABELS + ').split("|").length > 2', what, 15000);
+        await page.waitForTimeout(1500);
+      };
+      const heldTitles = async (name) => {
+        const held = await h.cachedRows(name);
+        return held && held.rows ? held.rows.map((row) => row.title) : [];
+      };
+      /* Down to the last row, and the label it carries. */
+      const lastLabel = async () => {
+        await press('ArrowDown', 8);
+        const labels = (await page.evaluate(LABELS)).split('|');
+        await press('ArrowUp', 8);
+        return labels[labels.length - 1];
+      };
+
+      return step(
+        'Home mixes both libraries, and Home, Movies and TV have no All row',
+        async function () {
+          await calls('reset=1');
+          await page.reload();
+          await h.ready();
+          await settle('Home rows');
+          const homeLast = await lastLabel();
+          await press('ArrowUp');
+          await press('ArrowRight');
+          await page.waitForTimeout(400);
+          await press('Enter');
+          await settle('Movies rows');
+          const moviesLast = await lastLabel();
+          await press('ArrowUp');
+          await press('ArrowRight');
+          await page.waitForTimeout(400);
+          await press('Enter');
+          await settle('TV rows');
+          const tvLast = await lastLabel();
+
+          const home = await heldTitles('Home');
+          const movies = await heldTitles('Movies');
+          const tv = await heldTitles('TV Shows');
+          assertEqual(home.indexOf('Recently Aired') >= 0, true, 'Home has a TV row: ' + home);
+          assertEqual(home.indexOf('Recently Released') >= 0, true, 'Home has a film row: ' + home);
+          assertEqual(movies.indexOf('Recently Released') >= 0, true, 'Movies rows: ' + movies);
+          assertEqual(movies.indexOf('Recently Aired'), -1, 'Movies has no TV row: ' + movies);
+          assertEqual(tv.indexOf('Recently Aired') >= 0, true, 'TV rows: ' + tv);
+          assertEqual(homeLast, home[home.length - 1], 'Home ends on its last hub');
+          assertEqual(moviesLast, movies[movies.length - 1], 'Movies ends on its last hub');
+          assertEqual(tvLast, tv[tv.length - 1], 'TV ends on its last hub');
+        },
+      )
+        .then(function () {
+          return step(
+            'Movies, Home, Movies within two minutes makes no request, and the first visit did',
+            async function () {
+              await calls('reset=1');
+              await page.reload();
+              await h.ready();
+              await settle('Home after a reload');
+              const first = (await calls('')).length;
+              assertEqual(first > 0, true, 'the first visit asks the servers (' + first + ')');
+              await press('ArrowUp');
+              await press('ArrowRight');
+              await settle('Movies');
+              await calls('reset=1');
+              const home = await page.evaluate(GO(37));
+              await press('ArrowUp');
+              assertEqual(
+                home.labels.split('|').length > 2 && home.tiles > 0,
+                true,
+                'Home in the first frame: ' + home.labels,
+              );
+              const movies = await page.evaluate(GO(39));
+              assertEqual(
+                movies.labels.split('|').length > 2 && movies.tiles > 0,
+                true,
+                'Movies in the first frame: ' + movies.labels,
+              );
+              await page.waitForTimeout(1500);
+              assertEqual((await calls('')).length, 0, 'Movies, Home, Movies asked nothing');
+            },
+          );
+        })
+        .then(function () {
+          return step(
+            'Kids, Collections and Discover come back whole in the first frame',
+            async function () {
+              const hop = async (code) => {
+                await press('ArrowUp');
+                return page.evaluate(GO(code));
+              };
+              const loaded = async (ready, what) => {
+                await waitFor(ready, what, 60000);
+                await page.waitForTimeout(1500);
+              };
+              const tiles = 'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0';
+              await hop(39);
+              await hop(39);
+              await loaded('/Popular kids films/.test(' + LABELS + ')', 'the kids rows');
+              await hop(39);
+              await loaded(tiles, 'the first collection');
+              await hop(39);
+              await loaded(tiles, 'the discovery rows');
+
+              const collections = await hop(37);
+              assertEqual(collections.tiles > 0, true, 'Collections in the first frame');
+              const kids = await hop(37);
+              assertEqual(
+                /Popular kids films/.test(kids.labels) && kids.tiles > 0,
+                true,
+                'Kids in the first frame: ' + kids.labels,
+              );
+              await hop(39);
+              const discover = await hop(39);
+              assertEqual(
+                discover.labels.length > 0 && discover.tiles > 0,
+                true,
+                'Discover in the first frame: ' + discover.labels,
+              );
+              await press('Escape');
             },
           );
         });

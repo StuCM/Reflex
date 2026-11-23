@@ -4,7 +4,6 @@
    own totals and walks them in title order only as far as you scroll. */
 import {
   collectionItems as plexCollectionItems,
-  collections as plexCollections,
   hideFromDeck as plexHideFromDeck,
   sectionHubs,
   items as plexItems,
@@ -28,6 +27,7 @@ import * as discovery from '../data/discovery';
 import * as kids from '../data/kids';
 import settings from '../core/config';
 import * as saved from './pages';
+import * as router from './router';
 import * as masthead from '../view/masthead';
 import * as glyphs from '../view/glyphs';
 import { createHold } from '../view/hold';
@@ -72,15 +72,6 @@ interface BrowseSection {
 
 type Mode = 'library' | 'kids' | 'discover' | 'collection';
 
-interface CollectionEntry {
-  title: string;
-  count: number;
-  parts: { server: string; key: string }[];
-}
-
-/** Fewer films than this across every server and it is not a collection worth a place. */
-const MIN_COLLECTION = 5;
-
 interface BrowseOptions {
   onOpen?: (item: PlexItem) => void;
   onShow?: (item: PlexItem) => void;
@@ -89,7 +80,9 @@ interface BrowseOptions {
 }
 
 let sections: BrowseSection[] = [];
-let sectionIndex = 0;
+/** Snapshot key of the library page showing or last shown: home, movies, tv, or libN from the sidebar. */
+let viewKey = 'home';
+let homeSection: BrowseSection | undefined;
 let rows: Row[] = [];
 let rowIndex = 0;
 /** section title -> its row titles, for the sidebar. */
@@ -103,8 +96,6 @@ let watchingType: string | null = null;
 /** Row to land on once the next section is built. */
 let wantRow = 0;
 let mode: Mode = 'library';
-/** The movie collections worth listing, merged by title across servers. */
-let collectionEntries: CollectionEntry[] = [];
 /** The one showing, while mode is 'collection'. */
 let collectionTitle = '';
 /** Rows parked while showing search results. */
@@ -170,7 +161,18 @@ export function hasRows() {
   return rows.length > 0;
 }
 export function currentSection() {
-  return sections[sectionIndex] || null;
+  return viewSection() || null;
+}
+
+const sectionKey = (i: number) => `lib${i}`;
+/* Only a library opened from the sidebar carries the All row. */
+const hasAll = (name: string) => name.startsWith('lib');
+
+function viewSection(name = viewKey): BrowseSection | undefined {
+  if (name === 'home') return homeSection;
+  if (name === 'movies') return sections.find((section) => section.type === 'movie');
+  if (name === 'tv') return sections.find((section) => section.type === 'show');
+  return sections[Number(name.slice(3))];
 }
 
 /* A guard any in-flight load can check before it paints. */
@@ -203,7 +205,7 @@ export function render() {
    library and an LQ one contributes two parts; the merge folds them back to
    one entry per film, the way it already does across servers. */
 
-export function setSections(perServer: { server: PlexServer; sections: PlexSection[] }[]): number {
+export function setSections(perServer: { server: PlexServer; sections: PlexSection[] }[]): void {
   const byType: Partial<Record<'movie' | 'show', BrowseSection>> = {};
 
   perServer.forEach((entry) => {
@@ -221,13 +223,17 @@ export function setSections(perServer: { server: PlexServer; sections: PlexSecti
     });
   });
 
-  const currentTitle = sections[sectionIndex]?.title;
   sections = SECTION_ORDER.map((type) => byType[type]).filter(
     (section): section is BrowseSection => !!section,
   );
-  const at = sections.findIndex((section) => section.title === currentTitle);
-  void listCollections(byType.movie);
-  return at < 0 ? 0 : at;
+  const parts = ([] as MergePart[]).concat(...sections.map((section) => section.parts));
+  homeSection = parts.length ? { title: 'Home', type: 'movie', parts } : undefined;
+  void router.listCollections(byType.movie?.parts ?? []);
+}
+
+/** Launch: show the page the app is on, from the cache or the servers. */
+export function start(allowFetch: boolean): void {
+  loadView(viewKey, allowFetch);
 }
 
 function serversOf(section: BrowseSection): PlexServer[] {
@@ -262,13 +268,13 @@ function openSidebar() {
       return {
         title: section.title,
         categories: cats[section.title] ?? [],
-        current: mode === 'library' && i === sectionIndex,
+        current: mode === 'library' && viewKey === sectionKey(i),
       };
     }),
     activate,
     mode,
     watching,
-    collectionEntries.map((entry) => ({
+    router.collectionEntries().map((entry) => ({
       title: entry.title,
       current: mode === 'collection' && entry.title === collectionTitle,
     })),
@@ -277,48 +283,52 @@ function openSidebar() {
 
 /* ---------- the top menu ---------- */
 
-const PAGE_HOME = 0;
-const PAGE_KIDS = 3;
-const PAGE_COLLECTIONS = 4;
-const PAGE_DISCOVER = 5;
-let lastPage = PAGE_HOME;
-
-function currentPage(): number {
-  if (mode === 'kids') return PAGE_KIDS;
-  if (mode === 'discover') return PAGE_DISCOVER;
-  if (mode === 'collection') return PAGE_COLLECTIONS;
-  if (sectionIndex === 1) return 2;
-  return lastPage === 1 ? 1 : PAGE_HOME;
+function pageId(): router.PageId {
+  if (mode === 'kids' || mode === 'discover') return mode;
+  if (mode === 'collection') return 'collections';
+  if (viewKey === 'home') return 'home';
+  return viewSection()?.type === 'show' ? 'tv' : 'movies';
 }
 
-function showSection(i: number, settled: boolean): void {
-  const here = mode === 'library' && sectionIndex === i;
-  if (!sections[i]) toast('Nothing there on these servers');
-  else if (settled ? !here || Date.now() - loadedAt >= saved.FRESH_FOR : !here && saved.recall(i)) {
-    loadSection(i, settled);
+function currentPage(): number {
+  return router.indexOf(pageId());
+}
+
+function showPage(name: string, settled: boolean): void {
+  const here = mode === 'library' && viewKey === name;
+  if (!viewSection(name)) toast('Nothing there on these servers');
+  else if (
+    settled ? !here || Date.now() - loadedAt >= saved.FRESH_FOR : !here && saved.recall(name)
+  ) {
+    loadView(name, settled);
   }
 }
 
-function goToPage(page: number, settled: boolean): void {
-  lastPage = page;
-  if (page <= 2) showSection(Math.max(page - 1, 0), settled);
-  else if (!settled) return;
-  else if (page === PAGE_COLLECTIONS) {
-    const first = collectionEntries[0];
-    if (mode === 'collection') return;
-    if (first) loadCollection(first);
-    else toast('No collections on these servers');
-  } else if (page === PAGE_DISCOVER && mode !== 'discover') loadDiscover();
-  else if (page === PAGE_KIDS && mode !== 'kids') loadKids();
+/* A page kept within the window comes back as it was; otherwise it loads, once settled. */
+function showMode(wanted: Mode, snapshot: string, load: () => void, settled: boolean): void {
+  if (mode === wanted || restore(snapshot, wanted)) return;
+  if (settled) load();
 }
 
+router.register('home', (settled) => showPage('home', settled));
+router.register('movies', (settled) => showPage('movies', settled));
+router.register('tv', (settled) => showPage('tv', settled));
+router.register('kids', (settled) => showMode('kids', 'kids', loadKids, settled));
+router.register('discover', (settled) => showMode('discover', 'discover', loadDiscover, settled));
+router.register('collections', (settled) => {
+  const first = router.collectionEntries()[0];
+  if (first)
+    showMode('collection', collectionKey(first.title), () => loadCollection(first), settled);
+  else if (settled) toast('No collections on these servers');
+});
+
 function menuKey(code: number): boolean {
-  if (menubar.key(code, goToPage)) return true;
+  if (menubar.key(code, router.goTo)) return true;
   if (code === KEY.OK && menubar.focused() === menubar.MORE) {
     menubar.close();
     openSidebar();
   } else if (code === KEY.OK || code === KEY.DOWN || isBack(code)) {
-    menubar.flush(goToPage);
+    menubar.flush(router.goTo);
     menubar.close();
   }
   return true;
@@ -471,7 +481,7 @@ function dropFromDeck(entry: PlexItem) {
   const gone = identity(entry);
   saved.clear();
   deckItems = deckItems.filter((held) => identity(held) !== gone);
-  sections.forEach((section) => void cached.rows.drop(section.title));
+  sections.concat(homeSection ?? []).forEach((section) => void cached.rows.drop(section.title));
   const at = watchingRowIndex();
   const current = rows[at];
   if (at < 0 || !current) return;
@@ -593,7 +603,7 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
   if (choice.kind === 'watching') {
     /* Kids and discovery have no Continue watching row, so the library comes
        back first — it lands on row 0, which is it. */
-    if (mode !== 'library') loadSection(sectionIndex, true);
+    if (mode !== 'library') loadView(viewKey, true);
     else showWatching(choice.type ?? null);
     return;
   }
@@ -620,7 +630,7 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
   }
   if (choice.kind === 'collections') return;
   if (choice.kind === 'collection') {
-    const entry = collectionEntries[choice.index ?? -1];
+    const entry = router.collectionEntries()[choice.index ?? -1];
     if (entry) loadCollection(entry);
     return;
   }
@@ -630,7 +640,7 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
     /* Rebuild the rows: which copy of a shared film is shown changes with
        the preference. */
     saved.clear();
-    loadSection(sectionIndex, true);
+    loadView(viewKey, true);
     return;
   }
   if (choice.kind === 'autoplay') {
@@ -654,21 +664,22 @@ function activate(choice: { kind: string; index?: number; row?: number; type?: s
       showView('browse');
       if (changed) {
         saved.clear();
-        loadSection(sectionIndex, true);
+        loadView(viewKey, true);
       } else render();
     });
     return;
   }
   if (choice.kind === 'row') {
-    if (mode === 'library' && choice.index === sectionIndex) {
+    if (mode === 'library' && viewKey === sectionKey(choice.index ?? 0)) {
       rowIndex = clamp(choice.row ?? 0, 0, rows.length - 1);
       render();
     } else {
-      loadSection(choice.index ?? 0, true, choice.row);
+      loadView(sectionKey(choice.index ?? 0), true, choice.row);
     }
     return;
   }
-  if (mode !== 'library' || choice.index !== sectionIndex) loadSection(choice.index ?? 0, true);
+  const name = sectionKey(choice.index ?? 0);
+  if (mode !== 'library' || viewKey !== name) loadView(name, true);
   else render();
 }
 
@@ -684,6 +695,7 @@ function reset(newMode: Mode) {
   generation++;
   if (newMode !== 'library') keepPage();
   mode = newMode;
+  loadedAt = 0;
   keepHeld = undefined;
   rows = [];
   rowIndex = 0;
@@ -697,10 +709,32 @@ function reset(newMode: Mode) {
   render();
 }
 
-/* The page on screen, put by for when it is come back to. */
+const collectionKey = (title: string) => `collection:${title}`;
+
+function snapshotKey(): string {
+  if (mode === 'collection') return collectionKey(collectionTitle);
+  return mode === 'library' ? viewKey : mode;
+}
+
+/* The page on screen, put by for when it is come back to. A page that has not finished loading has loadedAt 0 and is not kept. */
 function keepPage() {
-  if (mode !== 'library' || searchQuery !== null || !rows.length || loadingRow) return;
-  saved.keep(sectionIndex, { rows, rowIndex, deckItems, loadedAt });
+  if (searchQuery !== null || !rows.length || loadingRow) return;
+  if (mode !== 'library' && !loadedAt) return;
+  saved.keep(snapshotKey(), { rows, rowIndex, deckItems, loadedAt, held: keepHeld });
+}
+
+/* Puts a fresh snapshot back as the mode, without asking anyone. */
+function restore(name: string, newMode: Mode): boolean {
+  const page = saved.recall(name);
+  if (!page || !saved.isFresh(page)) return false;
+  reset(newMode);
+  rows = page.rows;
+  rowIndex = page.rowIndex;
+  deckItems = page.deckItems;
+  loadedAt = page.loadedAt;
+  keepHeld = page.held;
+  render();
+  return true;
 }
 
 /* Rows from titled item lists, remembering the part-watched ones so the
@@ -812,9 +846,9 @@ function landDeck(deck: PlexItem[]) {
     target.unshift(rowModel.list(WATCHING, deckCut()));
     if (!parked && target.length > 1 && !loadingRow) rowIndex++;
   }
-  const section = sections[sectionIndex];
+  const section = viewSection();
   if (section) {
-    if (!parked) noteCategories(section);
+    if (!parked && hasAll(viewKey)) noteCategories(section);
     cacheLists(section, target);
   }
   if (parked) return;
@@ -836,7 +870,7 @@ function cacheLists(section: BrowseSection, held: Row[]) {
 /* Ask the servers again what is on deck. Called on coming back from the
    player, when the history `mine` filters by is also a launch old. */
 export function refreshDeck(forgetHistory?: boolean) {
-  const section = sections[sectionIndex];
+  const section = viewSection();
   if (!section || mode !== 'library') return;
   if (forgetHistory) devices.forgetHistory();
   saved.clear();
@@ -854,25 +888,26 @@ export function refreshDeck(forgetHistory?: boolean) {
 /* focusRow lands on a named category once its section is built, which is what
    picking one out of the sidebar has to do when it belongs to another
    section. */
-export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
+function loadView(name: string, allowFetch: boolean, focusRow?: number) {
   keepPage();
-  const here = mode === 'library' && sectionIndex === i;
+  const here = mode === 'library' && viewKey === name;
   /* Asking again for the page on screen leaves it there until the answer lands. */
   const stay = here && rows.length > 0 && !loadingRow && !picking && searchQuery === null;
-  const page = here ? undefined : saved.recall(i);
-  sectionIndex = i;
+  const page = here ? undefined : saved.recall(name);
+  viewKey = name;
+  const withAll = hasAll(name);
   wantRow = focusRow || 0;
   if (stay) generation++;
   else reset('library');
   const isCurrent = generationGuard();
-  const section = sections[i];
+  const section = viewSection(name);
   if (!section) return;
   if (page) {
     rows = page.rows;
     rowIndex = focusRow === undefined ? page.rowIndex : clamp(focusRow, 0, rows.length - 1);
     deckItems = page.deckItems;
     loadedAt = page.loadedAt;
-    noteCategories(section);
+    if (withAll) noteCategories(section);
     render();
     if (saved.isFresh(page) || !allowFetch) return;
   } else if (!stay) {
@@ -887,9 +922,9 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
       if (hit?.rows?.length) {
         loadingRow = null;
         rows = listRows(hit.rows as { title: string; items: PlexItem[] }[]);
-        rows.push(allRow(section));
+        if (withAll) rows.push(allRow(section));
         loadedAt = 0;
-        noteCategories(section);
+        if (withAll) noteCategories(section);
         rowIndex = clamp(wantRow, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
         render();
@@ -916,19 +951,19 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
         const deck = saved.buildDeck(results[0]);
         if (deck.length) built.push({ title: WATCHING, items: deck });
 
-        mergeHubs(results[1]).forEach((hub) => {
+        saved.mergeHubs(results[1]).forEach((hub) => {
           built.push(hub);
         });
 
         void cached.rows.put(section.title, { rows: built });
         const heldTitle = focusedRow() === loadingRow ? undefined : focusedRow()?.title;
         const walked = rows[rows.length - 1];
-        const last = page && walked?.kind === 'merge' ? walked : allRow(section);
+        const last = withAll && (page && walked?.kind === 'merge' ? walked : allRow(section));
         loadingRow = null;
         rows = listRows(built);
-        rows.push(last);
+        if (last) rows.push(last);
         loadedAt = Date.now();
-        noteCategories(section);
+        if (withAll) noteCategories(section);
         const heldAt = rows.findIndex((row) => row.title === heldTitle);
         rowIndex = heldAt >= 0 ? heldAt : clamp(rowIndex || wantRow, 0, rows.length - 1);
         primeTotals(rows[rows.length - 1], isCurrent);
@@ -944,26 +979,6 @@ export function loadSection(i: number, allowFetch: boolean, focusRow?: number) {
       debug(`rows: ${error.message}`);
       if (!rows.length || loadingRow) toast('Could not reach the servers');
     });
-}
-
-/* Both servers offer a "Recently Added"; they are one row, deduplicated.
-   Order within it is first-seen, which keeps each server's own ordering
-   intact rather than inventing a ranking across them. */
-function mergeHubs(perPart: PlexHub[][]): { title: string; items: PlexItem[] }[] {
-  const byTitle: Record<string, PlexItem[][]> = {};
-  const order: string[] = [];
-  perPart.forEach((hubs) => {
-    hubs.forEach((hub) => {
-      if (!byTitle[hub.title]) {
-        byTitle[hub.title] = [];
-        order.push(hub.title);
-      }
-      byTitle[hub.title]?.push(hub.items);
-    });
-  });
-  return order
-    .map((title) => ({ title, items: merge.lists(byTitle[title] ?? []) }))
-    .filter((hub) => hub.items.length > 0);
 }
 
 /* ---------- walking the merge ---------- */
@@ -1001,57 +1016,10 @@ function scheduleWalk() {
   }, 150);
 }
 
-/* ---------- collections ---------- */
-
-/* Each movie library's collections, from the daily cache or one request. LQ
-   libraries hold only cam copies, so their collections are skipped. */
-async function fetchCollections(part: MergePart): Promise<PlexCollection[]> {
-  const id = `${part.server.id}:${part.key}`;
-  const hit = await cached.collections.get(id);
-  if (hit) return hit;
-  const found = await plexCollections(part.server, part.key);
-  void cached.collections.put(id, found);
-  return found;
-}
-
-/* setSections runs twice at boot, from cache and then live, so the first ask
-   is shared rather than repeated before the cache has been written. */
-const asked: Record<string, Promise<PlexCollection[]>> = {};
-function libraryCollections(part: MergePart): Promise<PlexCollection[]> {
-  const id = `${part.server.id}:${part.key}`;
-  asked[id] ??= fetchCollections(part);
-  return asked[id];
-}
-
-/* Merged by title across servers; a failure leaves the sidebar group empty. */
-async function listCollections(section: BrowseSection | undefined): Promise<void> {
-  if (!section) return;
-  const parts = section.parts.filter((part) => !/\bLQ\b/i.test(part.title ?? ''));
-  const perPart = await Promise.all(parts.map((part) => libraryCollections(part)));
-  const byTitle: Record<string, CollectionEntry> = {};
-  const merged: CollectionEntry[] = [];
-  perPart.forEach((list) => {
-    list.forEach((one) => {
-      if (!one.title) return;
-      let entry = byTitle[one.title];
-      if (!entry) {
-        entry = { title: one.title, count: 0, parts: [] };
-        byTitle[one.title] = entry;
-        merged.push(entry);
-      }
-      entry.count += one.count;
-      entry.parts.push({ server: one.server, key: one.ratingKey });
-    });
-  });
-  collectionEntries = merged
-    .filter((entry) => entry.count >= MIN_COLLECTION)
-    .sort((one, two) => (one.title < two.title ? -1 : 1));
-}
-
 /* One row of the collection's films. The merge walks by title, so each page is
    keyed by (server rank, position) instead: the preferred server's films in its
    own collection order, then the other copies' extras. */
-function loadCollection(entry: CollectionEntry) {
+function loadCollection(entry: router.CollectionEntry) {
   reset('collection');
   collectionTitle = entry.title;
   const preferred = servers.preferred();
@@ -1074,6 +1042,7 @@ function loadCollection(entry: CollectionEntry) {
     return page;
   };
   rows = [rowModel.merged(entry.title, parts, fetch)];
+  loadedAt = Date.now();
   render();
 }
 
@@ -1142,10 +1111,8 @@ export function openKids(): void {
   menu.close();
   menubar.close();
   menubar.abandon();
-  lastPage = PAGE_KIDS;
-  setPage(PAGE_KIDS);
-  if (mode === 'kids') return;
-  loadKids();
+  setPage(router.indexOf('kids'));
+  showMode('kids', 'kids', loadKids, true);
 }
 
 function loadKids() {
@@ -1205,7 +1172,9 @@ function loadKids() {
   );
 
   void Promise.all([rowsDone, heldDone]).then(() => {
-    if (!isCurrent() || rows.length) return;
+    if (!isCurrent()) return;
+    loadedAt = Date.now();
+    if (rows.length) return;
     message(
       'Nothing to show',
       'No kids titles on the servers match what TMDB lists. BACK to return.',
@@ -1282,7 +1251,9 @@ function loadDiscover() {
       add: addDiscoveryRow,
     })
     .then(() => {
-      if (!isCurrent() || rows.length) return;
+      if (!isCurrent()) return;
+      loadedAt = Date.now();
+      if (rows.length) return;
       message(
         'Nothing to show',
         'TMDB returned no titles for any of the categories in js/config.js. ' +
@@ -1293,7 +1264,7 @@ function loadDiscover() {
 
 function leaveMode() {
   if (mode === 'library') return false;
-  loadSection(sectionIndex, true);
+  loadView(viewKey, true);
   return true;
 }
 

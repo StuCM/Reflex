@@ -631,9 +631,8 @@ function drive(page, titles, port) {
         });
       });
     }
-    /* No pause between presses, and the way round that passes no library
-       page of another section: a page seen before shows at once on an arrow,
-       so Home and Movies go left (wrapping to More) and TV goes right. */
+    /* No pause between presses. A page seen before shows at once on an arrow,
+       so Movies passes Home on the way left (wrapping to More) and TV goes right. */
     function toMore() {
       return page
         .evaluate(function () {
