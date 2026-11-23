@@ -347,7 +347,7 @@ module.exports = function (h) {
 
       .then(function () {
         if (!hasFixture()) return;
-        return step('the buttons are the design’s size and the panel is opaque', function () {
+        return step('the buttons are the design’s size and the panel wears the glass', function () {
           return page
             .evaluate(function () {
               function widths(sel) {
@@ -378,13 +378,14 @@ module.exports = function (h) {
             .then(function () {
               return page.evaluate(function () {
                 const s = getComputedStyle(document.getElementById('menu'));
-                return [s.backgroundColor, s.borderTopLeftRadius];
+                return [s.backgroundColor, s.borderTopLeftRadius, s.backgroundImage];
               });
             })
             .then(function (style) {
               const parts = /rgba?\(([^)]+)\)/.exec(style[0])[1].split(',');
               const alpha = parts.length > 3 ? Number(parts[3]) : 1;
-              if (alpha !== 1) throw new Error('the panel is translucent: ' + style[0]);
+              if (alpha !== 0.96) throw new Error('the panel is not the glass base: ' + style[0]);
+              if (!/gradient/.test(style[2])) throw new Error('the panel has no glass sheen');
               if (style[1] !== '26px') throw new Error('the panel corner is ' + style[1]);
             })
             .then(function () {

@@ -16,6 +16,132 @@ module.exports = function (h) {
     .ready()
 
     .then(function () {
+      return step('the grid keeps a bounded pool and focus reaches item 300', async function () {
+        const got = await page.evaluate(function () {
+          const host = document.createElement('div');
+          host.id = 'test-grid';
+          document.body.appendChild(host);
+          const items = [];
+          for (let i = 0; i < 500; i++) items.push({ title: 'Film ' + i, absent: i === 300 });
+          const g = window.Grid.grid(host, {
+            columns: 7,
+            tileW: 206,
+            tileH: 309,
+            gap: 40,
+            rows: 2,
+          });
+          g.render(items, 0);
+          const before = host.querySelectorAll('.gd-tile').length;
+          g.render(items, 300);
+          const on = host.querySelector('.gd-tile.on');
+          const out = {
+            before: before,
+            after: host.querySelectorAll('.gd-tile').length,
+            visible: host.querySelectorAll('.gd-tile:not(.hidden)').length,
+            title: on && on.querySelector('.gd-title').textContent,
+            absent: on && on.classList.contains('absent'),
+            tag: on && getComputedStyle(on.querySelector('.gd-tag')).display,
+          };
+          host.parentNode.removeChild(host);
+          return out;
+        });
+        assertEqual(got.before, 21, 'pool before');
+        assertEqual(got.after, 21, 'pool after focusing 300');
+        assertEqual(got.visible, 21, 'tiles carrying an item');
+        assertEqual(got.title, 'Film 300', 'focused title');
+        assertEqual(got.absent, true, 'absent class');
+        assertEqual(got.tag, 'block', 'not-on-server tag shown');
+      });
+    })
+
+    .then(function () {
+      return step(
+        'the legend lists its keys in order with their colour classes',
+        async function () {
+          const got = await page.evaluate(function () {
+            const host = document.createElement('div');
+            document.body.appendChild(host);
+            window.Legend.legend(host, [
+              { key: 'ok', label: 'Play' },
+              { key: 'yellow', label: 'Add to list' },
+              { key: 'red', label: 'Mark watched' },
+              { key: 'blue', label: 'Trailer' },
+            ]);
+            const out = Array.prototype.map.call(
+              host.querySelectorAll('.lg-item'),
+              function (item) {
+                return item.querySelector('.lg-dot').className + '=' + item.textContent;
+              },
+            );
+            host.parentNode.removeChild(host);
+            return out.join('|');
+          });
+          assertEqual(
+            got,
+            'lg-dot lg-ok=Play|lg-dot lg-yellow=Add to list|lg-dot lg-red=Mark watched|lg-dot lg-blue=Trailer',
+            'legend',
+          );
+        },
+      );
+    })
+
+    .then(function () {
+      return step('tabs move the underline and report the index', async function () {
+        const got = await page.evaluate(function () {
+          const host = document.createElement('div');
+          document.body.appendChild(host);
+          const t = window.Tabs.tabs(host, ['Cast', 'Extras', 'More'], 0);
+          const on = function () {
+            return host.querySelector('.v2-tab.on').textContent;
+          };
+          const out = [on(), t.step(1), on(), t.step(1), t.step(1), t.step(-1), on()];
+          host.parentNode.removeChild(host);
+          return out.join('|');
+        });
+        assertEqual(got, 'Cast|1|Extras|2|2|1|Extras', 'tab walk');
+      });
+    })
+
+    .then(function () {
+      return step(
+        'a menu wears the glass skin, shows the scrim and swallows keys',
+        async function () {
+          const got = await page.evaluate(function () {
+            const host = document.createElement('div');
+            document.body.appendChild(host);
+            const scrim = document.getElementById('glass-scrim');
+            window.Menu.open({
+              host: host,
+              tabs: [
+                {
+                  label: 'A',
+                  rows: function () {
+                    return [{ label: 'one', value: 1 }];
+                  },
+                },
+              ],
+            });
+            const open = {
+              glass: host.classList.contains('glass'),
+              image: getComputedStyle(host).backgroundImage,
+              scrim: !scrim.classList.contains('hidden'),
+              swallowed: window.Menu.key(65),
+            };
+            window.Menu.close();
+            open.scrimAfter = scrim.classList.contains('hidden');
+            host.parentNode.removeChild(host);
+            return open;
+          });
+          assertEqual(got.glass, true, 'glass class');
+          assertEqual(/gradient/.test(got.image), true, 'glass background ' + got.image);
+          assertEqual(got.scrim, true, 'scrim shown');
+          assertEqual(got.swallowed, true, 'key swallowed');
+          assertEqual(got.scrimAfter, true, 'scrim hidden after close');
+        },
+      );
+    })
+
+    .then(function () {
       return step('the background has three glows and a noise layer', function () {
         return page
           .evaluate(
