@@ -1,11 +1,11 @@
 ---
 id: 071
 slug: tmdb-and-the-kids-index-in-parallel
-status: approved
+status: done
 branch: crew/071-tmdb-and-the-kids-index-in-parallel
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-data
 files:
   - src/data/discovery.ts
@@ -17,6 +17,9 @@ files:
   - dev/smoke/discovery.js
   - dev/smoke/browse.js
   - test/kids.test.ts
+gate: pass
+gateSha: 6b35613e0464d4710b0d5a8e5375f0e823458923
+gateAt: 2026-11-22T11:33:02.883Z
 ---
 
 # TMDB rows and the kids index load in parallel, and the menu waits less
@@ -78,4 +81,18 @@ After 070 (same `browse.ts`).
 
 ## Review rounds
 
+Round 1: PASS (gate 159/159 on 6b35613).
+
 ## Graph writes proposed
+
+## Worker notes
+- src/data/discovery.ts: 4 fetches at once, published in config order.
+- src/view/menubar.ts: settle 150ms; each arrow also offers the page unsettled.
+- src/screen/browse.ts: unsettled arrow restores a 070 snapshot; fixed 070 bugs (reset kept page after mode flipped; sidebar pick set mode before loadSection). Net -1 line.
+- dev/smoke.js: openSidebar reaches More by the flip-free way, no pauses.
+- dev/smoke/{shell,discovery,browse}.js, test/kids.test.ts: new steps and tests.
+- Spec error: kids.held() already ran servers in parallel (Promise.all), so kids.ts is unchanged; only tests added.
+- Kids/Discover/Collections have no snapshot restore on arrow (070 keeps library pages only).
+
+## Graph writes proposed
+- Pattern: a fast arrow sweep now flips library pages through snapshots, so smoke helpers that sweep the menu must take the way that passes no other section.

@@ -1,0 +1,91 @@
+{
+  "title": "v2 foundations",
+  "summary": "The guard warns instead of refusing, each page gets its own loader and memory (Home stops being Movies), the shared v2 pieces (glass modal, legend, tabs, grid), and profiles underneath.",
+  "stage": "build",
+  "questions": [],
+  "gaps": [],
+  "findings": [],
+  "brief": {
+    "shape": "extend",
+    "target": [
+      {
+        "path": "src/data/guard.ts",
+        "name": "check/refusal"
+      },
+      {
+        "path": "src/screen/browse.ts",
+        "line": 302,
+        "name": "goToPage"
+      },
+      {
+        "path": "src/view/menu.ts",
+        "line": 141,
+        "name": "open"
+      },
+      {
+        "path": "src/data/store.ts",
+        "line": 13,
+        "name": "open"
+      }
+    ],
+    "direction": "Lay the four foundations from the v2 layout map before any page is rebuilt: guard warn-then-allow, a page router with per-page snapshots, shared view components, and a profile layer with local plays.",
+    "rejected": [
+      {
+        "option": "Build pages first and extract shared parts later",
+        "why": "six pages would each invent modals, tabs and grids"
+      },
+      {
+        "option": "Derive per-profile plays from Plex history",
+        "why": "Plex cannot tell Stu from Naoise on one device"
+      },
+      {
+        "option": "Keep growing browse.ts",
+        "why": "at its max-lines ratchet; Stuart chose page modules"
+      }
+    ],
+    "decided": [
+      "the guard needs to be loosened though and just warn allowing the user to still play",
+      "Yes, use them (the eight recommended answers, 2026-11-23)",
+      "all films shouldn't show as a row … only available through the server controls"
+    ],
+    "exploring": [
+      "Ch± keycodes 427/428 unverified on the B8"
+    ],
+    "approved": "2026-11-23"
+  },
+  "order": [
+    "074",
+    "072",
+    "073",
+    "075"
+  ],
+  "challenge": {
+    "verdict": "QUESTION",
+    "points": [
+      {
+        "q": "075's IndexedDB bump breaks 7 smoke files that open 'reflex' at version 1, and its Profiles seam needs seam.ts.",
+        "evidence": "dev/smoke.js:874, deck.js:124, detail.js:841, browse.js:1247, discovery.js:582, show.js:1569, sections.js:921",
+        "if": "add them; open without a version",
+        "answer": "Spec bug, fixed in 075 by the orchestrator."
+      },
+      {
+        "q": "Does Home keep the All row (all films), given the browse smoke runs All-row steps on Home?",
+        "evidence": "073 step 2 'No All row'; browse.js:891, :938",
+        "if": "keep it on Home, or move it to Movies and add browse.js to 073",
+        "answer": "Stuart, 2026-11-23: 'all films shouldn't show as a row … only available through the server controls … discovery and search provide the access.' No All row on Home/Movies/TV; it stays behind More (library sections) until the Servers browser."
+      },
+      {
+        "q": "072 must also accept an overridable choice on the film page (detail.ts:375), handle the series page (showpage.ts:664), and point at app.ts onSwitch/playNext.",
+        "evidence": "detail.ts:375, detail.js:166, showpage.ts:664, app.ts:302,348",
+        "if": "amend 072",
+        "answer": "Spec bug, fixed in 072 by the orchestrator."
+      },
+      {
+        "q": "Glass for existing overlays: default in menu.ts, or each caller opts in (4 files outside files:)?",
+        "evidence": "menu.open callers detail.ts:634, showpage.ts:744, browse.ts:434/1415, player.ts:1011",
+        "if": "make glass the default",
+        "answer": "Glass is the default in menu.ts (orchestrator) — keeps 074 within its files."
+      }
+    ]
+  }
+}
