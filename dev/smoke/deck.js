@@ -121,7 +121,7 @@ module.exports = function (h) {
     return page.evaluate(
       function (args) {
         return new Promise(function (resolve, reject) {
-          const req = indexedDB.open('reflex', 1);
+          const req = indexedDB.open('reflex');
           req.onerror = function () {
             reject(new Error('no database'));
           };

@@ -895,7 +895,7 @@ function drive(page, titles, port) {
   function cachedRows(section) {
     return page.evaluate(function (key) {
       return new Promise(function (resolve) {
-        const req = indexedDB.open('reflex', 1);
+        const req = indexedDB.open('reflex');
         req.onerror = function () {
           resolve('no database');
         };

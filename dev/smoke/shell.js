@@ -992,5 +992,78 @@ module.exports = function (h) {
             },
           );
         });
+    })
+
+    .then(function () {
+      return step(
+        'profiles: Together by default, a profile has its accent and its plays',
+        async function () {
+          const accent = () =>
+            page.evaluate(
+              'getComputedStyle(document.documentElement).getPropertyValue("--ac").trim()',
+            );
+          const profile = () => page.evaluate('window.Profiles.current().id');
+          const deckCount = () =>
+            page.evaluate(function () {
+              const rows = document.querySelectorAll('#rows .row');
+              for (let i = 0; i < rows.length; i++) {
+                if (
+                  rows[i].querySelector('.row-label').textContent.trim() === 'Continue watching'
+                ) {
+                  return rows[i]._rowRef.items.length;
+                }
+              }
+              return 0;
+            });
+          /* A reload, so the deck is built fresh under whichever profile was saved. */
+          const reloaded = async (want) => {
+            await page.reload();
+            await h.ready();
+            await waitFor(
+              '(function(){var r=document.querySelectorAll("#rows .row"),i;for(i=0;i<r.length;i++){' +
+                'if(r[i].querySelector(".row-label").textContent.trim()==="Continue watching"&&' +
+                'r[i]._rowRef.items.length' +
+                (want ? '===' + want : '>1') +
+                ')return true}return false})()',
+            );
+            return deckCount();
+          };
+
+          assertEqual(await profile(), 'together', 'the fresh profile');
+          assertEqual(await accent(), '#F4C8B6', 'Together accent');
+          const stores = await page.evaluate(function () {
+            return new Promise(function (resolve) {
+              const req = indexedDB.open('reflex');
+              req.onsuccess = function () {
+                resolve(Array.prototype.slice.call(req.result.objectStoreNames).sort().join());
+              };
+            });
+          });
+          assertEqual(stores, 'hidden,kv,plays,smart_lists,title_tags', 'the v2 tables');
+
+          const everything = await reloaded(0);
+          if (everything < 2) throw new Error('Together has ' + everything + ' on the deck');
+
+          await page.evaluate('window.Profiles.set("stu")');
+          assertEqual(await accent(), '#AEBBF0', 'Stu accent');
+          await page.evaluate(function () {
+            const rows = document.querySelectorAll('#rows .row');
+            for (let i = 0; i < rows.length; i++) {
+              if (rows[i].querySelector('.row-label').textContent.trim() === 'Continue watching') {
+                window.Profiles.recordPlay(rows[i]._rowRef.items[0], 1000, 5000);
+              }
+            }
+          });
+          await page.waitForTimeout(300);
+          assertEqual(await reloaded(1), 1, 'Stu deck count');
+          assertEqual(await profile(), 'stu', 'Stu survives a reload');
+          assertEqual(await accent(), '#AEBBF0', 'Stu accent after a reload');
+
+          await page.evaluate('window.Profiles.set("together")');
+          assertEqual(await accent(), '#F4C8B6', 'back to Together');
+          await page.waitForTimeout(300);
+          assertEqual(await reloaded(0), everything, 'Together deck count');
+        },
+      );
     });
 };

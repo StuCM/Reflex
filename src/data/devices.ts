@@ -4,6 +4,7 @@
 import { devices as serverDevices, history } from '../api/plex/library';
 import { KEY, debug, isBack, show } from '../core/ui';
 import * as merge from './merge';
+import * as profiles from './profiles';
 import * as servers from './servers';
 import { fill, put } from '../view/dom';
 
@@ -129,8 +130,9 @@ async function loadHistory(): Promise<Record<string, string>> {
 export function mine(items: PlexItem[]): PlexItem[] {
   const owned = claimed;
   const seen = played;
-  if (!owned || !seen) return items;
-  return items.filter((entry) =>
+  const byProfile = items.filter((entry) => merge.sources(entry).some(profiles.hasPlayed));
+  if (!owned || !seen) return byProfile;
+  return byProfile.filter((entry) =>
     merge.sources(entry).some((copy) => {
       const device = seen[`${copy._server ?? ''}:${copy.ratingKey}`];
       return !device || owned[device];

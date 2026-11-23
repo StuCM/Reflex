@@ -6,6 +6,7 @@
 import settings from './core/config';
 import * as art from './data/art';
 import * as merge from './data/merge';
+import * as profiles from './data/profiles';
 import * as showpage from './screen/showpage';
 import * as grid from './view/grid';
 import * as legend from './view/legend';
@@ -15,6 +16,7 @@ import * as tabs from './view/tabs';
 
 window.Art = art;
 window.Merge = merge;
+window.Profiles = profiles;
 window.ShowPage = showpage;
 window.Sidebar = sidebar;
 window.Grid = grid;

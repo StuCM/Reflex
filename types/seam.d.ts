@@ -4,6 +4,7 @@
 interface Window {
   Art: typeof import('../src/data/art');
   Merge: typeof import('../src/data/merge');
+  Profiles: typeof import('../src/data/profiles');
   ShowPage: typeof import('../src/screen/showpage');
   Sidebar: typeof import('../src/view/sidebar');
   Grid: typeof import('../src/view/grid');

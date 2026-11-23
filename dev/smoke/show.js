@@ -1566,7 +1566,7 @@ module.exports = function (h) {
                  discovery steps count those lookups and must find them unasked. */
               return page.evaluate(function () {
                 return new Promise(function (resolve) {
-                  const open = indexedDB.open('reflex', 1);
+                  const open = indexedDB.open('reflex');
                   open.onsuccess = function () {
                     const tx = open.result.transaction('kv', 'readwrite');
                     const store = tx.objectStore('kv');
