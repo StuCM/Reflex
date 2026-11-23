@@ -304,25 +304,22 @@ function showPage(name: string, settled: boolean): void {
   }
 }
 
-/* Unsettled, a page is only shown if it can come back whole; settled, it is loaded. */
-function showMode(wanted: Mode, load: () => void, settled: boolean): void {
-  if (mode === wanted) return;
+/* A page kept within the window comes back as it was; otherwise it loads, once settled. */
+function showMode(wanted: Mode, snapshot: string, load: () => void, settled: boolean): void {
+  if (mode === wanted || restore(snapshot, wanted)) return;
   if (settled) load();
-  else restore(wanted, wanted);
 }
 
 router.register('home', (settled) => showPage('home', settled));
 router.register('movies', (settled) => showPage('movies', settled));
 router.register('tv', (settled) => showPage('tv', settled));
-router.register('kids', (settled) => showMode('kids', loadKids, settled));
-router.register('discover', (settled) => showMode('discover', loadDiscover, settled));
+router.register('kids', (settled) => showMode('kids', 'kids', loadKids, settled));
+router.register('discover', (settled) => showMode('discover', 'discover', loadDiscover, settled));
 router.register('collections', (settled) => {
   const first = router.collectionEntries()[0];
-  if (mode === 'collection') return;
-  if (first) {
-    if (settled) loadCollection(first);
-    else restore(collectionKey(first.title), 'collection');
-  } else if (settled) toast('No collections on these servers');
+  if (first)
+    showMode('collection', collectionKey(first.title), () => loadCollection(first), settled);
+  else if (settled) toast('No collections on these servers');
 });
 
 function menuKey(code: number): boolean {
@@ -1023,10 +1020,6 @@ function scheduleWalk() {
    keyed by (server rank, position) instead: the preferred server's films in its
    own collection order, then the other copies' extras. */
 function loadCollection(entry: router.CollectionEntry) {
-  if (restore(collectionKey(entry.title), 'collection')) {
-    collectionTitle = entry.title;
-    return;
-  }
   reset('collection');
   collectionTitle = entry.title;
   const preferred = servers.preferred();
@@ -1119,12 +1112,10 @@ export function openKids(): void {
   menubar.close();
   menubar.abandon();
   setPage(router.indexOf('kids'));
-  if (mode === 'kids') return;
-  loadKids();
+  showMode('kids', 'kids', loadKids, true);
 }
 
 function loadKids() {
-  if (restore('kids', 'kids')) return;
   reset('kids');
   const isCurrent = generationGuard();
 
@@ -1238,7 +1229,6 @@ function addDiscoveryRow(
 }
 
 function loadDiscover() {
-  if (restore('discover', 'discover')) return;
   reset('discover');
   const isCurrent = generationGuard();
 

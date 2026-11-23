@@ -163,7 +163,7 @@ module.exports = function (h) {
       .then(function () {
         return step('the deck lands before the hubs do', function () {
           let expected;
-          return cachedRows('Movies')
+          return cachedRows('Home')
             .then(function (hit) {
               const row = hit.rows.find(function (r) {
                 return r.title === 'Continue watching';
@@ -175,7 +175,7 @@ module.exports = function (h) {
                  network. */
               const stale = row.items.slice(1).concat(row.items.slice(0, 1));
               if (titleOf(stale[0]) === expected) throw new Error('could not make a stale deck');
-              return writeRows('Movies', {
+              return writeRows('Home', {
                 rows: [{ title: 'Continue watching', items: stale }],
               });
             })
@@ -666,13 +666,13 @@ module.exports = function (h) {
               })
               .then(function (entry) {
                 film = entry;
-                return cachedRows('Movies');
+                return cachedRows('Home');
               })
               /* Read before as well as after: a check that the cache is empty
              afterwards proves nothing if the key was never the right one. */
               .then(function (cached) {
                 if (!cached || !cached.rows) {
-                  throw new Error('nothing cached under rows:Movies to begin with');
+                  throw new Error('nothing cached under rows:Home to begin with');
                 }
               })
               .then(function () {
@@ -729,7 +729,11 @@ module.exports = function (h) {
               /* The cached rows carry Continue watching too, in every section, so
              they have to go or a reload paints it straight back. */
               .then(function () {
-                return Promise.all([cachedRows('Movies'), cachedRows('TV Shows')]);
+                return Promise.all([
+                  cachedRows('Home'),
+                  cachedRows('Movies'),
+                  cachedRows('TV Shows'),
+                ]);
               })
               .then(function (cached) {
                 const kept = cached.filter(Boolean);
