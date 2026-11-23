@@ -80,7 +80,7 @@ module.exports = function (h) {
     });
   }
 
-  /* Reload onto Movies with the counter reset and the named server's promoted hubs
+  /* Reload onto the launch page with the counter reset and the named server's promoted hubs
      failing, wait for the hub rows, and return what the servers were asked. */
   function reloadForHubs(failing) {
     currentFailing = failing;
@@ -228,7 +228,7 @@ module.exports = function (h) {
       /* ---- a section's rows are one request per server ---- */
 
       .then(function () {
-        return step('opening Movies asks each server once for its rows', function () {
+        return step('opening Home asks each server once for its rows', function () {
           return reloadForHubs('').then(function (calls) {
             const promoted = calls.filter(function (c) {
               return c.indexOf('/hubs/promoted') >= 0;
@@ -316,7 +316,7 @@ module.exports = function (h) {
         if (!hasFixture()) return;
         return step('the refreshed deck is what the cache holds', function () {
           const watched = titles.directPlays.title;
-          return cachedDeckFirst('Movies')
+          return cachedDeckFirst('Home')
             .then(function (first) {
               if (first !== watched) {
                 throw new Error('cache opens Continue watching on "' + first + '"');
@@ -666,13 +666,13 @@ module.exports = function (h) {
               })
               .then(function (entry) {
                 film = entry;
-                return cachedRows('Home');
+                return cachedRows('Movies');
               })
               /* Read before as well as after: a check that the cache is empty
              afterwards proves nothing if the key was never the right one. */
               .then(function (cached) {
                 if (!cached || !cached.rows) {
-                  throw new Error('nothing cached under rows:Home to begin with');
+                  throw new Error('nothing cached under rows:Movies to begin with');
                 }
               })
               .then(function () {
