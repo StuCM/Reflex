@@ -1,7 +1,7 @@
 'use strict';
 /* the v2 background and the tuning panel */
 module.exports = function (h) {
-  const { press, waitFor, step, page, tilePosters, backdrops, reloadDeck } = h;
+  const { press, waitFor, step, page, tilePosters, backdrops } = h;
 
   const hudText = () => page.evaluate('document.getElementById("hud").textContent');
   const glowX = () => page.evaluate('document.getElementById("g1").style.getPropertyValue("--gx")');
@@ -1003,9 +1003,34 @@ module.exports = function (h) {
               'getComputedStyle(document.documentElement).getPropertyValue("--ac").trim()',
             );
           const profile = () => page.evaluate('window.Profiles.current().id');
+          const deckCount = () =>
+            page.evaluate(function () {
+              const rows = document.querySelectorAll('#rows .row');
+              for (let i = 0; i < rows.length; i++) {
+                if (
+                  rows[i].querySelector('.row-label').textContent.trim() === 'Continue watching'
+                ) {
+                  return rows[i]._rowRef.items.length;
+                }
+              }
+              return 0;
+            });
+          /* A reload, so the deck is built fresh under whichever profile was saved. */
+          const reloaded = async (want) => {
+            await page.reload();
+            await h.ready();
+            await waitFor(
+              '(function(){var r=document.querySelectorAll("#rows .row"),i;for(i=0;i<r.length;i++){' +
+                'if(r[i].querySelector(".row-label").textContent.trim()==="Continue watching"&&' +
+                'r[i]._rowRef.items.length' +
+                (want ? '===' + want : '>1') +
+                ')return true}return false})()',
+            );
+            return deckCount();
+          };
+
           assertEqual(await profile(), 'together', 'the fresh profile');
           assertEqual(await accent(), '#F4C8B6', 'Together accent');
-
           const stores = await page.evaluate(function () {
             return new Promise(function (resolve) {
               const req = indexedDB.open('reflex');
@@ -1016,24 +1041,28 @@ module.exports = function (h) {
           });
           assertEqual(stores, 'hidden,kv,plays,smart_lists,title_tags', 'the v2 tables');
 
-          const all = await reloadDeck();
-          if (all.entries.length < 2)
-            throw new Error('Together has ' + all.entries.length + ' on the deck');
+          const everything = await reloaded(0);
+          if (everything < 2) throw new Error('Together has ' + everything + ' on the deck');
 
           await page.evaluate('window.Profiles.set("stu")');
           assertEqual(await accent(), '#AEBBF0', 'Stu accent');
           await page.evaluate(function () {
-            const row = document.querySelector('#rows .row.on')._rowRef;
-            window.Profiles.recordPlay(row.items[0], 1000, 5000);
+            const rows = document.querySelectorAll('#rows .row');
+            for (let i = 0; i < rows.length; i++) {
+              if (rows[i].querySelector('.row-label').textContent.trim() === 'Continue watching') {
+                window.Profiles.recordPlay(rows[i]._rowRef.items[0], 1000, 5000);
+              }
+            }
           });
-          const stu = await reloadDeck();
-          assertEqual(stu.entries.length, 1, 'Stu deck count');
-          assertEqual(stu.entries[0].key, all.entries[0].key, 'Stu deck item');
+          await page.waitForTimeout(300);
+          assertEqual(await reloaded(1), 1, 'Stu deck count');
+          assertEqual(await profile(), 'stu', 'Stu survives a reload');
+          assertEqual(await accent(), '#AEBBF0', 'Stu accent after a reload');
 
           await page.evaluate('window.Profiles.set("together")');
           assertEqual(await accent(), '#F4C8B6', 'back to Together');
-          const again = await reloadDeck();
-          assertEqual(again.entries.length, all.entries.length, 'Together deck count');
+          await page.waitForTimeout(300);
+          assertEqual(await reloaded(0), everything, 'Together deck count');
         },
       );
     });
