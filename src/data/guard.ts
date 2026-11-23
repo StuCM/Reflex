@@ -3,7 +3,7 @@
    verdict, never rejects. */
 import { decide } from '../api/plex/playback';
 import { audioLabel, audioSummary, bestAudio, pickAudio, streamById } from '../rules/audio';
-import { allows, canDecode, isUHD } from '../rules/quality';
+import { allows, canDecode } from '../rules/quality';
 import { load } from './meta';
 import * as servers from './servers';
 import { debug } from '../core/ui';
@@ -16,8 +16,8 @@ import { debug } from '../core/ui';
 
    options.maxBitrate is the quality menu. Asking for a cap is asking the server
    to re-encode, so the decision comes back 'transcode' — which on a 4K file is
-   a refusal, arrived at by the ordinary rule rather than a special case.
-   options.forceStream is the same shape of thing for audio. */
+   the overridable warning, arrived at by the ordinary rule rather than a
+   special case. options.forceStream is the same shape of thing for audio. */
 export function check(
   item: PlexItem,
   mediaIndex = 0,
@@ -84,9 +84,12 @@ export function check(
                 : '') +
               ` ${verdict.text}`,
           );
+          const allowed = allows(media, direct);
           return {
-            /* 4K must direct play or not play. Anything else may transcode. */
-            ok: allows(media, direct),
+            ok: allowed,
+            /* 4K that will not direct play is the owner's to stop, so it is
+               warned about rather than refused. */
+            overridable: !allowed && !direct,
             state: undecodable ? 'codec' : verdict.decision,
             transcode: !direct,
             video: verdict.video,
@@ -133,9 +136,9 @@ export function label(verdict: Verdict | null | undefined): string {
     if (verdict.video && verdict.video !== 'transcode') return 'audio transcode';
     return 'server transcodes';
   }
+  if (verdict.overridable) return '4K transcode — may be stopped';
   if (verdict.state === 'noaudio') return 'no passable audio';
   if (verdict.state === 'codec') return 'panel cannot decode';
-  if (isUHD(verdict.media)) return '4K, would transcode';
   if (verdict.state === 'nopart') return 'nothing to play';
   if (verdict.state === 'nometa') return 'no metadata';
   if (verdict.state === 'error') {
@@ -147,7 +150,8 @@ export function label(verdict: Verdict | null | undefined): string {
   return 'would transcode';
 }
 
-/** Why we are refusing, in full, for the message screen. */
+/** Why we are refusing, in full, for the message screen — or, for an
+    overridable verdict, what playing anyway would cost. */
 export function refusal(item: PlexItem, verdict: Verdict): [string, string] {
   if (verdict.state === 'noaudio') {
     return [
@@ -172,13 +176,22 @@ export function refusal(item: PlexItem, verdict: Verdict): [string, string] {
   }
   if (verdict.state === 'error') return ['Could not check playback', verdict.text ?? ''];
 
-  const why = verdict.text || `the server returned "${verdict.state}"`;
-  /* The only thing still refused outright. */
   return [
-    '4K transcode refused',
-    `${item.title} will not direct play — ${why}. Starting it would register a 4K ` +
-      'transcode on the server, which gets killed mid-stream. Another copy may direct ' +
-      'play — check the list. Or run probe.py against this file to find which declared ' +
-      'capability flips it.',
+    '4K transcode',
+    `${item.title} will not direct play: ${transcodeCost(verdict)}. The owner's ` +
+      'server stops 4K transcodes, so it may be killed part way through. Another ' +
+      'copy may direct play — check the list.',
   ];
+}
+
+/* A server does not always say per stream what it would convert, so a cap and
+   a track that cannot cross ARC are each taken as saying it for them. */
+function transcodeCost(verdict: Verdict): string {
+  if (verdict.video === 'transcode' || verdict.maxBitrate) {
+    return 'the server would re-encode the 4K video';
+  }
+  if (verdict.audioDecision === 'transcode' || !verdict.passes) {
+    return `the server would re-encode the audio, ${audioLabel(verdict.audio)}`;
+  }
+  return 'the server would stream it rather than hand over the file';
 }

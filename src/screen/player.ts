@@ -341,7 +341,8 @@ function moveFocus(to: 'none' | 'bar' | 'row'): void {
    A direct play hands the panel the whole file and `audioStreamID` changes
    none of it, so only two things actually switch a track: selecting on the
    panel's own list, or giving up direct play and having the server mux it —
-   which on a 4K file the guard refuses. Everything below is that choice. */
+   which on a 4K file the guard warns about first. Everything below is that
+   choice. */
 
 /* The panel's own track list, or null when it does not have one. Only useful
    once metadata has loaded, so never cached. */
@@ -909,7 +910,7 @@ function subRow(stream: PlexStream): MenuRow {
    film — a separate file, often the 1080p next to the 4K — and a bitrate cap,
    which is the server re-encoding this one. Both belong here because both are
    what the user means by "make this play properly", and both go through the
-   guard, so the 4K rule refuses the cap and offers the other version. */
+   guard, so the 4K rule warns about the cap and offers the other version. */
 function qualityRows(): MenuRow[] {
   const versions = (item && item.Media) || [];
   const out: MenuRow[] = [];
@@ -945,7 +946,7 @@ function qualityNote(cap: Quality): string {
     return cap.detail ? `${cap.detail}  ·  ${cost}` : cost;
   }
   if (isUHD(currentMedia)) {
-    return 'a 4K transcode is what gets the stream killed — this will be refused';
+    return 'a 4K transcode — asks first, and the server may stop it';
   }
   return cap.detail ?? '';
 }
@@ -1097,7 +1098,7 @@ function chapterKey(code: number): boolean {
 /* Another version, a quality cap, and an audio track the panel will not
    select for us all mean the same thing: ask the server for a different
    stream and start again from here. The guard decides whether that is
-   allowed, which is what keeps a quality cap on a 4K file refused. */
+   allowed, which is what puts the 4K warning in front of a quality cap. */
 function switchTo(change: Partial<PlaybackSwitch>, what: string): void {
   if (!onSwitch) return;
   const asked: PlaybackSwitch = {

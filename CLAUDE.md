@@ -86,7 +86,12 @@ else's two remote servers, connecting directly (not via relay).
   starts.
 - Therefore: always call `/video/:/transcode/universal/decision` with
   `hasMDE=1` before playback. It returns the verdict without opening a
-  session. Refuse 4K playback if the decision is anything but `directplay`.
+  session. If a 4K decision is anything but `directplay`, **warn, then
+  allow**: the guard marks the verdict `overridable`, and Play shows what will
+  be transcoded (the video, or the audio track by name) and that the owner's
+  server may kill it, with **Play anyway** and **Back**. Back asks nothing of
+  the server; Play anyway fetches the converted stream. No audio at all, an
+  undecodable codec, or a failed check are still refused outright.
 - **Below 4K, a transcode is allowed.** Prefer direct play, but do not insist
   on it: the server is perfectly able to refuse work it does not want, and
   insisting is what made every TrueHD remux unplayable. `Media.allows` is the
@@ -315,16 +320,17 @@ pure, and new files must be.
      no server involvement. `src/core/panel.ts` reports on the `panel` chip
      whether this pipeline has it.
   2. Failing that, give up direct play (`directPlay=0`) so the server muxes the
-     stream itself. That is a real session, and on a 4K file the guard refuses
-     it — which is the honest answer, not a bug.
+     stream itself. That is a real session, and on a 4K file the guard warns
+     before it — which is the honest answer, not a bug.
 
   The menu says which of the two a row will cost before you press OK, and when
   neither applies the OSD stops claiming a track and says *panel's choice*
   instead. Another version and a quality cap are the same shape of move, and
   all of them go back through `Guard.check` first, so a quality cap on a 4K
-  file is refused by the ordinary rule rather than a special case. A refused
-  switch leaves the film playing and says why in a toast; it never stops
-  playback to deliver a message.
+  file is warned about by the ordinary rule rather than a special case. The
+  warning goes over the playing film: Back leaves it playing, Play anyway
+  restarts with the switch. A refused switch leaves the film playing and says
+  why in a toast. Neither ever stops playback to deliver a message.
 
   Keys while playing: ◀ ▶ nudge 30s · ▲ ▼ focus the control row, and from
   there the arrows walk it and OK opens a panel · RW/FF 5 min · 0–9 jump to

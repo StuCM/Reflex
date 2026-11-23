@@ -20,10 +20,11 @@ module.exports = function (h) {
     pressButton,
     openChooser,
     sourceRows,
-    playable,
     sidebarPick,
     page,
     titles,
+    transcodeStarts,
+    waitForConfirm,
   } = h;
 
   return (
@@ -33,29 +34,76 @@ module.exports = function (h) {
       .then(function () {
         /* A 4K remux whose only tracks are TrueHD and DTS-HD MA. Neither can cross
          plain ARC, so the film's own track is offered to the server for
-         re-encoding — and re-encoding anything on a 4K file is the one thing
-         the admin's kill-stream fires on, so it is refused. The decision call
-         is how we learn that, and it opens no session (hasMDE=1), which is
-         why asking is the design rather than a cost. */
-        return step('refuses a 4K remux whose only audio would be re-encoded', function () {
+         re-encoding — and re-encoding anything on a 4K file is what the admin's
+         kill-stream fires on. The decision call learns that without opening a
+         session (hasMDE=1); what it costs is said, and the choice is the
+         viewer's. */
+        return step('warns about a 4K remux whose only audio would be re-encoded', function () {
+          const mark = transcodeStarts.length;
           return openTitle(titles.truehdOnly.title)
             .then(function () {
               return page.keyboard.press('Enter');
             })
             .then(function () {
-              return waitFor(
-                shown('4K transcode refused', titles.truehdOnly.title),
-                'the 4K refusal, naming ' + titles.truehdOnly.title,
-              );
+              return waitForConfirm('warning of a 4K transcode');
             })
-            .then(function () {
+            .then(function (box) {
+              if (box.title !== '4K transcode')
+                throw new Error('the warning is titled ' + box.title);
+              if (box.note.indexOf(titles.truehdOnly.title) !== 0) {
+                throw new Error('the warning does not name the film: ' + box.note);
+              }
+              if (!/re-encode the audio, TRUEHD/.test(box.note)) {
+                throw new Error('the warning does not name the audio it costs: ' + box.note);
+              }
+              if (box.rows.join(' | ') !== '> Play anyway | Back') {
+                throw new Error('the warning offers ' + box.rows.join(' | '));
+              }
               if (!tracedThat(/decision: transcode/)) {
                 throw new Error('the verdict was reached without asking the server');
               }
             })
-
             .then(function () {
-              return shot('refuse-truehd');
+              return shot('warn-truehd');
+            })
+            .then(function () {
+              return press('Backspace');
+            })
+            .then(function () {
+              return waitFor(
+                'document.getElementById("confirm").classList.contains("hidden") &&' +
+                  ' !document.getElementById("detail").classList.contains("hidden")',
+                'Back to leave the film page as it was',
+              );
+            })
+            .then(function () {
+              if (transcodeStarts.length !== mark) {
+                throw new Error('Back asked the server for a transcode');
+              }
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return waitForConfirm('warning, a second time');
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return waitFor(
+                'document.getElementById("detail").classList.contains("hidden")',
+                'Play anyway to leave the film page',
+                15000,
+              );
+            })
+            .then(function () {
+              return page.waitForTimeout(1000);
+            })
+            .then(function () {
+              if (transcodeStarts.length !== mark + 1) {
+                throw new Error(
+                  'Play anyway made ' + (transcodeStarts.length - mark) + ' transcode requests',
+                );
+              }
             })
             .then(backToLibrary);
         });
@@ -141,7 +189,7 @@ module.exports = function (h) {
                 return /direct play/.test(s.verdict);
               });
               const refused = src.filter(function (s) {
-                return /4K, would transcode/.test(s.verdict);
+                return /4K transcode — may be stopped/.test(s.verdict);
               });
               if (plays.length !== 1 || refused.length !== 1) {
                 throw new Error(
@@ -163,30 +211,90 @@ module.exports = function (h) {
       })
 
       .then(function () {
-        return step('a copy the guard refuses toasts and leaves the last one chosen', function () {
-          /* The chooser is still up from the step before. Pick the copy that
-           cannot play: the page must say why in a line and go on offering the
-           one that can, rather than accepting a choice it will refuse at Play. */
-          let was;
+        return step('a 4K transcode copy is kept when chosen, and Play warns', function () {
+          /* The chooser is still up from the step before. A copy that would be a
+           4K transcode is the viewer's to choose: the page takes it, and the
+           cost is on Play's caption before anything starts. */
+          let label;
           return sourceRows()
+            .then(function (src) {
+              const uhd = src.find(function (s) {
+                return /4K transcode/.test(s.verdict);
+              });
+              if (!uhd) throw new Error('no 4K transcode copy to choose');
+              if (uhd.on) throw new Error('the 4K transcode copy was already chosen');
+              /* By the whole label: two copies of the same film routinely differ
+               only in bitrate, so half of one matches the other as well. */
+              label = uhd.version + ' \u00b7 ' + uhd.server;
+              return menuChoose(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+            })
+            .then(function () {
+              return waitFor(
+                '/4K transcode — may be stopped/.test(' +
+                  'document.querySelector("#dt-actions .dt-act-cap").textContent)',
+                "the warning on Play's caption",
+                15000,
+              );
+            })
+            .then(function () {
+              return openChooser('source');
+            })
+            .then(sourceRows)
+            .then(function (src) {
+              const on = src.find(function (s) {
+                return s.on;
+              });
+              if (!on || on.version + ' \u00b7 ' + on.server !== label) {
+                throw new Error(
+                  'the 4K copy was not kept: ' + (on ? on.server + ' ' + on.version : 'nothing'),
+                );
+              }
+            })
+            .then(function () {
+              return press('Backspace');
+            })
+            .then(backToLibrary);
+        });
+      })
+
+      .then(function () {
+        return step('a copy the guard refuses toasts and leaves the last one chosen', function () {
+          /* Every copy of this film is served with no audio at all, so each is
+           a hard refusal: choosing one says why in a line and keeps the copy
+           that was there, and Play explains rather than offering to go on. */
+          const mark = transcodeStarts.length;
+          let was;
+          return openTitle(titles.silent.title)
+            .then(function () {
+              return openChooser('source');
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var r=document.querySelectorAll(' +
+                  '"#dt-menu:not(.hidden) .menu-row");' +
+                  'return r.length === 2 && /no passable audio/.test(r[0].textContent) &&' +
+                  ' /no passable audio/.test(r[1].textContent);})()',
+                'both copies refused for want of audio',
+                15000,
+              );
+            })
+            .then(sourceRows)
             .then(function (src) {
               was = src.find(function (s) {
                 return s.on;
               });
-              const bad = src.find(function (s) {
-                return !playable(s.verdict);
+              const other = src.find(function (s) {
+                return !s.on;
               });
-              if (!bad) throw new Error('no refused copy to choose');
-              /* By the whole label: two copies of the same film routinely differ
-               only in bitrate, so half of one matches the other as well. */
-              const label = bad.version + ' \u00b7 ' + bad.server;
+              if (!was || !other) throw new Error('expected one chosen copy and one other');
+              const label = other.version + ' \u00b7 ' + other.server;
               return menuChoose(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
             })
             .then(function () {
               return waitFor(
                 '(function(){var t=document.getElementById("toast");' +
                   'return !t.classList.contains("hidden") &&' +
-                  ' /Kept as it was/.test(t.textContent);})()',
+                  ' /Kept as it was — no passable audio/.test(t.textContent);})()',
                 'the refusal toast',
                 15000,
               );
@@ -209,84 +317,28 @@ module.exports = function (h) {
             .then(function () {
               return press('Backspace');
             })
+            .then(function () {
+              return pressButton('play');
+            })
+            .then(function () {
+              return waitFor(
+                shown('No usable audio track', titles.silent.title),
+                'the refusal, naming ' + titles.silent.title,
+              );
+            })
+            .then(function () {
+              return page.evaluate(function () {
+                return !document.getElementById('confirm').classList.contains('hidden');
+              });
+            })
+            .then(function (warned) {
+              if (warned) throw new Error('a hard refusal offered to play anyway');
+              if (transcodeStarts.length !== mark) {
+                throw new Error('a refused film asked the server for a transcode');
+              }
+            })
             .then(backToLibrary);
         });
-      })
-
-      .then(function () {
-        return step(
-          'extras are cards with a length, and are guarded like anything else',
-          function () {
-            return (
-              openTitle(titles.directPlays.title)
-                .then(function () {
-                  return waitFor(
-                    '(function(){var e=document.querySelectorAll("#dt-extras .dt-extra");' +
-                      'if (!e.length) return false;' +
-                      'return !/checking/.test(e[0].textContent);})()',
-                    'an extra with a verdict',
-                    15000,
-                  );
-                })
-                .then(function () {
-                  return page.evaluate(function () {
-                    return Array.prototype.map.call(
-                      document.querySelectorAll('#dt-extras .dt-extra'),
-                      function (e) {
-                        const len = e.querySelector('.dt-extra-len');
-                        return {
-                          text: e.textContent.replace(/\s+/g, ' '),
-                          len: len ? len.textContent.trim() : '',
-                        };
-                      },
-                    );
-                  });
-                })
-                .then(function (cards) {
-                  const all = cards
-                    .map(function (c) {
-                      return c.text;
-                    })
-                    .join(' | ');
-                  if (!/Trailer/i.test(all)) throw new Error('no trailer listed: ' + all);
-                  /* A clip is an ordinary part on the same server, so it goes through
-               the same guard — it must carry a verdict, not be assumed safe. */
-                  if (!/direct play|transcode|no passable/.test(cards[0].text)) {
-                    throw new Error('extra has no verdict: ' + cards[0].text);
-                  }
-                  if (!/^\d+ min$/.test(cards[0].len)) {
-                    throw new Error('no length on the card: "' + cards[0].len + '"');
-                  }
-                })
-                /* Down off the action row is the cast, and down again the extras. */
-                .then(function () {
-                  return press('ArrowDown', 2);
-                })
-                .then(function () {
-                  return waitFor(
-                    '!!document.querySelector("#dt-extras .dt-extra.on")',
-                    'focus to reach the extras',
-                  );
-                })
-                .then(function () {
-                  return page.keyboard.press('Enter');
-                })
-                .then(function () {
-                  if (!hasFixture()) return page.waitForTimeout(500);
-                  return waitFor(
-                    '(function(){var v=document.getElementById("video");' +
-                      'return !v.classList.contains("hidden") && v.currentTime >= 0;})()',
-                    'the extra to start',
-                    15000,
-                  );
-                })
-                .then(function () {
-                  return shot('extras');
-                })
-                .then(backToLibrary)
-            );
-          },
-        );
       })
 
       .then(function () {

@@ -101,9 +101,11 @@ function findTitles() {
     backup = lib.servers[1];
 
   const copies = {}; // film index -> [copy, ...]
+  const prefixOf = new Map(); // copy -> its server's prefix
   lib.servers.forEach(function (srv) {
     srv.items['1'].forEach(function (m) {
       (copies[m._film] = copies[m._film] || []).push(m);
+      prefixOf.set(m, srv.prefix);
     });
   });
 
@@ -143,6 +145,19 @@ function findTitles() {
     );
   });
   if (!shared) throw new Error('no shared film with one playable and one unplayable copy');
+
+  /* A film both servers have, which the mock is told to serve with no audio at
+     all: a hard refusal on every copy, whichever server is preferred. */
+  const silentHit = main.items['1'].find(function (m) {
+    return m !== shared && copies[m._film].length === 2 && unambiguous(m);
+  });
+  if (!silentHit) throw new Error('no second shared film to silence');
+  const silent = {
+    title: silentHit.title,
+    keys: copies[silentHit._film].map(function (c) {
+      return prefixOf.get(c) + c.ratingKey;
+    }),
+  };
 
   /* Two films the TMDB mock treats differently: one with posters and backdrops
      both, so the tile and the hero are a poster and a backdrop, and one sparse
@@ -242,9 +257,11 @@ function findTitles() {
         return a + b;
       }, 0),
     },
-    truehdOnly: only('hevc-truehd'), // must be refused before any request
-    transcodes: only('vc1-avi'), // server says transcode, we refuse
+    truehdOnly: only('hevc-truehd'), // a 4K audio transcode: warned about, then allowed
+    transcodes: only('vc1-avi'), // server says transcode, below 4K so it plays
     directPlays: only('h264-eac3'), // plays
+    uhd: only('hevc-eac3'), // 4K that direct plays, so a quality cap is a 4K transcode
+    silent: silent, // no audio on any copy, so refused outright
     shared: shared, // on both servers, only one copy playable
     manyShots: withBackdrops(false), // posters and backdrops both
     oneShot: withBackdrops(true), // no posters, so the tile falls back
@@ -295,6 +312,11 @@ function run() {
     .then(function (p) {
       port = p;
       console.log('  smoke on http://localhost:' + port + '   areas: ' + RUNNING.join(' ') + '\n');
+      /* Before the app starts, so no copy of the silent film is cached with audio. */
+      const keys = encodeURIComponent(titles.silent.keys.join(','));
+      return fetch('http://localhost:' + port + '/__plextv/mute?keys=' + keys);
+    })
+    .then(function () {
       return chromium.launch({ headless: !HEADED });
     })
     .then(function (b) {
@@ -396,6 +418,8 @@ function drive(page, titles, port) {
   /* Every write that takes something off the deck, so a step can say which
      server was actually told rather than only that the row got shorter. */
   const deckWrites = [];
+  /* Converted streams asked for: each one is a session on the owner's server. */
+  const transcodeStarts = [];
   page.on('request', function (r) {
     const u = r.url();
     if (/removeFromContinueWatching|\/:\/scrobble/.test(u)) deckWrites.push(u);
@@ -413,6 +437,7 @@ function drive(page, titles, port) {
     )
       backdrops.push(u);
     if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
+    if (u.indexOf('/video/:/transcode/universal/start') >= 0) transcodeStarts.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
     if (
@@ -1438,6 +1463,7 @@ function drive(page, titles, port) {
     ytCalls,
     ytSearches,
     deckWrites,
+    transcodeStarts,
     menuLabels,
     menuChoose,
     controlRow,
