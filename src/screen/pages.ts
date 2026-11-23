@@ -1,5 +1,6 @@
 import { onDeck as plexOnDeck } from '../api/plex/library';
 import * as devices from '../data/devices';
+import * as profiles from '../data/profiles';
 import * as merge from '../data/merge';
 import * as rowModel from '../rules/rows';
 
@@ -111,6 +112,7 @@ export function fetchDeck(reachable: PlexServer[], fresh: boolean): Promise<Plex
   const lists = Promise.all([
     Promise.all(reachable.map((server) => plexOnDeck(server))),
     devices.ensureHistory(),
+    profiles.ready(),
   ]).then((results) => results[0]);
   prefetched = { ids, at: Date.now(), lists };
   return lists;

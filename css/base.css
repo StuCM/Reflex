@@ -21,15 +21,15 @@
   --bg:      #0B0912;
   --surface: #1f2233;
   --raised:  #252839;
-  --ac:      #9d93d6;
+  --ac:      #F4C8B6;
   --ac2:     #e5a06d;
   --fg:      #eef0f2;
   --dim:     rgba(238, 240, 242, .44);
   --dim2:    rgba(238, 240, 242, .26);
   --soft:    rgba(238, 240, 242, .07);
   /* The accent behind a chosen row, and the ring round a focused control. */
-  --ac-soft: rgba(157, 147, 214, .2);
-  --ac-tint: rgba(157, 147, 214, .14);
+  --ac-soft: rgba(244, 200, 182, .2);
+  --ac-tint: rgba(244, 200, 182, .14);
   --ac-ring: 0 0 0 2px var(--ac);
 
   --t-quick: 180ms;   /* a tile lifting, a strip sliding */

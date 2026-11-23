@@ -890,7 +890,7 @@ module.exports = function (h) {
               if (!st.on[0]) throw new Error('▲ from the extras did not return to the cast');
               return page.evaluate(function () {
                 return new Promise(function (resolve) {
-                  const open = indexedDB.open('reflex', 1);
+                  const open = indexedDB.open('reflex');
                   open.onsuccess = function () {
                     const tx = open.result.transaction('kv', 'readwrite');
                     tx.objectStore('kv').openCursor().onsuccess = function (event) {

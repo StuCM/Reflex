@@ -1,7 +1,7 @@
 'use strict';
 /* the v2 background and the tuning panel */
 module.exports = function (h) {
-  const { press, waitFor, step, page, tilePosters, backdrops } = h;
+  const { press, waitFor, step, page, tilePosters, backdrops, reloadDeck } = h;
 
   const hudText = () => page.evaluate('document.getElementById("hud").textContent');
   const glowX = () => page.evaluate('document.getElementById("g1").style.getPropertyValue("--gx")');
@@ -992,5 +992,49 @@ module.exports = function (h) {
             },
           );
         });
+    })
+
+    .then(function () {
+      return step(
+        'profiles: Together by default, a profile has its accent and its plays',
+        async function () {
+          const accent = () =>
+            page.evaluate(
+              'getComputedStyle(document.documentElement).getPropertyValue("--ac").trim()',
+            );
+          const profile = () => page.evaluate('window.Profiles.current().id');
+          assertEqual(await profile(), 'together', 'the fresh profile');
+          assertEqual(await accent(), '#F4C8B6', 'Together accent');
+
+          const stores = await page.evaluate(function () {
+            return new Promise(function (resolve) {
+              const req = indexedDB.open('reflex');
+              req.onsuccess = function () {
+                resolve(Array.prototype.slice.call(req.result.objectStoreNames).sort().join());
+              };
+            });
+          });
+          assertEqual(stores, 'hidden,kv,plays,smart_lists,title_tags', 'the v2 tables');
+
+          const all = await reloadDeck();
+          if (all.entries.length < 2)
+            throw new Error('Together has ' + all.entries.length + ' on the deck');
+
+          await page.evaluate('window.Profiles.set("stu")');
+          assertEqual(await accent(), '#AEBBF0', 'Stu accent');
+          await page.evaluate(function () {
+            const row = document.querySelector('#rows .row.on')._rowRef;
+            window.Profiles.recordPlay(row.items[0], 1000, 5000);
+          });
+          const stu = await reloadDeck();
+          assertEqual(stu.entries.length, 1, 'Stu deck count');
+          assertEqual(stu.entries[0].key, all.entries[0].key, 'Stu deck item');
+
+          await page.evaluate('window.Profiles.set("together")');
+          assertEqual(await accent(), '#F4C8B6', 'back to Together');
+          const again = await reloadDeck();
+          assertEqual(again.entries.length, all.entries.length, 'Together deck count');
+        },
+      );
     });
 };

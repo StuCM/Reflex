@@ -16,6 +16,8 @@ export const KEY = {
   OK: 13,
   RED: 403,
   YELLOW: 405,
+  CH_UP: 427,
+  CH_DOWN: 428,
   BACK: 461,
   ESC: 27,
   BACKSPACE: 8,

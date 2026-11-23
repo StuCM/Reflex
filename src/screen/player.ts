@@ -6,6 +6,7 @@ import { photoUrl, posterUrl } from '../api/plex/images';
 import { streamUrl, subtitles as fetchSubtitles, timeline } from '../api/plex/playback';
 import settings from '../core/config';
 import { clamp, debug, isBack, toast } from '../core/ui';
+import * as profiles from '../data/profiles';
 import { endsAt, timecode, wallClock } from '../rules/clock';
 import { audioLabel, audioMenuLabel, audioTracks } from '../rules/audio';
 import * as cues from '../rules/cues';
@@ -1122,13 +1123,10 @@ function switchTo(change: Partial<PlaybackSwitch>, what: string): void {
 
 function report(state: string): void {
   if (!item || !server) return;
-  timeline(
-    server,
-    item,
-    state,
-    (videoElement.currentTime || 0) * 1000,
-    (videoElement.duration || 0) * 1000,
-  );
+  const at = (videoElement.currentTime || 0) * 1000;
+  const length = (videoElement.duration || 0) * 1000;
+  timeline(server, item, state, at, length);
+  profiles.recordPlay(item, at, length);
 }
 
 /* A black screen tells you nothing, and "the panel refused it" is only one of

@@ -579,7 +579,7 @@ module.exports = function (h) {
             .then(function () {
               return page.evaluate(function () {
                 return new Promise(function (resolve) {
-                  const req = indexedDB.open('reflex', 1);
+                  const req = indexedDB.open('reflex');
                   req.onsuccess = function () {
                     const store = req.result.transaction('kv', 'readwrite').objectStore('kv');
                     const cursor = store.openCursor();
