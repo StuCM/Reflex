@@ -1,11 +1,11 @@
 ---
 id: 072
 slug: the-guard-warns-and-lets-you-play
-status: approved
+status: done
 branch: crew/072-the-guard-warns-and-lets-you-play
 model: opus
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-foundations
 files:
   - src/data/guard.ts
@@ -19,6 +19,9 @@ files:
   - dev/smoke/detail.js
   - dev/smoke/player.js
   - dev/mock-plex.js
+gate: pass
+gateSha: 8c8c482f4ab20761ea47ac05a8a193e3d858541d
+gateAt: 2026-11-23T17:03:43.072Z
 ---
 
 # The guard warns about a 4K transcode and lets you play anyway
@@ -112,6 +115,32 @@ one at a time.
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)
 
+## Worker notes
+
+What changed:
+- `src/data/guard.ts` — `overridable: !allowed && !direct` on a decision verdict; `label` says "4K transcode — may be stopped"; `refusal` for it is the warning, naming the video or the audio track. `state` stays the server's decision (nothing reads a new one).
+- `types/plex.d.ts` — `Verdict.overridable`.
+- `src/app.ts` — `warnThen` opens the glass menu on `#confirm` (Play anyway / Back) for an overridable verdict; film page, series page, mid-play switch and next episode all go through it.
+- `src/screen/detail.ts`, `src/screen/showpage.ts` — an overridable verdict is chosen / played rather than refused; quality note reworded.
+- `src/screen/player.ts` — the 4K quality note and comments say "warns", not "refused".
+- `CLAUDE.md` — warn-then-allow in the 4K rule and the player passage.
+- `dev/mock-plex.js` — `/__plextv/mute?keys=` serves listed copies with no audio: the one hard refusal a generated library never produces.
+- `dev/smoke.js` — `transcodeStarts` collector, `titles.uhd` and `titles.silent` (muted before the app starts).
+- `dev/smoke/detail.js`, `dev/smoke/player.js` — the warning steps, the hard-refusal step, the 4K quality cap over a playing film.
+
+Where the spec did not match the code:
+- The next episode cannot be asked "over the playing film": `player.takeNext` closes the finished episode before `onPlayNext` runs, so nothing is playing. It goes back to the series page (where a refusal already landed) and asks there; Back leaves it there. The "over the playing film" case is covered by a 4K quality cap mid-film instead.
+- The mock gives no per-stream decisions on an ordinary transcode, so the warning names the audio from `passes` and the video from `maxBitrate` when the server is silent.
+- `detail.js:166` hard-refusal case needed a hard-refusable copy; the mock had none, hence the mute knob.
+
+New steps against `feat/v2` (src/ and types/ stashed): the TrueHD warning, the 4K copy kept, the quality cap and the next-episode warning fail; the hard-refusal step passes (unchanged behaviour).
+
 ## Review rounds
 
+- Round 1 (8c8c482): PASS. Every Definition of done item met; the next episode asking from the series page accepted as a justified deviation. No advice.
+
 ## Graph writes proposed
+
+- Decision: a 4K verdict that will not direct play is `overridable` — warned about (glass menu on `#confirm`, Play anyway / Back), never refused; hard refusals (noaudio, codec, error, nometa, nopart) are unchanged. Stuart, 2026-11-16/23.
+- Pattern: the mock-plex never produces a hard refusal on its own; `/__plextv/mute?keys=<prefix><ratingKey>` serves copies with no audio, and must be set before the app caches that metadata (the harness does it before launch).
+- Gotcha: the next episode cannot be asked about over a playing film — `player.takeNext` stops the finished one before `onPlayNext` runs — so its warning appears on the page it was started from.

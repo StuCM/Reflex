@@ -1,11 +1,11 @@
 ---
 id: 074
 slug: the-shared-v2-pieces
-status: approved
+status: done
 branch: crew/074-the-shared-v2-pieces
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-foundations
 files:
   - src/view/menu.ts
@@ -20,6 +20,9 @@ files:
   - dev/smoke/detail.js
   - dev/smoke/player.js
   - dev/smoke/show.js
+gate: pass
+gateSha: e40637d385f5a2d3a2559fd42b63177296ab1909
+gateAt: 2026-11-23T16:20:45.001Z
 ---
 
 # The pieces most v2 pages share: glass modal, colour-key legend, tabs, poster grid
@@ -104,5 +107,13 @@ files with 072, 073, 075's code), so 072's warning can use the glass modal.
 - [ ] commits follow the convention (the hook enforces it)
 
 ## Review rounds
+
+Round 1: PASS (gate 163/163). Not verified visually: detail/show menus stacking above #glass-scrim (z 5 vs .glass z 6).
+
+## Changes
+- src/view/menu.ts: open adds .glass and shows #glass-scrim (not for hold-menu); close hides it.
+- src/view/{grid,legend,tabs}.ts: new.
+- css/v2.css, index.html (#glass-scrim), src/seam.ts, types/seam.d.ts (Grid, Legend, Menu, Tabs).
+- dev/smoke/shell.js: four steps; dev/smoke/player.js: panel step now asserts glass (alpha .96 + gradient) instead of opaque.
 
 ## Graph writes proposed
