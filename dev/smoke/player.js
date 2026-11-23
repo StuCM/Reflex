@@ -25,6 +25,8 @@ module.exports = function (h) {
     waitForOffer,
     page,
     titles,
+    transcodeStarts,
+    waitForConfirm,
   } = h;
 
   /* The control row is entered with ▼ and a panel opens on OK, so the row is
@@ -958,6 +960,101 @@ module.exports = function (h) {
         });
       })
 
+      .then(function () {
+        if (!hasFixture()) return;
+        return step('a 4K quality cap asks over the playing film and never stops it', function () {
+          const starts = transcodeStarts.length;
+          const ADVANCING =
+            '(function(){var v=document.getElementById("video");' +
+            'return !v.classList.contains("hidden") && !v.paused && !v.error &&' +
+            ' v.currentTime > window.__at + 0.3;})()';
+          function mark() {
+            return page.evaluate(function () {
+              window.__at = document.getElementById('video').currentTime;
+            });
+          }
+          function askForCap() {
+            return openMenu('quality').then(function () {
+              return menuChoose(/^\s*\d+ Mbps/);
+            });
+          }
+          return backToLibrary()
+            .then(function () {
+              return openTitle(titles.uhd.title);
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return page.evaluate(function () {
+                window.__at = 0;
+              });
+            })
+            .then(function () {
+              return waitFor(ADVANCING, 'the 4K film to play', 15000);
+            })
+            .then(askForCap)
+            .then(function () {
+              return waitForConfirm('warning over the film');
+            })
+            .then(function (box) {
+              if (box.title !== '4K transcode')
+                throw new Error('the warning is titled ' + box.title);
+              if (!/re-encode the 4K video/.test(box.note)) {
+                throw new Error('the warning does not say the video is re-encoded: ' + box.note);
+              }
+            })
+            .then(mark)
+            .then(function () {
+              return waitFor(ADVANCING, 'the film to go on playing behind the warning');
+            })
+            .then(function () {
+              return press('Backspace');
+            })
+            .then(function () {
+              return waitFor(
+                'document.getElementById("confirm").classList.contains("hidden")',
+                'Back to close the warning',
+              );
+            })
+            .then(mark)
+            .then(function () {
+              return waitFor(ADVANCING, 'the film to go on playing after Back');
+            })
+            .then(function () {
+              if (transcodeStarts.length !== starts) {
+                throw new Error('Back asked the server for a transcode');
+              }
+            })
+            .then(askForCap)
+            .then(function () {
+              return waitForConfirm('warning, a second time');
+            })
+            .then(function () {
+              return page.keyboard.press('Enter');
+            })
+            .then(function () {
+              return waitFor(
+                'document.getElementById("confirm").classList.contains("hidden")',
+                'Play anyway to close the warning',
+              );
+            })
+            .then(function () {
+              return page.waitForTimeout(1000);
+            })
+            .then(function () {
+              /* The restart reaches for start.m3u8, which desktop Chrome will not
+               play; the request is what this environment can prove. */
+              if (transcodeStarts.length !== starts + 1) {
+                throw new Error(
+                  'Play anyway made ' + (transcodeStarts.length - starts) + ' transcode requests',
+                );
+              }
+            })
+            .then(backToLibrary);
+        });
+      })
+
       /* ---- what comes next ----
 
        The whole point of the feature is that it does NOT roll on by itself
@@ -1041,8 +1138,12 @@ module.exports = function (h) {
 
       .then(function () {
         if (!hasFixture()) return;
-        return step('a next episode the guard refuses toasts instead of playing', function () {
+        return step('a next episode that would be a 4K transcode asks first', function () {
+          /* The episode before it has ended and been closed, so the question is
+           asked from the series page it was started from — and Back leaves it
+           there, with nothing opened on the server. */
           const mark = timelines.length;
+          const starts = transcodeStarts.length;
           return playToEnd()
             .then(waitForOffer)
             .then(function (st) {
@@ -1054,22 +1155,40 @@ module.exports = function (h) {
               return page.keyboard.press('Enter');
             })
             .then(function () {
+              return waitForConfirm('warning for the next episode');
+            })
+            .then(function (box) {
+              if (box.title !== '4K transcode')
+                throw new Error('the warning is titled ' + box.title);
+              if (box.rows.join(' | ') !== '> Play anyway | Back') {
+                throw new Error('the warning offers ' + box.rows.join(' | '));
+              }
+              return page.evaluate(function () {
+                return {
+                  show: !document.getElementById('show').classList.contains('hidden'),
+                  video: !document.getElementById('video').classList.contains('hidden'),
+                };
+              });
+            })
+            .then(function (st) {
+              if (!st.show || st.video) throw new Error('the warning is not over the series page');
+              return press('Backspace');
+            })
+            .then(function () {
               return waitFor(
-                '(function(){var t=document.getElementById("toast");' +
-                  'return !t.classList.contains("hidden") && /Not playing/.test(t.textContent) &&' +
-                  ' document.getElementById("video").classList.contains("hidden") &&' +
-                  ' !document.getElementById("show").classList.contains("hidden");})()',
-                'the refusal, back on the series page',
-                25000,
+                'document.getElementById("confirm").classList.contains("hidden") &&' +
+                  ' !document.getElementById("show").classList.contains("hidden")',
+                'Back to leave the series page showing',
               );
             })
             .then(function () {
-              /* Refused before anything opened: the decision call carries
-               hasMDE=1 and nothing was ever reported playing. */
               const started = timelines.slice(mark).filter(function (u) {
                 return /state=playing/.test(u);
               });
-              if (started.length) throw new Error('a session was opened for a refused episode');
+              if (started.length) throw new Error('a session was opened for a declined episode');
+              if (transcodeStarts.length !== starts) {
+                throw new Error('Back asked the server for a transcode');
+              }
             });
         });
       })

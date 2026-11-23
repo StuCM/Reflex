@@ -358,9 +358,9 @@ function adoptDefault() {
 /* ---------- choosing ----------
 
    Every button on the row is the same move: ask the guard about the new
-   combination, and keep it only if the answer is yes. Losing your place to
+   combination, and keep it unless the answer is no. Losing your place to
    deliver a message is a worse answer than not switching, so a refusal is a
-   toast and the page does not move. */
+   toast and the page does not move. A 4K transcode is kept: Play warns. */
 function choose(next: Choice) {
   const mine = generation;
   const src = sources[next.sel];
@@ -372,7 +372,7 @@ function choose(next: Choice) {
     })
     .then((checked) => {
       if (mine !== generation) return;
-      if (!checked.ok) {
+      if (!checked.ok && !checked.overridable) {
         toast(`Kept as it was — ${guard.label(checked)}`);
         debug(`choice refused: ${guard.refusal(item as PlexItem, checked)[1]}`);
         return;
@@ -428,7 +428,7 @@ function qualityRows() {
       label: cap.label,
       note:
         cap.bitrate && isUHD(source && source.media)
-          ? 'a 4K transcode is what gets the stream killed — this will be refused'
+          ? 'a 4K transcode — Play warns, and the server may stop it'
           : cap.detail || '',
       on: (cap.bitrate || null) === maxBitrate,
       value: cap.bitrate || null,
@@ -1074,7 +1074,7 @@ function start(chosenVerdict: Verdict | null | undefined, isExtra?: boolean, at?
     toast('Still checking that copy…');
     return;
   }
-  if (!chosenVerdict.ok) {
+  if (!chosenVerdict.ok && !chosenVerdict.overridable) {
     const why = guard.refusal(item as PlexItem, chosenVerdict);
     message(why[0], why[1]);
     return;

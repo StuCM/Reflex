@@ -660,8 +660,9 @@ function playFocused(at?: number): void {
   if (!episode) return;
   const verdict = verdicts[verdictKey(episode)];
   /* Not checked yet, or the preferred copy will not play: the film page is
-     where every copy is listed, so send them there rather than guessing. */
-  if (!verdict?.ok) {
+     where every copy is listed, so send them there rather than guessing. A 4K
+     transcode goes on, to be warned about. */
+  if (!verdict || !(verdict.ok || verdict.overridable)) {
     openCopies();
     return;
   }

@@ -72,6 +72,9 @@ function create(opts) {
   lib.indexDelay = 0;
   lib.indexFail = 0;
   lib.indexReads = [];
+  /* Copies, by server prefix and ratingKey, served with no audio at all: the one
+     hard refusal the guard has left that a generated library never produces. */
+  lib.muted = [];
   const pins = {};
   let nextPin = 4000;
 
@@ -612,6 +615,11 @@ function create(opts) {
       json(res, 200, lib.hubCalls);
       return true;
     }
+    if (pathname === '/mute') {
+      lib.muted = q.keys ? String(q.keys).split(',') : [];
+      json(res, 200, lib.muted);
+      return true;
+    }
     if (pathname === '/kids-index') {
       lib.indexDelay = Number(q.ms || 0);
       lib.indexFail = Number(q.fail || 0);
@@ -1038,6 +1046,15 @@ function create(opts) {
       });
       const full = lib.fullMetadata(item);
       if (deckHit) full.viewOffset = deckHit.viewOffset;
+      if (lib.muted.indexOf(srv.prefix + item.ratingKey) >= 0) {
+        full.Media.forEach(function (media) {
+          media.Part.forEach(function (part) {
+            part.Stream = part.Stream.filter(function (s) {
+              return s.streamType !== 2;
+            });
+          });
+        });
+      }
       json(res, 200, container({ size: 1, Metadata: [full] }));
       return true;
     }

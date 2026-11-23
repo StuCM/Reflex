@@ -384,6 +384,8 @@ interface PlexResource {
 /** What Guard.check resolves with. Never rejects. */
 interface Verdict {
   ok: boolean;
+  /** Not ok, but only because it is a 4K transcode: warn, and play if asked. */
+  overridable?: boolean;
   state: string;
   text?: string;
   transcode?: boolean;

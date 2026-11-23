@@ -23,6 +23,7 @@ import * as showpage from './screen/showpage';
 import * as player from './screen/player';
 import { must } from './view/dom';
 import * as hud from './view/hud';
+import * as menu from './view/menu';
 import * as rail from './view/rail';
 
 /* ---------- opening something ----------
@@ -98,7 +99,9 @@ function openShow(
        undefined otherwise — the difference between starting again and picking
        up, so it must not be collapsed to `startAt || 0`. */
     onPlay: (episode, verdict, startAt) => {
-      playChecked(episode, verdict, false, startAt, toShow);
+      warnThen(episode, verdict, () => {
+        playChecked(episode, verdict, false, startAt, toShow);
+      });
     },
     /* Leaving the page by any route stops its theme. One call per route rather
        than a listener, because the failure mode is two sources on one ARC
@@ -220,16 +223,18 @@ function openDetail(
        Play was — the difference between starting again and picking up, so it
        must not be collapsed to `at || 0`. */
     onPlay: (entry, verdict, isExtra, language, at) => {
-      playChecked(
-        entry,
-        verdict,
-        isExtra,
-        at,
-        () => {
-          openDetail(item, back);
-        },
-        language,
-      );
+      warnThen(entry, verdict, () => {
+        playChecked(
+          entry,
+          verdict,
+          isExtra,
+          at,
+          () => {
+            openDetail(item, back);
+          },
+          language,
+        );
+      });
     },
     onTrailer: (key) => {
       openRecap({ id: key, title: `${item.title} trailer`, thumb: '', season: null, length: '' });
@@ -238,8 +243,38 @@ function openDetail(
   });
 }
 
+const confirmHost = must('confirm');
+
+/* A 4K transcode is the server owner's to stop, not ours to refuse: say what
+   it costs over whatever is showing, and play only on Play anyway. Back just
+   closes it, which leaves a playing film playing. */
+function warnThen(item: PlexItem, verdict: Verdict, play: () => void) {
+  if (!verdict.overridable) {
+    play();
+    return;
+  }
+  const [title, body] = guard.refusal(item, verdict);
+  menu.open({
+    host: confirmHost,
+    tabs: [
+      {
+        label: title,
+        note: body,
+        rows: () => [
+          { label: 'Play anyway', value: true },
+          { label: 'Back', value: false },
+        ],
+      },
+    ],
+    onChoose: (value) => {
+      if (value) play();
+    },
+  });
+}
+
 /* The one way into the player: the verdict has already been through the
-   guard, so the server will serve it and it is not a 4K transcode.
+   guard, so the server will serve it, and a 4K transcode has been warned
+   about and accepted.
 
    `back` and `language` are carried through a switch of audio track, version
    or quality, because a switch is a restart and losing either to it is what
@@ -255,7 +290,7 @@ function playChecked(
   /* Before anything touches the video element: a series theme and playback
      must never share the ARC link. */
   showpage.silence();
-  if (!verdict || !verdict.ok) return;
+  if (!verdict || !(verdict.ok || verdict.overridable)) return;
   const metadata = verdict.metadata;
   const server = servers.of(metadata);
   if (!metadata || !server) return;
@@ -299,15 +334,17 @@ function playChecked(
           forceStream: change.forceStream,
         })
         .then((switched) => {
-          if (!switched.ok) {
-            /* A refusal returns without touching the player: stopping
-               playback to deliver a message is worse than not switching. */
+          /* Neither a refusal nor the warning touches the player: stopping
+             playback to deliver a message is worse than not switching. */
+          if (!switched.ok && !switched.overridable) {
             toast(`Kept as it was — ${guard.label(switched)}`);
             debug(`switch refused: ${guard.refusal(item, switched)[1]}`);
             return;
           }
-          player.stop('stopped', true);
-          playChecked(item, switched, isExtra, change.at, back, change.subLang);
+          warnThen(item, switched, () => {
+            player.stop('stopped', true);
+            playChecked(item, switched, isExtra, change.at, back, change.subLang);
+          });
         });
     },
     /* Direct play reads the file itself. Otherwise the server has to serve a
@@ -342,16 +379,24 @@ function playChecked(
 /* The next episode is not a special case: it may be a 4K remux the server would
    refuse, and finding that out by starting a session is exactly what the guard
    exists to prevent. A refusal says why and goes back to the series rather than
-   leaving a black screen. */
+   leaving a black screen; a 4K transcode asks from there, since the episode
+   before it has already been closed. */
 function playNext(episode: PlexItem, back: () => void) {
   guard.check(episode).then((verdict) => {
-    if (!verdict.ok) {
+    if (verdict.ok) {
+      playChecked(episode, verdict, false, 0, back);
+      return;
+    }
+    if (!verdict.overridable) {
       toast(`Not playing ${episode.title || 'the next one'} — ${guard.label(verdict)}`);
       debug(`next refused: ${guard.refusal(episode, verdict)[1]}`);
       back();
       return;
     }
-    playChecked(episode, verdict, false, 0, back);
+    back();
+    warnThen(episode, verdict, () => {
+      playChecked(episode, verdict, false, 0, back);
+    });
   });
 }
 
