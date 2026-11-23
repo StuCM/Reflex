@@ -163,7 +163,25 @@ module.exports = function (h) {
       .then(function () {
         return step('the deck lands before the hubs do', function () {
           let expected;
-          return cachedRows('Home')
+          /* Home is only cached when it is the page shown, so land on it fresh
+             first: the hubs arriving means the cache now holds the servers' deck. */
+          return page
+            .reload()
+            .then(function () {
+              return h.ready();
+            })
+            .then(function () {
+              return waitFor(
+                '(function(){var l=document.querySelectorAll("#rows .row .row-label"),i;' +
+                  'for(i=0;i<l.length;i++) if(l[i].textContent.trim()==="Recently Added") return true;' +
+                  'return false;})()',
+                'the hub row on a fresh Home',
+                15000,
+              );
+            })
+            .then(function () {
+              return cachedRows('Home');
+            })
             .then(function (hit) {
               const row = hit.rows.find(function (r) {
                 return r.title === 'Continue watching';
