@@ -25,6 +25,8 @@ module.exports = function (h) {
     titles,
   } = h;
 
+  const ageOut = () => page.evaluate(h.AGE_PAGES);
+
   /* What every tile of the focused row is showing, against what Art says that
      tile's own item should show: fresh is its own picture, stale is one that
      belongs to another film, blank is waiting on the settle. Blank and stale
@@ -889,7 +891,18 @@ module.exports = function (h) {
 
     .then(function () {
       return step('the All row knows its size without crawling it', function () {
-        return press('ArrowDown', 5)
+        /* The menu pages carry no All row; it is the server-controls fallback
+           behind More. */
+        return sidebarPick('Movies')
+          .then(function () {
+            return waitFor(
+              'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0',
+              'the Movies library from More',
+            );
+          })
+          .then(function () {
+            return press('ArrowDown', 5);
+          })
           .then(function () {
             return waitFor(
               '/All films\\s+\\(\\d+\\)/.test(document.querySelector("#rows").textContent)',
@@ -1267,7 +1280,9 @@ module.exports = function (h) {
             return kidsIndex(2500, 0);
           })
           .then(function () {
-            return press('F4');
+            return ageOut().then(function () {
+              return press('F4');
+            });
           })
           .then(function () {
             return waitFor(newAndComing, 'New and coming before the index', 20000);
@@ -1304,7 +1319,9 @@ module.exports = function (h) {
               return kidsIndex(0, 1);
             })
             .then(function () {
-              return press('F4');
+              return ageOut().then(function () {
+                return press('F4');
+              });
             })
             .then(function () {
               return waitFor(newAndComing, 'New and coming with the index failing', 20000);
@@ -1386,7 +1403,9 @@ module.exports = function (h) {
                   return kidsIndex(250, 0);
                 })
                 .then(function () {
-                  return press('F4');
+                  return ageOut().then(function () {
+                    return press('F4');
+                  });
                 })
                 .then(function () {
                   return waitFor(popular, 'the held rows from a slow index', 90000);
@@ -1430,7 +1449,10 @@ module.exports = function (h) {
         'document.querySelectorAll("#rows .row:not(.hidden) .row-label").length >= 4 &&' +
         ' /Popular kids films/.test(document.querySelector("#rows").textContent)';
       return step('yellow opens Kids from the library', function () {
-        return press('F4')
+        return ageOut()
+          .then(function () {
+            return press('F4');
+          })
           .then(function () {
             return waitFor(kidsUp, 'the kids rows after yellow', 20000);
           })

@@ -561,7 +561,8 @@ function start() {
     .get()
     .then((list) => {
       if (list && list.length && servers.count()) {
-        browse.loadSection(browse.setSections(rehydrate(list)), false);
+        browse.setSections(rehydrate(list));
+        browse.start(false);
         /* The cached servers can answer for Continue watching now, without
            waiting on plex.tv and the section lists. */
         browse.refreshDeck();
@@ -584,7 +585,8 @@ function start() {
       cached.sections.put(
         perServer.map((row) => ({ serverId: row.server.id, sections: row.sections })),
       );
-      browse.loadSection(browse.setSections(perServer), true);
+      browse.setSections(perServer);
+      browse.start(true);
     })
     .catch(startFailed);
 }

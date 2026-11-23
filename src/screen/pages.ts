@@ -3,7 +3,7 @@ import * as devices from '../data/devices';
 import * as merge from '../data/merge';
 import * as rowModel from '../rules/rows';
 
-/* The last state of each library page, so changing page does not blank it. */
+/* The last state of each page, by key, so changing page does not blank it. */
 
 export interface Page {
   rows: Row[];
@@ -11,18 +11,20 @@ export interface Page {
   deckItems: PlexItem[];
   /** When the rows last came from the servers; 0 if only from the cache. */
   loadedAt: number;
+  /** Kids only: the filter its later pages are cut by. */
+  held?: (entry: DiscoveryEntry) => boolean;
 }
 
 export const FRESH_FOR = 2 * 60 * 1000;
 
-const kept = new Map<number, Page>();
+const kept = new Map<string, Page>();
 
-export function keep(section: number, page: Page): void {
-  kept.set(section, page);
+export function keep(key: string, page: Page): void {
+  kept.set(key, page);
 }
 
-export function recall(section: number): Page | undefined {
-  return kept.get(section);
+export function recall(key: string): Page | undefined {
+  return kept.get(key);
 }
 
 export function isFresh(page: Page): boolean {
@@ -59,6 +61,26 @@ export function refreshed(shown: Row[], fresh: { title: string; items: PlexItem[
   const moved = was ? fresh.items.findIndex((item) => sameItem(was, item)) : -1;
   row.focus = moved >= 0 ? moved : Math.min(old.focus, Math.max(0, row.total - 1));
   return row;
+}
+
+/* Both servers offer a "Recently Added"; they are one row, deduplicated.
+   Order within it is first-seen, which keeps each server's own ordering
+   intact rather than inventing a ranking across them. */
+export function mergeHubs(perPart: PlexHub[][]): { title: string; items: PlexItem[] }[] {
+  const byTitle: Record<string, PlexItem[][]> = {};
+  const order: string[] = [];
+  perPart.forEach((hubs) => {
+    hubs.forEach((hub) => {
+      if (!byTitle[hub.title]) {
+        byTitle[hub.title] = [];
+        order.push(hub.title);
+      }
+      byTitle[hub.title]?.push(hub.items);
+    });
+  });
+  return order
+    .map((title) => ({ title, items: merge.lists(byTitle[title] ?? []) }))
+    .filter((hub) => hub.items.length > 0);
 }
 
 /* onDeck is per server, not per section, and hands back films and episodes
