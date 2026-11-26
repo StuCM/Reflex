@@ -1,11 +1,11 @@
 ---
 id: 081
 slug: the-menu-the-boards-draw
-status: approved
+status: done
 branch: crew/081-the-menu-the-boards-draw
 model: opus
 env: laptop
-rounds: 0
+rounds: 2
 work: v2-movies-tv
 files:
   - src/view/menubar.ts
@@ -20,6 +20,9 @@ files:
   - dev/smoke.js
   - dev/smoke/shell.js
   - dev/smoke/browse.js
+gate: pass
+gateSha: bbb1849ac3ba338f8750d6de039130eebc35dd1a
+gateAt: 2026-11-26T17:22:21.928Z
 ---
 
 # The top menu is the one the boards draw: tabs at rest, icon tiles on Up, and a clock
@@ -144,8 +147,40 @@ Everything in Background marked as board values, verbatim.
 
 ## Review rounds
 
+- Round 1 (ead7338): **PASS**. Advice: the DoD's "seven" should read ten; `#hero-art` stays under the open menu as Approach 4 says, though ComboMenu draws none (a follow-up if it must match exactly); arrowing off a page tile onto a non-page tile within 150ms cancels that page's settled load (old More behaviour); the search pill is hidden everywhere; `dev/smoke/browse.js` still says "More". None taken: the first two are spec decisions, the last is outside `files:`. The reviewer checked board values from the diff and CSS and did not open the board beside the app.
+
 - Person, side by side (orchestrator opened ComboMenu.dc.html and the app at 1920×1080, measured by rect): tiles, hint (top 486) and clock match. The tray does not: board posters are all 176×264 at top 775, stride 202, no row title, no captions, no backdrop; app posters start at 724, the first is enlarged, the row title and captions show, and `#hero-art` stays visible. Spec Background/Approach 4 corrected; DoD "seven" → ten; `dev/smoke/browse.js` added to `files:` for the stale "More" strings. Assert the tray by rect against these numbers.
+
+- Round 2 work (8dba8ac, folded into the one commit): the tray fix below. **Not reviewed: no round opened.** The gate passed on 8dba8ac (171/171) but only against a scratch copy of this file, because the installed crew (`node_modules/@stucm/crew` → `Reflex/crew`) requires a fully clean tree *including* this task file, and HEAD's copy of it predates `dev/smoke/browse.js` joining `files:`, so the scope check fails on HEAD's copy. Copying that stamp in by hand was refused, correctly. `crew task … block` does not exist in that version either, so `status:` is untouched. To unblock: commit this task file's `files:` change on the branch, or update `Reflex/crew` to the claude-crew version whose gate excludes bookkeeping. Then `crew gate` + `crew review` + reviewer.
+
+- Round 2 (bbb1849): **PASS**. `npm run verify` 171/171. The tray matches the corrected spec: `#viewport` translateY(151px) at opacity .4 puts posters at 775, and the row label, captions, ring, `#hero-art` and scrims are 0 in the menu, with the focused lift removed and the ground glows shown. The shell smoke asserts every on-screen poster by rect (at least nine) and `#g1` opacity 1. Orchestrator's side-by-side at 1920x1080 agrees. No findings.
 
 ## Worker notes
 
+- `src/view/glyphs.ts` — `line()` plus the board's eight stroked icons (`television` for TV: `id-length` rejects `tv`), Home (house) and Servers (two drives) in the same 24-unit grid.
+- `src/view/menubar.ts` — `#tabs` drawn by `tabs(pages, current)` (no-op on a repeat), ten tiles built once with `.on` toggled per key; the strip winds by `--mb-x` on `#mb-strip` (Servers only, by 184px). Load callback takes a tile id; `MORE` gone.
+- `src/view/clock.ts` (new) — `wallClock` from `rules/clock` into `#clock`, rescheduled to the next minute boundary.
+- `src/screen/browse.ts` — `goToTile` maps a tile id to the router page (glows on unsettled); OK on Streaming toasts "Coming soon" and leaves the menu open, Search opens search, Settings/Servers open the sidebar; `render` keeps the tab bar on `pageId()`; Up opens with the first row's title.
+- `src/app.ts` — starts the clock at boot. `src/view/hud.ts` — the default (slow) row's menu timing 420 → 300; `css/base.css` `--t-menu` 300ms to match.
+- `index.html` — `#tabs` (chevron + `#tab-list`), `#menubar > #mb-strip`, `#menu-hint` (chevron-down + `#menu-hint-title`), `#clock` after `#video`.
+- `css/v2.css` — the board values; open state fades `#tabs`/`#masthead`, `#viewport` translateY(100px) (rest tiles 624 → 724) at opacity .4. `#clock` hidden by `#video:not(.hidden) ~ #clock`. `#top-right` (search pill) hidden: the clock takes its corner and the board has no pill.
+- `dev/smoke.js` — `openSidebar` goes left to Servers from Home/Movies, otherwise right to Settings (the old More rule, so no new page is passed on the way); `menuIsOpen` exported.
+- `dev/smoke/shell.js` — new rest step (tab bar + clock board values, a second page on a Playwright fake clock rolls 09:59 → 10:00 with no key); menu step asserts every tile/hint/tray board value by computed style or rect, `--t-menu` 300ms and the transition properties; Streaming/Search step; winding step with a root-style-write counter and a strip-write control; the page-hop step and the 150ms settle step re-routed for the new tile order.
+
+Spec discrepancies:
+- DoD says "Up shows ten icon tiles"; Goal, Approach 2 and 6 and *Differs from board* all say ten. Built ten.
+- "hides the hero": Approach 4 fades `#tabs` and `#masthead` only, so the backdrop (`#hero-art`) stays under the open menu, where ComboMenu draws none. Left as specified.
+- Space Grotesk ships 500 and 700 only (`css/fonts`), as does the board's own font link, so 600 computes as 600 but renders from the nearest face in both.
+- `dev/smoke/browse.js:895,900` still say "More" in a comment and a waitFor label; not in `files:`.
+
+Round 2 (tray, from the side-by-side):
+- `css/v2.css` — `#viewport` drops 151px (posters 624 → 775); in the menu the row label, captions, `#ring`, `#hero-art` and both scrims go to opacity 0 and the focused poster loses its 1.19 lift; label/caption opacity on `--t-menu`. `#bg.hero-on:not(.menu)` so the ground glows show under the tray as on the board.
+- `src/view/menubar.ts` — toggles `menu` on `#bg` with `#browse`.
+- `dev/smoke/shell.js` — asserts every on-screen tray poster by rect (`96+202i, 775, 176×264`, at least nine), row label/captions/hero/scrims opacity 0, and waits for `#g1` opacity 1 (it was 0 under the hero before, so not a pass-on-nothing).
+- `dev/smoke/browse.js` — "More" → "Servers" in the comment and the waitFor label.
+
 ## Graph writes proposed
+
+- Gotcha: the vendored `Reflex/crew` gate checks `git status --porcelain` with no bookkeeping exclusion, so a worker whose task file was amended by the orchestrator (and must not be committed) cannot get a stamp. claude-crew's own `gate.js` already excludes `bookkeeping()`; the vendored copy needs updating.
+
+- Pattern: a smoke step that needs a clock to tick can open a second page with `page.context().newPage()` and `clock.install({ time })` before `goto`, then `clock.runFor()` — the main page's timers stay real for every later step.
