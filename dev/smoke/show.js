@@ -303,7 +303,7 @@ module.exports = function (h) {
             return page.waitForTimeout(800);
           })
           .then(function () {
-            return press('ArrowDown');
+            return press('ArrowDown', 2);
           }) // off Continue watching
           .then(function () {
             /* Shows are not films: no runtime, no audio verdict, a series count
