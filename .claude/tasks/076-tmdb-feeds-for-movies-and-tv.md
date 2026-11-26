@@ -1,11 +1,11 @@
 ---
 id: 076
 slug: tmdb-feeds-for-movies-and-tv
-status: approved
+status: done
 branch: crew/076-tmdb-feeds-for-movies-and-tv
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-movies-tv
 files:
   - src/api/tmdb.ts
@@ -16,6 +16,9 @@ files:
   - dev/mock-tmdb.js
   - test/tmdb.test.ts
   - test/art.test.ts
+gate: pass
+gateSha: f32b35ba723a185cad39a47cf14f1338f9b48187
+gateAt: 2026-11-26T18:06:46.632Z
 ---
 
 # TMDB feeds Movies and TV need: one-title recommendations, a row cap, and the service a title is on
@@ -94,6 +97,15 @@ None. Base `feat/v2`.
 
 ## Review rounds
 
+Round 1: PASS. Gate passed on f32b35b (171/171 smoke).
+
 ## Worker notes
+
+- config.ts: exported SERVICES and SERVICE_IDS (SERVICE_IDS unused until a page needs it).
+- tmdb.ts: trending takes a window; recommendationsFor; catalogue 'because'; details appends watch/providers.
+- discovery.ts: limit slices in kept() and caps pages to 1; pageKey separates seed and day.
+- art.ts: serviceOf, facts.service, exported isComplete (lookUp treats service undefined as a miss).
+- types/plex.d.ts, mock-tmdb.js, tests updated.
+- The first full gate run failed one smoke step once (deck) and passed on rerun; the isolated `smoke deck` area fails on base too.
 
 ## Graph writes proposed
