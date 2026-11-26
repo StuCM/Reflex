@@ -9,6 +9,8 @@ rounds: 0
 work: v2-movies-tv
 files:
   - src/screen/browse.ts
+  - src/view/menubar.ts
+  - src/view/glyphs.ts
   - src/screen/pages.ts
   - src/core/config.ts
   - src/rules/rows.ts
@@ -26,11 +28,12 @@ files:
 ## Goal
 Movies shows, in order, the Movies board's rows with its labels and sub-lines:
 **Trending this week** / Updated daily, **Top 10 today** / Most watched in your
-region, **Because you watched <title>** / From your history — then genre rows
-of ours: Top thrillers, Top sci-fi, Top comedies, Top action, Top horror, Top
+region, **Because you watched <title>** / From your history — then a row per service
+(**Popular on Netflix**, **Popular on Prime Video**, **Popular on Apple TV+**,
+**Popular on Disney+**), then genre rows of ours: Top thrillers, Top sci-fi, Top comedies, Top action, Top horror, Top
 documentaries. TV: Trending this week, Top 10 today, **Your next episodes** /
 Shows you are watching (the deck's episodes), Because you watched <show>, then
-Top crime, Top sci-fi & fantasy, Top comedies, Top dramas, Top documentaries,
+the same four service rows, then Top crime, Top sci-fi & fantasy, Top comedies, Top dramas, Top documentaries,
 Top animation. No Plex hub on either page, no Continue watching on Movies. The
 Top 10 row is marked ranked in the row model (drawn plain until 078).
 
@@ -38,8 +41,9 @@ Top 10 row is marked ranked in the row model (drawn plain until 078).
 Stuart, 2026-11-26: "the servers rows are not in this at all, all rows are
 custom by us and from tmdb lists"; Continue watching "only on home"; then "no
 lets have next episodes still on the tv show page"; "could we add a few more
-rows … Maybe like Top thrillers, top sci fi for example"; the per-service rows
-move to the Streaming page. Labels follow `designs/v2/Movies.dc.html:145-157`.
+rows … Maybe like Top thrillers, top sci fi for example"; "I don't think
+streaming is needed this is folded in with movies and tvs" — so the service
+rows live here and the menu's Streaming tile (081) goes. Labels follow `designs/v2/Movies.dc.html:145-157`.
 
 ## Existing work
 After 076 (uses `SERVICES`, `limit`, `kind: 'because'`). Base `feat/v2`.
@@ -77,6 +81,7 @@ After 076 (uses `SERVICES`, `limit`, `kind: 'because'`). Base `feat/v2`.
    - Top 10 today / Most watched in your region — `trending`, `window: 'day'`, `limit: 10`, `ranked: true`.
    - Movies: Because you watched <title> / From your history — `because`.
    - TV: Your next episodes / Shows you are watching — the deck's episodes (step 3), then Because you watched <show> / From your history.
+   - Popular on <service> ×4 (`SERVICES` order) / sub-line "On your services" — `discover`, `{with_watch_providers: <one id>, sort_by: 'popularity.desc'}`.
    - Genre rows — `discover`, `{with_genres: <id>, sort_by: 'vote_average.desc'}` with the existing vote floor. Movies: thrillers 53, sci-fi 878, comedies 35, action 28, horror 27, documentaries 99. TV: crime 80, sci-fi & fantasy 10765, comedies 35, dramas 18, documentaries 99, animation 16. Sub-line "Highest rated".
    `ListRow` gains `sub?: string`; the rail draws it under the title (board:
    24px, rgba(255,255,255,.55)) — the CSS is 078's, the field is this task's.
@@ -92,7 +97,7 @@ After 076 (uses `SERVICES`, `limit`, `kind: 'because'`). Base `feat/v2`.
 4. Mock TMDB: answer `with_watch_providers` discover (any ids) and the four
    single-provider rows with distinct lists so each row is tellable.
 5. Smoke, new area `movies` (`dev/smoke/movies.js`, registered in
-   `dev/smoke.js`): Movies shows its nine labels in order; TV its twelve, with
+   `dev/smoke.js`): Movies shows its thirteen labels in order; TV its sixteen, with
    Your next episodes third (positive count from the mock deck); Top 10
    has exactly 10 tiles; Movies and TV make **zero** hub calls
    (with a control asserting Home makes ≥1 on the same collector); no
@@ -103,9 +108,16 @@ After 076 (uses `SERVICES`, `limit`, `kind: 'because'`). Base `feat/v2`.
    only; Movies/TV asserted by labels). `deck.js:687-693, 745-760` read the
    sidebar's `rows:Movies` key and should still pass — touch only if they fail.
 
+## The Streaming tile
+`src/view/menubar.ts` drops the Streaming tile (nine tiles: Home, Movies, TV,
+Collections, Discover, Kids, Search, Settings, Servers) and its "Coming soon"
+toast; `src/view/glyphs.ts` drops its icon if nothing else uses it. Update
+`shell.js`'s tile count and order, and any `smoke.js` helper walking the tiles.
+Record it under 081's "Differs from board" in `docs/v2-decisions.md`? No —
+that file is outside `files:`; note it in Worker notes for the orchestrator.
+
 ## Out of scope
 - Drawing the ranked row (078), the hero (079), Home's split (080).
-- Per-service rows (the Streaming page, 083).
 - The watchlist seed; finished-film seeds.
 
 ## Definition of done
