@@ -1,7 +1,7 @@
 ---
 id: 080
 slug: home-splits-continue-watching
-status: review
+status: done
 branch: crew/080-home-splits-continue-watching
 model: sonnet
 env: laptop

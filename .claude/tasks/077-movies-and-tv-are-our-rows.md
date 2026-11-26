@@ -1,7 +1,7 @@
 ---
 id: 077
 slug: movies-and-tv-are-our-rows
-status: review
+status: done
 branch: crew/077-movies-and-tv-are-our-rows
 model: sonnet
 env: laptop
