@@ -1,4 +1,5 @@
 'use strict';
+/* eslint-disable no-await-in-loop -- key presses and polls are sequential by nature */
 /* clearing things out of Continue watching */
 module.exports = function (h) {
   const {
@@ -28,6 +29,12 @@ module.exports = function (h) {
     hasFixture,
   } = h;
 
+  const assertEqual = (got, want, what) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) {
+      throw new Error(what + ': got ' + JSON.stringify(got) + ', wanted ' + JSON.stringify(want));
+    }
+  };
+
   /* The rows the rail holds, by label, with the title each opens on. */
   function railRows() {
     return page.evaluate(function () {
@@ -38,6 +45,19 @@ module.exports = function (h) {
           label: el.querySelector('.row-label').textContent.trim(),
           first: first ? first.grandparentTitle || first.title : null,
           viewedAt: first ? first.lastViewedAt || 0 : 0,
+        };
+      });
+    });
+  }
+
+  /* Every row the rail holds: its label and the types of its items. */
+  function homeRows() {
+    return page.evaluate(function () {
+      return Array.prototype.map.call(document.querySelectorAll('#rows .row'), function (el) {
+        const row = el._rowRef;
+        return {
+          label: el.querySelector('.row-label').textContent.trim(),
+          types: row && row.items ? row.items.map((m) => m.type) : [],
         };
       });
     });
@@ -243,6 +263,253 @@ module.exports = function (h) {
         });
       })
 
+      /* ---- Home draws the deck as two rows ---- */
+
+      .then(function () {
+        return step(
+          'Home draws films in Continue watching and episodes in Your next episodes',
+          async function () {
+            await page.reload();
+            await h.ready();
+            await waitFor(
+              'document.querySelectorAll("#rows .row .row-label")[1].textContent.trim() === "Your next episodes"',
+              'Your next episodes under Continue watching',
+              15000,
+            );
+            const rows = await homeRows();
+            assertEqual(
+              [rows[0].label, rows[1].label],
+              ['Continue watching', 'Your next episodes'],
+            );
+            assertEqual(rows[0].types.length > 0, true, 'films in Continue watching');
+            assertEqual(
+              rows[0].types.every((type) => type === 'movie'),
+              true,
+              'Continue watching holds only films: ' + rows[0].types,
+            );
+            assertEqual(rows[1].types.length > 0, true, 'episodes in Your next episodes');
+            assertEqual(
+              rows[1].types.every((type) => type === 'episode'),
+              true,
+              'Your next episodes holds only episodes: ' + rows[1].types,
+            );
+            const mixed = await reloadDeck();
+            assertEqual(
+              mixed.entries.length,
+              rows[0].types.length + rows[1].types.length,
+              'the sidebar pick still lists every entry',
+            );
+          },
+        );
+      })
+
+      .then(function () {
+        return step('a deck of films alone draws no Your next episodes', async function () {
+          const filmsOnly = async (route) => {
+            const response = await route.fetch();
+            const body = await response.json();
+            const held = body.MediaContainer.Metadata || [];
+            body.MediaContainer.Metadata = held.filter((m) => m.type !== 'episode');
+            body.MediaContainer.size = body.MediaContainer.Metadata.length;
+            await route.fulfill({ response, json: body });
+          };
+          await page.route(/\/library\/onDeck/, filmsOnly);
+          try {
+            await page.reload();
+            await h.ready();
+            await waitFor(
+              'document.querySelectorAll("#rows .row .row-label")[1] && ' +
+                'document.querySelectorAll("#rows .row .row-label")[1].textContent.trim() === "Recently Added"',
+              'the hubs straight under Continue watching',
+              15000,
+            );
+            const rows = await homeRows();
+            assertEqual(rows[0].label, 'Continue watching');
+            assertEqual(rows[0].types.length > 0, true, 'films still in Continue watching');
+            assertEqual(
+              rows.some((row) => row.label === 'Your next episodes'),
+              false,
+              'no Your next episodes row',
+            );
+          } finally {
+            await page.unroute(/\/library\/onDeck/, filmsOnly);
+          }
+          await page.reload();
+          await h.ready();
+        });
+      })
+
+      .then(function () {
+        return step('a deck half landing above the focus does not move it', async function () {
+          const hit = await cachedRows('Home');
+          const films = hit.rows.find((r) => r.title === 'Continue watching');
+          const hub = hit.rows.find((r) => r.title === 'Recently Added');
+          assertEqual(!!(films && hub), true, 'a cached deck and a hub to keep');
+          await writeRows('Home', { rows: [films, hub] });
+          const slow = async (route) => {
+            await page.waitForTimeout(2500);
+            await route.continue();
+          };
+          const labels =
+            'Array.prototype.map.call(document.querySelectorAll("#rows .row .row-label"), function (l) { return l.textContent.trim(); })';
+          await page.route(/\/library\/onDeck/, slow);
+          try {
+            await page.reload();
+            await h.ready();
+            await waitFor(labels + '[1] === "Recently Added"', 'the cached rows', 15000);
+            await press('ArrowDown');
+            const on = 'document.querySelector("#rows .row.on .row-label").textContent.trim()';
+            assertEqual(await page.evaluate(on), 'Recently Added', 'the row focused first');
+            await page.waitForTimeout(4000);
+            assertEqual(await page.evaluate(on), 'Recently Added', 'the row focused after');
+            await press('ArrowUp');
+            assertEqual(await page.evaluate(on), 'Your next episodes', 'the row that landed above');
+          } finally {
+            await page.unroute(/\/library\/onDeck/, slow);
+          }
+        });
+      })
+
+      .then(function () {
+        if (!hasFixture()) return;
+        return step(
+          'after a play, TV shows the new state of Your next episodes on return',
+          async function () {
+            const nextRow = () =>
+              page.evaluate(function () {
+                const el = Array.prototype.find.call(
+                  document.querySelectorAll('#rows .row'),
+                  (r) => r.querySelector('.row-label').textContent.trim() === 'Your next episodes',
+                );
+                const row = el && el._rowRef;
+                return row && row.items
+                  ? row.items.map((m) => m.grandparentTitle || m.title)
+                  : null;
+              });
+            const rowLanded =
+              'Array.prototype.some.call(document.querySelectorAll("#rows .row .row-label"), function (l) { return l.textContent.trim() === "Your next episodes"; })';
+            const openTV = async () => {
+              await h.topRow();
+              await press('ArrowUp');
+              for (let i = 0; i < 12; i++) {
+                const on = await page.evaluate(
+                  'document.querySelector("#menubar .mb-tile.on").textContent',
+                );
+                if (on === 'TV') break;
+                await press('ArrowRight');
+              }
+              await press('ArrowDown');
+              await waitFor(rowLanded, 'Your next episodes on TV', 15000);
+            };
+            await openTV();
+            const before = await nextRow();
+            assertEqual(before.length > 1, true, 'episodes to play and lose: ' + before);
+            let dropShow = '';
+            const lose = async (route) => {
+              const response = await route.fetch();
+              const body = await response.json();
+              const held = body.MediaContainer.Metadata || [];
+              body.MediaContainer.Metadata = held.filter((m) => m.grandparentTitle !== dropShow);
+              body.MediaContainer.size = body.MediaContainer.Metadata.length;
+              await route.fulfill({ response, json: body });
+            };
+            await page.route(/\/library\/onDeck/, lose);
+            try {
+              /* The mock has episodes that only transcode, which cannot play here:
+                 take the first one on the row that does. */
+              let played = false;
+              for (let at = 0; at < before.length && !played; at++) {
+                if (at) await openTV();
+                dropShow = before[at];
+                await press('ArrowDown', 2);
+                await press('ArrowRight', at);
+                await page.keyboard.press('Enter');
+                await waitFor(
+                  '!document.getElementById("show").classList.contains("hidden") && document.querySelectorAll(".sh-episode").length > 1',
+                  'the show page',
+                );
+                await page.waitForTimeout(800);
+                await page.keyboard.press('Enter');
+                try {
+                  await waitFor(
+                    '(function(){var v=document.getElementById("video");' +
+                      'return !v.classList.contains("hidden") && !v.paused && v.currentTime > 1;})()',
+                    'the episode to be playing',
+                    6000,
+                  );
+                  played = true;
+                } catch (error) {
+                  dropShow = '';
+                }
+                await press('Backspace');
+                await page.waitForTimeout(300);
+                await backToLibrary();
+              }
+              assertEqual(played, true, 'an episode on the row plays');
+              await waitFor(rowLanded, 'Your next episodes back on TV');
+              let gone = await nextRow();
+              for (let i = 0; i < 40 && gone.length === before.length; i++) {
+                await page.waitForTimeout(200);
+                gone = await nextRow();
+              }
+              assertEqual(
+                gone,
+                before.filter((title) => title !== dropShow),
+                'Your next episodes after the play',
+              );
+            } finally {
+              await page.unroute(/\/library\/onDeck/, lose);
+            }
+          },
+        );
+      })
+
+      .then(function () {
+        return step(
+          'green clears from Your next episodes, and Continue watching stays',
+          async function () {
+            await page.reload();
+            await h.ready();
+            await waitFor(
+              'document.querySelectorAll("#rows .row .row-label")[1].textContent.trim() === "Your next episodes"',
+              'Your next episodes under Continue watching',
+              15000,
+            );
+            const before = await homeRows();
+            const wrote = deckWrites.length;
+            await press('ArrowDown');
+            const entry = await focusDeck(onMain);
+            await press('F3');
+            await page.keyboard.press('Enter');
+            await press('F3');
+            await waitForConfirm('to hide ' + entry.title);
+            await takeConfirm();
+            await page.waitForTimeout(600);
+            const asking = await page.evaluate(
+              () => !document.getElementById('confirm').classList.contains('hidden'),
+            );
+            if (asking) await takeConfirm();
+            await waitFor(
+              '!/Select to remove/.test(document.getElementById("rows").textContent)',
+              'select mode to end',
+              10000,
+            );
+            await press('ArrowUp');
+            await page.waitForTimeout(300);
+            const after = await homeRows();
+            const films = after.find((row) => row.label === 'Continue watching');
+            const next = after.find((row) => row.label === 'Your next episodes');
+            assertEqual(next.types.length, before[1].types.length - 1, 'episodes left');
+            assertEqual(films.types.length, before[0].types.length, 'films left');
+            assertEqual(
+              deckWrites.slice(wrote).some((u) => u.indexOf('removeFromContinueWatching') >= 0),
+              true,
+              'the server was asked to hide it',
+            );
+          },
+        );
+      })
+
       /* ---- a section's rows are one request per server ---- */
 
       .then(function () {
@@ -254,7 +521,7 @@ module.exports = function (h) {
             if (promoted.length !== 2) throw new Error('promoted asked: ' + calls.join(', '));
             if (calls.length !== 2) throw new Error('other hub requests: ' + calls.join(', '));
             return hubLabels().then(function (labels) {
-              const want = ['Recently Added', 'Recently Released', 'Top Rated'];
+              const want = ['Recently Added', 'Recently Released'];
               const got = labels.filter(function (l) {
                 return want.indexOf(l) >= 0;
               });
@@ -389,7 +656,12 @@ module.exports = function (h) {
         return step('a show held on two servers is one tile, its newest episode', function () {
           return page
             .evaluate(function () {
-              const el = document.querySelector('#rows .row.on');
+              const el = Array.prototype.find.call(
+                document.querySelectorAll('#rows .row'),
+                function (r) {
+                  return r.querySelector('.row-label').textContent.trim() === 'Your next episodes';
+                },
+              );
               const row = el && el._rowRef;
               if (!row || !row.items) return null;
               return row.items

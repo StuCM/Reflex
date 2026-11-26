@@ -52,16 +52,19 @@ function sameItem(one: PlexItem, two: PlexItem): boolean {
 
 /* The row for fresh items: the one on screen if nothing changed, else a new one
    that keeps the focus on the same item. */
-export function refreshed(shown: Row[], fresh: { title: string; items: PlexItem[] }): Row {
+export function refreshed(
+  shown: Row[],
+  fresh: { title: string; items: PlexItem[]; sub?: string },
+): Row {
   const old = shown.find((row) => row.kind === 'list' && row.title === fresh.title);
-  if (!old || old.kind !== 'list') return rowModel.list(fresh.title, fresh.items);
+  if (!old || old.kind !== 'list') return rowModel.list(fresh.title, fresh.items, fresh.sub);
   if (
     old.items.length === fresh.items.length &&
     old.items.every((item, at) => sameItem(item, fresh.items[at]!))
   ) {
     return old;
   }
-  const row = rowModel.list(fresh.title, fresh.items);
+  const row = rowModel.list(fresh.title, fresh.items, fresh.sub);
   const was = old.items[old.focus];
   const moved = was ? fresh.items.findIndex((item) => sameItem(was, item)) : -1;
   row.focus = moved >= 0 ? moved : Math.min(old.focus, Math.max(0, row.total - 1));
@@ -122,9 +125,68 @@ export function fetchDeck(reachable: PlexServer[], fresh: boolean): Promise<Plex
   return lists;
 }
 
+export const WATCHING = 'Continue watching';
+export const NEXT_TITLE = 'Your next episodes';
+const NEXT_SUB = 'Shows you are watching';
+
+/** Whether a row is one of the two the deck is drawn as. */
+export function isDeckRow(row: { title: string }): boolean {
+  return row.title === WATCHING || row.title === NEXT_TITLE;
+}
+
+/** The deck cut into its films and its episodes, each in the deck's order. */
+export function splitDeck(deck: PlexItem[]): {
+  films: PlexItem[];
+  episodes: PlexItem[];
+} {
+  return {
+    films: deck.filter((item) => item.type !== 'episode'),
+    episodes: deck.filter((item) => item.type === 'episode'),
+  };
+}
+
+/** The deck as the rows Home draws, an empty half left out. */
+export function deckRows(deck: PlexItem[]): { title: string; items: PlexItem[]; sub?: string }[] {
+  const { films, episodes } = splitDeck(deck);
+  const out: { title: string; items: PlexItem[]; sub?: string }[] = [];
+  if (films.length) out.push({ title: WATCHING, items: films });
+  if (episodes.length) out.push({ title: NEXT_TITLE, items: episodes, sub: NEXT_SUB });
+  return out;
+}
+
+/** Syncs the deck rows in `held` to `deck`; `focus` is shifted past rows added or removed above it, and -1 leaves it be. */
+export function placeDeck(
+  held: Row[],
+  deck: PlexItem[],
+  focus: number,
+): { changed: boolean; focus: number } {
+  const halves = deckRows(deck);
+  let changed = false;
+  [WATCHING, NEXT_TITLE].forEach((title) => {
+    const half = halves.find((one) => one.title === title);
+    const at = held.findIndex((row) => row.title === title);
+    if (at >= 0 && !half) {
+      held.splice(at, 1);
+      if (focus > at) focus--;
+      changed = true;
+    } else if (at >= 0 && half) {
+      const row = refreshed(held, half);
+      if (row === held[at]) return;
+      held[at] = row;
+      changed = true;
+    } else if (half) {
+      const place = title === WATCHING ? 0 : held.findIndex((row) => row.title === WATCHING) + 1;
+      held.splice(place, 0, rowModel.list(title, half.items, half.sub));
+      if (place <= focus && held.length > 1) focus++;
+      changed = true;
+    }
+  });
+  return { changed, focus: Math.max(0, Math.min(focus, held.length - 1)) };
+}
+
 const NEXT_EPISODES: DiscoveryCategory = {
-  title: 'Your next episodes',
-  sub: 'Shows you are watching',
+  title: NEXT_TITLE,
+  sub: NEXT_SUB,
   kind: 'recommended',
   media: 'tv',
 };
@@ -168,10 +230,14 @@ export async function loadPageRows(
   settings.pageRows[name].forEach((category) => {
     if (category.kind !== 'because') categories.push(category);
     else if (seed) {
-      categories.push({ ...category, title: `Because you watched ${seed.title}`, seed: seed.id });
+      categories.push({
+        ...category,
+        title: `Because you watched ${seed.title}`,
+        seed: seed.id,
+      });
     }
   });
-  const episodes = name === 'tv' ? deck.filter((item) => item.type === 'episode') : [];
+  const episodes = name === 'tv' ? splitDeck(deck).episodes : [];
   let placed = !episodes.length;
   const land = () => {
     if (placed) return;

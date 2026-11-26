@@ -1094,7 +1094,7 @@ module.exports = function (h) {
                 const body = await response.json();
                 if (drop) {
                   ((body.MediaContainer || {}).Hub || []).forEach((hub) => {
-                    if (hub.title === 'Top Rated') hub.Metadata = hub.Metadata.slice(1);
+                    if (hub.title === 'Recently Released') hub.Metadata = hub.Metadata.slice(1);
                   });
                 }
                 await route.fulfill({ response, json: body });
@@ -1129,14 +1129,15 @@ module.exports = function (h) {
               );
               const writes = await page.evaluate('window.__writes');
               assertEqual(
-                (writes['Top Rated'] || 0) > 0,
+                (writes['Recently Released'] || 0) > 0,
                 true,
                 'the changed row redraws: ' + JSON.stringify(writes),
               );
               const quiet = Object.keys(writes).filter(
                 (label) =>
-                  label !== 'Top Rated' &&
+                  label !== 'Recently Released' &&
                   label !== 'Continue watching' &&
+                  label !== 'Your next episodes' &&
                   label.indexOf('All') !== 0,
               );
               assertEqual(quiet.length, 0, 'unchanged rows redraw: ' + JSON.stringify(writes));
@@ -1171,7 +1172,7 @@ module.exports = function (h) {
               await waitFor(
                 'document.querySelectorAll("#rows .tile:not(.hidden):not(.placeholder)").length > 0 && (' +
                   LABELS +
-                  ').split("|").length > 2',
+                  ').split("|").length > 3',
                 'rows after the placeholders',
                 15000,
               );

@@ -115,9 +115,11 @@ let picking = false; // green has the deck row in select mode
 /** The entries picked, while it has. */
 let picks: PlexItem[] = [];
 let pickAt = -1; // the row that is happening on
+let pickTitle = ''; // and what it was called
 
 const RESULTS_PER_ROW = 10;
-const WATCHING = 'Continue watching';
+const WATCHING = saved.WATCHING;
+const isDeckRow = saved.isDeckRow;
 /* KEY carries red, which search already uses; green is free on this
    screen and is the only other key the Magic Remote's siblings all have. */
 const GREEN = 404;
@@ -347,27 +349,26 @@ function menuKey(code: number): boolean {
    is rather than by what it says. */
 function watchingRowIndex(): number {
   if (picking) return pickAt;
-  return rows.findIndex((row) => row.title === WATCHING);
+  const focused = rows[rowIndex];
+  if (focused && isDeckRow(focused)) return rowIndex;
+  return rows.findIndex(isDeckRow);
 }
 
-function deckCut() {
-  if (!watchingType) return deckItems;
-  return deckItems.filter((entry) => entry.type === watchingType);
+function deckCut(type = watchingType) {
+  if (!type) return deckItems;
+  return deckItems.filter((entry) => entry.type === type);
 }
 
-/* Continue watching, cut to films or episodes. The unfiltered deck is kept so
-   the cut can be lifted without asking the servers again, and an empty cut
-   leaves the row where it is — a row vanishing on a keypress reads as a
-   crash. */
+/* Continue watching as one mixed list, cut to films or episodes. The whole deck is kept so
+   the cut can lift; an empty cut changes nothing, since a row vanishing reads as a crash. */
 function showWatching(type: string | null) {
-  const at = watchingRowIndex();
-  if (at < 0) return toast('Nothing part-watched there');
+  const at = rows.findIndex(isDeckRow);
+  if (at < 0 || !deckCut(type || null).length) return toast('Nothing part-watched there');
   watchingType = type || null;
-  const items = deckCut();
-  rows[at] = rowModel.list(WATCHING, items);
+  rows = rows.filter((row, i) => i === at || !isDeckRow(row));
+  rows[at] = rowModel.list(WATCHING, deckCut());
   rowIndex = at;
   render();
-  if (!items.length) toast('Nothing part-watched there');
 }
 
 /* ---------- clearing Continue watching ----------
@@ -400,7 +401,7 @@ function paintPicking() {
   /* A new row object rather than a renamed one: the rail repaints a label
      only when the row it is handed changes identity. */
   const renamed = rowModel.list(
-    picking ? `Select to remove — ${picks.length} picked` : WATCHING,
+    picking ? `Select to remove — ${picks.length} picked` : pickTitle,
     row.items,
   );
   renamed.focus = row.focus;
@@ -424,6 +425,7 @@ function startPicking() {
   }
   picking = true;
   pickAt = at;
+  pickTitle = rows[at]?.title ?? WATCHING;
   picks = [];
   paintPicking();
 }
@@ -491,12 +493,13 @@ function dropFromDeck(entry: PlexItem) {
   saved.clear();
   deckItems = deckItems.filter((held) => identity(held) !== gone);
   sections.concat(homeSection ?? []).forEach((section) => void cached.rows.drop(section.title));
-  const at = watchingRowIndex();
-  const current = rows[at];
-  if (at < 0 || !current) return;
-  const row = rowModel.list(current.title, deckCut());
-  row.focus = clamp(current.focus, 0, Math.max(0, row.total - 1));
-  rows[at] = row;
+  rows.forEach((current, at) => {
+    if (current.kind !== 'list' || !(isDeckRow(current) || (picking && at === pickAt))) return;
+    const items = current.items.filter((held) => identity(held) !== gone);
+    const row = rowModel.list(current.title, items);
+    row.focus = clamp(current.focus, 0, Math.max(0, row.total - 1));
+    rows[at] = row;
+  });
 }
 
 /* A job is an entry and the copies of it still to be dealt with — a film on
@@ -746,11 +749,13 @@ function restore(name: string, newMode: Mode): boolean {
   return true;
 }
 
-/* Rows from titled item lists, remembering the part-watched ones so the
-   Continue watching cut has something to filter. */
+/* Rows from titled lists, keeping the deck for the Continue watching cut to filter. */
 function listRows(built: { title: string; items: PlexItem[] }[]): Row[] {
-  deckItems = built.find((row) => row.title === WATCHING)?.items ?? [];
-  return built.map((fresh) => saved.refreshed(rows, fresh));
+  deckItems = built.filter(isDeckRow).reduce((all, row) => all.concat(row.items), [] as PlexItem[]);
+  return saved
+    .deckRows(deckItems)
+    .concat(built.filter((row) => !isDeckRow(row)))
+    .map((fresh) => saved.refreshed(rows, fresh));
 }
 
 /* One page of one server's section, for the merge walk. */
@@ -835,27 +840,14 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
    parked the rows, and those are the ones that get the new deck. */
 function landDeck(deck: PlexItem[]) {
   const tmdbPage = viewKey === 'movies' || viewKey === 'tv';
-  if (picking || mode !== 'library' || tmdbPage) return;
+  if (picking || mode !== 'library') return;
+  if (tmdbPage) return viewKey === 'tv' ? landNext(deck) : undefined;
   deckItems = deck;
   const parked = searchQuery !== null && savedRows !== null;
   const target = (parked ? savedRows : rows) ?? rows;
-  const at = target.findIndex((row) => row.title === WATCHING);
-  const current = target[at];
-  if (current) {
-    if (!deck.length) {
-      target.splice(at, 1);
-      if (!parked) {
-        rowIndex = clamp(rowIndex > at ? rowIndex - 1 : rowIndex, 0, Math.max(0, rows.length - 1));
-      }
-    } else {
-      const row = saved.refreshed(target, { title: WATCHING, items: deckCut() });
-      if (row === current) return;
-      target[at] = row;
-    }
-  } else if (deck.length) {
-    target.unshift(rowModel.list(WATCHING, deckCut()));
-    if (!parked && target.length > 1 && !loadingRow) rowIndex++;
-  }
+  const placed = saved.placeDeck(target, deckCut(), parked || loadingRow ? -1 : rowIndex);
+  if (!placed.changed) return;
+  if (!parked && !loadingRow) rowIndex = placed.focus;
   const section = viewSection();
   if (section) {
     if (!parked && hasAll(viewKey)) noteCategories(section);
@@ -866,15 +858,22 @@ function landDeck(deck: PlexItem[]) {
   render();
 }
 
+function landNext(deck: PlexItem[]) {
+  if (!rows.some((row) => row.title === saved.NEXT_TITLE)) return;
+  rowIndex = saved.placeDeck(rows, saved.splitDeck(deck).episodes, rowIndex).focus;
+  rail.invalidateEmpty();
+  render();
+}
+
 /* The cache holds the rows as they are, so a deck that landed ahead of the
    hubs is what the next launch paints. */
 function cacheLists(section: BrowseSection, held: Row[]) {
   const lists: { title: string; items: PlexItem[] }[] = [];
   held.forEach((row) => {
-    if (row.kind !== 'list' || row === loadingRow) return;
-    lists.push({ title: row.title, items: row.title === WATCHING ? deckItems : row.items });
+    if (row.kind !== 'list' || row === loadingRow || isDeckRow(row)) return;
+    lists.push({ title: row.title, items: row.items });
   });
-  void cached.rows.put(section.title, { rows: lists });
+  void cached.rows.put(section.title, { rows: saved.deckRows(deckItems).concat(lists) });
 }
 
 /* Ask the servers again what is on deck. Called on coming back from the
@@ -960,7 +959,7 @@ function loadView(name: string, allowFetch: boolean, focusRow?: number) {
         const built: { title: string; items: PlexItem[] }[] = [];
 
         const deck = saved.buildDeck(results[0]);
-        if (deck.length) built.push({ title: WATCHING, items: deck });
+        built.push(...saved.deckRows(deck));
 
         saved.mergeHubs(results[1]).forEach((hub) => {
           built.push(hub);
