@@ -15,6 +15,7 @@ files:
   - dev/smoke/shell.js
   - dev/smoke/detail.js
   - dev/smoke/sections.js
+  - dev/smoke/browse.js
 ---
 
 # Home has a Continue watching row for films and one for TV
@@ -79,6 +80,8 @@ After 077 (both edit `loadView` in browse.ts). Base `feat/v2`.
 - [ ] commits follow the convention (the hook enforces it)
 
 ## Review rounds
+
+- Orchestrator, after scope block: spec bug — `dev/smoke/browse.js` added to `files:`; apply your patch (`rowsOf(2)`, `press('ArrowDown', 2)`). The deck step 'the refreshed deck is what the cache holds' passed in the orchestrator's full verify on feat/v2 (182/182 at 605565b): it is the known flaky deck step, so re-run the gate rather than treat it as baseline. The split also showing on the v1 section pages (shared `loadView`) is accepted.
 
 ## Worker notes
 
