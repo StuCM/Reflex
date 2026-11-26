@@ -40,6 +40,18 @@ the spec disagree, this file wins. Decided by Stuart, 2026-11-16.
   Autoplay and the rest) until those find v2 homes. The per-server browser
   is its own later task.
 
+- **The boards are exact** (Stuart, 2026-11-26: "The designs must match
+  exactly, time was spent getting these correct"). Where a page differs on
+  purpose, its task lists why.
+- **The menu's tiles** are the board's with Home first and Servers last
+  (Servers opens each server's own libraries), and **no Streaming tile**:
+  "I don't think streaming is needed this is folded in with movies and tvs".
+  More is gone; Settings and Servers open the sidebar until they have pages.
+- **Movies and TV are our rows, from TMDB**, never the servers' hubs: the
+  board's rows, then a row per service (Netflix, Prime Video, Apple TV+,
+  Disney+), then genre rows. Continue watching lives on Home only; TV keeps
+  Your next episodes.
+
 ## Type
 
 - Space Grotesk and Inter are the starting point, not final. Stuart,
