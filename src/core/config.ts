@@ -19,6 +19,15 @@ interface Settings {
   dev: boolean;
 }
 
+/** The four services Movies and TV know by name, in the order a title is credited to them. */
+export const SERVICES = [
+  { id: 8, name: 'Netflix' },
+  { id: 9, name: 'Prime Video' },
+  { id: 350, name: 'Apple TV+' },
+  { id: 337, name: 'Disney+' },
+];
+export const SERVICE_IDS = '8|9|350|337';
+
 const PG_CEILING = { certification_country: 'GB', 'certification.lte': 'PG' };
 
 function kids(): DiscoveryCategory[] {

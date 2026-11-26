@@ -69,8 +69,12 @@ function paged(body: TmdbResponse, media: Media, minVotes = MIN_VOTES): TmdbPage
   };
 }
 
-export async function trending(page = 1, media: Media = 'movie'): Promise<TmdbPage> {
-  return paged(await get(`/trending/${media}/week`, { page }), media);
+export async function trending(
+  page = 1,
+  media: Media = 'movie',
+  window: 'day' | 'week' = 'week',
+): Promise<TmdbPage> {
+  return paged(await get(`/trending/${media}/${window}`, { page }), media);
 }
 
 /** What is on a streaming service right now, in this region. */
@@ -162,6 +166,11 @@ export function recommendedFrom(seedTmdbIds: string[] | undefined): Promise<Tmdb
   );
 }
 
+/** What TMDB says resembles one title; the "Because you watched" row. */
+export async function recommendationsFor(id: number, media: Media = 'movie'): Promise<TmdbPage> {
+  return paged(await get(`/${media}/${id}/recommendations`), media);
+}
+
 /* One category from settings.categories to its films. An unknown kind is a typo
    in the config rather than a crash: it gives an empty row. `seeds` are TMDB
    ids of what has been watched, and only the recommended kind uses them. */
@@ -171,7 +180,7 @@ export async function catalogue(
   page = 1,
 ): Promise<TmdbPage> {
   const media = category?.media ?? 'movie';
-  if (category?.kind === 'trending') return trending(page, media);
+  if (category?.kind === 'trending') return trending(page, media, category.window);
   if (category?.kind === 'provider') return onProvider(category.id as number, page, media);
   if (category?.kind === 'genre') return byGenre(category.id as number, page, media);
   const parameters = category?.params ?? {};
@@ -190,6 +199,7 @@ export async function catalogue(
     };
     return discover('movie', upcoming, page, 0);
   }
+  if (category?.kind === 'because') return recommendationsFor(category.seed as number, media);
   if (category?.kind === 'recommended') return { films: await recommendedFrom(seeds), pages: 1 };
   return { films: [], pages: 1 };
 }
@@ -202,7 +212,7 @@ export function details(tmdbId: string): Promise<TmdbResponse> {
   /* A show's id is `tv/<id>` everywhere it is keyed, so it is its own path. */
   const path = tmdbId.startsWith('tv/') ? `/${tmdbId}` : `/movie/${tmdbId}`;
   return get(path, {
-    append_to_response: 'images,credits,videos',
+    append_to_response: 'images,credits,videos,watch/providers',
     include_image_language: 'en,null',
   });
 }

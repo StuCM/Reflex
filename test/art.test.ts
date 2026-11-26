@@ -32,12 +32,16 @@ test('tmdb art picking', () => {
 
   /* ---- backdrops but no posters: the tile has to fall back to Plex ---- */
 
-  var wideOnly = Art.pick({ images: { backdrops: [shot('/only.jpg', 6, 3)], posters: [] } });
+  var wideOnly = Art.pick({
+    images: { backdrops: [shot('/only.jpg', 6, 3)], posters: [] },
+  });
   assert.strictEqual(wideOnly.hero, '/only.jpg');
   assert.strictEqual(wideOnly.poster, null, 'a backdrop must never stand in for a poster');
 
   /* A second backdrop is not a poster either — that was the old rule. */
-  var twoWide = Art.pick({ images: { backdrops: [shot('/a.jpg', 9, 5), shot('/b.jpg', 8, 5)] } });
+  var twoWide = Art.pick({
+    images: { backdrops: [shot('/a.jpg', 9, 5), shot('/b.jpg', 8, 5)] },
+  });
   assert.strictEqual(twoWide.poster, null);
 
   /* ---- and the other way round ---- */
@@ -58,7 +62,10 @@ test('tmdb art picking', () => {
   nothing(Art.pick({ images: { backdrops: 'nonsense', posters: 42 } }), 'lists that are not lists');
   nothing(
     Art.pick({
-      images: { backdrops: [null, {}, { file_path: '' }], posters: [null, { file_path: '' }] },
+      images: {
+        backdrops: [null, {}, { file_path: '' }],
+        posters: [null, { file_path: '' }],
+      },
     }),
     'entries with no path',
   );
@@ -135,7 +142,9 @@ test('tmdb art picking', () => {
   /* An entry with no name is not a name. */
   assert.deepStrictEqual(
     Array.prototype.slice.call(
-      Art.facts({ credits: { cast: [null, {}, { name: '' }, { name: 'Ada' }] } }).cast,
+      Art.facts({
+        credits: { cast: [null, {}, { name: '' }, { name: 'Ada' }] },
+      }).cast,
     ),
     ['Ada'],
   );
@@ -156,6 +165,50 @@ test('tmdb art picking', () => {
   assert.strictEqual(noCast.overview, 'Still a film.');
   assert.strictEqual(noCast.runtime, 90);
   assert.strictEqual(noCast.cast.length, 0);
+
+  /* ---- which of our services carries it ---- */
+
+  function onGb(...ids) {
+    return {
+      'watch/providers': {
+        results: {
+          GB: {
+            flatrate: ids.map((id) => ({
+              provider_id: id,
+              logo_path: '/l' + id + '.png',
+            })),
+          },
+        },
+      },
+    };
+  }
+  assert.deepStrictEqual(Art.facts(onGb(337, 350)).service, {
+    id: 350,
+    name: 'Apple TV+',
+    logo: '/l350.png',
+  });
+  assert.strictEqual(
+    Art.facts(onGb(15, 337, 8)).service.name,
+    'Netflix',
+    'SERVICES order, not TMDB',
+  );
+  assert.strictEqual(Art.facts(onGb(15)).service, null, 'no flatrate of ours');
+  assert.strictEqual(Art.facts({}).service, null);
+  assert.strictEqual(
+    Art.facts({
+      'watch/providers': {
+        results: { US: { flatrate: [{ provider_id: 8 }] } },
+      },
+    }).service,
+    null,
+    'only GB counts',
+  );
+
+  const whole = { hero: null, poster: '/p', facts: Art.facts({}) };
+  assert.strictEqual(Art.isComplete(whole), true);
+  const old = { hero: null, poster: '/p', facts: { ...whole.facts } };
+  delete old.facts.service;
+  assert.strictEqual(Art.isComplete(old), false, 'cached before service existed: refetch');
 
   console.log('art: pick chooses a backdrop and a poster, and facts read the header');
 });

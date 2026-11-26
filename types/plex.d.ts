@@ -275,11 +275,17 @@ interface TmdbResponse {
 /** One row of the Discovery page, from js/core/config.js. */
 interface DiscoveryCategory {
   title: string;
-  kind: 'trending' | 'provider' | 'genre' | 'recommended' | 'discover' | 'upcoming';
+  kind: 'trending' | 'provider' | 'genre' | 'recommended' | 'because' | 'discover' | 'upcoming';
   id?: number;
   media?: 'movie' | 'tv';
   params?: Record<string, string | number>;
   minVotes?: number;
+  /** Trending only: the day's list rather than the week's. */
+  window?: 'day' | 'week';
+  /** Most entries the row shows; a capped row has no further pages. */
+  limit?: number;
+  /** The TMDB id a 'because' row is recommended from. */
+  seed?: number;
 }
 
 /* ---------- YouTube ---------- */
@@ -413,11 +419,16 @@ interface TmdbDetails {
   images?: { backdrops?: TmdbImage[]; posters?: TmdbImage[] };
   backdrops?: TmdbImage[];
   posters?: TmdbImage[];
-  credits?: { cast?: { name?: string; id?: number; profile_path?: string | null }[] };
+  credits?: {
+    cast?: { name?: string; id?: number; profile_path?: string | null }[];
+  };
   videos?: { results?: TmdbVideo[] };
   overview?: string;
   runtime?: number;
   vote_average?: number;
+  'watch/providers'?: {
+    results?: Record<string, { flatrate?: { provider_id: number; logo_path?: string | null }[] }>;
+  };
 }
 
 interface TmdbVideo {
@@ -436,6 +447,8 @@ interface ArtFacts {
   cast: string[];
   /** Billing order, with the TMDB person id; absent on an entry cached before it. */
   castIds?: CastId[];
+  /** Which of our four services carries it, or null; absent on an entry cached before it. */
+  service?: { id: number; name: string; logo: string | null } | null;
 }
 
 interface CastId {
