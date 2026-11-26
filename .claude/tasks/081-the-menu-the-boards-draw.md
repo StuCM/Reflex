@@ -19,6 +19,7 @@ files:
   - css/base.css
   - dev/smoke.js
   - dev/smoke/shell.js
+  - dev/smoke/browse.js
 ---
 
 # The top menu is the one the boards draw: tabs at rest, icon tiles on Up, and a clock
@@ -59,8 +60,9 @@ Board values (`designs/v2/Combo.dc.html`; `ComboMenu.dc.html` is Combo with
   `0 0 0 3px rgba(255,255,255,.95)`, `inset 0 1px 0 rgba(255,255,255,.5)`,
   `0 24px 60px rgba(0,0,0,.5)`. Icon 52px (76 focused), stroke 1.7, over the
   label 24px (30 focused) weight 600, 10px apart. A chevron-down + row title
-  at top 486 (26px, 600, rgba(255,255,255,.55)); the row dimmed to opacity .4
-  with tiles at top 724.
+  at top 486 (26px, 600, rgba(255,255,255,.55)); the row dimmed to opacity .4,
+  **posters only** — every poster 176×264 (none enlarged), top 775, left 96,
+  stride 202; no row title above and no captions under; no backdrop.
 - **Clock**: right 96, top 44, 32px 600, rgba(255,255,255,.7), on every board.
 - Tab labels: Combo l.160 `['Home','Movies','TV','Kids','Collections','Discover']`.
 - Tiles and icon paths: Combo `defs` l.191-200, in order Movies, TV,
@@ -111,8 +113,9 @@ Everything in Background marked as board values, verbatim.
    220 / icon 76 / label 30, radius 30 / 38. No scale approximation (a .727
    scale gives 21.8px labels, not 24). Focus swaps a class that changes those
    sizes; the board draws no growth animation, so none is added.
-4. Open: `#tabs` and `#masthead` fade out, `#viewport` moves to the tray
-   position (translateY to top 724) at opacity .4, `#menu-hint` shows the
+4. Open: `#tabs`, `#masthead` and `#hero-art` fade out, `#viewport` moves so
+   the first row's posters sit at top 775 at opacity .4, with the row title,
+   the captions under the tiles and the focused-tile enlargement hidden, `#menu-hint` shows the
    first row's title. Closed: the reverse. All on `--t-menu`; in `hud.ts` the
    menu timing value becomes 300ms (the other timings unchanged).
 5. `src/view/clock.ts` (new): draws `HH:MM` into `#clock`, scheduled to the
@@ -130,7 +133,7 @@ Everything in Background marked as board values, verbatim.
 
 ## Definition of done
 - [ ] Tab bar visible at rest with the current page underlined (smoke, positive text).
-- [ ] Up shows seven icon tiles, hero hidden, first row dimmed under its title (smoke).
+- [ ] Up shows ten icon tiles, hero hidden, first row dimmed under its title (smoke).
 - [ ] Motion is 300 ms, transform/opacity only; no style on `:root` per key (smoke + lint).
 - [ ] Clock shows the time and changes on the minute (smoke with a fake clock or page-side check).
 - [ ] Every existing menu helper in `dev/smoke.js` still works (`npm run smoke`).
@@ -140,6 +143,8 @@ Everything in Background marked as board values, verbatim.
 - [ ] commits follow the convention (the hook enforces it)
 
 ## Review rounds
+
+- Person, side by side (orchestrator opened ComboMenu.dc.html and the app at 1920×1080, measured by rect): tiles, hint (top 486) and clock match. The tray does not: board posters are all 176×264 at top 775, stride 202, no row title, no captions, no backdrop; app posters start at 724, the first is enlarged, the row title and captions show, and `#hero-art` stays visible. Spec Background/Approach 4 corrected; DoD "seven" → ten; `dev/smoke/browse.js` added to `files:` for the stale "More" strings. Assert the tray by rect against these numbers.
 
 ## Worker notes
 
