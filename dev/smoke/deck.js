@@ -371,6 +371,100 @@ module.exports = function (h) {
       })
 
       .then(function () {
+        if (!hasFixture()) return;
+        return step(
+          'after a play, TV shows the new state of Your next episodes on return',
+          async function () {
+            const nextRow = () =>
+              page.evaluate(function () {
+                const el = Array.prototype.find.call(
+                  document.querySelectorAll('#rows .row'),
+                  (r) => r.querySelector('.row-label').textContent.trim() === 'Your next episodes',
+                );
+                const row = el && el._rowRef;
+                return row && row.items
+                  ? row.items.map((m) => m.grandparentTitle || m.title)
+                  : null;
+              });
+            const rowLanded =
+              'Array.prototype.some.call(document.querySelectorAll("#rows .row .row-label"), function (l) { return l.textContent.trim() === "Your next episodes"; })';
+            const openTV = async () => {
+              await h.topRow();
+              await press('ArrowUp');
+              for (let i = 0; i < 12; i++) {
+                const on = await page.evaluate(
+                  'document.querySelector("#menubar .mb-tile.on").textContent',
+                );
+                if (on === 'TV') break;
+                await press('ArrowRight');
+              }
+              await press('ArrowDown');
+              await waitFor(rowLanded, 'Your next episodes on TV', 15000);
+            };
+            await openTV();
+            const before = await nextRow();
+            assertEqual(before.length > 1, true, 'episodes to play and lose: ' + before);
+            let dropShow = '';
+            const lose = async (route) => {
+              const response = await route.fetch();
+              const body = await response.json();
+              const held = body.MediaContainer.Metadata || [];
+              body.MediaContainer.Metadata = held.filter((m) => m.grandparentTitle !== dropShow);
+              body.MediaContainer.size = body.MediaContainer.Metadata.length;
+              await route.fulfill({ response, json: body });
+            };
+            await page.route(/\/library\/onDeck/, lose);
+            try {
+              /* The mock has episodes that only transcode, which cannot play here:
+                 take the first one on the row that does. */
+              let played = false;
+              for (let at = 0; at < before.length && !played; at++) {
+                if (at) await openTV();
+                dropShow = before[at];
+                await press('ArrowDown', 2);
+                await press('ArrowRight', at);
+                await page.keyboard.press('Enter');
+                await waitFor(
+                  '!document.getElementById("show").classList.contains("hidden") && document.querySelectorAll(".sh-episode").length > 1',
+                  'the show page',
+                );
+                await page.waitForTimeout(800);
+                await page.keyboard.press('Enter');
+                try {
+                  await waitFor(
+                    '(function(){var v=document.getElementById("video");' +
+                      'return !v.classList.contains("hidden") && !v.paused && v.currentTime > 1;})()',
+                    'the episode to be playing',
+                    6000,
+                  );
+                  played = true;
+                } catch (error) {
+                  dropShow = '';
+                }
+                await press('Backspace');
+                await page.waitForTimeout(300);
+                await backToLibrary();
+              }
+              assertEqual(played, true, 'an episode on the row plays');
+              await waitFor(rowLanded, 'Your next episodes back on TV');
+              let gone = await nextRow();
+              for (let i = 0; i < 40 && gone.length === before.length; i++) {
+                await page.waitForTimeout(200);
+                gone = await nextRow();
+              }
+              assertEqual(
+                gone,
+                before.filter((title) => title !== dropShow),
+                'Your next episodes after the play',
+              );
+            } finally {
+              await page.unroute(/\/library\/onDeck/, lose);
+            }
+          },
+        );
+      })
+
+      .then(function () {
         return step(
           'green clears from Your next episodes, and Continue watching stays',
           async function () {
@@ -1227,84 +1321,6 @@ module.exports = function (h) {
               })
           );
         });
-      })
-
-      .then(function () {
-        if (!hasFixture()) return;
-        return step(
-          'after a play, TV shows the new state of Your next episodes on return',
-          async function () {
-            const nextRow = () =>
-              page.evaluate(function () {
-                const el = Array.prototype.find.call(
-                  document.querySelectorAll('#rows .row'),
-                  (r) => r.querySelector('.row-label').textContent.trim() === 'Your next episodes',
-                );
-                const row = el && el._rowRef;
-                return row && row.items
-                  ? row.items.map((m) => m.grandparentTitle || m.title)
-                  : null;
-              });
-            await h.topRow();
-            await press('ArrowUp');
-            for (let i = 0; i < 12; i++) {
-              const on = await page.evaluate(
-                'document.querySelector("#menubar .mb-tile.on").textContent',
-              );
-              if (on === 'TV') break;
-              await press('ArrowRight');
-            }
-            await press('ArrowDown');
-            await waitFor(
-              'Array.prototype.some.call(document.querySelectorAll("#rows .row .row-label"), function (l) { return l.textContent.trim() === "Your next episodes"; })',
-              'Your next episodes on TV',
-              15000,
-            );
-            const before = await nextRow();
-            assertEqual(before.length > 1, true, 'episodes to play and lose: ' + before);
-            const dropShow = before[0];
-            const lose = async (route) => {
-              const response = await route.fetch();
-              const body = await response.json();
-              const held = body.MediaContainer.Metadata || [];
-              body.MediaContainer.Metadata = held.filter((m) => m.grandparentTitle !== dropShow);
-              body.MediaContainer.size = body.MediaContainer.Metadata.length;
-              await route.fulfill({ response, json: body });
-            };
-            await page.route(/\/library\/onDeck/, lose);
-            try {
-              await press('ArrowDown', 2);
-              await page.keyboard.press('Enter');
-              await waitFor(
-                '!document.getElementById("show").classList.contains("hidden") && document.querySelectorAll(".sh-episode").length > 1',
-                'the show page',
-              );
-              await page.waitForTimeout(800);
-              await page.keyboard.press('Enter');
-              await waitFor(
-                '(function(){var v=document.getElementById("video");' +
-                  'return !v.classList.contains("hidden") && !v.paused && v.currentTime > 1;})()',
-                'the episode to be playing',
-                15000,
-              );
-              await press('Backspace');
-              await page.waitForTimeout(300);
-              await backToLibrary();
-              await waitFor(
-                'Array.prototype.some.call(document.querySelectorAll("#rows .row .row-label"), function (l) { return l.textContent.trim() === "Your next episodes"; })',
-                'Your next episodes back on TV',
-              );
-              let gone = await nextRow();
-              for (let i = 0; i < 40 && gone.length === before.length; i++) {
-                await page.waitForTimeout(200);
-                gone = await nextRow();
-              }
-              assertEqual(gone, before.slice(1), 'Your next episodes after the play');
-            } finally {
-              await page.unroute(/\/library\/onDeck/, lose);
-            }
-          },
-        );
       })
   );
 };
