@@ -70,6 +70,7 @@ margin-top 12, rgba(255,255,255,.88), two lines. Worker reads the board for any
 value not listed here and adds it to this list.
 
 ## Differs from board, because
+Only Stuart's calls or what the board itself forces belong here. A worker may not add its own; if something cannot match, stop and ask. The reviewer refuses any entry with neither reason.
 - The service box holds the real TMDB `logo_path` image, not a coloured box
   with a drawn glyph: the board's services are placeholders.
 - "#N in the top 10 today" uses the real rank.
