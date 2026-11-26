@@ -11,6 +11,10 @@ files:
   - src/view/masthead.ts
   - src/data/discovery.ts
   - src/app.ts
+  - src/data/art.ts
+  - types/plex.d.ts
+  - test/art.test.ts
+  - dev/mock-tmdb.js
   - index.html
   - css/browse.css
   - css/v2.css
@@ -113,6 +117,8 @@ Only Stuart's calls or what the board itself forces belong here. A worker may no
 - [ ] commits follow the convention (the hook enforces it)
 
 ## Review rounds
+
+- Orchestrator, after round-1 block: spec bug — `dev/mock-tmdb.js` added to `files:`. Serve `/<size>/<name>.svg` provider logos in `image()`, and add `vote_average` to the mock's details so `movies.js` drops its `page.route` rating patch and the `art:` cache clearing. Also added `src/data/art.ts`, `types/plex.d.ts`, `test/art.test.ts`: `ArtFacts.seasons` from the details' `number_of_seasons` (already in the body), so an unheld show's meta reads "N seasons" as the board's TV meta does; unit test it. Certificate for unheld titles stays out (needs another append).
 
 ## Worker notes
 
