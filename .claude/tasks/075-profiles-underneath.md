@@ -1,11 +1,11 @@
 ---
 id: 075
 slug: profiles-underneath
-status: approved
+status: done
 branch: crew/075-profiles-underneath
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-foundations
 files:
   - src/data/store.ts
@@ -26,6 +26,9 @@ files:
   - dev/smoke/sections.js
   - src/seam.ts
   - types/seam.d.ts
+gate: pass
+gateSha: 780c5f422538c2c62644435216b95ed6d2357139
+gateAt: 2026-11-23T18:45:15.488Z
 ---
 
 # Profiles underneath: who is watching, their accent, and their plays
@@ -104,4 +107,17 @@ After 073 (shares `src/screen/pages.ts`). Base `feat/v2`.
 
 ## Review rounds
 
+Round 1: PASS. Non-blocking: no unit/smoke run of a real v1->v2 upgrade (no fake-indexeddb; smoke checks the five stores on a fresh v2 DB); CH keys change the accent but the on-screen deck follows only on next rebuild.
+
 ## Graph writes proposed
+
+## Worker notes
+- store.ts: v2, stores kv/plays/title_tags/smart_lists/hidden; `keysIn`, `putIn` added.
+- profiles.ts (new): current/set/all/touch/recordPlay/hasPlayed/ready; self-starts at import (app.ts is outside files), CH keys cycle on browse.
+- devices.mine filters by profile; pages.fetchDeck awaits profiles.ready(); player.report records plays.
+- base.css defaults are now the Together peach (also --ac-soft/--ac-tint); profiles sets all three. sections.js assertion updated.
+- Spec gap: no hook to refresh the deck live on profile change (browse.ts/app.ts out of scope).
+- Smoke seven indexedDB.open calls now unversioned.
+
+## Graph writes proposed
+- Pattern: a smoke step judging a deck must reload the page; sidebar re-picks showed a stale Continue watching row.

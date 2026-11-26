@@ -1,11 +1,11 @@
 ---
 id: 073
 slug: each-page-has-its-own-loader
-status: approved
+status: done
 branch: crew/073-each-page-has-its-own-loader
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-foundations
 files:
   - src/screen/browse.ts
@@ -20,6 +20,9 @@ files:
   - dev/smoke/sections.js
   - dev/smoke/deck.js
   - dev/smoke/browse.js
+gate: pass
+gateSha: 62a7fbd509741f81047cb07c4224ae9a44a7f3dc
+gateAt: 2026-11-23T17:56:05.078Z
 ---
 
 # Each page has its own loader and its own memory, and Home is no longer Movies
@@ -98,5 +101,14 @@ After 072 (shares `src/app.ts`). Base `feat/v2`.
 - [ ] commits follow the convention (the hook enforces it)
 
 ## Review rounds
+
+Round 1: PASS (crew-reviewer). Gate stamped on 62a7fbd.
+
+## Worker notes
+- browse.ts 1547 -> 1518 lines (ratchet 1548). Collections listing moved to router.ts, mergeHubs to pages.ts.
+- router.ts: page ids, loader table, collection listing. Snapshots keyed by page id (home, movies, tv), libN (More), kids, discover, collection:<title>.
+- Only the menu and yellow restore a kept Kids/Discover/Collection page; the sidebar loads them fresh (discovery.js, outside files:, depends on a cold Discover from the sidebar).
+- Smoke: deck.js now treats Home as the launch page; browse.js reaches the All row through More; shell.js has the new Home/Movies/TV and restore steps.
+- Not run against feat/v2 to watch the new steps fail.
 
 ## Graph writes proposed

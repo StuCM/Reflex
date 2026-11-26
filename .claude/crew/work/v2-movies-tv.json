@@ -1,0 +1,133 @@
+{
+  "title": "v2 menu, Movies and TV",
+  "summary": "Movies and TV become pages of our own TMDB rows (services trending, weekly Top 10 drawn ranked, Because you watched, one row per service) with a hero that names the service and says when the servers lack a title; Continue watching lives only on Home, split into films and TV.",
+  "stage": "build",
+  "questions": [],
+  "gaps": [
+    {
+      "id": "g-seed",
+      "text": "The deck holds in-progress items only, so 'last thing watched' misses a finished film.",
+      "next": "plays-based seed needs store.getIn plus a metadata call; later"
+    },
+    {
+      "id": "g-apple",
+      "text": "Apple TV+ provider id 350 is from TMDB knowledge, not in the repo.",
+      "next": "worker checks against a live /watch/providers/movie?watch_region=GB if a key is present"
+    },
+    {
+      "id": "g-home",
+      "text": "Home has not been checked against Combo; 082 is a stub.",
+      "next": "scout Combo vs Home values, then spec 082"
+    }
+  ],
+  "findings": [],
+  "brief": {
+    "shape": "replace",
+    "target": [
+      {
+        "path": "src/view/menubar.ts",
+        "line": 5,
+        "name": "PAGES / the menu"
+      },
+      {
+        "path": "src/screen/browse.ts",
+        "line": 891,
+        "name": "loadView (movies/tv branch)"
+      },
+      {
+        "path": "src/view/rail.ts",
+        "line": 47,
+        "name": "STRIDE"
+      },
+      {
+        "path": "src/view/masthead.ts",
+        "line": 95,
+        "name": "render"
+      }
+    ],
+    "direction": "Rebuild the top menu to the Combo/ComboMenu boards first; then replace the hub-and-deck loader on Movies and TV with config-defined TMDB rows (the loadKids pattern), draw the ranked row with per-row stride, build the Movies board hero, and split Home's deck in two.",
+    "rejected": [
+      {
+        "option": "Keep Plex hubs after the TMDB rows",
+        "why": "Stuart: the servers rows are not in this at all"
+      },
+      {
+        "option": "Fade unheld tiles on the rail",
+        "why": "resolving every tile is 2 searches each on servers we don't own; Stuart: say it below the description"
+      },
+      {
+        "option": "Top 10 from the weekly trending list",
+        "why": "the board has Trending this week and Top 10 today; weekly for both would repeat the same titles"
+      },
+      {
+        "option": "Continue watching on Movies",
+        "why": "Stuart: only on home, a row for TV and a row for movies; TV keeps Next episodes"
+      },
+      {
+        "option": "Keep 062's push-down pill strip (spec text)",
+        "why": "Stuart: stick to the designs; the boards draw tabs at rest and icon tiles on Up"
+      }
+    ],
+    "decided": [
+      "Server should have nearly everything. If its not on the server, say below desc and you can still go to the page and watch a trailer",
+      "Can the weekly trending be the top 10?",
+      "Netflix prime apple tv disney",
+      "lets just do the last thing we watched or random pick something from the watchlist",
+      "only on home row for tv and a row for movies",
+      "no lets have next episodes still on the tv show page",
+      "go with board",
+      "No the servers rows are not in this at all, all rows are custom by us and from tmdb lists",
+      "we need to make sure we stick to the designs. I think creating the correct menu should be first",
+      "Add Home to the list we have and add icons",
+      "Use 300ms",
+      "yes add the clock in",
+      "The designs must match exactly, time was spent getting these correct",
+      "Should also show the servers so we can select those for the old lists",
+      "could we add a few more rows … Maybe like Top thrillers, top sci fi",
+      "do the board",
+      "yes copy support in, they were generated in a chat"
+    ],
+    "exploring": [
+      "watchlist as the Because-you-watched seed (needs TMDB sign-in)",
+      "Top 10 second or third row"
+    ],
+    "approved": "2026-11-26"
+  },
+  "order": [
+    "081",
+    "076",
+    "077",
+    "078",
+    "079",
+    "080"
+  ],
+  "challenge": {
+    "verdict": "QUESTION",
+    "points": [
+      {
+        "q": "Up tiles: the board's list (Movies, TV, Collections, Discover, Streaming, Kids, Search, Settings) plus Home, or our PAGES list?",
+        "evidence": "designs/v2/Combo.dc.html:191-200; src/view/menubar.ts:5",
+        "if": "081 tile list/order/icons and smoke count change",
+        "answer": "Stuart: board's tiles with Home, plus Servers ('Should also show the servers so we can select those for the old lists'). Ten tiles overflow at board size, so the row winds."
+      },
+      {
+        "q": "300ms: the hud's menu value only, or the whole default timing row? hud.ts writes --t-menu 420ms on :root at boot, overriding base.css.",
+        "evidence": "src/view/hud.ts:18-22,93-96; css/base.css:38",
+        "if": "add src/view/hud.ts to 081 files",
+        "answer": "Stuart: 'yes' — the hud's menu value only; hud.ts added to 081."
+      },
+      {
+        "q": "Movies/TV rows, hero and gap follow Movies.dc.html: labels+sub-lines (Trending this week/Updated daily; Top 10 today/Most watched in your region; Because you watched X/From your history; Your next episodes/Shows you are watching), hero as one row with service box, OK Details and Add to list; no JustWatch line; plain stride 216.",
+        "evidence": "designs/v2/Movies.dc.html:37-50,105,132-163",
+        "if": "077 labels, 079 hero layout, 078 step 6/DoD",
+        "answer": "Stuart: board labels; genre rows added ('Top thrillers, top sci fi for example'); per-service rows move to a Streaming page (083 stub). Top 10 today/Trending this week per the board."
+      },
+      {
+        "q": "'Exactly' is not checkable as written: boards need ./support.js (only in design/), content is placeholder. Replace the screenshot clause with a value table per task plus a 'differs from board because' list.",
+        "evidence": "designs/v2/Movies.dc.html:6; design/support.js",
+        "if": "078/079/081 DoD rewritten; support.js copied into designs/v2",
+        "answer": "Stuart: 'yes copy support in' and 'do the board' — value tables + deviation lists in 078/079/081; support.js copied into designs/v2."
+      }
+    ]
+  }
+}
