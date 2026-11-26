@@ -19,6 +19,19 @@ test('row model', () => {
   assert.strictEqual(Rows.itemAt(list, 2), null);
   assert.strictEqual(Rows.itemAt(list, -1), null);
 
+  /* ---- a Top 10 is ten, marked, with its sub-line ---- */
+
+  var twelve = [];
+  for (var place = 0; place < 12; place++) twelve.push({ title: 'R' + place });
+  var top = Rows.ranked('Top 10 today', twelve, 'Most watched in your region');
+  assert.strictEqual(top.kind, 'list');
+  assert.strictEqual(top.ranked, true);
+  assert.strictEqual(top.total, 10);
+  assert.strictEqual(Rows.itemAt(top, 9).title, 'R9');
+  assert.strictEqual(Rows.itemAt(top, 10), null);
+  assert.strictEqual(top.sub, 'Most watched in your region');
+  assert.strictEqual(list.ranked, undefined, 'an ordinary list is not ranked');
+
   /* ---- paged rows grow when the focus nears the end ---- */
 
   function film(id: string) {

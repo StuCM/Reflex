@@ -624,10 +624,10 @@ module.exports = function (h) {
           const got = await page.evaluate(OPENED);
           assertEqual(
             got.labels,
-            'Home|Movies|TV|Collections|Discover|Streaming|Kids|Search|Settings|Servers',
+            'Home|Movies|TV|Collections|Discover|Kids|Search|Settings|Servers',
             'menu tiles',
           );
-          assertEqual(got.icons, 10, 'tiles with an icon');
+          assertEqual(got.icons, 9, 'tiles with an icon');
           assertEqual(got.ons, 1, 'one focused tile');
           assertEqual(got.on.box, '220,220,220', 'focused tile size and top');
           assertEqual(got.rest.box, '160,160,250', 'rest tile size, centred on the row');
@@ -637,7 +637,7 @@ module.exports = function (h) {
           assertEqual(got.rest.label, '24px 600 rgb(255, 255, 255)', 'rest label');
           assertEqual(got.on.between + ',' + got.rest.between, '10,10', 'icon to label');
           assertEqual(got.left, 96, 'row starts at the edge');
-          assertEqual(got.gaps, '28,28,28,28,28,28,28,28,28', 'tile gaps');
+          assertEqual(got.gaps, '28,28,28,28,28,28,28,28', 'tile gaps');
           assertEqual(
             /^(330,)*330$/.test(got.centres),
             true,
@@ -772,7 +772,7 @@ module.exports = function (h) {
         );
       return step('Kids loads from the menu, and Servers opens the sidebar', async function () {
         await press('ArrowUp');
-        await press('ArrowRight', 4);
+        await press('ArrowRight', 3);
         await press('Escape');
         assertEqual(await h.menuIsOpen(), false, 'Back closes the menu');
         await waitFor(
@@ -808,22 +808,14 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      return step('Streaming says it is coming, and Search opens search', async function () {
+      return step('Search opens search', async function () {
         await h.topRow();
         await press('ArrowUp');
         const walk = await page.evaluate(function () {
           const tiles = Array.prototype.slice.call(document.querySelectorAll('#menubar .mb-tile'));
           return tiles.findIndex((t) => t.classList.contains('on'));
         });
-        await press('ArrowRight', 5 - walk);
-        await press('Enter');
-        assertEqual(
-          await page.evaluate('document.getElementById("toast").textContent'),
-          'Coming soon',
-          'Streaming toast',
-        );
-        assertEqual(await h.menuIsOpen(), true, 'the menu stays open on Streaming');
-        await press('ArrowRight', 2);
+        await press('ArrowRight', 6 - walk);
         await press('Enter');
         assertEqual(
           await page.evaluate('document.querySelector(".view:not(.hidden)").id'),
@@ -835,40 +827,41 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      return step(
-        'Servers is the last tile, and the row winds to keep it on screen',
-        async function () {
-          await h.topRow();
-          await press('ArrowUp');
-          const walk = await page.evaluate(function () {
-            const tiles = Array.prototype.slice.call(
-              document.querySelectorAll('#menubar .mb-tile'),
-            );
-            return tiles.findIndex((t) => t.classList.contains('on'));
+      return step('Servers is the last tile, and ends inside the right edge', async function () {
+        await h.topRow();
+        await press('ArrowUp');
+        const walk = await page.evaluate(function () {
+          const tiles = Array.prototype.slice.call(document.querySelectorAll('#menubar .mb-tile'));
+          return tiles.findIndex((t) => t.classList.contains('on'));
+        });
+        await page.evaluate(function () {
+          const counts = (window.__mbWrites = { root: 0, strip: 0 });
+          const watch = (el, key) =>
+            new MutationObserver((m) => {
+              counts[key] += m.length;
+            }).observe(el, { attributes: true, attributeFilter: ['style'] });
+          watch(document.documentElement, 'root');
+          new MutationObserver((m) => {
+            counts.strip += m.length;
+          }).observe(document.getElementById('mb-strip'), {
+            attributes: true,
+            attributeFilter: ['class'],
+            subtree: true,
           });
-          await page.evaluate(function () {
-            const counts = (window.__mbWrites = { root: 0, strip: 0 });
-            const watch = (el, key) =>
-              new MutationObserver((m) => {
-                counts[key] += m.length;
-              }).observe(el, { attributes: true, attributeFilter: ['style'] });
-            watch(document.documentElement, 'root');
-            watch(document.getElementById('mb-strip'), 'strip');
-          });
-          await press('ArrowLeft', walk + 1);
-          await page.waitForTimeout(400);
-          const servers = await page.evaluate(function () {
-            const on = document.querySelector('#menubar .mb-tile.on');
-            return { label: on.textContent, right: on.getBoundingClientRect().right };
-          });
-          const writes = await page.evaluate('window.__mbWrites');
-          assertEqual(servers.label, 'Servers', 'left past Home wraps to Servers');
-          assertEqual(servers.right, 1824, 'Servers wound in to the right edge');
-          assertEqual(writes.root, 0, 'root style writes while walking the tiles');
-          assertEqual(writes.strip > 0, true, 'the strip took the offset (control)');
-          await press('Escape');
-        },
-      );
+        });
+        await press('ArrowLeft', walk + 1);
+        await page.waitForTimeout(400);
+        const servers = await page.evaluate(function () {
+          const on = document.querySelector('#menubar .mb-tile.on');
+          return { label: on.textContent, right: on.getBoundingClientRect().right };
+        });
+        const writes = await page.evaluate('window.__mbWrites');
+        assertEqual(servers.label, 'Servers', 'left past Home wraps to Servers');
+        assertEqual(servers.right, 1820, 'Servers ends inside the right edge');
+        assertEqual(writes.root, 0, 'root style writes while walking the tiles');
+        assertEqual(writes.strip > 0, true, 'the focus moved from tile to tile (control)');
+        await press('Escape');
+      });
     })
 
     .then(function () {
@@ -1119,7 +1112,7 @@ module.exports = function (h) {
               await page.evaluate('fetch("/__plextv/slow-hubs?ms=1500")');
               drop = true;
               await press('ArrowUp');
-              const old = await page.evaluate(GO(39));
+              const old = await page.evaluate(GO(37));
               assertEqual(
                 old.labels.split('|').length > 2 && old.tiles > 0,
                 true,
@@ -1229,7 +1222,7 @@ module.exports = function (h) {
       };
 
       return step(
-        'Home mixes both libraries, and Home, Movies and TV have no All row',
+        'Home mixes both libraries and has no All row; Movies and TV are TMDB rows',
         async function () {
           await calls('reset=1');
           await page.reload();
@@ -1241,25 +1234,30 @@ module.exports = function (h) {
           await page.waitForTimeout(400);
           await press('Enter');
           await settle('Movies rows');
-          const moviesLast = await lastLabel();
+          const movies = await page.evaluate(LABELS);
           await press('ArrowUp');
           await press('ArrowRight');
           await page.waitForTimeout(400);
           await press('Enter');
           await settle('TV rows');
-          const tvLast = await lastLabel();
+          const tv = await page.evaluate(LABELS);
 
           const home = await heldTitles('Home');
-          const movies = await heldTitles('Movies');
-          const tv = await heldTitles('TV Shows');
           assertEqual(home.indexOf('Recently Aired') >= 0, true, 'Home has a TV row: ' + home);
           assertEqual(home.indexOf('Recently Released') >= 0, true, 'Home has a film row: ' + home);
-          assertEqual(movies.indexOf('Recently Released') >= 0, true, 'Movies rows: ' + movies);
-          assertEqual(movies.indexOf('Recently Aired'), -1, 'Movies has no TV row: ' + movies);
-          assertEqual(tv.indexOf('Recently Aired') >= 0, true, 'TV rows: ' + tv);
+          assertEqual(
+            movies.startsWith('Trending this week|Top 10 today|Because you watched '),
+            true,
+            'Movies rows: ' + movies,
+          );
+          assertEqual(
+            tv.startsWith(
+              'Trending this week|Top 10 today|Your next episodes|Because you watched ',
+            ),
+            true,
+            'TV rows: ' + tv,
+          );
           assertEqual(homeLast, home[home.length - 1], 'Home ends on its last hub');
-          assertEqual(moviesLast, movies[movies.length - 1], 'Movies ends on its last hub');
-          assertEqual(tvLast, tv[tv.length - 1], 'TV ends on its last hub');
         },
       )
         .then(function () {
@@ -1307,18 +1305,15 @@ module.exports = function (h) {
                 await page.waitForTimeout(1500);
               };
               const tiles = 'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0';
-              /* From Movies: TV, Collections, Discover, Streaming, Kids. OK on
-                 Streaming only toasts, so the menu is still open for the next hop. */
+              /* From Movies: TV, Collections, Discover, Kids. */
               await hop(39);
               await hop(39);
               await loaded(tiles, 'the first collection');
               await hop(39);
               await loaded(tiles, 'the discovery rows');
               await hop(39);
-              await hop(39);
               await loaded('/Popular kids films/.test(' + LABELS + ')', 'the kids rows');
 
-              await hop(37);
               const discover = await hop(37);
               assertEqual(
                 discover.labels.length > 0 && discover.tiles > 0,
@@ -1327,7 +1322,6 @@ module.exports = function (h) {
               );
               const collections = await hop(37);
               assertEqual(collections.tiles > 0, true, 'Collections in the first frame');
-              await hop(39);
               await hop(39);
               const kids = await hop(39);
               assertEqual(
