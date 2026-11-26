@@ -4,13 +4,34 @@
 import * as merge from '../data/merge';
 
 /** Items held outright. */
-export function list(title: string, items: PlexItem[]): ListRow {
-  return { kind: 'list', title, items, total: items.length, focus: 0 };
+export function list(title: string, items: PlexItem[], sub?: string): ListRow {
+  const row: ListRow = {
+    kind: 'list',
+    title,
+    items,
+    total: items.length,
+    focus: 0,
+  };
+  if (sub) row.sub = sub;
+  return row;
+}
+
+/** A Top 10: the first ten of `items`, marked ranked. */
+export function ranked(title: string, items: PlexItem[], sub?: string): ListRow {
+  const row = list(title, items.slice(0, 10), sub);
+  row.ranked = true;
+  return row;
 }
 
 /* A TMDB list asked for a page at a time; `next` is the page to ask for. */
-export function paged(title: string, items: PlexItem[], next: number, pages: number): PagedRow {
-  return {
+export function paged(
+  title: string,
+  items: PlexItem[],
+  next: number,
+  pages: number,
+  sub?: string,
+): PagedRow {
+  const row: PagedRow = {
     kind: 'paged',
     title,
     items,
@@ -20,6 +41,8 @@ export function paged(title: string, items: PlexItem[], next: number, pages: num
     pages,
     asking: false,
   };
+  if (sub) row.sub = sub;
+  return row;
 }
 
 /* parts: one per server section. fetch(part, offset) resolves { items, total }. */

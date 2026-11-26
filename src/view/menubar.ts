@@ -9,7 +9,6 @@ const TILES = [
   { id: 'tv', label: 'TV', icon: glyphs.television },
   { id: 'collections', label: 'Collections', icon: glyphs.collections },
   { id: 'discover', label: 'Discover', icon: glyphs.discover },
-  { id: 'streaming', label: 'Streaming', icon: glyphs.streaming },
   { id: 'kids', label: 'Kids', icon: glyphs.kids },
   { id: 'search', label: 'Search', icon: glyphs.search },
   { id: 'settings', label: 'Settings', icon: glyphs.settings },

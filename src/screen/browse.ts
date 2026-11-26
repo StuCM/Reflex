@@ -330,8 +330,7 @@ function goToTile(id: string, settled: boolean): void {
 function menuKey(code: number): boolean {
   if (menubar.key(code, goToTile)) return true;
   const tile = menubar.focused();
-  if (code === KEY.OK && tile === 'streaming') toast('Coming soon');
-  else if (code === KEY.OK && tile === 'search') {
+  if (code === KEY.OK && tile === 'search') {
     menubar.close();
     openSearch();
   } else if (code === KEY.OK && (tile === 'settings' || tile === 'servers')) {
@@ -835,7 +834,8 @@ function primeTotals(row: Row | undefined, isCurrent: () => boolean) {
    mode owns the row while it lasts, so it is left alone; a results page has
    parked the rows, and those are the ones that get the new deck. */
 function landDeck(deck: PlexItem[]) {
-  if (picking || mode !== 'library') return;
+  const tmdbPage = viewKey === 'movies' || viewKey === 'tv';
+  if (picking || mode !== 'library' || tmdbPage) return;
   deckItems = deck;
   const parked = searchQuery !== null && savedRows !== null;
   const target = (parked ? savedRows : rows) ?? rows;
@@ -899,6 +899,7 @@ export function refreshDeck(forgetHistory?: boolean) {
    picking one out of the sidebar has to do when it belongs to another
    section. */
 function loadView(name: string, allowFetch: boolean, focusRow?: number) {
+  if (name === 'movies' || name === 'tv') return loadPageRows(name, allowFetch);
   keepPage();
   const here = mode === 'library' && viewKey === name;
   /* Asking again for the page on screen leaves it there until the answer lands. */
@@ -989,6 +990,23 @@ function loadView(name: string, allowFetch: boolean, focusRow?: number) {
       debug(`rows: ${error.message}`);
       if (!rows.length || loadingRow) toast('Could not reach the servers');
     });
+}
+
+/* Movies and TV: TMDB rows, no hub, nothing written to the library's cached rows. */
+function loadPageRows(name: 'movies' | 'tv', allowFetch: boolean): void {
+  keepPage();
+  const section = viewSection(name);
+  if (!section) return;
+  const again = mode === 'library' && viewKey === name;
+  viewKey = name;
+  if ((!again && restore(name, 'library')) || !allowFetch) return;
+  reset('library');
+  const isCurrent = generationGuard();
+  void saved.loadPageRows(name, serversOf(section), isCurrent, addDiscoveryRow).then((deck) => {
+    if (!isCurrent()) return;
+    deckItems = deck;
+    loadedAt = Date.now();
+  });
 }
 
 /* ---------- walking the merge ---------- */
@@ -1224,14 +1242,16 @@ function deckSeeds() {
    while the rest are still being fetched. */
 function addDiscoveryRow(
   title: string,
-  items: DiscoveryEntry[],
+  items: PlexItem[],
   category: DiscoveryCategory,
   pages: number,
 ) {
   if (category.kind === 'recommended') {
-    rows.push(rowModel.list(title, items));
+    rows.push(rowModel.list(title, items, category.sub));
+  } else if (category.ranked) {
+    rows.push(rowModel.ranked(title, items, category.sub));
   } else {
-    const row = rowModel.paged(title, items, 2, pages);
+    const row = rowModel.paged(title, items, 2, pages, category.sub);
     categoryOf.set(row, category);
     rows.push(row);
   }

@@ -10,6 +10,7 @@ interface Settings {
   tmdbKey: string;
   categories: DiscoveryCategory[];
   kidsCategories: DiscoveryCategory[];
+  pageRows: Record<'movies' | 'tv', DiscoveryCategory[]>;
   tmdbBase: string;
   tmdbImageBase: string;
   youtubeKey: string;
@@ -89,6 +90,51 @@ function kids(): DiscoveryCategory[] {
   ];
 }
 
+/* The Movies and TV boards' TMDB rows, in order. The 'because' row carries no seed: the page
+   names the title it was recommended from, or leaves the row out. */
+function pageRows(media: 'movie' | 'tv', genres: [string, number][]): DiscoveryCategory[] {
+  const services: DiscoveryCategory[] = SERVICES.map((service) => ({
+    title: `Popular on ${service.name}`,
+    sub: 'On your services',
+    kind: 'discover',
+    media,
+    params: { with_watch_providers: service.id, sort_by: 'popularity.desc' },
+  }));
+  const top: DiscoveryCategory[] = genres.map(([title, id]) => ({
+    title: `Top ${title}`,
+    sub: 'Highest rated',
+    kind: 'discover',
+    media,
+    params: { with_genres: id, sort_by: 'vote_average.desc' },
+  }));
+  return [
+    {
+      title: 'Trending this week',
+      sub: 'Updated daily',
+      kind: 'discover',
+      media,
+      params: { with_watch_providers: SERVICE_IDS, sort_by: 'popularity.desc' },
+    },
+    {
+      title: 'Top 10 today',
+      sub: 'Most watched in your region',
+      kind: 'trending',
+      media,
+      window: 'day',
+      limit: 10,
+      ranked: true,
+    },
+    {
+      title: 'Because you watched',
+      sub: 'From your history',
+      kind: 'because',
+      media,
+    },
+    ...services,
+    ...top,
+  ];
+}
+
 const settings: Settings = {
   /* plex.tv itself, unless something is standing in for it. */
   plexTvBase: 'https://plex.tv',
@@ -115,6 +161,25 @@ const settings: Settings = {
   /* The Kids page: what TMDB calls family and kids, nothing else. Films carry
      a PG_CEILING ceiling except the unreleased row, which often has no certificate yet. */
   kidsCategories: kids(),
+
+  pageRows: {
+    movies: pageRows('movie', [
+      ['thrillers', 53],
+      ['sci-fi', 878],
+      ['comedies', 35],
+      ['action', 28],
+      ['horror', 27],
+      ['documentaries', 99],
+    ]),
+    tv: pageRows('tv', [
+      ['crime', 80],
+      ['sci-fi & fantasy', 10765],
+      ['comedies', 35],
+      ['dramas', 18],
+      ['documentaries', 99],
+      ['animation', 16],
+    ]),
+  },
 
   /* TMDB's API and its image CDN, unless something is standing in for them. */
   tmdbBase: 'https://api.themoviedb.org/3',

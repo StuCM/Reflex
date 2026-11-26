@@ -112,9 +112,6 @@ export const collections = line(
   'M8 8h11a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z M4 16V6a2 2 0 0 1 2-2h10',
 );
 export const discover = line('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M16 8l-2.5 5.5L8 16l2.5-5.5z');
-export const streaming = line(
-  'M4 9a12 12 0 0 1 16 0 M7 12.5a8 8 0 0 1 10 0 M10 16a4 4 0 0 1 4 0 M12 19.5h.01',
-);
 export const kids = line(
   'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8.5 14a4.5 4.5 0 0 0 7 0 M9 9.5h.01 M15 9.5h.01',
 );

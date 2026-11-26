@@ -212,6 +212,10 @@ interface MergeState {
 interface ListRow {
   kind: 'list';
   title: string;
+  /** The line under the title. */
+  sub?: string;
+  /** Drawn with its places numbered (078). */
+  ranked?: true;
   items: PlexItem[];
   total: number;
   focus: number;
@@ -229,6 +233,7 @@ interface MergeRow {
 interface PagedRow {
   kind: 'paged';
   title: string;
+  sub?: string;
   items: PlexItem[];
   total: number;
   focus: number;
@@ -286,6 +291,10 @@ interface DiscoveryCategory {
   limit?: number;
   /** The TMDB id a 'because' row is recommended from. */
   seed?: number;
+  /** The line under the row's title. */
+  sub?: string;
+  /** The row is a Top 10: a plain list of ten, marked for the rail. */
+  ranked?: true;
 }
 
 /* ---------- YouTube ---------- */

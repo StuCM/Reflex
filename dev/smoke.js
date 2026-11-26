@@ -48,6 +48,7 @@ const AREAS = [
   'player',
   'deck',
   'shell',
+  'movies',
 ];
 
 const args = process.argv.slice(2);
@@ -420,6 +421,8 @@ function drive(page, titles, port) {
   const deckWrites = [];
   /* Converted streams asked for: each one is a session on the owner's server. */
   const transcodeStarts = [];
+  /* The library hubs a page's rows are built from, which Movies and TV must not ask for. */
+  const hubCalls = [];
   page.on('request', function (r) {
     const u = r.url();
     if (/removeFromContinueWatching|\/:\/scrobble/.test(u)) deckWrites.push(u);
@@ -438,6 +441,7 @@ function drive(page, titles, port) {
       backdrops.push(u);
     if (u.indexOf('/:/timeline?') >= 0) timelines.push(u);
     if (u.indexOf('/video/:/transcode/universal/start') >= 0) transcodeStarts.push(u);
+    if (/\/hubs\/(sections\/|promoted)/.test(u)) hubCalls.push(u);
     /* 10.255.255.1 is the dead connection the mock advertises on purpose, so
        that discovery's race has something to lose to. */
     if (
@@ -1464,6 +1468,7 @@ function drive(page, titles, port) {
     ytSearches,
     deckWrites,
     transcodeStarts,
+    hubCalls,
     menuLabels,
     menuChoose,
     controlRow,

@@ -1,4 +1,8 @@
-import { onDeck as plexOnDeck } from '../api/plex/library';
+import { onDeck as plexOnDeck, tmdbId as plexTmdbId } from '../api/plex/library';
+import settings from '../core/config';
+import { debug } from '../core/ui';
+import * as discovery from '../data/discovery';
+import * as meta from '../data/meta';
 import * as devices from '../data/devices';
 import * as profiles from '../data/profiles';
 import * as merge from '../data/merge';
@@ -116,4 +120,72 @@ export function fetchDeck(reachable: PlexServer[], fresh: boolean): Promise<Plex
   ]).then((results) => results[0]);
   prefetched = { ids, at: Date.now(), lists };
   return lists;
+}
+
+const NEXT_EPISODES: DiscoveryCategory = {
+  title: 'Your next episodes',
+  sub: 'Shows you are watching',
+  kind: 'recommended',
+  media: 'tv',
+};
+
+/* The title Because you watched is recommended from: the deck's first film, or the show of its first episode. */
+async function seedFrom(
+  deck: PlexItem[],
+  type: 'movie' | 'episode',
+): Promise<{ title: string; id: number } | null> {
+  const first = deck.find((item) => item.type === type);
+  if (!first) return null;
+  const owner =
+    type === 'movie'
+      ? first
+      : await meta.load({
+          ratingKey: first.grandparentRatingKey,
+          _server: first._server,
+        } as PlexItem);
+  const id = Number(plexTmdbId(owner));
+  const title = type === 'movie' ? first.title : first.grandparentTitle;
+  return id && title ? { title, id } : null;
+}
+
+/** The rows of Movies or TV from TMDB, in the board's order, and the deck they were seeded from. */
+export async function loadPageRows(
+  name: 'movies' | 'tv',
+  reachable: PlexServer[],
+  isCurrent: () => boolean,
+  add: (title: string, items: PlexItem[], category: DiscoveryCategory, pages: number) => void,
+): Promise<PlexItem[]> {
+  let deck: PlexItem[] = [];
+  let seed = null;
+  try {
+    deck = buildDeck(await fetchDeck(reachable, false));
+    seed = await seedFrom(deck, name === 'tv' ? 'episode' : 'movie');
+  } catch (error) {
+    debug(`deck: ${(error as Error).message}`);
+  }
+  if (!isCurrent()) return deck;
+  const categories: DiscoveryCategory[] = [];
+  settings.pageRows[name].forEach((category) => {
+    if (category.kind !== 'because') categories.push(category);
+    else if (seed) {
+      categories.push({ ...category, title: `Because you watched ${seed.title}`, seed: seed.id });
+    }
+  });
+  const episodes = name === 'tv' ? deck.filter((item) => item.type === 'episode') : [];
+  let placed = !episodes.length;
+  const land = () => {
+    if (placed) return;
+    placed = true;
+    add(NEXT_EPISODES.title, episodes, NEXT_EPISODES, 1);
+  };
+  await discovery.load({
+    isCurrent,
+    categories,
+    add: (title, items, category, pages) => {
+      add(title, items, category, pages);
+      if (category.ranked) land();
+    },
+  });
+  if (isCurrent()) land();
+  return deck;
 }

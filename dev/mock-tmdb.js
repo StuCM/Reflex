@@ -301,6 +301,15 @@ function create(opts) {
     return { results: out, total_pages: PAGES };
   }
 
+  /* A provider filter is one id or several joined with |; the sum tells every combination apart. */
+  function seedOf(value) {
+    return String(value || 0)
+      .split('|')
+      .reduce(function (sum, id) {
+        return sum + Number(id);
+      }, 0);
+  }
+
   /* Every /discover query, so a test can read what the app asked for. */
   const discovered = [];
 
@@ -335,7 +344,7 @@ function create(opts) {
     if (p === '/discover/tv') {
       json(
         res,
-        tvResults(query.with_genres || query.with_watch_providers, Number(query.page || 1)),
+        tvResults(seedOf(query.with_genres || query.with_watch_providers), Number(query.page || 1)),
       );
       return true;
     }
@@ -370,7 +379,7 @@ function create(opts) {
         json(res, unheld(query.with_genres, Number(query.page || 1)));
         return true;
       }
-      json(res, results(Number(query.with_watch_providers || 0), Number(query.page || 1)));
+      json(res, results(seedOf(query.with_watch_providers), Number(query.page || 1)));
       return true;
     }
     return false;
