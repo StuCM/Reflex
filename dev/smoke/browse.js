@@ -1601,7 +1601,7 @@ module.exports = function (h) {
           await press('Backspace');
           await page.waitForTimeout(200);
           /* A row that is not the deck: no removal, and one copy, one write. */
-          same(await rowsOf(1), ['Mark watched', 'Mark unwatched'], 'a film row');
+          same(await rowsOf(2), ['Mark watched', 'Mark unwatched'], 'a film row');
           await press('Enter');
           await page.waitForTimeout(400);
           same([scrobbles(), unscrobbles()], [1, 2], 'Mark watched writes');
@@ -1638,7 +1638,7 @@ module.exports = function (h) {
               20000,
             );
             await page.waitForTimeout(800);
-            await press('ArrowDown');
+            await press('ArrowDown', 2);
             await waitFor(
               '/\\d+ series/.test(document.querySelector("#mh-meta").textContent)',
               'a show in the masthead',
