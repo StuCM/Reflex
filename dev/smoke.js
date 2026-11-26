@@ -596,7 +596,7 @@ function drive(page, titles, port) {
 
   /* ---- the sidebar ----
 
-     What the chip row used to be. The top menu's More tile opens it. */
+     What the chip row used to be. The top menu's Settings and Servers tiles open it. */
 
   function sidebarIsOpen() {
     return page.evaluate(function () {
@@ -604,7 +604,7 @@ function drive(page, titles, port) {
     });
   }
 
-  /* UP to the top menu, then to its More tile and OK. Sweeping with arrows
+  /* UP to the top menu, then to Settings or Servers and OK. Sweeping with arrows
      loads nothing: a page loads only once the focus rests on it. */
   function menuIsOpen() {
     return page.evaluate(function () {
@@ -632,8 +632,9 @@ function drive(page, titles, port) {
       });
     }
     /* No pause between presses. A page seen before shows at once on an arrow,
-       so Movies passes Home on the way left (wrapping to More) and TV goes right. */
-    function toMore() {
+       so Movies passes Home on the way left, wrapping to Servers, and TV goes
+       right to Settings. Both open the sidebar. */
+    function toSidebarTile() {
       return page
         .evaluate(function () {
           const tiles = document.querySelectorAll('#menubar .mb-tile');
@@ -642,7 +643,7 @@ function drive(page, titles, port) {
           });
           return at <= 1
             ? { key: 'ArrowLeft', times: at + 1 }
-            : { key: 'ArrowRight', times: tiles.length - 1 - at };
+            : { key: 'ArrowRight', times: tiles.length - 2 - at };
         })
         .then(function (way) {
           let p = Promise.resolve();
@@ -658,14 +659,14 @@ function drive(page, titles, port) {
       if (isOpen) return true;
       return climb(60)
         .then(function () {
-          return toMore();
+          return toSidebarTile();
         })
         .then(function () {
           return press('Enter');
         })
         .then(sidebarIsOpen)
         .then(function (opened) {
-          if (!opened) throw new Error('More did not open the sidebar');
+          if (!opened) throw new Error('Settings or Servers did not open the sidebar');
         });
     });
   }
@@ -1469,6 +1470,7 @@ function drive(page, titles, port) {
     openSidebar,
     sidebarRows,
     topRow,
+    menuIsOpen,
     sidebarWalkTo,
     sidebarPick,
     watchingPick,

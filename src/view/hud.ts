@@ -18,7 +18,7 @@ type Name = keyof typeof OPTIONS;
 const TIMINGS = [
   [100, 200, 240],
   [130, 260, 300],
-  [180, 360, 420],
+  [180, 360, 300],
 ];
 
 /* Number key to setting: 1 to 8, in the order the panel lists them; 9 is poster. */

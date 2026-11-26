@@ -52,8 +52,17 @@
   <!-- What the keys mean while green has Continue watching in select mode.
        Empty and hidden the rest of the time. -->
   <div id="browse-hint" class="hidden"></div>
-  <div id="menubar"></div>
-  <div id="menu-hint"></div>
+  <div id="tabs">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)"
+      stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+    <div id="tab-list"></div>
+  </div>
+  <div id="menubar"><div id="mb-strip"></div></div>
+  <div id="menu-hint">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    <span id="menu-hint-title"></span>
+  </div>
   <div id="sidebar"><div id="sidebar-list"></div></div>
   <div id="viewport"><div id="rows"></div></div>
 </div>
@@ -243,6 +252,8 @@
   <div class="msg-hint" id="recap-hint">BACK closes it</div>
 </div>
 
+<!-- After #video, so css/v2.css can hide it while a film plays. -->
+<div id="clock"></div>
 <div id="toast" class="hidden"></div>
 <div id="debug"></div>
 <div id="hud" class="hidden"></div>

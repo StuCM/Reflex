@@ -35,7 +35,7 @@
   --t-quick: 180ms;   /* a tile lifting, a strip sliding */
   --t-move:  360ms;   /* a row change, the hero collapsing */
   --t-fade:  620ms;   /* one backdrop crossfading into the next */
-  --t-menu:  420ms;
+  --t-menu:  300ms;
   --t-hero:  420ms;   /* the hero text fading in on a new title */
   --t-glow:  800ms;
   --ease:    cubic-bezier(.2, .7, .2, 1);

@@ -410,21 +410,290 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      const menuOpen = () =>
-        page.evaluate('document.getElementById("browse").classList.contains("menu")');
+      /* Combo.dc.html at rest: the tab bar and the clock, measured. */
+      const RESTING = function () {
+        const rect = (el) => el.getBoundingClientRect();
+        const css = (el) => getComputedStyle(el);
+        const tabs = Array.prototype.slice.call(document.querySelectorAll('#tab-list .tab'));
+        const on = document.querySelector('#tab-list .tab.on');
+        const off = document.querySelector('#tab-list .tab:not(.on)');
+        const chevron = document.querySelector('#tabs svg');
+        const clock = document.getElementById('clock');
+        const now = new Date();
+        const pad = (n) => (n < 10 ? '0' : '') + n;
+        return {
+          labels: tabs.map((t) => t.textContent).join('|'),
+          on: on && on.textContent,
+          ons: document.querySelectorAll('#tab-list .tab.on').length,
+          tabsTop: rect(document.getElementById('tabs')).top,
+          tabsOpacity: css(document.getElementById('tabs')).opacity,
+          chevron: [
+            rect(chevron).width,
+            rect(chevron).height,
+            rect(tabs[0]).top - rect(chevron).bottom,
+          ],
+          chevronStroke: [chevron.getAttribute('stroke'), chevron.getAttribute('stroke-width')],
+          chevronPath: chevron.querySelector('path').getAttribute('d'),
+          centre: Math.round((rect(tabs[0]).left + rect(tabs[tabs.length - 1]).right) / 2),
+          gaps: tabs
+            .slice(1)
+            .map((t, i) => Math.round(rect(t).left - rect(tabs[i]).right))
+            .join(','),
+          font: [css(on).fontFamily, css(on).fontSize, css(on).fontWeight].join(' '),
+          onColour: css(on).color,
+          onLine: [
+            css(on).borderBottomWidth,
+            css(on).borderBottomStyle,
+            css(on).borderBottomColor,
+            css(on).paddingBottom,
+          ].join(' '),
+          offColour: css(off).color,
+          offLine: css(off).borderBottomColor,
+          accent: getComputedStyle(document.documentElement).getPropertyValue('--ac').trim(),
+          clock: clock.textContent,
+          wall: [
+            pad(now.getHours()) + ':' + pad(now.getMinutes()),
+            pad(new Date(now.getTime() - 1000).getHours()) +
+              ':' +
+              pad(new Date(now.getTime() - 1000).getMinutes()),
+          ],
+          clockRight: 1920 - rect(clock).right,
+          clockTop: rect(clock).top,
+          clockFont: [css(clock).fontSize, css(clock).fontWeight, css(clock).color].join(' '),
+          clockShown: css(clock).display,
+        };
+      };
+      return step(
+        'at rest the tab bar names the pages, underlines this one, and the clock tells the time',
+        async function () {
+          await h.topRow();
+          await waitFor(
+            'getComputedStyle(document.getElementById("tabs")).opacity === "1"',
+            'the tab bar to settle',
+            3000,
+          );
+          const got = await page.evaluate(RESTING);
+          assertEqual(got.labels, 'Home|Movies|TV|Kids|Collections|Discover', 'tab labels');
+          assertEqual(got.ons, 1, 'one tab underlined');
+          assertEqual(got.tabsTop, 22, 'tab bar top');
+          assertEqual(got.tabsOpacity, '1', 'tab bar shown at rest');
+          assertEqual(
+            got.chevron.join(','),
+            '28,28,6',
+            'chevron size and the 6px above the labels',
+          );
+          assertEqual(got.chevronStroke.join(' '), 'rgba(255,255,255,0.55) 2.2', 'chevron stroke');
+          assertEqual(got.chevronPath, 'M6 15l6-6 6 6', 'chevron path');
+          assertEqual(got.centre, 960, 'tab bar centred across 1920');
+          assertEqual(got.gaps, '48,48,48,48,48', 'tab gaps');
+          assertEqual(got.font, '"Space Grotesk", Inter, sans-serif 30px 600', 'tab font');
+          assertEqual(got.onColour, 'rgb(255, 255, 255)', 'active tab colour');
+          assertEqual(got.accent, '#F4C8B6', 'the accent the underline uses');
+          assertEqual(got.onLine, '3px solid rgb(244, 200, 182) 8px', 'active underline');
+          assertEqual(got.offColour, 'rgba(255, 255, 255, 0.42)', 'inactive tab colour');
+          assertEqual(got.offLine, 'rgba(0, 0, 0, 0)', 'no underline on an inactive tab');
+          assertEqual(
+            got.wall.indexOf(got.clock) >= 0,
+            true,
+            'clock ' + got.clock + ' against ' + got.wall,
+          );
+          assertEqual(got.clockRight, 96, 'clock right edge');
+          assertEqual(got.clockTop, 44, 'clock top');
+          assertEqual(got.clockFont, '32px 600 rgba(255, 255, 255, 0.7)', 'clock type');
+          assertEqual(got.clockShown, 'block', 'clock shown');
+
+          /* A second page on a fake clock, two seconds short of ten. */
+          const fake = await page.context().newPage();
+          try {
+            await fake.clock.install({ time: new Date(2026, 0, 1, 9, 59, 58) });
+            await fake.goto(page.url());
+            const read = () => fake.evaluate('document.getElementById("clock").textContent');
+            assertEqual(await read(), '09:59', 'the fake clock at boot');
+            await fake.clock.runFor(3000);
+            assertEqual(await read(), '10:00', 'the clock on the minute, with no key pressed');
+          } finally {
+            await fake.close();
+          }
+        },
+      );
+    })
+
+    .then(function () {
+      /* ComboMenu.dc.html: the tiles, the hint and the dimmed row, measured. */
+      const OPENED = function () {
+        const rect = (el) => el.getBoundingClientRect();
+        const css = (el) => getComputedStyle(el);
+        const tiles = Array.prototype.slice.call(document.querySelectorAll('#menubar .mb-tile'));
+        const face = (tile) => {
+          const icon = tile.querySelector('svg');
+          const label = tile.querySelector('.mb-label');
+          const box = rect(tile);
+          return {
+            box: [box.width, box.height, box.top].join(','),
+            radius: css(tile).borderTopLeftRadius,
+            icon: [rect(icon).width, icon.getAttribute('stroke-width')].join(','),
+            label: [css(label).fontSize, css(label).fontWeight, css(label).color].join(' '),
+            between: Math.round(rect(label).top - rect(icon).bottom),
+            border: [
+              css(tile).borderTopWidth,
+              css(tile).borderTopStyle,
+              css(tile).borderTopColor,
+            ].join(' '),
+            fill: css(tile).backgroundColor + ' ' + css(tile).backgroundImage,
+            shadow: css(tile).boxShadow,
+          };
+        };
+        const on = tiles.find((t) => t.classList.contains('on'));
+        const rest = tiles.find((t) => !t.classList.contains('on'));
+        const hint = document.getElementById('menu-hint');
+        const firstRow = document.querySelector('#rows .row');
+        const restTile = firstRow.querySelector('.tile:not(.on)');
+        let node = restTile;
+        let dim = 1;
+        while (node) {
+          dim *= Number(css(node).opacity);
+          node = node.parentElement;
+        }
+        return {
+          labels: tiles.map((t) => t.textContent).join('|'),
+          icons: tiles.filter((t) => t.querySelector('svg path')).length,
+          ons: tiles.filter((t) => t.classList.contains('on')).length,
+          on: face(on),
+          rest: face(rest),
+          left: rect(tiles[0]).left,
+          gaps: tiles
+            .slice(1)
+            .map((t, i) => Math.round(rect(t).left - rect(tiles[i]).right))
+            .join(','),
+          centres: tiles.map((t) => Math.round(rect(t).top + rect(t).height / 2)).join(','),
+          masthead: css(document.getElementById('masthead')).opacity,
+          tabs: css(document.getElementById('tabs')).opacity,
+          hint: document.getElementById('menu-hint-title').textContent,
+          row: firstRow.querySelector('.row-label').textContent,
+          hintTop: rect(hint).top,
+          hintCentre: Math.round(
+            (rect(hint.querySelector('svg')).left + rect(hint.querySelector('span')).right) / 2,
+          ),
+          hintType: [css(hint).fontSize, css(hint).fontWeight, css(hint).color].join(' '),
+          hintChevron: [
+            rect(hint.querySelector('svg')).width,
+            hint.querySelector('path').getAttribute('d'),
+            Math.round(
+              rect(hint.querySelector('span')).left - rect(hint.querySelector('svg')).right,
+            ),
+          ].join(' '),
+          rowTop: rect(restTile).top,
+          posters: Array.prototype.slice
+            .call(firstRow.querySelectorAll('.tile:not(.hidden) .tile-inner'))
+            .map((inner) => rect(inner))
+            .filter((box) => box.right > 0 && box.left < 1920)
+            .map((box) => [box.left, box.top, box.width, box.height].join(','))
+            .join(' '),
+          trayHidden: [
+            firstRow.querySelector('.row-label'),
+            firstRow.querySelector('.tile-title'),
+            firstRow.querySelector('.tile-sub'),
+            document.getElementById('hero-art'),
+            document.getElementById('hero-scrim-x'),
+            document.getElementById('hero-scrim-y'),
+          ]
+            .map((el) => css(el).opacity)
+            .join(','),
+          dim: Math.round(dim * 100) / 100,
+          menuMs: getComputedStyle(document.documentElement).getPropertyValue('--t-menu').trim(),
+          motion: ['menubar', 'tabs', 'masthead', 'viewport', 'menu-hint']
+            .map(
+              (id) =>
+                css(document.getElementById(id)).transitionProperty +
+                '/' +
+                css(document.getElementById(id)).transitionDuration,
+            )
+            .join(' '),
+        };
+      };
       const LABELS =
         'Array.prototype.map.call(document.querySelectorAll("#rows .row-label"), function (t) {' +
         ' return t.textContent.trim(); }).join("|")';
+      const onTab = () => page.evaluate('document.querySelector("#tab-list .tab.on").textContent');
       return step(
-        'Up opens the top menu; arrows change page and Down closes it',
+        "Up opens the board's tiles over a dimmed first row; arrows change page and Down closes it",
         async function () {
           await press('ArrowUp');
-          assertEqual(await menuOpen(), true, 'menu open after Up from row 0');
-          const tiles = await page.evaluate(
-            'Array.prototype.map.call(document.querySelectorAll("#menubar .mb-tile"), function (t) {' +
-              ' return t.textContent; }).join("|")',
+          assertEqual(await h.menuIsOpen(), true, 'menu open after Up from row 0');
+          await page.waitForTimeout(400);
+          const got = await page.evaluate(OPENED);
+          assertEqual(
+            got.labels,
+            'Home|Movies|TV|Collections|Discover|Streaming|Kids|Search|Settings|Servers',
+            'menu tiles',
           );
-          assertEqual(tiles, 'Home|Movies|TV|Kids|Collections|Discover|More', 'menu tiles');
+          assertEqual(got.icons, 10, 'tiles with an icon');
+          assertEqual(got.ons, 1, 'one focused tile');
+          assertEqual(got.on.box, '220,220,220', 'focused tile size and top');
+          assertEqual(got.rest.box, '160,160,250', 'rest tile size, centred on the row');
+          assertEqual(got.on.radius + ' ' + got.rest.radius, '38px 30px', 'tile corners');
+          assertEqual(got.on.icon + ' ' + got.rest.icon, '76,1.7 52,1.7', 'icon size and stroke');
+          assertEqual(got.on.label, '30px 600 rgb(255, 255, 255)', 'focused label');
+          assertEqual(got.rest.label, '24px 600 rgb(255, 255, 255)', 'rest label');
+          assertEqual(got.on.between + ',' + got.rest.between, '10,10', 'icon to label');
+          assertEqual(got.left, 96, 'row starts at the edge');
+          assertEqual(got.gaps, '28,28,28,28,28,28,28,28,28', 'tile gaps');
+          assertEqual(
+            /^(330,)*330$/.test(got.centres),
+            true,
+            'tiles centre-aligned: ' + got.centres,
+          );
+          assertEqual(got.rest.border, '1px solid rgba(255, 255, 255, 0.26)', 'rest border');
+          assertEqual(got.on.border, '1px solid rgba(255, 255, 255, 0.26)', 'focused border');
+          assertEqual(
+            got.rest.fill,
+            'rgba(22, 16, 44, 0.74) linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08))',
+            'rest glass',
+          );
+          assertEqual(
+            got.on.fill,
+            'rgba(44, 34, 84, 0.9) linear-gradient(rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.16))',
+            'focused glass',
+          );
+          assertEqual(
+            got.rest.shadow,
+            'rgba(255, 255, 255, 0.3) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 12px 30px 0px',
+            'rest shadow',
+          );
+          assertEqual(
+            got.on.shadow,
+            'rgba(255, 255, 255, 0.95) 0px 0px 0px 3px, rgba(255, 255, 255, 0.5) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.5) 0px 24px 60px 0px',
+            'focused ring',
+          );
+          assertEqual(got.masthead, '0', 'masthead hidden');
+          assertEqual(got.tabs, '0', 'tab bar hidden');
+          assertEqual(got.hint, got.row, 'the hint names the first row');
+          assertEqual(got.hint.length > 0, true, 'a hint at all');
+          assertEqual(got.hintTop, 486, 'hint top');
+          assertEqual(got.hintCentre, 960, 'hint centred');
+          assertEqual(got.hintType, '26px 600 rgba(255, 255, 255, 0.55)', 'hint type');
+          assertEqual(got.hintChevron, '26 M6 9l6 6 6-6 12', 'hint chevron and gap');
+          assertEqual(got.rowTop, 775, 'the first row in the tray');
+          const lefts = got.posters.split(' ').map((p) => p.split(',')[0]);
+          assertEqual(lefts.length >= 9, true, 'posters across the tray: ' + got.posters);
+          assertEqual(
+            got.posters,
+            lefts.map((_, i) => [96 + 202 * i, 775, 176, 264].join(',')).join(' '),
+            'every tray poster 176x264 at top 775, left 96, stride 202',
+          );
+          assertEqual(got.trayHidden, '0,0,0,0,0,0', 'no row title, captions or backdrop');
+          await waitFor(
+            'getComputedStyle(document.getElementById("g1")).opacity === "1"',
+            'the ground glows under the tray',
+            3000,
+          );
+          assertEqual(got.dim, 0.4, 'the first row dimmed');
+          assertEqual(got.menuMs, '300ms', '--t-menu');
+          assertEqual(
+            got.motion,
+            'opacity/0.3s opacity/0.3s opacity/0.3s transform, opacity/0.3s, 0.3s opacity/0.3s',
+            'menu motion: transform and opacity, 300ms',
+          );
           const movies = await page.evaluate(LABELS);
           assertEqual(movies.length > 0, true, 'Movies row labels are drawn');
 
@@ -438,7 +707,13 @@ module.exports = function (h) {
 
           await press('ArrowDown');
           await page.waitForTimeout(500);
-          assertEqual(await menuOpen(), false, 'menu closed after Down');
+          assertEqual(await h.menuIsOpen(), false, 'menu closed after Down');
+          assertEqual(await onTab(), 'TV', 'the tab bar underlines TV');
+          assertEqual(
+            await page.evaluate('getComputedStyle(document.getElementById("tabs")).opacity'),
+            '1',
+            'the tab bar back',
+          );
           assertEqual(
             await page.evaluate('document.getElementById("browse").classList.contains("dense")'),
             false,
@@ -478,7 +753,7 @@ module.exports = function (h) {
           assertEqual(
             first >= 140 && first < 290,
             true,
-            'Kids loaded ' + first + 'ms after the arrow',
+            'Collections loaded ' + first + 'ms after the arrow',
           );
           await rearm();
           await press('ArrowLeft');
@@ -490,24 +765,27 @@ module.exports = function (h) {
     })
 
     .then(function () {
-      const menuOpen = () =>
-        page.evaluate('document.getElementById("browse").classList.contains("menu")');
       const sidebarText = () =>
         page.evaluate(
           'Array.prototype.map.call(document.querySelectorAll("#sidebar .sb-row"), function (r) {' +
             ' return (r.classList.contains("cur") ? "* " : "") + r.textContent.trim(); }).join("|")',
         );
-      return step('Kids loads from the menu, and More opens the sidebar', async function () {
+      return step('Kids loads from the menu, and Servers opens the sidebar', async function () {
         await press('ArrowUp');
-        await press('ArrowRight');
+        await press('ArrowRight', 4);
         await press('Escape');
-        assertEqual(await menuOpen(), false, 'Back closes the menu');
+        assertEqual(await h.menuIsOpen(), false, 'Back closes the menu');
         await waitFor(
           'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0',
           'Kids tiles',
           15000,
         );
         assertEqual(await glowX(), '-780px', 'g1 --gx on the Kids page');
+        assertEqual(
+          await page.evaluate('document.querySelector("#tab-list .tab.on").textContent'),
+          'Kids',
+          'the tab bar underlines Kids',
+        );
         await h.openSidebar();
         const rows = await sidebarText();
         assertEqual(/(^|\|)\* Kids(\||$)/.test(rows), true, 'Kids is current in ' + rows);
@@ -519,7 +797,7 @@ module.exports = function (h) {
         );
         await h.openSidebar();
         const after = await sidebarText();
-        /* The way to More from a library passes Home, which shows at once. */
+        /* The way to Servers from a library passes Home, which shows at once. */
         assertEqual(
           /\* Continue watching/.test(after) && !/\* Kids/.test(after),
           true,
@@ -527,6 +805,70 @@ module.exports = function (h) {
         );
         await press('ArrowLeft');
       });
+    })
+
+    .then(function () {
+      return step('Streaming says it is coming, and Search opens search', async function () {
+        await h.topRow();
+        await press('ArrowUp');
+        const walk = await page.evaluate(function () {
+          const tiles = Array.prototype.slice.call(document.querySelectorAll('#menubar .mb-tile'));
+          return tiles.findIndex((t) => t.classList.contains('on'));
+        });
+        await press('ArrowRight', 5 - walk);
+        await press('Enter');
+        assertEqual(
+          await page.evaluate('document.getElementById("toast").textContent'),
+          'Coming soon',
+          'Streaming toast',
+        );
+        assertEqual(await h.menuIsOpen(), true, 'the menu stays open on Streaming');
+        await press('ArrowRight', 2);
+        await press('Enter');
+        assertEqual(
+          await page.evaluate('document.querySelector(".view:not(.hidden)").id'),
+          'search',
+          'Search opens the search view',
+        );
+        await press('Escape');
+      });
+    })
+
+    .then(function () {
+      return step(
+        'Servers is the last tile, and the row winds to keep it on screen',
+        async function () {
+          await h.topRow();
+          await press('ArrowUp');
+          const walk = await page.evaluate(function () {
+            const tiles = Array.prototype.slice.call(
+              document.querySelectorAll('#menubar .mb-tile'),
+            );
+            return tiles.findIndex((t) => t.classList.contains('on'));
+          });
+          await page.evaluate(function () {
+            const counts = (window.__mbWrites = { root: 0, strip: 0 });
+            const watch = (el, key) =>
+              new MutationObserver((m) => {
+                counts[key] += m.length;
+              }).observe(el, { attributes: true, attributeFilter: ['style'] });
+            watch(document.documentElement, 'root');
+            watch(document.getElementById('mb-strip'), 'strip');
+          });
+          await press('ArrowLeft', walk + 1);
+          await page.waitForTimeout(400);
+          const servers = await page.evaluate(function () {
+            const on = document.querySelector('#menubar .mb-tile.on');
+            return { label: on.textContent, right: on.getBoundingClientRect().right };
+          });
+          const writes = await page.evaluate('window.__mbWrites');
+          assertEqual(servers.label, 'Servers', 'left past Home wraps to Servers');
+          assertEqual(servers.right, 1824, 'Servers wound in to the right edge');
+          assertEqual(writes.root, 0, 'root style writes while walking the tiles');
+          assertEqual(writes.strip > 0, true, 'the strip took the offset (control)');
+          await press('Escape');
+        },
+      );
     })
 
     .then(function () {
@@ -965,28 +1307,33 @@ module.exports = function (h) {
                 await page.waitForTimeout(1500);
               };
               const tiles = 'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0';
+              /* From Movies: TV, Collections, Discover, Streaming, Kids. OK on
+                 Streaming only toasts, so the menu is still open for the next hop. */
               await hop(39);
-              await hop(39);
-              await loaded('/Popular kids films/.test(' + LABELS + ')', 'the kids rows');
               await hop(39);
               await loaded(tiles, 'the first collection');
               await hop(39);
               await loaded(tiles, 'the discovery rows');
-
-              const collections = await hop(37);
-              assertEqual(collections.tiles > 0, true, 'Collections in the first frame');
-              const kids = await hop(37);
-              assertEqual(
-                /Popular kids films/.test(kids.labels) && kids.tiles > 0,
-                true,
-                'Kids in the first frame: ' + kids.labels,
-              );
               await hop(39);
-              const discover = await hop(39);
+              await hop(39);
+              await loaded('/Popular kids films/.test(' + LABELS + ')', 'the kids rows');
+
+              await hop(37);
+              const discover = await hop(37);
               assertEqual(
                 discover.labels.length > 0 && discover.tiles > 0,
                 true,
                 'Discover in the first frame: ' + discover.labels,
+              );
+              const collections = await hop(37);
+              assertEqual(collections.tiles > 0, true, 'Collections in the first frame');
+              await hop(39);
+              await hop(39);
+              const kids = await hop(39);
+              assertEqual(
+                /Popular kids films/.test(kids.labels) && kids.tiles > 0,
+                true,
+                'Kids in the first frame: ' + kids.labels,
               );
               await press('Escape');
             },
