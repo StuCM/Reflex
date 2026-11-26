@@ -1,11 +1,11 @@
 ---
 id: 079
 slug: the-movies-and-tv-hero
-status: building
+status: done
 branch: crew/079-the-movies-and-tv-hero
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-movies-tv
 files:
   - src/view/masthead.ts
@@ -22,6 +22,9 @@ files:
   - dev/smoke/discovery.js
   - dev/smoke/sections.js
   - dev/smoke/search.js
+gate: pass
+gateSha: b736f2d392c4d5d9061b68a838868d849a589b83
+gateAt: 2026-11-26T20:53:35.603Z
 ---
 
 # The hero says what the focused title is, where it streams, and if we lack it
@@ -118,8 +121,22 @@ Only Stuart's calls or what the board itself forces belong here. A worker may no
 
 ## Review rounds
 
+Round 1: PASS (gate stamped b736f2d; verify 182/182). Non-blocking: `#mh-cast` hidden on board pages and `#mh-info` `min-height: 44px` are deviations not listed under "Differs from board" (orchestrator to list or accept); `boardMeta` also adds seasons for an episode, harmless.
+
 - Orchestrator, after round-1 block: spec bug — `dev/mock-tmdb.js` added to `files:`. Serve `/<size>/<name>.svg` provider logos in `image()`, and add `vote_average` to the mock's details so `movies.js` drops its `page.route` rating patch and the `art:` cache clearing. Also added `src/data/art.ts`, `types/plex.d.ts`, `test/art.test.ts`: `ArtFacts.seasons` from the details' `number_of_seasons` (already in the body), so an unheld show's meta reads "N seasons" as the board's TV meta does; unit test it. Certificate for unheld titles stays out (needs another append).
 
 ## Worker notes
+Round-1 block resolved by the orchestrator's spec change: mock now serves provider logos and `vote_average` (and `number_of_seasons` for shows), `movies.js` workarounds dropped, `ArtFacts.seasons` added with a unit test and a TV smoke step (an unheld show reads "N seasons"). The 'gap' paragraphs below are historical.
+
+Built: `index.html` hero info row and `#mh-avail`; `css/v2.css` board values (hero at 96/160, 1300 wide, 24/96px eyebrow and title, 44px logo box, 32px gaps, OK chip, #F5C84C dot, 28/1.4 synopsis at 800 wide); `css/browse.css` base and dense styles for `#mh-avail`; `src/view/masthead.ts` board meta (year, certificate, run time or seasons, star rating), service logo and name, ranked eyebrow, "Not on server"; `src/data/discovery.ts` `_availability` is 'absent' or 'held'; `src/app.ts` yellow toasts "Lists are coming" on the board pages; `dev/smoke/movies.js` three new steps (every Board value by rect or computed style, Not on server plus Trailer on its page, "#3 in the top 10 today" plus yellow); `dev/smoke/discovery.js` reads availability from `#mh-avail`. On Discover and other non-board pages availability keeps its old wording, now in `#mh-avail`.
+
+`npm run smoke -- movies`, `discovery`, `search` pass alone. The full `npm run smoke` has one failure: "no console errors and nothing left this machine".
+
+**The gap:** the mock TMDB (`dev/mock-tmdb.js`) serves only `/<size>/(backdrop|poster|profile)/<id>/<n>.svg`, so the service logo (`/__tmdbimg/w92/netflix.svg`, `apple.svg`) is a 404. The browse, sections and shell areas run before `movies`, are not in `files:`, and focus Movies titles on a service, so the hero requests the logo and the harness counts the 404 as a console error. A `page.route` inside `movies.js` only covers what runs after it.
+Needed: add `dev/mock-tmdb.js` to `files:` and have `image()` also serve `/w92/<name>.svg`. Nothing in `src/` changes.
+
+Also: the mock's details carry no `vote_average`, so no title has a rating; `movies.js` patches it in with `page.route` and clears the `art:` cache keys first (earlier areas cache facts without it). A mock `vote_average` would make both unnecessary.
+
+Kept within the spec: seasons and certificate come from a held copy (`childCount`, `contentRating`), so an unheld TV title has no seasons part (ArtFacts has no season count; art.ts is outside `files:`). `#mh-cast` is hidden on the board pages (not on the board). `#mh-info` has `min-height: 44px` so a title with no service keeps the same row height.
 
 ## Graph writes proposed
