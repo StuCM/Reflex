@@ -76,6 +76,9 @@ value not listed here and adds it to this list.
 - `#mh-avail` "Not on server" under the synopsis: Stuart; not on the board.
 - Real titles, meta and synopses.
 
+## Constraints that bite here
+- `src/screen/browse.ts` is at its 1548-line `max-lines` limit (`.oxlintrc.json`). Net-zero or shrink it; new logic goes in `src/screen/pages.ts` (077 did this).
+
 ## Approach
 1. `index.html`: `#mh-info` row (`#mh-service` with `img` + name, `#mh-meta`,
    `.mh-chip` OK Details, `.mh-add` dot + Add to list) after the title;

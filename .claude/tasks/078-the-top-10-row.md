@@ -57,6 +57,9 @@ Movies.dc.html: everything listed in Background and Approach 5, verbatim.
   `transform: scale`, never a font-size change.
 - Never write custom properties on `:root` per key.
 
+## Constraints that bite here
+- `src/screen/browse.ts` is at its 1548-line `max-lines` limit (`.oxlintrc.json`). Net-zero or shrink it; new logic goes in `src/screen/pages.ts` (077 did this).
+
 ## Approach
 1. One `_rank` element per pooled tile, created with the pool, absolutely
    positioned left of the poster inside the tile; text set only when the
