@@ -6,7 +6,7 @@ import { tmdbId } from '../api/plex/library';
 import { details, enabled } from '../api/tmdb';
 import * as cached from './cached';
 import * as servers from './servers';
-import settings from '../core/config';
+import settings, { SERVICES } from '../core/config';
 
 /* The tile is 176 wide, so w342 is the next size up — w500 was for a tile
    nearly twice as wide and is a third of a megabyte per poster wasted. */
@@ -59,6 +59,21 @@ function trailerOf(payload: TmdbDetails | null | undefined): string | null {
   return best?.key ?? null;
 }
 
+/* The first of our services, in SERVICES order, that streams it here. */
+function serviceOf(payload: TmdbDetails | null | undefined): ArtFacts['service'] {
+  const flatrate = payload?.['watch/providers']?.results?.GB?.flatrate ?? [];
+  for (const service of SERVICES) {
+    const found = flatrate.find((provider) => provider.provider_id === service.id);
+    if (found)
+      return {
+        id: service.id,
+        name: service.name,
+        logo: found.logo_path ?? null,
+      };
+  }
+  return null;
+}
+
 /* What the header says about a title, out of the same payload. Never throws:
    anything missing gives empty. */
 export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
@@ -86,6 +101,7 @@ export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
     cast,
     castIds: ids,
     trailerKey: trailerOf(payload),
+    service: serviceOf(payload),
   };
 }
 
@@ -174,18 +190,21 @@ async function fetchOne(id: string): Promise<void> {
   landed(id, got);
 }
 
+export function isComplete(entry: ArtEntry | undefined): boolean {
+  return !!(
+    entry?.facts &&
+    entry.facts.trailerKey !== undefined &&
+    entry.facts.castIds !== undefined &&
+    entry.facts.service !== undefined &&
+    entry.poster !== undefined
+  );
+}
+
 async function lookUp(id: string): Promise<ArtEntry> {
   /* An entry cached before the facts or the poster existed is a miss for them,
      or an old cache would leave a title short of one for ever. */
   const entry = (await cached.art.get(id)) as ArtEntry | undefined;
-  if (
-    entry?.facts &&
-    entry.facts.trailerKey !== undefined &&
-    entry.facts.castIds !== undefined &&
-    entry.poster !== undefined
-  ) {
-    return entry;
-  }
+  if (isComplete(entry)) return entry as ArtEntry;
   const payload = (await details(id)) as TmdbDetails;
   const got = pick(payload);
   got.facts = facts(payload);

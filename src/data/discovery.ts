@@ -115,7 +115,9 @@ export function pageKey(category: DiscoveryCategory, seeds: string[], page: numb
     .join('&');
   const extra =
     filters || category.minVotes !== undefined ? `:${filters}:${category.minVotes}` : '';
-  return `${category.media === 'tv' ? 'tv:' : ''}${category.kind}:${category.id ?? seeds.join('-')}:${page}${extra}`;
+  const who = category.id ?? category.seed ?? seeds.join('-');
+  const day = category.window === 'day' ? 'day:' : '';
+  return `${category.media === 'tv' ? 'tv:' : ''}${day}${category.kind}:${who}:${page}${extra}`;
 }
 
 /* One page of a category, from the day's cache or TMDB. A bare array is
@@ -143,9 +145,9 @@ function kept(
   entries: DiscoveryEntry[],
   keep?: (entry: DiscoveryEntry) => boolean,
 ): DiscoveryEntry[] {
-  return keep && category.kind !== 'upcoming'
-    ? entries.filter((candidate) => keep(candidate))
-    : entries;
+  const filtered =
+    keep && category.kind !== 'upcoming' ? entries.filter((candidate) => keep(candidate)) : entries;
+  return category.limit ? filtered.slice(0, category.limit) : filtered;
 }
 
 /** The next page of a paged row, as entries the rail can draw. */
@@ -156,7 +158,10 @@ export async function more(
   keep?: (entry: DiscoveryEntry) => boolean,
 ): Promise<{ entries: DiscoveryEntry[]; pages: number }> {
   const got = await fetchPage(category, seeds, page);
-  return { entries: kept(category, got.films.map(entry), keep), pages: got.pages };
+  return {
+    entries: kept(category, got.films.map(entry), keep),
+    pages: got.pages,
+  };
 }
 
 async function fetchRow(
@@ -182,7 +187,7 @@ function publish(
     debug(`${category.title}: nothing to show`);
     return;
   }
-  context.add(category.title, entries, category, found.pages);
+  context.add(category.title, entries, category, category.limit ? 1 : found.pages);
   debug(`${category.title}: ${entries.length} from TMDB`);
 }
 

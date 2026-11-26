@@ -106,6 +106,38 @@ test('catalogue dispatch and the vote floor', () => {
       });
     })
 
+    /* ---- one-title recommendations, the day's trending, and the row cap ---- */
+
+    .then(function () {
+      payload = { results: [result(31), result(32), result(33)] };
+      return fetched({ kind: 'because', seed: 603 }).then(function (got) {
+        assert.ok(/\/movie\/603\/recommendations\?/.test(got.asked[0]), got.asked[0]);
+        assert.strictEqual(got.films.length, 3);
+        return fetched({ kind: 'because', seed: 1399, media: 'tv' });
+      });
+    })
+    .then(function (got) {
+      assert.ok(/\/tv\/1399\/recommendations\?/.test(got.asked[0]), got.asked[0]);
+      assert.strictEqual(got.films.length, 3);
+      assert.strictEqual(got.films[0].media, 'tv');
+      return fetched({ kind: 'trending', window: 'day', media: 'tv' });
+    })
+    .then(function (got) {
+      assert.ok(/\/trending\/tv\/day\?/.test(got.asked[0]), got.asked[0]);
+      return fetched({ kind: 'trending' });
+    })
+    .then(function (got) {
+      assert.ok(/\/trending\/movie\/week\?/.test(got.asked[0]), got.asked[0]);
+      return Discovery.more({ title: 'Top', kind: 'trending', limit: 2 }, [], 1);
+    })
+    .then(function (got) {
+      assert.strictEqual(got.entries.length, 2, 'three came back, the cap is two');
+      assert.notStrictEqual(
+        Discovery.pageKey({ title: 'a', kind: 'trending', window: 'day' }, [], 1),
+        Discovery.pageKey({ title: 'a', kind: 'trending' }, [], 1),
+      );
+    })
+
     /* ---- paging: the page reaches the URL and the total comes back ---- */
 
     .then(function () {

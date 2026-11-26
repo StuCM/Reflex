@@ -110,7 +110,10 @@ function create(opts) {
         });
       }
     }
-    return { results: out.concat(unheld(10751, p).results.slice(0, 4)), total_pages: PAGES };
+    return {
+      results: out.concat(unheld(10751, p).results.slice(0, 4)),
+      total_pages: PAGES,
+    };
   }
 
   function comingSoon() {
@@ -186,6 +189,13 @@ function create(opts) {
         ],
       },
     };
+    /* Every third title is on Netflix, the next on Apple TV+, the rest on none. */
+    const on = { 0: [8, '/netflix.svg'], 1: [350, '/apple.svg'] }[Number(id) % 3];
+    body['watch/providers'] = {
+      results: {
+        GB: { flatrate: on ? [{ provider_id: on[0], logo_path: on[1] }] : [] },
+      },
+    };
     if (!creditless[id]) body.credits = { cast: castFor(id, tv) };
     return body;
   }
@@ -218,7 +228,12 @@ function create(opts) {
   function personFor(id) {
     const credits = [];
     function add(media, cid, title, date, votes) {
-      const credit = { id: cid, media_type: media, vote_count: votes, vote_average: 7 };
+      const credit = {
+        id: cid,
+        media_type: media,
+        vote_count: votes,
+        vote_average: 7,
+      };
       credit[media === 'tv' ? 'name' : 'title'] = title;
       credit[media === 'tv' ? 'first_air_date' : 'release_date'] = date;
       credits.push(credit);
@@ -306,6 +321,17 @@ function create(opts) {
       json(res, tvResults(0, Number(query.page || 1)));
       return true;
     }
+    if (p === '/trending/tv/day') {
+      const day = tvResults(0, Number(query.page || 1));
+      day.results.reverse();
+      json(res, day);
+      return true;
+    }
+    m = p.match(/^\/tv\/(\d+)\/recommendations$/);
+    if (m) {
+      json(res, tvResults(Number(m[1]), 1));
+      return true;
+    }
     if (p === '/discover/tv') {
       json(
         res,
@@ -321,6 +347,10 @@ function create(opts) {
     m = p.match(/^\/movie\/(\d+)$/);
     if (m) {
       json(res, detailsFor(m[1]));
+      return true;
+    }
+    if (p === '/trending/movie/day') {
+      json(res, results(1, Number(query.page || 1)));
       return true;
     }
     if (p === '/trending/movie/week') {
