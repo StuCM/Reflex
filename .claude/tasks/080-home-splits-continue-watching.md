@@ -48,6 +48,9 @@ After 077 (both edit `loadView` in browse.ts). Base `feat/v2`.
 - Insert without moving focus: `landDeck` bumps `rowIndex` per row inserted
   above — now possibly two.
 
+## Constraints that bite here
+- `src/screen/browse.ts` is at its 1548-line `max-lines` limit (`.oxlintrc.json`). Net-zero or shrink it; new logic goes in `src/screen/pages.ts` (077 did this).
+
 ## Approach
 1. `pages.ts`: `splitDeck(deck)` → `{films, episodes}`, order kept; replace
    077's inline episode filter for TV's Your next episodes with it.
@@ -55,7 +58,10 @@ After 077 (both edit `loadView` in browse.ts). Base `feat/v2`.
    title; `watchingRowIndex` and the clear/pick paths act on whichever row the
    item is in. The sidebar's Continue watching pick (v1 surface under More)
    keeps its mixed list.
-3. Smoke: where a step relies on an episode in "Continue watching" on Home,
+3. TV's **Your next episodes** row (077, built in `pages.ts loadPageRows`) is
+   refreshed the same way when the deck changes — today `landDeck` leaves the
+   movies/tv pages alone, so it is stale after playback. Use `splitDeck` for it.
+4. Smoke: where a step relies on an episode in "Continue watching" on Home,
    look for it in "Your next episodes"; add a step that Home shows both rows with
    their own counts (positive) and that a films-only deck draws no "Next
    episodes" row.
@@ -67,6 +73,7 @@ After 077 (both edit `loadView` in browse.ts). Base `feat/v2`.
 - [ ] Home shows Continue watching (films) and Your next episodes (episodes), each correct by count (smoke).
 - [ ] An empty half draws no row; focus does not jump when either lands (smoke).
 - [ ] Clear from Continue watching works from either row (smoke).
+- [ ] After a play, TV's Your next episodes shows the new state on return (smoke).
 - [ ] the gate passes (`crew gate .claude/tasks/080-home-splits-continue-watching.md`)
 - [ ] no file outside `files:` is touched
 - [ ] commits follow the convention (the hook enforces it)

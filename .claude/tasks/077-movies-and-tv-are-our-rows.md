@@ -1,11 +1,11 @@
 ---
 id: 077
 slug: movies-and-tv-are-our-rows
-status: approved
+status: review
 branch: crew/077-movies-and-tv-are-our-rows
 model: sonnet
 env: laptop
-rounds: 0
+rounds: 1
 work: v2-movies-tv
 files:
   - src/screen/browse.ts
@@ -21,6 +21,9 @@ files:
   - dev/smoke/movies.js
   - dev/smoke/shell.js
   - dev/smoke/deck.js
+gate: pass
+gateSha: ae6164811ec12d25dab9f2f3b27fb99897cdad2a
+gateAt: 2026-11-26T19:07:35.036Z
 ---
 
 # Movies and TV are our rows, from TMDB, with no server rows
@@ -132,6 +135,23 @@ that file is outside `files:`; note it in Worker notes for the orchestrator.
 
 ## Review rounds
 
+Round 1: PASS (crew-reviewer). Minor, non-blocking: a failed seed lookup silently drops the Because row; known gaps stand.
+
 ## Worker notes
+- config.ts: `pageRows` (Movies 13 rows, TV 14), built from `SERVICES`; `sub` and `ranked` on `DiscoveryCategory`.
+- rows.ts / plex.d.ts: `rowModel.ranked` (capped at 10, `ranked: true`); `sub?` on `ListRow` and `PagedRow`; `list` and `paged` take a sub.
+- pages.ts: `loadPageRows` (deck, seed, categories, Your next episodes placed after the Top 10 as a synthetic `recommended` category). Put here because `browse.ts` is at its 1548-line ratchet.
+- browse.ts: `loadView` hands movies/tv to `loadPageRows`; `landDeck` leaves these pages alone; `addDiscoveryRow` draws ranked and sub.
+- menubar.ts / glyphs.ts / browse.ts: the Streaming tile, icon and toast gone (nine tiles).
+- mock-tmdb.js: a `with_watch_providers` of `8|9|350|337` no longer makes NaN ids; smoke.js: `hubCalls` (sections and promoted only; `/hubs/search` is discovery's own lookup).
+- smoke: new `movies` area, run after `shell` (it leaves the app on TV). shell.js re-pointed: nine tiles, Kids at +3, Servers ends at 1820 (nine tiles no longer wind), stale-page step uses Home, Movies/TV asserted by labels.
+
+Spec corrections: TV has 14 rows, not sixteen (2 + next + because + 4 services + 6 genres). The rail does not draw `sub` (`rail.ts` is not in `files:`; 078).
+
+Known gaps: coming back from the player does not refresh Your next episodes on TV (`landDeck` skips these pages); a stale Movies/TV page reloads from blank rather than showing the old rows first (TMDB rows are cached for the day). Sub-lines are not asserted in smoke because nothing draws them yet.
+
+For the orchestrator: 081's "Differs from board" in `docs/v2-decisions.md` should record that the Streaming tile is gone.
 
 ## Graph writes proposed
+- Pattern: `browse.ts` sits at the 1548-line oxlint ratchet, so new page logic goes in `screen/pages.ts` with `addDiscoveryRow` as the callback.
+- Pattern: smoke `hubCalls` must match `/hubs/(sections/|promoted)` only; `/hubs/search` is discovery's resolve lookup.
