@@ -1,11 +1,11 @@
 ---
 id: 078
 slug: the-top-10-row
-status: approved
+status: done
 branch: crew/078-the-top-10-row
 model: opus
 env: laptop
-rounds: 0
+rounds: 2
 work: v2-movies-tv
 files:
   - src/view/rail.ts
@@ -13,6 +13,9 @@ files:
   - css/browse.css
   - css/v2.css
   - dev/smoke/movies.js
+gate: pass
+gateSha: 467c5d7cfd7ab37b54fc025576264b1de30694b6
+gateAt: 2026-11-26T19:45:19.607Z
 ---
 
 # The Top 10 row draws its numerals, and Movies and TV keep the hero tall
@@ -48,6 +51,16 @@ Movies.dc.html: everything listed in Background and Approach 5, verbatim.
 ## Differs from board, because
 - Real titles and rankings; the board's are placeholder.
 - Genre rows (ours, Stuart) below the board's rows use the same plain-row values.
+- The focused row's label rides up 57px on a transform, because the board
+  bottom-aligns a focused row in 315px and a resting one in 264: row tops 402
+  apart are 351 apart between resting posters (621, 972), which is the pitch.
+- The row's sub-line sits on the label's line, 12px after it, as the board
+  draws it (Approach 6 says "under"); it is `::after { content: attr(data-sub) }`
+  so `.row-label`'s text, which seven smoke files read, is unchanged.
+- Plain rows on Movies and TV show 8 across before the row stops winding, not
+  Home's 9: a ninth at the board's 216 stride would end at 2000px.
+- Titles under the posters are hidden on Movies and TV: the board has none, and
+  they would run into the peek label at 928.
 
 ## Graph context
 - "B8 fast pan profile": every key rewriting 48 tiles' styles cost the frame;
@@ -98,6 +111,36 @@ Movies.dc.html: everything listed in Background and Approach 5, verbatim.
 
 ## Review rounds
 
+- Round 1 (gate stamped 7e81fd9, 178/178): PASS. Advice taken: the 8-across
+  plain row added to Differs from board. Advice left: a ranked row on Home keeps
+  Home's label styling; Home's board is unchecked, so out of scope here.
+
+- Person, side by side (orchestrator, Movies.dc.html vs the app's Movies page at 1920×1080, by screenshot positions): row label (540), stride 216, poster heights and the Top 10 numerals match. **Focus does not**: the board anchors the focused poster at its left and bottom (left 96, 210×315, bottom 883) and moves every poster after it 34px right (next at 346, then 562…); the app grows it from the centre (left 79) and leaves the rest, so everything after the focus is 34px off. The "Focus is a scale, not a reflow" deviation is refused — the boards are exact. Do it on transform alone: focused tile scales from left bottom, tiles after it `translateX(+34)` (ranked rows the same, per `rankedRow`'s `x += 170 - 20 + w + 40`). Assert the next poster's left by rect.
+
+- Round 2 (gate stamped 467c5d7, 178/178): PASS. Focus is anchored left and
+  bottom, and the posters after it move 34px on `.after`. The deviation has been
+  removed from Differs from board. Not checked: the focused numeral against the
+  board.
+
 ## Worker notes
+
+- `src/view/rail.ts` — a `_rank` per pooled tile; `Pitch` per row (Home 202/9,
+  board 216/8, ranked 366/5 with +150 offset); `render(rows, rowIndex, board)`
+  picks the row pitch 351 and drop 77 on Movies/TV; `.ranked` toggled per draw;
+  `adopt()` split out of `drawRow` for `max-lines-per-function`.
+- `src/screen/browse.ts` — `board` page flag; no `dense` on Movies/TV. Net zero
+  lines (1548).
+- `css/v2.css` — board label, sub-line, peek opacity, hidden titles,
+  bottom-origin focus, the numeral. `#browse.menu #rows .row-label` raised so
+  the menu still hides labels over the board rules. `css/browse.css` untouched.
+- `dev/smoke/movies.js` — three steps; all three fail with `src/` and `css/`
+  stashed (5/8), pass with them (8/8).
+- Round 2: focus as the board, on transform alone. The focused poster scales
+  from its left and bottom; `.after` on every later tile of the focused row
+  moves its poster and numeral 34px right (`translateX`, transitioned). Only
+  the tiles whose side of the focus changed toggle, one per step. The menu's
+  tray and the ring mode undo the shift. Smoke asserts the next poster's left
+  by rect (plain x+250, ranked 646) and rank 1 focused at 246.
+- Plain board rows show 8 across, not 9: the ninth at 216 would end at 2000px.
 
 ## Graph writes proposed
