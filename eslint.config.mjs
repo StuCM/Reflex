@@ -91,6 +91,7 @@ export default tseslint.config(
       'build/**',
       'dist/**',
       'design/**',
+      'designs/**',
       'js/**',
       'dev/**',
       'tools/**',
