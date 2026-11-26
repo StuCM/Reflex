@@ -15,6 +15,7 @@ export interface RailTileElement extends HTMLDivElement {
   _name: HTMLDivElement;
   _sub: HTMLDivElement;
   _prog: HTMLDivElement;
+  _rank: HTMLDivElement;
   /** Index within the row, or -1 while unused. */
   _idx: number;
   _filled: boolean;
@@ -50,6 +51,21 @@ const VIEWPORT_H = 580;
 const TILE_POOL = 12;
 const ROW_POOL = 4;
 const TILES_VISIBLE = 9;
+
+/** How far apart a row's tiles are, how many fit across, and where the first sits. */
+interface Pitch {
+  stride: number;
+  visible: number;
+  offset: number;
+}
+const HOME: Pitch = { stride: STRIDE, visible: TILES_VISIBLE, offset: 0 };
+const BOARD: Pitch = { stride: TILE_W + 40, visible: 8, offset: 0 };
+/** A numeral 170 wide that the poster overlaps by 20, then the poster; offset so rank 1's numeral shows. */
+const RANKED: Pitch = { stride: 170 - 20 + TILE_W + 40, visible: 5, offset: 150 };
+
+/** Movies and TV: resting posters at 621 and 972. Not the 402 between the board's row tops, which bottom-align a focused row in 315. */
+const BOARD_ROW_H = 351;
+const BOARD_DROP = 77;
 
 /** Tiles kept to the left of the focused one. */
 const LEAD = 1;
@@ -118,16 +134,16 @@ function place(element: HTMLElement, across: number, animate: boolean): void {
 }
 
 /* One ring, slid along the focused row's strip; a jump to another row is not animated. */
-function moveRing(strip: HTMLElement, index: number): void {
+function moveRing(strip: HTMLElement, across: number): void {
   if (ring.parentNode !== strip) {
     ring.classList.add('no-anim');
     strip.appendChild(ring);
-    translate(ring, index * STRIDE, 0);
+    translate(ring, across, 0);
     void ring.offsetWidth;
     ring.classList.remove('no-anim');
     return;
   }
-  translate(ring, index * STRIDE, 0);
+  translate(ring, across, 0);
 }
 
 export function build(): void {
@@ -155,12 +171,14 @@ export function build(): void {
          own title already, and text on top of it is unreadable. */
       const name = div('tile-title');
       const sub = div('tile-sub');
+      const rank = div('tile-rank');
       put(inner, image, progress);
-      put(tile, inner, name, sub);
+      put(tile, rank, inner, name, sub);
       tile._img = image;
       tile._name = name;
       tile._sub = sub;
       tile._prog = progress;
+      tile._rank = rank;
       tile._idx = -1;
       tile._filled = false;
       tile._item = null;
@@ -236,12 +254,27 @@ function settled(): void {
   });
 }
 
+/* A pool row taking on a different row: its label, and every tile marked for refilling. */
+function adopt(rowElement: RailRowElement, row: Row, at: number): void {
+  rowElement._row = at;
+  rowElement._rowRef = row;
+  rowElement._label.textContent = row.title;
+  if (row.kind !== 'merge' && row.sub) rowElement._label.setAttribute('data-sub', row.sub);
+  else rowElement._label.removeAttribute('data-sub');
+  rowElement._tiles.forEach((tile) => {
+    tile._idx = -1;
+    tile._filled = false;
+  });
+}
+
 function drawRow(
   rowElement: RailRowElement,
   rows: Row[],
   at: number,
   rowIndex: number,
   onScreen: boolean,
+  rowH: number,
+  board: boolean,
 ): void {
   /* Position alone does not identify a row: search results replace the rows in
      place and keep rowIndex 0, so a pool element holding row 0 went on showing
@@ -252,27 +285,22 @@ function drawRow(
 
   rowElement._onScreen = onScreen;
   rowElement.classList.remove('hidden');
-  translate(rowElement, 0, at * ROW_H);
+  translate(rowElement, 0, at * rowH);
+  const ranked = row.kind === 'list' && !!row.ranked;
+  rowElement.classList.toggle('ranked', ranked);
+  const pitch = ranked ? RANKED : board ? BOARD : HOME;
   rowElement.classList.toggle('on', at === rowIndex);
 
-  if (reused) {
-    rowElement._row = at;
-    rowElement._rowRef = row;
-    rowElement._label.textContent = row.title;
-    rowElement._tiles.forEach((tile) => {
-      tile._idx = -1;
-      tile._filled = false;
-    });
-  }
+  if (reused) adopt(rowElement, row, at);
   /* A merged row's length is an estimate until it has been walked, so the count
      is re-read on every paint rather than only when the row is reused. */
   if (row.kind === 'merge') {
     rowElement._label.textContent = row.title + (row.total ? `  (${row.total})` : '');
   }
 
-  const firstVisible = clamp(row.focus - LEAD, 0, Math.max(0, row.total - TILES_VISIBLE));
+  const firstVisible = clamp(row.focus - LEAD, 0, Math.max(0, row.total - pitch.visible));
   const start = clamp(firstVisible - 2, 0, Math.max(0, row.total - TILE_POOL));
-  place(rowElement._strip, -firstVisible * STRIDE, !reused);
+  place(rowElement._strip, pitch.offset - firstVisible * pitch.stride, !reused);
 
   /* A slot per index, not per position in the window: the pool is exactly the
      window, so one step recycles the one tile that wrapped round and leaves the
@@ -287,10 +315,11 @@ function drawRow(
       continue;
     }
     tile.classList.remove('hidden');
-    translate(tile, index * STRIDE, 0);
+    translate(tile, index * pitch.stride, 0);
     const focused = at === rowIndex && index === row.focus;
     tile.classList.toggle('on', focused);
-    if (focused) moveRing(rowElement._strip, index);
+    tile.classList.toggle('after', board && at === rowIndex && index > row.focus);
+    if (focused) moveRing(rowElement._strip, index * pitch.stride);
 
     /* A tile whose poster was skipped has to be redrawn when its row comes into
        view, so the short circuit has to know about that. */
@@ -301,6 +330,7 @@ function drawRow(
       continue;
     }
     tile._idx = index;
+    tile._rank.textContent = ranked ? String(index + 1) : '';
     const item = itemAt(row, index);
     tile._filled = !!item;
     tile._item = item;
@@ -343,7 +373,11 @@ function drawRow(
   }
 }
 
-export function render(rows: Row[], rowIndex: number): void {
+/** `board` is Movies and TV: the hero stays tall and the rows are laid out as the Movies board's. */
+export function render(rows: Row[], rowIndex: number, board = false): void {
+  container.classList.toggle('board', board);
+  const rowH = board ? BOARD_ROW_H : ROW_H;
+  const drop = board ? BOARD_DROP : rowIndex === 0 ? BIG_DROP : 0;
   /* Rows of context kept above the focused one — every row that fits bar the
      focused one itself. A portrait row leaves room for exactly one, so this is
      zero and the focused row sits at the top. */
@@ -352,7 +386,7 @@ export function render(rows: Row[], rowIndex: number): void {
   /* Row 0 sits under the tall hero; everything below sits under the band. Both
      states are one translate on this element, so the collapse animates for free
      on the transform that was moving anyway. */
-  translate(container, 0, (rowIndex === 0 ? BIG_DROP : 0) - firstVisible * ROW_H);
+  translate(container, 0, drop - firstVisible * rowH);
 
   pool.forEach((rowElement, offset) => {
     const at = start + offset;
@@ -362,7 +396,7 @@ export function render(rows: Row[], rowIndex: number): void {
       rowElement._onScreen = false;
       return;
     }
-    drawRow(rowElement, rows, at, rowIndex, at < firstVisible + ROWS_VISIBLE);
+    drawRow(rowElement, rows, at, rowIndex, at < firstVisible + ROWS_VISIBLE, rowH, board);
   });
 
   /* One timer for the whole rail, restarted by every render: a sweep resets it

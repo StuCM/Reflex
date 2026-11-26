@@ -158,9 +158,50 @@ body.on-browse #bg.hero-on:not(.menu) .glow { opacity: 0; }
   -webkit-transition: -webkit-transform var(--t-quick) var(--ease), opacity var(--t-menu) var(--ease);
   transition: transform var(--t-quick) var(--ease), opacity var(--t-menu) var(--ease);
 }
-#browse.menu .row-label, #browse.menu .tile-title, #browse.menu .tile-sub, #browse.menu #ring,
+#browse.menu #rows .row-label, #browse.menu .tile-title, #browse.menu .tile-sub, #browse.menu #ring,
 #browse.menu #hero-art, #browse.menu #hero-scrim-x, #browse.menu #hero-scrim-y { opacity: 0; }
-#browse.menu #rows .tile.on .tile-inner { -webkit-transform: none; transform: none; }
+#browse.menu #rows .tile.on .tile-inner,
+#browse.menu #rows .tile.after .tile-inner, #browse.menu #rows .tile.after .tile-rank { -webkit-transform: none; transform: none; }
+
+/* ---- Movies and TV (Movies.dc.html): the hero stays tall and the rows are the board's ----
+   The focused row's posters sit bottom-aligned in 315px, so its label rides 57px
+   above where a resting row's does. The posters carry their own titles here. */
+.row-label[data-sub]::after {
+  content: attr(data-sub); margin-left: 12px;
+  font: 400 24px var(--font-body); letter-spacing: 0; text-transform: none;
+  color: rgba(255, 255, 255, .55);
+}
+#rows.board .row-label {
+  height: auto; opacity: .6;
+  font: 700 30px var(--font-title); letter-spacing: 0; text-transform: none; color: #fff;
+  -webkit-transition: -webkit-transform var(--t-move) var(--ease), opacity var(--t-menu) var(--ease);
+  transition: transform var(--t-move) var(--ease), opacity var(--t-menu) var(--ease);
+}
+#rows.board .row.on .row-label {
+  opacity: 1;
+  -webkit-transform: translateY(-57px); transform: translateY(-57px);
+}
+#rows.board .tile-title, #rows.board .tile-sub { display: none; }
+/* As the board: the focused poster grows from its left and bottom, and every one after it moves over by the 34px it grew. */
+#rows.board .tile-inner { -webkit-transform-origin: 0 100%; transform-origin: 0 100%; }
+#rows.board:not(.f-ring) .tile.after .tile-inner, #rows.board:not(.f-ring) .tile.after .tile-rank {
+  -webkit-transform: translateX(34px); transform: translateX(34px);
+}
+
+/* A Top 10's numeral, left of its poster and under its edge; focus grows it 260 to 300. */
+.tile-rank { display: none; }
+.row.ranked .tile-rank {
+  display: block; position: absolute; left: -150px; bottom: 74px; width: 170px;
+  text-align: right; font: 700 260px/.76 var(--font-title);
+  color: rgba(255, 255, 255, .06); -webkit-text-stroke: 4px rgba(255, 255, 255, .7);
+  -webkit-transform-origin: 100% 100%; transform-origin: 100% 100%;
+  -webkit-transition: -webkit-transform var(--t-quick) var(--ease);
+  transition: transform var(--t-quick) var(--ease);
+}
+.row.ranked .tile.on .tile-rank {
+  color: rgba(255, 255, 255, .14); -webkit-text-stroke-color: rgba(255, 255, 255, .95);
+  -webkit-transform: scale(1.1538); transform: scale(1.1538);
+}
 
 /* The clock takes the corner the search pill had; the red key and the menu still reach search. */
 #top-right { display: none; }

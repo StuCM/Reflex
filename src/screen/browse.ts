@@ -185,10 +185,10 @@ function generationGuard() {
 
 export function render() {
   browseView.classList.toggle('results', !!searchQuery);
-  /* The hero is full height on the first row and a band everywhere else, so
-     the rows have somewhere to go the moment you step into them. */
-  browseView.classList.toggle('dense', rowIndex !== 0);
-  rail.render(rows, rowIndex);
+  const board = !searchQuery && (viewKey === 'movies' || viewKey === 'tv');
+  /* Below the first row the hero becomes a band, except on Movies and TV. */
+  browseView.classList.toggle('dense', !board && rowIndex !== 0);
+  rail.render(rows, rowIndex, board);
   menubar.tabs(router.IDS, pageId());
   setDrift(focusedRow()?.focus ?? 0, rowIndex);
   masthead.render(focusedRow() ?? null, focusedItem(), rows.length > 0 && !loadingRow);
