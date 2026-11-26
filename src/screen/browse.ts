@@ -189,6 +189,7 @@ export function render() {
      the rows have somewhere to go the moment you step into them. */
   browseView.classList.toggle('dense', rowIndex !== 0);
   rail.render(rows, rowIndex);
+  menubar.tabs(router.IDS, pageId());
   setDrift(focusedRow()?.focus ?? 0, rowIndex);
   masthead.render(focusedRow() ?? null, focusedItem(), rows.length > 0 && !loadingRow);
   masthead.showFacts(focusedItem());
@@ -290,10 +291,6 @@ function pageId(): router.PageId {
   return viewSection()?.type === 'show' ? 'tv' : 'movies';
 }
 
-function currentPage(): number {
-  return router.indexOf(pageId());
-}
-
 function showPage(name: string, settled: boolean): void {
   const here = mode === 'library' && viewKey === name;
   if (!viewSection(name)) toast('Nothing there on these servers');
@@ -322,13 +319,26 @@ router.register('collections', (settled) => {
   else if (settled) toast('No collections on these servers');
 });
 
+/* A tile that is a page loads it; the rest wait for OK. */
+function goToTile(id: string, settled: boolean): void {
+  const index = router.indexOf(id as router.PageId);
+  if (index < 0) return;
+  if (!settled) setPage(index);
+  router.goTo(index, settled);
+}
+
 function menuKey(code: number): boolean {
-  if (menubar.key(code, router.goTo)) return true;
-  if (code === KEY.OK && menubar.focused() === menubar.MORE) {
+  if (menubar.key(code, goToTile)) return true;
+  const tile = menubar.focused();
+  if (code === KEY.OK && tile === 'streaming') toast('Coming soon');
+  else if (code === KEY.OK && tile === 'search') {
+    menubar.close();
+    openSearch();
+  } else if (code === KEY.OK && (tile === 'settings' || tile === 'servers')) {
     menubar.close();
     openSidebar();
   } else if (code === KEY.OK || code === KEY.DOWN || isBack(code)) {
-    menubar.flush(router.goTo);
+    menubar.flush(goToTile);
     menubar.close();
   }
   return true;
@@ -1483,7 +1493,7 @@ export function key(code: number): boolean {
       if (rowIndex > 0) {
         rowIndex--;
         render();
-      } else menubar.open(currentPage());
+      } else menubar.open(pageId(), rows[0]?.title ?? '');
       break;
     case K.DOWN:
       if (!picking && rowIndex < rows.length - 1) {

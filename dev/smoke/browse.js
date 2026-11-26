@@ -892,12 +892,12 @@ module.exports = function (h) {
     .then(function () {
       return step('the All row knows its size without crawling it', function () {
         /* The menu pages carry no All row; it is the server-controls fallback
-           behind More. */
+           behind Servers. */
         return sidebarPick('Movies')
           .then(function () {
             return waitFor(
               'document.querySelectorAll("#rows .tile:not(.hidden)").length > 0',
-              'the Movies library from More',
+              'the Movies library from Servers',
             );
           })
           .then(function () {

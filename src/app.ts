@@ -21,6 +21,7 @@ import * as browse from './screen/browse';
 import * as detail from './screen/detail';
 import * as showpage from './screen/showpage';
 import * as player from './screen/player';
+import * as clock from './view/clock';
 import { must } from './view/dom';
 import * as hud from './view/hud';
 import * as menu from './view/menu';
@@ -656,6 +657,7 @@ window.onerror = (text, url, line) => {
 };
 
 rail.build();
+clock.start();
 browse.init({ onOpen: openItem, onExit: exitApp });
 document.addEventListener('keydown', onKey, false);
 document.addEventListener('keyup', onKeyUp, false);
