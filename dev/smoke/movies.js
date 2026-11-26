@@ -150,6 +150,76 @@ module.exports = function (h) {
     });
   }
 
+  async function heroAt() {
+    return page.evaluate(function () {
+      const byId = (id) => document.getElementById(id);
+      const box = (el) => {
+        const r = el.getBoundingClientRect();
+        return [r.left, r.top, r.width, r.height].map((n) => Math.round(n * 10) / 10);
+      };
+      const css = (el, props) => props.map((p) => getComputedStyle(el)[p]);
+      const chip = document.querySelector('#mh-ok .mh-chip');
+      const chipStyle = getComputedStyle(chip);
+      const logo = byId('mh-logo');
+      const onService = !byId('mh-service').classList.contains('hidden');
+      return {
+        service: onService
+          ? {
+              name: byId('mh-svc-name').textContent,
+              logo: byId('mh-logo-img').src,
+              box: box(logo),
+              radius: getComputedStyle(logo).borderTopLeftRadius,
+              nameStyle: css(byId('mh-svc-name'), ['fontSize', 'fontWeight']),
+              nameBox: box(byId('mh-svc-name')),
+            }
+          : null,
+        serviceRow: onService ? box(byId('mh-service')) : box(byId('mh-meta')),
+        meta: byId('mh-meta').textContent,
+        meta2: box(byId('mh-meta')),
+        metaStyle: css(byId('mh-meta'), ['fontSize', 'color']),
+        eyebrowText: byId('mh-row').textContent,
+        eyebrow: box(byId('mh-row')),
+        eyebrowStyle: css(byId('mh-row'), [
+          'fontSize',
+          'fontWeight',
+          'letterSpacing',
+          'textTransform',
+          'color',
+        ]),
+        rowLabel: document.querySelector('#rows .row.on .row-label').textContent.trim(),
+        accent: getComputedStyle(document.documentElement).getPropertyValue('--ac').trim(),
+        title: box(byId('mh-title')),
+        titleStyle: css(byId('mh-title'), [
+          'fontSize',
+          'lineHeight',
+          'fontWeight',
+          'letterSpacing',
+          'textTransform',
+        ]).concat(getComputedStyle(byId('mh-title')).fontFamily.indexOf('Space Grotesk') !== -1),
+        ok: box(byId('mh-ok')),
+        okText: byId('mh-ok').textContent,
+        chipStyle: [
+          chipStyle.borderTopWidth +
+            ' ' +
+            chipStyle.borderTopStyle +
+            ' ' +
+            chipStyle.borderTopColor,
+          chipStyle.borderTopLeftRadius,
+          chipStyle.paddingTop + ' ' + chipStyle.paddingLeft,
+          getComputedStyle(byId('mh-ok')).fontSize,
+          chipStyle.fontWeight,
+          chipStyle.marginRight,
+        ],
+        add: box(byId('mh-add')),
+        addText: byId('mh-add').textContent,
+        dot: box(document.querySelector('#mh-add .mh-dot')),
+        dotColor: getComputedStyle(document.querySelector('#mh-add .mh-dot')).backgroundColor,
+        desc: box(byId('mh-desc')),
+        descStyle: css(byId('mh-desc'), ['fontSize', 'lineHeight', 'color']),
+      };
+    });
+  }
+
   const SERVICES = ['Netflix', 'Prime Video', 'Apple TV+', 'Disney+'].map(
     (name) => 'Popular on ' + name,
   );
@@ -160,6 +230,25 @@ module.exports = function (h) {
 
   return h
     .ready()
+
+    .then(function () {
+      /* The mock's details carry no vote average, so no title would have a rating. */
+      return page.route(/\/__tmdb\/(movie|tv)\/\d+\?/, async (route) => {
+        const response = await route.fetch();
+        const body = await response.json();
+        body.vote_average = 7.5;
+        await route.fulfill({ response, json: body });
+      });
+    })
+
+    .then(function () {
+      return page.route(/__tmdbimg\/w92\//, (route) =>
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+        }),
+      );
+    })
 
     .then(function () {
       return step('Home asks the servers for hubs, so the hub counter counts', async function () {
@@ -405,6 +494,141 @@ module.exports = function (h) {
             'TV starts',
           );
           await page.unroute(/\/library\/onDeck/, noDeck);
+        },
+      );
+    })
+
+    .then(function () {
+      return step('the Movies hero is the board: its rects, fonts and colours', async function () {
+        await openTile('Movies');
+        await waitForRows('Top 10 today');
+        await h.topRow();
+        const seen = [];
+        for (let i = 0; i < 8; i++) {
+          await h.waitFor(
+            'document.getElementById("mh-meta").textContent.indexOf("★") >= 0',
+            'the hero facts to land',
+          );
+          await page.waitForTimeout(300);
+          seen.push(await heroAt());
+          await press('ArrowDown');
+        }
+        const withService = seen.filter((at) => at.service);
+        assertEqual(
+          withService.length > 0,
+          true,
+          'some title on the first rows streams on a service ' +
+            JSON.stringify(seen.map((x) => [x.meta, x.eyebrowText])),
+        );
+        assertEqual(
+          seen.some((at) => !at.service),
+          true,
+          'some title on the first rows streams on none, and shows no service',
+        );
+        const at = withService[0];
+        assertEqual(
+          withService.every((x) => x.service.name && x.service.logo.endsWith('.svg')),
+          true,
+          'a service shows its name and logo',
+        );
+        assertEqual(/^\d{4}  ·  .*★ \d/.test(at.meta), true, 'meta: ' + at.meta);
+        assertEqual(
+          at.eyebrowText,
+          at.rowLabel === 'Top 10 today' ? '#1 in the top 10 today' : at.rowLabel,
+          'the eyebrow is the row title',
+        );
+        nearAll(at.eyebrow.slice(0, 2), [96, 160], 'eyebrow left, top');
+        assertEqual(
+          at.eyebrowStyle.slice(0, 4),
+          ['24px', '600', '3px', 'uppercase'],
+          'the eyebrow',
+        );
+        const hex = at.accent
+          .slice(1)
+          .match(/../g)
+          .map((x) => parseInt(x, 16));
+        assertEqual(at.eyebrowStyle[4], 'rgb(' + hex.join(', ') + ')', 'the eyebrow is the accent');
+        assertEqual(at.titleStyle, ['96px', '96px', '700', '-1px', 'uppercase', true], 'the title');
+        near(at.title[1], at.eyebrow[1] + at.eyebrow[3] + 10, 'the title margin');
+        near(at.service.box[2], 44, 'the logo box width');
+        near(at.service.box[3], 44, 'the logo box height');
+        assertEqual(at.service.radius, '12px', 'the logo box radius');
+        near(at.serviceRow[1], at.title[1] + at.title[3] + 16, 'the info row margin');
+        near(at.service.nameBox[0], at.service.box[0] + 44 + 14, 'the name is 14 from the box');
+        assertEqual(at.service.nameStyle, ['26px', '600'], 'the service name');
+        near(at.meta2[0], at.serviceRow[0] + at.serviceRow[2] + 32, 'meta is 32 after the service');
+        assertEqual(at.metaStyle, ['28px', 'rgba(255, 255, 255, 0.78)'], 'the meta');
+        near(at.ok[0], at.meta2[0] + at.meta2[2] + 32, 'OK Details is 32 after the meta');
+        assertEqual(
+          at.chipStyle,
+          ['1px solid rgba(255, 255, 255, 0.5)', '10px', '3px 14px', '24px', '600', '12px'],
+          'the OK chip',
+        );
+        assertEqual(at.okText, 'OKDetails', 'the OK Details chip');
+        near(at.add[0], at.ok[0] + at.ok[2] + 32, 'Add to list is 32 after Details');
+        near(at.dot[0], at.add[0], 'the dot leads Add to list');
+        near(at.dot[2], 22, 'the dot width');
+        near(at.dot[3], 22, 'the dot height');
+        assertEqual(at.dotColor, 'rgb(245, 200, 76)', 'the dot colour');
+        assertEqual(at.addText, 'Add to list', 'the Add to list text');
+        near(at.desc[0], 96, 'the synopsis left');
+        near(at.desc[1], at.serviceRow[1] + at.serviceRow[3] + 12, 'the synopsis margin');
+        near(at.desc[2], 800, 'the synopsis width');
+        assertEqual(at.descStyle, ['28px', '39.2px', 'rgba(255, 255, 255, 0.88)'], 'the synopsis');
+        const none = seen.find((x) => !x.service);
+        near(none.desc[1], at.desc[1], 'a title with no service keeps the row');
+      });
+    })
+
+    .then(function () {
+      return step(
+        'an unheld title says Not on server under its synopsis, and OK opens a page with a Trailer',
+        async function () {
+          await h.topRow();
+          await press('ArrowDown', 7);
+          await h.waitFor(
+            'document.getElementById("mh-avail").textContent === "Not on server"',
+            'the hero to say Not on server',
+          );
+          const rects = await page.evaluate(function () {
+            const r = (id) => document.getElementById(id).getBoundingClientRect();
+            return [r('mh-desc').bottom, r('mh-avail').top];
+          });
+          near(rects[1], rects[0] + 12, 'Not on server sits under the synopsis');
+          await press('Enter');
+          await h.waitFor(
+            '!!document.querySelector("#dt-actions [data-act=trailer]")',
+            'the unheld title page with a Trailer',
+            20000,
+          );
+          await press('Backspace');
+        },
+      );
+    })
+
+    .then(function () {
+      return step(
+        'the Top 10 hero says its place, and yellow says lists are coming',
+        async function () {
+          await openTile('Movies');
+          await waitForRows('Top 10 today');
+          await h.topRow();
+          await press('ArrowDown');
+          await press('ArrowRight', 2);
+          await h.waitFor(
+            'document.getElementById("mh-row").textContent === "#3 in the top 10 today"',
+            'the eyebrow to give the place',
+          );
+          await press('F4');
+          await h.waitFor(
+            'document.getElementById("toast").textContent === "Lists are coming"',
+            'yellow to toast on Movies',
+          );
+          assertEqual(
+            await page.evaluate('document.querySelector("#menubar .mb-tile.on").textContent'),
+            'Movies',
+            'yellow stays on Movies',
+          );
         },
       );
     });

@@ -284,3 +284,38 @@ body.on-browse #bg.hero-on:not(.menu) .glow { opacity: 0; }
   border-radius: var(--r-tag); font-size: 18px; color: #fff; background: rgba(10, 8, 24, .8);
 }
 .gd-tile.absent .gd-tag { display: block; }
+
+/* ---- the Movies and TV hero (Movies.dc.html) ---- */
+#masthead.board { top: 160px; left: 96px; width: 1300px; }
+#masthead.board #mh-row { font-size: 24px; }
+#masthead.board #mh-title { font-size: 96px; line-height: 1; }
+#masthead.board #mh-info {
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+  min-height: 44px; margin-top: 16px;
+}
+#masthead.board #mh-meta { margin-top: 0; margin-right: 32px; }
+#masthead.board #mh-service, #masthead.board #mh-ok, #masthead.board #mh-add {
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+  margin-right: 32px;
+}
+#mh-logo {
+  display: block; width: 44px; height: 44px; border-radius: 12px; overflow: hidden;
+  background: rgba(255, 255, 255, .12);
+}
+#mh-logo-img { display: block; width: 44px; height: 44px; }
+#mh-svc-name { margin-left: 14px; font-size: 26px; font-weight: 600; }
+#masthead.board #mh-ok, #masthead.board #mh-add {
+  font-size: 24px; color: rgba(255, 255, 255, .78);
+}
+.mh-chip {
+  margin-right: 12px; padding: 3px 14px; border: 1px solid rgba(255, 255, 255, .5);
+  border-radius: 10px; color: #FFF; font-weight: 600;
+}
+.mh-dot { width: 22px; height: 22px; margin-right: 12px; border-radius: 50%; background: #F5C84C; }
+#masthead.board #mh-desc {
+  width: 800px; margin-top: 12px; max-height: 79px;
+  font-size: 28px; line-height: 1.4; color: rgba(255, 255, 255, .88);
+}
+#masthead.board #mh-cast { display: none; }
