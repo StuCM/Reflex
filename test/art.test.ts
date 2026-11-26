@@ -204,11 +204,19 @@ test('tmdb art picking', () => {
     'only GB counts',
   );
 
+  assert.strictEqual(Art.facts({ number_of_seasons: 3 }).seasons, 3, 'a show has seasons');
+  assert.strictEqual(Art.facts({ runtime: 90 }).seasons, null, 'a film has none');
+  assert.strictEqual(Art.facts({ number_of_seasons: 0 }).seasons, null, 'zero is none');
+
   const whole = { hero: null, poster: '/p', facts: Art.facts({}) };
   assert.strictEqual(Art.isComplete(whole), true);
   const old = { hero: null, poster: '/p', facts: { ...whole.facts } };
   delete old.facts.service;
   assert.strictEqual(Art.isComplete(old), false, 'cached before service existed: refetch');
+
+  const unseasoned = { hero: null, poster: '/p', facts: { ...whole.facts } };
+  delete unseasoned.facts.seasons;
+  assert.strictEqual(Art.isComplete(unseasoned), false, 'cached before seasons existed: refetch');
 
   console.log('art: pick chooses a backdrop and a poster, and facts read the header');
 });

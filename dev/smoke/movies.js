@@ -232,25 +232,6 @@ module.exports = function (h) {
     .ready()
 
     .then(function () {
-      /* The mock's details carry no vote average, so no title would have a rating. */
-      return page.route(/\/__tmdb\/(movie|tv)\/\d+\?/, async (route) => {
-        const response = await route.fetch();
-        const body = await response.json();
-        body.vote_average = 7.5;
-        await route.fulfill({ response, json: body });
-      });
-    })
-
-    .then(function () {
-      return page.route(/__tmdbimg\/w92\//, (route) =>
-        route.fulfill({
-          contentType: 'image/svg+xml',
-          body: '<svg xmlns="http://www.w3.org/2000/svg"/>',
-        }),
-      );
-    })
-
-    .then(function () {
       return step('Home asks the servers for hubs, so the hub counter counts', async function () {
         const before = hubCalls.length;
         deck = await h.reloadDeck();
@@ -604,6 +585,19 @@ module.exports = function (h) {
           await press('Backspace');
         },
       );
+    })
+
+    .then(function () {
+      return step('an unheld show says its seasons in the hero meta', async function () {
+        await openTile('TV');
+        await waitForRows('Top 10 today');
+        await h.topRow();
+        await press('ArrowDown', 7);
+        await h.waitFor(
+          '/^\\d{4}  ·  \\d+ seasons  ·  \u2605 7\\.5$/.test(document.getElementById("mh-meta").textContent)',
+          'an unheld show to read N seasons',
+        );
+      });
     })
 
     .then(function () {

@@ -93,8 +93,8 @@ function boardMeta(item: PlexItem, facts: ArtFacts | null): string {
     copy.contentRating,
   ];
   if (item.type === 'show' || item.type === 'episode') {
-    if (copy.childCount)
-      parts.push(`${copy.childCount} ${copy.childCount === 1 ? 'season' : 'seasons'}`);
+    const seasons = copy.childCount || facts?.seasons;
+    if (seasons) parts.push(`${seasons} ${seasons === 1 ? 'season' : 'seasons'}`);
   } else if (facts?.runtime) {
     parts.push(runtimeText(facts.runtime));
   }

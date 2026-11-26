@@ -102,6 +102,7 @@ export function facts(payload: TmdbDetails | null | undefined): ArtFacts {
     castIds: ids,
     trailerKey: trailerOf(payload),
     service: serviceOf(payload),
+    seasons: payload?.number_of_seasons ? payload.number_of_seasons : null,
   };
 }
 
@@ -196,6 +197,7 @@ export function isComplete(entry: ArtEntry | undefined): boolean {
     entry.facts.trailerKey !== undefined &&
     entry.facts.castIds !== undefined &&
     entry.facts.service !== undefined &&
+    entry.facts.seasons !== undefined &&
     entry.poster !== undefined
   );
 }
