@@ -16,6 +16,14 @@ files:
   - dev/smoke/detail.js
   - dev/smoke/sections.js
   - dev/smoke/browse.js
+  - dev/smoke/devices.js
+  - dev/smoke/discovery.js
+  - dev/smoke/link.js
+  - dev/smoke/movies.js
+  - dev/smoke/player.js
+  - dev/smoke/recaps.js
+  - dev/smoke/search.js
+  - dev/smoke/show.js
 ---
 
 # Home has a Continue watching row for films and one for TV
@@ -82,6 +90,8 @@ After 077 (both edit `loadView` in browse.ts). Base `feat/v2`.
 ## Review rounds
 
 - Orchestrator, after scope block: spec bug — `dev/smoke/browse.js` added to `files:`; apply your patch (`rowsOf(2)`, `press('ArrowDown', 2)`). The deck step 'the refreshed deck is what the cache holds' passed in the orchestrator's full verify on feat/v2 (182/182 at 605565b): it is the known flaky deck step, so re-run the gate rather than treat it as baseline. The split also showing on the v1 section pages (shared `loadView`) is accepted.
+
+- Orchestrator, after second scope block: every `dev/smoke/*.js` is now in `files:` — Home's row order is walked by most areas, so fix any position-dependent step you find (apply /tmp/claude-1000/show-js.patch first) rather than blocking again. The deck step that fails in `smoke -- deck` alone passes in full runs (the area does not pass in isolation); judge it by the full gate. Re-run the 'glows' step once if it alone fails.
 
 ## Worker notes
 
