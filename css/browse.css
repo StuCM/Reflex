@@ -98,6 +98,9 @@
   margin-top: 18px; max-height: 68px; overflow: hidden;
   font-size: 22px; line-height: 1.45; color: var(--dim);
 }
+#mh-service, #mh-ok, #mh-add { display: none; }
+#mh-avail { margin-top: 12px; font-size: 24px; color: var(--dim); }
+#mh-avail:empty { display: none; }
 #mh-cast {
   margin-top: 12px; font-size: 20px; color: var(--dim2);
   white-space: nowrap; overflow: hidden;
@@ -127,6 +130,10 @@
 }
 /* The second column: to the right of the title rather than under it, so the
    header stays 264px and the rows keep their room. */
+#browse.dense #mh-avail {
+  position: absolute; top: 258px; left: var(--sp-edge); width: 760px; margin-top: 0;
+  white-space: nowrap; overflow: hidden;
+}
 #browse.dense #mh-desc {
   position: absolute; top: 144px; left: 900px; width: 620px;
   margin-top: 0; max-height: 96px;

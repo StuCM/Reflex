@@ -4,7 +4,6 @@
    crawl this page exists to avoid. */
 import { search, tmdbId } from '../api/plex/library';
 import * as tmdb from '../api/tmdb';
-import { railSub } from '../rules/labels';
 import * as cached from './cached';
 import * as merge from './merge';
 import * as servers from './servers';
@@ -40,16 +39,10 @@ export function isEntry(item: PlexItem | null | undefined): boolean {
   return !!(item as DiscoveryEntry | undefined)?._tmdb;
 }
 
-/* The line the masthead shows under the name — the honest answer before OK is
-   pressed. */
+/* Whether we hold the title, which the masthead says before OK is pressed. */
 function settle(item: DiscoveryEntry, found: PlexItem | null): void {
-  const sub = found ? railSub(found) : '';
   item._resolved = found ?? null;
-  item._availability = !found
-    ? 'Not in your library'
-    : sub
-      ? `In your library  ·  ${sub}`
-      : 'In your library';
+  item._availability = found ? 'held' : 'absent';
 }
 
 /* The servers ignore a tmdb:// guid filter, so search by title and keep the film whose TMDB id is

@@ -171,6 +171,7 @@ function create(opts) {
         '. What this one is actually about, ' +
         'in the words of a database rather than a file name.',
       runtime: 90 + (Number(id) % 60),
+      vote_average: 7.5,
       images: imagesFor(id),
       videos: {
         results: [
@@ -196,6 +197,7 @@ function create(opts) {
         GB: { flatrate: on ? [{ provider_id: on[0], logo_path: on[1] }] : [] },
       },
     };
+    if (tv) body.number_of_seasons = 2 + (Number(id) % 3);
     if (!creditless[id]) body.credits = { cast: castFor(id, tv) };
     return body;
   }
@@ -390,6 +392,14 @@ function create(opts) {
      backdrop of the same title can be told apart at a glance, by shape as well
      as by caption. */
   function image(res, p) {
+    const logo = p.match(/^\/\w+\/(\w+)\.svg$/);
+    if (logo) {
+      res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=60' });
+      res.end(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><rect width="1" height="1"/></svg>',
+      );
+      return true;
+    }
     const m = p.match(/^\/(\w+)\/(backdrop|poster|profile)\/(\d+)\/(\d+)\.svg$/);
     if (!m) return false;
     const size = m[1],

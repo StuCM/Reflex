@@ -434,6 +434,7 @@ interface TmdbDetails {
   videos?: { results?: TmdbVideo[] };
   overview?: string;
   runtime?: number;
+  number_of_seasons?: number;
   vote_average?: number;
   'watch/providers'?: {
     results?: Record<string, { flatrate?: { provider_id: number; logo_path?: string | null }[] }>;
@@ -458,6 +459,8 @@ interface ArtFacts {
   castIds?: CastId[];
   /** Which of our four services carries it, or null; absent on an entry cached before it. */
   service?: { id: number; name: string; logo: string | null } | null;
+  /** A show's season count, null for a film; absent on an entry cached before it. */
+  seasons?: number | null;
 }
 
 interface CastId {

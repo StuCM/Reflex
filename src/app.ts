@@ -453,6 +453,12 @@ function onKey(event: KeyboardEvent) {
     skipOnRepeat(event);
   }
 
+  if (code === KEY.YELLOW && view() === 'browse' && must('rows').classList.contains('board')) {
+    toast('Lists are coming');
+    event.preventDefault();
+    return;
+  }
+
   if (code === KEY.YELLOW && hasToken()) {
     for (let step = 0; step < 4 && view() !== 'browse'; step++) dispatch(KEY.BACK);
     if (view() === 'browse') {

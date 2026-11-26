@@ -135,7 +135,7 @@ module.exports = function (h) {
     return page.evaluate(function () {
       return {
         title: document.getElementById('mh-title').textContent.trim(),
-        meta: document.getElementById('mh-meta').textContent.trim(),
+        meta: document.getElementById('mh-avail').textContent.trim(),
       };
     });
   }
@@ -309,7 +309,7 @@ module.exports = function (h) {
         return toRow('Science fiction')
           .then(function () {
             return waitFor(
-              'document.getElementById("mh-meta").textContent.trim() === ' +
+              'document.getElementById("mh-avail").textContent.trim() === ' +
                 '"Not in your library"',
               'the masthead to say we have not got it',
             );
@@ -400,7 +400,7 @@ module.exports = function (h) {
                 JSON.stringify(title) +
                 ' && ' +
                 JSON.stringify(meta) +
-                ' === document.getElementById("mh-meta").textContent.trim().slice(0, ' +
+                ' === document.getElementById("mh-avail").textContent.trim().slice(0, ' +
                 meta.length +
                 ')',
               title + ' to read "' + meta + '"',

@@ -1,7 +1,7 @@
 ---
 id: 079
 slug: the-movies-and-tv-hero
-status: approved
+status: building
 branch: crew/079-the-movies-and-tv-hero
 model: sonnet
 env: laptop
